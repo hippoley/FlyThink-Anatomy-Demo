@@ -1,49 +1,125 @@
 <!doctype html>
 <html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>FlyThink Playground · Multi-Intent Multi-Slot Multi-Turn</title>
+<title>FlyThink · A Neural Playground for Home Intelligence</title>
 <style>
-:root{--bg:#050b11;--panel:#0b1621;--card:#09131d;--line:#26394d;--text:#eef6ff;--muted:#8fa6bd;--green:#63e0aa;--amber:#f1bd69;--blue:#6ea9ff;--red:#ff8f9b}
-*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 50% -10%,#17314a,#071019 48%,#050b11);color:var(--text);font:13px/1.45 Inter,system-ui,sans-serif}.app{max-width:1900px;margin:auto;padding:14px}.top{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}.top h1{margin:0;font-size:24px}.sub{margin-top:5px;color:var(--muted);max-width:1180px}.pill{border:1px solid #30465f;border-radius:999px;padding:5px 8px;font-size:9px;color:#d7e8f8}.ok{color:#9cf0ca;border-color:#376b58}.warn{color:#ffd69b;border-color:#6e5832}.grid{display:grid;grid-template-columns:.8fr 1.05fr 1.15fr;gap:12px;margin-top:12px}.panel{background:linear-gradient(180deg,rgba(14,24,37,.98),rgba(8,15,24,.97));border:1px solid var(--line);border-radius:14px;overflow:hidden}.ph{min-height:46px;padding:8px 12px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:8px}.pb{padding:12px}.presets{display:flex;gap:6px;flex-wrap:wrap}.btn{border:1px solid #31465e;background:#0d1925;color:#d8e9fa;border-radius:8px;padding:8px 10px;cursor:pointer}.btn:hover{border-color:#55779e}.btn.primary{background:#17304b;border-color:#5e87b2}.btn.danger{color:#ffc5cb;border-color:#71434b}.composer{display:grid;grid-template-columns:1fr auto;gap:7px;margin-top:10px}.composer input{min-width:0;background:#071019;border:1px solid #2b3e53;border-radius:9px;padding:11px;color:white}.chat{margin-top:10px;display:flex;flex-direction:column;gap:7px;max-height:570px;overflow:auto}.msg{border:1px solid #26394d;border-radius:10px;background:#09131d;padding:9px}.msg.user{background:#132238}.who,.k{font-size:9px;color:var(--muted)}.v{font-size:13px;font-weight:700;margin-top:3px}.section{border:1px solid #26394d;border-radius:10px;background:#09131d;padding:9px;margin-bottom:8px}.section h3{font-size:11px;margin:0 0 7px}.cards{display:grid;grid-template-columns:repeat(2,1fr);gap:6px}.card{border:1px solid #273a4e;border-radius:8px;background:#08121b;padding:7px}.mono{font:10px/1.45 ui-monospace,Consolas,monospace;white-space:pre-wrap;overflow:auto;max-height:220px}.task{border-left:3px solid #5e87b2;padding-left:8px;margin:7px 0}.task.cancel{border-left-color:#85505a;opacity:.75}.node{display:flex;justify-content:space-between;gap:6px;border-top:1px solid #1d2e40;padding:5px 0;font-size:10px}.slotgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:5px}.slot{background:#071019;border:1px solid #25384c;border-radius:7px;padding:6px}.flow{display:flex;gap:5px;flex-wrap:wrap}.step{border:1px solid #30445b;border-radius:999px;padding:5px 8px;font-size:9px;color:#b6c9dc}.step.on{border-color:#5a846f;color:#bdf3d9}.viewer{height:720px;position:relative;background:#050b11}canvas{display:block;width:100%;height:100%;touch-action:none}.legend,.hud{position:absolute;top:9px;background:rgba(5,10,16,.84);border:1px solid #2c4057;border-radius:8px;padding:8px;color:var(--muted);font-size:10px;pointer-events:none}.legend{left:9px}.hud{right:9px;max-width:275px}.detail{margin-top:9px;white-space:pre-wrap;font:10px/1.45 ui-monospace,Consolas,monospace;background:#071019;border:1px solid #23364a;border-radius:8px;padding:8px;max-height:180px;overflow:auto}.truth{color:#ffd69b;border:1px solid #6e5832;background:#241c11;border-radius:8px;padding:8px;font-size:10px;margin-top:8px}.neuralbox{position:relative;height:260px;background:#050b11;border:1px solid #24384c;border-radius:9px;overflow:hidden}.neuralbox canvas{width:100%;height:100%}.neuralhud{position:absolute;left:8px;top:8px;pointer-events:none;font:9px/1.45 ui-monospace,Consolas,monospace;color:#9fb5c9;background:rgba(5,11,17,.82);border:1px solid #273b50;border-radius:7px;padding:6px;max-width:58%}.matches{display:flex;gap:5px;flex-wrap:wrap;margin-top:7px}.match{font-size:9px;border:1px solid #31475e;border-radius:999px;padding:4px 6px;color:#c4d8ea}.match.hot{border-color:#8b6a36;color:#ffd69b}@media(max-width:1400px){.grid{grid-template-columns:1fr 1fr}.grid .panel:last-child{grid-column:1/-1}.viewer{height:600px}}@media(max-width:850px){.grid{grid-template-columns:1fr}.grid .panel:last-child{grid-column:auto}.viewer{height:520px}.cards,.slotgrid{grid-template-columns:1fr}}
+:root{
+  --bg:#07090d;--surface:#0d1117;--surface2:#111722;--surface3:#151d29;--line:#202b38;
+  --text:#f4f7fb;--muted:#8f9cab;--soft:#b7c3cf;--accent:#89b8ff;--accent2:#a8e6cf;
+  --gold:#edbf77;--blue:#79aef8;--danger:#f1959f;--radius:18px
+}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:
+radial-gradient(900px 480px at 56% -120px,rgba(74,116,178,.18),transparent 65%),
+radial-gradient(700px 420px at 0% 24%,rgba(55,108,92,.09),transparent 70%),var(--bg);
+color:var(--text);font:14px/1.55 Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+button,input{font:inherit}.app{width:min(1540px,calc(100% - 32px));margin:0 auto;padding:28px 0 54px}
+.nav{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:0 2px 24px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:760;letter-spacing:-.02em}.mark{width:28px;height:28px;border:1px solid #34465c;border-radius:10px;display:grid;place-items:center;background:linear-gradient(145deg,#142031,#0b1018)}
+.mark:before{content:"";width:10px;height:10px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 5px rgba(121,174,248,.10)}
+.navmeta{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.tag,.pill{border:1px solid #2a3848;border-radius:999px;padding:6px 9px;font-size:10px;color:#c4ced8;background:rgba(13,17,23,.7)}
+.tag.live{color:#bfead7;border-color:#2d5948}.tag.truth{color:#ecd6aa;border-color:#5c4d32}
+.hero{display:grid;grid-template-columns:minmax(0,1.12fr) minmax(330px,.88fr);gap:28px;align-items:end;padding:28px 4px 34px}
+.eyebrow{font-size:11px;text-transform:uppercase;letter-spacing:.16em;color:#8fa7c1;margin-bottom:13px}
+.hero h1{font-size:clamp(38px,5.4vw,74px);line-height:.98;letter-spacing:-.055em;margin:0;max-width:900px}
+.hero h1 span{color:#9fc5ff}.lead{font-size:16px;color:#aab6c3;max-width:800px;margin:18px 0 0}
+.engine{border-left:1px solid #2b3745;padding:4px 0 4px 22px}.engineTitle{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#72859b}.engineMain{font-size:18px;font-weight:720;margin-top:7px;letter-spacing:-.02em}.engineSub{font-size:12px;color:var(--muted);margin-top:6px}
+.pipeline{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-top:14px}.pipe{font-size:10px;color:#c2ccd6;border:1px solid #2b3948;border-radius:9px;padding:6px 8px;background:#0b1017}.arrow{color:#506073}
+.stage{display:grid;grid-template-columns:minmax(340px,.78fr) minmax(0,1.22fr);gap:14px;align-items:stretch}
+.panel{background:linear-gradient(180deg,rgba(15,21,29,.96),rgba(10,14,20,.96));border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
+.panelhead{min-height:52px;padding:0 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:12px}
+.panelhead b{font-size:12px;letter-spacing:.07em;text-transform:uppercase;color:#d7e1eb}.panelbody{padding:14px}
+.chatShell{display:flex;flex-direction:column;min-height:610px}.introCard{background:linear-gradient(145deg,#111a26,#0d131c);border:1px solid #263546;border-radius:14px;padding:14px;margin-bottom:10px}
+.introCard strong{font-size:15px}.introCard p{margin:4px 0 0;color:#8fa0b3;font-size:12px}
+.presets{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}.btn{border:1px solid #2c3b4d;background:#0d141d;color:#dbe6ef;border-radius:10px;padding:8px 10px;cursor:pointer;transition:.18s ease}.btn:hover{border-color:#4b6683;background:#111c29}.btn.primary{background:#e6eef8;color:#0b1017;border-color:#e6eef8;font-weight:720}.btn.danger{color:#efb1b8}.chat{display:flex;flex-direction:column;gap:8px;overflow:auto;max-height:390px;padding:4px 2px 12px}
+.msg{border:1px solid #202e3d;border-radius:13px;background:#0b1118;padding:10px 11px}.msg.user{background:#121c29;border-color:#2c4057}.who,.k{font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:#73879c}.v{font-size:13px;font-weight:680;margin-top:3px}
+.composer{display:grid;grid-template-columns:1fr auto;gap:8px;margin-top:auto;padding-top:10px;border-top:1px solid #1d2936}.composer input{min-width:0;background:#090e14;border:1px solid #2d3d4f;border-radius:12px;padding:12px 13px;color:white;outline:none}.composer input:focus{border-color:#6081a7;box-shadow:0 0 0 3px rgba(96,129,167,.12)}
+.truthnote{font-size:10px;color:#8796a6;margin-top:9px}.truthnote strong{color:#c9d3dc}
+.brainStage{position:relative;min-height:610px;background:
+radial-gradient(circle at 52% 46%,rgba(80,121,170,.10),transparent 38%),#070b10}
+.viewer{height:610px;position:relative}.viewer canvas{display:block;width:100%;height:100%;touch-action:none}
+.legend,.hud{position:absolute;background:rgba(7,11,16,.80);backdrop-filter:blur(10px);border:1px solid #253444;border-radius:11px;padding:9px 10px;font-size:10px;color:#94a4b5;pointer-events:none}
+.legend{left:12px;bottom:12px}.hud{right:12px;top:12px;max-width:275px}.legend .row{display:flex;align-items:center;gap:7px;margin:3px 0}.dot{width:7px;height:7px;border-radius:50%}.dot.blue{background:var(--blue)}.dot.gold{background:var(--gold)}.dot.base{background:#52786a}
+.neuronDetail{position:absolute;right:12px;bottom:12px;max-width:310px;white-space:pre-wrap;font:9px/1.45 ui-monospace,Consolas,monospace;color:#aebdcb;background:rgba(7,11,16,.84);border:1px solid #253444;border-radius:11px;padding:9px;max-height:150px;overflow:auto}
+.turnstrip{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:14px}.metric{background:#0c1118;border:1px solid #1f2a36;border-radius:14px;padding:12px}.metric .k{margin-bottom:4px}.metric .v{font-size:15px}
+.reasoning{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}.section{background:linear-gradient(180deg,#0d131b,#0a0f15);border:1px solid var(--line);border-radius:var(--radius);padding:14px}.sectiontitle{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}.sectiontitle h3{font-size:13px;margin:0}.sectiontitle span{font-size:10px;color:#71849a}
+.neuralbox{position:relative;height:330px;background:radial-gradient(circle at center,rgba(74,116,178,.08),transparent 44%),#070b10;border:1px solid #213040;border-radius:14px;overflow:hidden}.neuralbox canvas{display:block;width:100%;height:100%}.neuralhud{position:absolute;left:9px;top:9px;pointer-events:none;font:9px/1.45 ui-monospace,Consolas,monospace;color:#9fb0c0;background:rgba(7,11,16,.82);border:1px solid #263747;border-radius:9px;padding:7px;max-width:62%}
+.matches{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}.match{font-size:9px;border:1px solid #2b3c4f;border-radius:999px;padding:5px 7px;color:#aebdcb}.match.hot{border-color:#735d37;color:#f0d6a7;background:#18140d}
+.stackgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.subcard{background:#090e14;border:1px solid #202d3a;border-radius:12px;padding:10px;min-width:0}.mono{font:9px/1.5 ui-monospace,Consolas,monospace;white-space:pre-wrap;overflow:auto;max-height:190px;color:#9eafbf}
+.task{border-left:2px solid #688eb9;padding-left:8px;margin:7px 0}.task.cancel{border-left-color:#86515a;opacity:.72}.node{display:flex;justify-content:space-between;gap:6px;border-top:1px solid #192530;padding:5px 0;font-size:10px}.slotgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:5px}.slot{background:#070c12;border:1px solid #1f2d3b;border-radius:8px;padding:7px}.flow{display:flex;gap:5px;flex-wrap:wrap}.step{border:1px solid #2b3a4b;border-radius:999px;padding:5px 7px;font-size:9px;color:#9eb0c2}.step.on{border-color:#476d5d;color:#bce8d3;background:#0d1713}
+details{margin-top:14px;border:1px solid #202b38;border-radius:14px;background:#0a0f15;overflow:hidden}summary{cursor:pointer;padding:12px 14px;color:#c8d2dc;font-size:12px;font-weight:680;list-style:none}summary::-webkit-details-marker{display:none}.advanced{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;padding:0 12px 12px}
+.footer{display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;color:#687a8d;font-size:10px;padding:22px 4px 0}
+@media(max-width:1080px){.hero{grid-template-columns:1fr}.engine{border-left:0;border-top:1px solid #283542;padding:16px 0 0}.stage,.reasoning{grid-template-columns:1fr}.viewer,.brainStage{height:560px;min-height:560px}.turnstrip{grid-template-columns:1fr 1fr}.advanced{grid-template-columns:1fr 1fr}}
+@media(max-width:680px){.app{width:min(100% - 18px,1540px);padding-top:14px}.nav{padding-bottom:12px}.navmeta{display:none}.hero{padding:18px 2px 24px}.hero h1{font-size:42px}.stage{grid-template-columns:1fr}.chatShell{min-height:520px}.viewer,.brainStage{height:470px;min-height:470px}.turnstrip,.reasoning,.stackgrid,.advanced{grid-template-columns:1fr}.composer{grid-template-columns:1fr}.btn.primary{min-height:44px}}
 </style></head><body><div class="app">
-<div class="top"><div><h1>FlyThink Playground</h1><div class="sub">多意图 · 多槽位 · 多轮对话 → GraphDelta → Dialogue Graph / Task Stack → Route / Thing Model → Real FlyWire anatomy。训练语料 semantic drive → 216-unit recurrent neural substrate → GraphDelta / task context → route / Thing Model → Real FlyWire anatomy evidence。</div></div><div style="display:flex;gap:6px;flex-wrap:wrap"><span class="pill ok">MULTI-INTENT</span><span class="pill ok">MULTI-SLOT</span><span class="pill ok">MULTI-TURN</span><span class="pill ok">TRAIN-ONLY SEMANTIC DRIVE</span><span class="pill ok">216 RECURRENT UNITS</span><span class="pill ok">GRAPHDELTA</span><span class="pill ok">REAL CODEX XYZ</span><span class="pill warn">DEVELOPMENTAL ≠ MEASURED FLYWIRE</span></div></div>
+<nav class="nav"><div class="brand"><span class="mark"></span>FlyThink <span style="color:#687a8d;font-weight:540">Research Playground</span></div><div class="navmeta"><span class="tag live">Interactive</span><span class="tag">Multi-turn</span><span class="tag truth">Truth-separated</span></div></nav>
 
-<div class="grid">
-<section class="panel"><div class="ph"><b>01 · CONVERSATION PLAYGROUND</b><span id="turnPill" class="pill">turn 0</span></div><div class="pb">
+<section class="hero">
+<div><div class="eyebrow">Fly-inspired home intelligence · public research preview</div><h1>Talk to a home.<br><span>Watch its neural state change.</span></h1><p class="lead">输入一句自然语言，观察训练语料如何形成 semantic drive、216 个 recurrent units 如何保持多轮上下文，以及动作如何落到 Thing Model。右侧真实 FlyWire anatomy 作为独立证据层展示。</p></div>
+<aside class="engine"><div class="engineTitle">Who is reasoning?</div><div class="engineMain">Browser semantic resolver + train-only exemplars + 216-unit recurrent substrate</div><div class="engineSub">不是 ChatGPT，也不是“真实果蝇脑直接理解中文”。真实 FlyWire 只承担 anatomy / measured evidence 视图。</div><div class="pipeline"><span class="pipe">Text</span><span class="arrow">→</span><span class="pipe">Semantic drive</span><span class="arrow">→</span><span class="pipe">Recurrent state</span><span class="arrow">→</span><span class="pipe">GraphDelta</span><span class="arrow">→</span><span class="pipe">Action</span></div></aside>
+</section>
+
+<section class="stage">
+<div class="panel chatShell"><div class="panelhead"><b>Conversation</b><span id="turnPill" class="pill">turn 0</span></div><div class="panelbody" style="display:flex;flex-direction:column;flex:1">
+<div class="introCard"><strong>Try a multi-turn path</strong><p>从一句简单控制开始，再改口、指代、中断、恢复。右侧蓝色 activity 会跟着当前神经状态变化。</p></div>
 <div class="presets">
 <button class="btn" data-p="把客厅外窗关上，客厅灯也关了">多意图</button>
 <button class="btn" data-p="窗户还是开一点吧">修正</button>
 <button class="btn" data-p="那个再调暗一点">指代继承</button>
-<button class="btn" data-p="先别管窗户，帮我查一下客厅现在温度">中断查询</button>
-<button class="btn" data-p="好，继续刚才那个">恢复任务</button>
-<button class="btn" data-p="算了，取消刚才那个">取消</button>
-<button class="btn danger" id="reset">RESET</button>
+<button class="btn" data-p="先别管窗户，帮我查一下客厅现在温度">中断</button>
+<button class="btn" data-p="好，继续刚才那个">恢复</button>
+<button class="btn danger" data-p="算了，取消刚才那个">取消</button>
+<button class="btn" id="reset">Reset</button>
 </div>
-<div id="chat" class="chat"><div class="msg"><div class="who">SYSTEM</div>直接输入自然语言，推荐先试：把客厅外窗关上，客厅灯也关了。</div></div>
-<form id="composer" class="composer"><input id="input" value="把客厅外窗关上，客厅灯也关了" placeholder="输入多意图 / 多槽位 / 多轮中文"><button class="btn primary" type="submit">SEND</button></form>
-<div class="truth">Truth boundary：这里的浏览器 parser/reducer 用来把真实 runtime contract 做成可玩的界面；训练后端、benchmark 和生产执行仍在 private runtime 中。</div>
-</div></section>
-
-<section class="panel"><div class="ph"><b>02 · DIALOGUE GRAPH / GRAPHDELTA</b><span id="deltaPill" class="pill">IDLE</span></div><div class="pb">
-<div class="section"><h3>GraphDelta</h3><div id="delta" class="mono">{}</div></div>
-<div class="section"><h3>Task Stack</h3><div id="tasks">No active task.</div></div>
-<div class="section"><h3>Slot Ledger</h3><div id="slots" class="slotgrid"></div></div>
-<div class="section"><h3>Developmental Neural Substrate · 18 × 12</h3><div class="neuralbox"><canvas id="neural"></canvas><div id="neuralHud" class="neuralhud">loading recurrent substrate…</div></div><div id="semanticMatches" class="matches"></div><div class="k" style="margin-top:6px">TRAINING → semantic drive → recurrent settling. These 216 units are developmental product units, not measured FlyWire neuron IDs.</div></div>
-<div class="section"><h3>Runtime Flow</h3><div id="flow" class="flow"></div></div>
-<div class="section"><h3>Revisions / Context</h3><div id="revisions" class="mono">[]</div></div>
-</div></section>
-
-<section class="panel"><div class="ph"><b>03 · ROUTE / THING MODEL / REAL FLYWIRE EVIDENCE</b><span id="mappedPill" class="pill ok">loading anatomy…</span></div><div class="pb">
-<div class="cards">
-<div class="card"><div class="k">ROUTE</div><div id="route" class="v">WAITING</div></div>
-<div class="card"><div class="k">ACTION</div><div id="action" class="v">—</div></div>
-<div class="card"><div class="k">FOCUS</div><div id="focus" class="v">—</div></div>
-<div class="card"><div class="k">WORLD DELTA</div><div id="worldDelta" class="v">—</div></div>
-</div>
-<div class="viewer" style="margin-top:9px"><canvas id="brain"></canvas><div class="legend">拖动：3D rotate<br>滚轮：zoom<br>点击金色 neuron：inspect<br><br>灰绿：real Codex FAFB v783 xyz<br>蓝色：当前 turn 的 developmental neural projection<br>金色：measured FlyWire replay roots</div><div id="hud" class="hud">Loading real anatomy…</div></div>
-<div id="neuronDetail" class="detail">Click a blue or gold neuron. Blue = current developmental projection; gold = measured replay evidence.</div>
-</div></section>
+<div id="chat" class="chat"><div class="msg"><div class="who">FlyThink</div><div class="v">说一句话。我会把这一轮的语义、神经状态和动作过程一起展示出来。</div></div></div>
+<form id="composer" class="composer"><input id="input" value="把客厅外窗关上，客厅灯也关了" placeholder="自由输入中文，多轮上下文会保留"><button class="btn primary" type="submit">Run turn</button></form>
+<div class="truthnote"><strong>Truth boundary</strong> · 公网页面运行 contract-compatible browser inference。训练后端与完整 benchmark 仍在 private runtime。</div>
 </div></div>
 
+<div class="panel brainStage"><div class="panelhead"><b>Neural activity → anatomy</b><span id="mappedPill" class="pill">loading anatomy…</span></div>
+<div class="viewer"><canvas id="brain"></canvas>
+<div class="hud" id="hud">Loading real anatomy…</div>
+<div class="legend"><div class="row"><span class="dot blue"></span>Current developmental projection</div><div class="row"><span class="dot gold"></span>Measured FlyWire replay evidence</div><div class="row"><span class="dot base"></span>Real Codex FAFB v783 xyz</div></div>
+<div id="neuronDetail" class="neuronDetail">Click a blue or gold neuron to inspect its provenance.</div>
+</div></div>
+</section>
+
+<div class="turnstrip">
+<div class="metric"><div class="k">Route</div><div id="route" class="v">WAITING</div></div>
+<div class="metric"><div class="k">Action</div><div id="action" class="v">—</div></div>
+<div class="metric"><div class="k">Focus</div><div id="focus" class="v">—</div></div>
+<div class="metric"><div class="k">World delta</div><div id="worldDelta" class="v">—</div></div>
+</div>
+
+<section class="reasoning">
+<div class="section"><div class="sectiontitle"><h3>Developmental neural substrate</h3><span>18 populations × 12 units</span></div>
+<div class="neuralbox"><canvas id="neural"></canvas><div id="neuralHud" class="neuralhud">loading recurrent substrate…</div></div>
+<div id="semanticMatches" class="matches"></div>
+<div class="truthnote">Train-only exemplars produce semantic drive; recurrent settling preserves dialogue context. These units are developmental product units, not measured FlyWire neurons.</div>
+</div>
+
+<div class="section"><div class="sectiontitle"><h3>Reasoning trace</h3><span id="deltaPill" class="pill">IDLE</span></div>
+<div class="stackgrid">
+<div class="subcard"><div class="k">Task stack</div><div id="tasks">No active task.</div></div>
+<div class="subcard"><div class="k">Slot ledger</div><div id="slots" class="slotgrid"></div></div>
+</div>
+<div class="subcard" style="margin-top:8px"><div class="k">Runtime flow</div><div id="flow" class="flow" style="margin-top:7px"></div></div>
+</div>
+</section>
+
+<details><summary>Open advanced trace · GraphDelta / revisions / raw state</summary><div class="advanced">
+<div class="subcard"><div class="k">GraphDelta</div><div id="delta" class="mono">{}</div></div>
+<div class="subcard"><div class="k">Revisions / context</div><div id="revisions" class="mono">[]</div></div>
+<div class="subcard"><div class="k">Interpretation</div><div class="mono">Product inference truth:
+developmental_fly_inspired_product_runtime
+
+Anatomy truth:
+measured_flywire_coordinate_derivative
+
+Blue anatomy mapping:
+developmental projection, not measured FlyWire activity.</div></div>
+</div></details>
+
+<footer class="footer"><span>FlyThink · public research playground</span><span>Multi-intent · Multi-slot · Multi-turn · Truth-separated neural visualization</span></footer>
+</div>
 <script>
 const $=s=>document.querySelector(s);
 const state={turn:0,taskSeq:0,nodeSeq:0,tasks:[],activeTask:null,paused:[],revisions:[],focus:null,lastAction:null,world:{window:0,light:1,brightness:100,temperature:24},lastDelta:null};
