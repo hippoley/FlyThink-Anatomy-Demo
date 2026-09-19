@@ -1,44 +1,200 @@
 <!doctype html>
 <html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>FlyThink × Real FlyWire Anatomy</title>
+<title>FlyThink Playground · Multi-Intent Multi-Slot Multi-Turn</title>
 <style>
-:root{--bg:#050b11;--panel:#0b1621;--card:#09131d;--line:#26394d;--text:#eef6ff;--muted:#8fa6bd;--green:#63e0aa;--amber:#f1bd69;--blue:#6ea9ff}
-*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 50% -10%,#17314a,#071019 48%,#050b11);color:var(--text);font:13px/1.45 Inter,system-ui,sans-serif}.app{max-width:1780px;margin:auto;padding:14px}.top{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}.top h1{margin:0;font-size:24px}.sub{margin-top:5px;color:var(--muted);max-width:1080px}.pill{border:1px solid #30465f;border-radius:999px;padding:6px 9px;font-size:10px;color:#d7e8f8}.ok{color:#9cf0ca;border-color:#376b58}.warn{color:#ffd69b;border-color:#6e5832}.grid{display:grid;grid-template-columns:.84fr 1.16fr;gap:12px;margin-top:12px}.panel{background:linear-gradient(180deg,rgba(14,24,37,.98),rgba(8,15,24,.97));border:1px solid var(--line);border-radius:14px;overflow:hidden}.ph{height:46px;padding:0 12px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:8px}.pb{padding:12px}.turns{display:flex;gap:6px;flex-wrap:wrap}.btn{border:1px solid #31465e;background:#0d1925;color:#d8e9fa;border-radius:8px;padding:8px 10px;cursor:pointer}.btn.active{border-color:#6ea9ff;background:#132338}.chat{margin-top:10px;display:flex;flex-direction:column;gap:7px}.msg{border:1px solid #26394d;border-radius:9px;background:#09131d;padding:8px}.k{font-size:9px;color:var(--muted)}.v{font-size:13px;font-weight:700;margin-top:3px}.cards{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:10px}.card{border:1px solid #26394d;border-radius:9px;background:#09131d;padding:8px}.big{font-size:20px;font-weight:800}.viewer{height:720px;position:relative;background:#050b11}canvas{display:block;width:100%;height:100%;touch-action:none}.legend,.hud{position:absolute;top:9px;background:rgba(5,10,16,.84);border:1px solid #2c4057;border-radius:8px;padding:8px;color:var(--muted);font-size:10px;pointer-events:none}.legend{left:9px}.hud{right:9px;max-width:270px}.detail{margin-top:10px;white-space:pre-wrap;font:10px/1.45 ui-monospace,Consolas,monospace;background:#071019;border:1px solid #23364a;border-radius:8px;padding:8px;max-height:240px;overflow:auto}.status{margin-top:8px;color:var(--muted);font-size:10px}@media(max-width:1050px){.grid{grid-template-columns:1fr}.viewer{height:580px}}@media(max-width:640px){.cards{grid-template-columns:1fr}.app{padding:8px}}
+:root{--bg:#050b11;--panel:#0b1621;--card:#09131d;--line:#26394d;--text:#eef6ff;--muted:#8fa6bd;--green:#63e0aa;--amber:#f1bd69;--blue:#6ea9ff;--red:#ff8f9b}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 50% -10%,#17314a,#071019 48%,#050b11);color:var(--text);font:13px/1.45 Inter,system-ui,sans-serif}.app{max-width:1900px;margin:auto;padding:14px}.top{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}.top h1{margin:0;font-size:24px}.sub{margin-top:5px;color:var(--muted);max-width:1180px}.pill{border:1px solid #30465f;border-radius:999px;padding:5px 8px;font-size:9px;color:#d7e8f8}.ok{color:#9cf0ca;border-color:#376b58}.warn{color:#ffd69b;border-color:#6e5832}.grid{display:grid;grid-template-columns:.8fr 1.05fr 1.15fr;gap:12px;margin-top:12px}.panel{background:linear-gradient(180deg,rgba(14,24,37,.98),rgba(8,15,24,.97));border:1px solid var(--line);border-radius:14px;overflow:hidden}.ph{min-height:46px;padding:8px 12px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:8px}.pb{padding:12px}.presets{display:flex;gap:6px;flex-wrap:wrap}.btn{border:1px solid #31465e;background:#0d1925;color:#d8e9fa;border-radius:8px;padding:8px 10px;cursor:pointer}.btn:hover{border-color:#55779e}.btn.primary{background:#17304b;border-color:#5e87b2}.btn.danger{color:#ffc5cb;border-color:#71434b}.composer{display:grid;grid-template-columns:1fr auto;gap:7px;margin-top:10px}.composer input{min-width:0;background:#071019;border:1px solid #2b3e53;border-radius:9px;padding:11px;color:white}.chat{margin-top:10px;display:flex;flex-direction:column;gap:7px;max-height:570px;overflow:auto}.msg{border:1px solid #26394d;border-radius:10px;background:#09131d;padding:9px}.msg.user{background:#132238}.who,.k{font-size:9px;color:var(--muted)}.v{font-size:13px;font-weight:700;margin-top:3px}.section{border:1px solid #26394d;border-radius:10px;background:#09131d;padding:9px;margin-bottom:8px}.section h3{font-size:11px;margin:0 0 7px}.cards{display:grid;grid-template-columns:repeat(2,1fr);gap:6px}.card{border:1px solid #273a4e;border-radius:8px;background:#08121b;padding:7px}.mono{font:10px/1.45 ui-monospace,Consolas,monospace;white-space:pre-wrap;overflow:auto;max-height:220px}.task{border-left:3px solid #5e87b2;padding-left:8px;margin:7px 0}.task.cancel{border-left-color:#85505a;opacity:.75}.node{display:flex;justify-content:space-between;gap:6px;border-top:1px solid #1d2e40;padding:5px 0;font-size:10px}.slotgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:5px}.slot{background:#071019;border:1px solid #25384c;border-radius:7px;padding:6px}.flow{display:flex;gap:5px;flex-wrap:wrap}.step{border:1px solid #30445b;border-radius:999px;padding:5px 8px;font-size:9px;color:#b6c9dc}.step.on{border-color:#5a846f;color:#bdf3d9}.viewer{height:720px;position:relative;background:#050b11}canvas{display:block;width:100%;height:100%;touch-action:none}.legend,.hud{position:absolute;top:9px;background:rgba(5,10,16,.84);border:1px solid #2c4057;border-radius:8px;padding:8px;color:var(--muted);font-size:10px;pointer-events:none}.legend{left:9px}.hud{right:9px;max-width:275px}.detail{margin-top:9px;white-space:pre-wrap;font:10px/1.45 ui-monospace,Consolas,monospace;background:#071019;border:1px solid #23364a;border-radius:8px;padding:8px;max-height:180px;overflow:auto}.truth{color:#ffd69b;border:1px solid #6e5832;background:#241c11;border-radius:8px;padding:8px;font-size:10px;margin-top:8px}@media(max-width:1400px){.grid{grid-template-columns:1fr 1fr}.grid .panel:last-child{grid-column:1/-1}.viewer{height:600px}}@media(max-width:850px){.grid{grid-template-columns:1fr}.grid .panel:last-child{grid-column:auto}.viewer{height:520px}.cards,.slotgrid{grid-template-columns:1fr}}
 </style></head><body><div class="app">
-<div class="top"><div><h1>FlyThink × Real FlyWire Anatomy</h1><div class="sub">Public demo · verified replay. 左侧是多轮产品状态；右侧使用 Codex FAFB v783 真实 anatomical xyz，并高亮 measured FlyWire root IDs。不是 topology layout。</div></div><div style="display:flex;gap:6px;flex-wrap:wrap"><span class="pill ok">REAL CODEX XYZ</span><span class="pill ok">MEASURED ROOT IDS</span><span class="pill warn">VERIFIED REPLAY · NOT LIVE</span></div></div>
+<div class="top"><div><h1>FlyThink Playground</h1><div class="sub">多意图 · 多槽位 · 多轮对话 → GraphDelta → Dialogue Graph / Task Stack → Route / Thing Model → Real FlyWire anatomy。Public demo 使用浏览器内 contract-compatible reducer 展示我们 runtime 的语义结构；不是把静态规则冒充训练后端。</div></div><div style="display:flex;gap:6px;flex-wrap:wrap"><span class="pill ok">MULTI-INTENT</span><span class="pill ok">MULTI-SLOT</span><span class="pill ok">MULTI-TURN</span><span class="pill ok">GRAPHDELTA</span><span class="pill ok">REAL CODEX XYZ</span><span class="pill warn">BROWSER DEMO · NOT TRAINED BACKEND LIVE</span></div></div>
+
 <div class="grid">
-<section class="panel"><div class="ph"><b>01 · FLY THINKING</b><span id="turnPill" class="pill">turn 1</span></div><div class="pb">
-<div class="turns"><button class="btn active" data-turn="0">关外窗</button><button class="btn" data-turn="1">再打开</button><button class="btn" data-turn="2">还是关着</button></div>
-<div id="chat" class="chat"></div>
-<div class="cards"><div class="card"><div class="k">ENTITY</div><div id="entity" class="v">window</div></div><div class="card"><div class="k">OPERATION</div><div id="operation" class="v">close</div></div><div class="card"><div class="k">REFERENCE</div><div id="reference" class="v">explicit</div></div><div class="card"><div class="k">ROUTE</div><div id="route" class="v">THING_MODEL_EXECUTE</div></div></div>
-<div class="card" style="margin-top:8px"><div class="k">ACTION</div><div id="action" class="big">exterior_window_close</div></div>
-<div class="card" style="margin-top:8px"><div class="k">THING MODEL</div><div class="v">physical_dev_home_001.window.combo01</div><div class="status">CWDS-CA01 · motor_1 · motorControl</div><div id="delta" class="big">0 → 1</div></div>
-<div id="detail" class="detail">点击右边金色 neuron 查看 root ID / Brian index / activity / spikes。</div>
+<section class="panel"><div class="ph"><b>01 · CONVERSATION PLAYGROUND</b><span id="turnPill" class="pill">turn 0</span></div><div class="pb">
+<div class="presets">
+<button class="btn" data-p="把客厅外窗关上，客厅灯也关了">多意图</button>
+<button class="btn" data-p="窗户还是开一点吧">修正</button>
+<button class="btn" data-p="那个再调暗一点">指代继承</button>
+<button class="btn" data-p="先别管窗户，帮我查一下客厅现在温度">中断查询</button>
+<button class="btn" data-p="好，继续刚才那个">恢复任务</button>
+<button class="btn" data-p="算了，取消刚才那个">取消</button>
+<button class="btn danger" id="reset">RESET</button>
+</div>
+<div id="chat" class="chat"><div class="msg"><div class="who">SYSTEM</div>直接输入自然语言，推荐先试：把客厅外窗关上，客厅灯也关了。</div></div>
+<form id="composer" class="composer"><input id="input" value="把客厅外窗关上，客厅灯也关了" placeholder="输入多意图 / 多槽位 / 多轮中文"><button class="btn primary" type="submit">SEND</button></form>
+<div class="truth">Truth boundary：这里的浏览器 parser/reducer 用来把真实 runtime contract 做成可玩的界面；训练后端、benchmark 和生产执行仍在 private runtime 中。</div>
 </div></section>
-<section class="panel"><div class="ph"><b>02 · REAL ANATOMICAL XYZ</b><span id="mappedPill" class="pill ok">loading…</span></div><div class="viewer"><canvas id="brain"></canvas><div class="legend">拖动：3D rotate<br>滚轮：zoom<br>点击金色 neuron：inspect<br><br>灰绿：real Codex xyz sample<br>金色：measured FlyWire roots</div><div id="hud" class="hud">Loading public anatomy artifact…</div></div></section>
+
+<section class="panel"><div class="ph"><b>02 · DIALOGUE GRAPH / GRAPHDELTA</b><span id="deltaPill" class="pill">IDLE</span></div><div class="pb">
+<div class="section"><h3>GraphDelta</h3><div id="delta" class="mono">{}</div></div>
+<div class="section"><h3>Task Stack</h3><div id="tasks">No active task.</div></div>
+<div class="section"><h3>Slot Ledger</h3><div id="slots" class="slotgrid"></div></div>
+<div class="section"><h3>Runtime Flow</h3><div id="flow" class="flow"></div></div>
+<div class="section"><h3>Revisions / Context</h3><div id="revisions" class="mono">[]</div></div>
+</div></section>
+
+<section class="panel"><div class="ph"><b>03 · ROUTE / THING MODEL / REAL ANATOMY</b><span id="mappedPill" class="pill ok">loading anatomy…</span></div><div class="pb">
+<div class="cards">
+<div class="card"><div class="k">ROUTE</div><div id="route" class="v">WAITING</div></div>
+<div class="card"><div class="k">ACTION</div><div id="action" class="v">—</div></div>
+<div class="card"><div class="k">FOCUS</div><div id="focus" class="v">—</div></div>
+<div class="card"><div class="k">WORLD DELTA</div><div id="worldDelta" class="v">—</div></div>
+</div>
+<div class="viewer" style="margin-top:9px"><canvas id="brain"></canvas><div class="legend">拖动：3D rotate<br>滚轮：zoom<br>点击金色 neuron：inspect<br><br>灰绿：real Codex FAFB v783 xyz<br>金色：measured FlyWire replay roots</div><div id="hud" class="hud">Loading real anatomy…</div></div>
+<div id="neuronDetail" class="detail">Click a highlighted neuron.</div>
+</div></section>
 </div></div>
+
 <script>
 const $=s=>document.querySelector(s);
-const turns=[
-{text:'把客厅外窗关上',entity:'window',operation:'close',reference:'explicit',route:'THING_MODEL_EXECUTE',action:'exterior_window_close',before:0,after:1,offset:0},
-{text:'再打开',entity:'window',operation:'open',reference:'inherit_previous',route:'THING_MODEL_EXECUTE',action:'exterior_window_open',before:1,after:0,offset:1},
-{text:'还是关着吧',entity:'window',operation:'close',reference:'inherit_previous',route:'THING_MODEL_EXECUTE',action:'exterior_window_close',before:0,after:1,offset:2}
-];
-let DATA=null,current=0,rot={x:-.18,y:.31},zoom=1.55,drag=null,hits=[],selected=null;
-async function load(){
- const [g,s]=await Promise.all([fetch('./anatomy-sample.json').then(r=>r.json()),fetch('./measured-snapshot.json').then(r=>r.json())]);
- DATA={g,s};
- $('#mappedPill').textContent=(s.graph.nodes||[]).length+' measured roots';
- $('#hud').innerHTML='geometry: '+g.truth+'<br>source: Codex FAFB v783<br>source points: '+Number(g.source_count).toLocaleString()+'<br>display sample: '+Number(g.points.length).toLocaleString()+'<br><br>activity: '+s.truth;
- render();
+const state={turn:0,taskSeq:0,nodeSeq:0,tasks:[],activeTask:null,paused:[],revisions:[],focus:null,lastAction:null,world:{window:0,light:1,brightness:100,temperature:24},lastDelta:null};
+let DATA=null,rot={x:-.18,y:.31},zoom=1.55,drag=null,hits=[],selected=null;
+
+function clone(x){return JSON.parse(JSON.stringify(x))}
+function newNode(intent,target,slots={},status='resolved'){
+  state.nodeSeq++;
+  return {node_id:'node:'+state.nodeSeq,kind:'device_action',intent,target:{entity:target},slots,semantic_status:status,source_turn_id:'turn:'+state.turn};
+}
+function taskById(id){return state.tasks.find(t=>t.task_id===id)}
+function activeTask(){return taskById(state.activeTask)}
+function pushTask(nodes,program={control_type:'single'}){
+  state.taskSeq++; const t={task_id:'task:'+state.taskSeq,status:'active',node_ids:nodes.map(n=>n.node_id),nodes,program,created_turn_id:'turn:'+state.turn};
+  state.tasks.push(t); state.activeTask=t.task_id; return t;
+}
+function updateFocusFromNodes(nodes){const n=[...nodes].reverse().find(x=>x.target?.entity); if(n)state.focus=n.target.entity}
+
+function parseUtterance(text){
+  const raw=text.trim(), parts=raw.split(/[，,；;]/).map(x=>x.trim()).filter(Boolean);
+  const isCancel=/算了|取消|别执行|不用了/.test(raw);
+  const isResume=/继续刚才|继续之前|恢复刚才|接着刚才/.test(raw);
+  const isInterrupt=/先别管|先放一放|先暂停/.test(raw);
+  const correction=/还是|改成|改为|换成|开一点|关一点/.test(raw);
+  const inherit=/那个|它|再/.test(raw);
+  if(isCancel) return {type:'cancel'};
+  if(isResume) return {type:'resume'};
+  const nodes=[];
+  for(const p of parts){
+    let entity=null,intent=null,slots={};
+    if(/外窗|窗户|窗扇|开窗器/.test(p))entity='window';
+    else if(/灯|彩灯|RGB/.test(p))entity='light';
+    else if(/温度|空调/.test(p))entity='climate';
+    else if(inherit && state.focus)entity=state.focus;
+
+    if(/查询|现在|多少|开着吗|关着吗|温度/.test(p) && entity==='climate'){intent='QueryState';slots.property='temperature';}
+    else if(/查询|状态|开着吗|关着吗/.test(p)){intent='QueryState';slots.property='state';}
+    else if(/调暗|亮度/.test(p)){intent='SetValue';slots.property='brightness';slots.value=30;}
+    else if(/开一点/.test(p)){intent='SetValue';slots.property='open_ratio';slots.value=30;}
+    else if(/关/.test(p)){intent='TurnOff';slots.property=entity==='light'?'power':'motorControl';slots.value=entity==='light'?false:1;}
+    else if(/开/.test(p)){intent='TurnOn';slots.property=entity==='light'?'power':'motorControl';slots.value=entity==='light'?true:0;}
+    else if(/规划|总结|解释|写一份/.test(p)){entity='llm';intent='Plan';}
+    if(entity&&intent)nodes.push(newNode(intent,entity,slots));
+  }
+  if(!nodes.length && inherit && state.focus){
+    nodes.push(newNode('Clarify',state.focus,{},'unresolved'));
+  }
+  return {type:isInterrupt?'interrupt':correction?'revise':'apply',nodes,parallel:nodes.length>1};
+}
+
+function deltaFor(text){
+  state.turn++;
+  const p=parseUtterance(text);
+  const turn_id='turn:'+state.turn;
+  if(p.type==='cancel'){
+    return {contract_version:'homeflow.graph_delta.v1',op:'CANCEL_TASK',turn_id,commit_policy:'immediate_cancel',target_task_id:state.activeTask,source:'browser_contract_demo'};
+  }
+  if(p.type==='resume'){
+    const target=state.paused.pop()||state.tasks.filter(t=>t.status==='active').slice(-2,-1)[0]?.task_id||state.activeTask;
+    return {contract_version:'homeflow.graph_delta.v1',op:'UPDATE_TASK',turn_id,commit_policy:'final_only',target_task_id:target,nodes:[],metadata:{control:'resume'},source:'browser_contract_demo'};
+  }
+  if(p.type==='revise'&&activeTask()){
+    return {contract_version:'homeflow.graph_delta.v1',op:'REVISE_NODE',turn_id,commit_policy:'final_only',target_task_id:state.activeTask,target_node_id:activeTask().node_ids.slice(-1)[0],replacement_node:p.nodes[0]||newNode('Clarify',state.focus,{},'unresolved'),source:'browser_contract_demo'};
+  }
+  if(p.type==='interrupt'){
+    if(state.activeTask)state.paused.push(state.activeTask);
+    return {contract_version:'homeflow.graph_delta.v1',op:'CREATE_TASK',turn_id,commit_policy:'final_only',nodes:p.nodes,program:{control_type:p.parallel?'parallel':'single'},metadata:{interrupt:true,paused_task_id:state.activeTask},source:'browser_contract_demo'};
+  }
+  const op=activeTask()?'UPDATE_TASK':'CREATE_TASK';
+  return {contract_version:'homeflow.graph_delta.v1',op,turn_id,commit_policy:'final_only',target_task_id:op==='UPDATE_TASK'?state.activeTask:undefined,nodes:p.nodes,program:{control_type:p.parallel?'parallel':'single'},source:'browser_contract_demo'};
+}
+
+function applyDelta(d){
+  state.lastDelta=d;
+  if(d.op==='CREATE_TASK'){
+    const t=pushTask(d.nodes||[],d.program||{}); updateFocusFromNodes(t.nodes);
+  } else if(d.op==='UPDATE_TASK'){
+    if(d.metadata?.control==='resume'){state.activeTask=d.target_task_id;if(taskById(state.activeTask))taskById(state.activeTask).status='active';}
+    else {const t=taskById(d.target_task_id)||activeTask(); if(t){for(const n of d.nodes||[]){t.nodes.push(n);t.node_ids.push(n.node_id)} updateFocusFromNodes(d.nodes||[])}}
+  } else if(d.op==='REVISE_NODE'){
+    const t=taskById(d.target_task_id)||activeTask(); if(t&&d.replacement_node){const idx=t.node_ids.indexOf(d.target_node_id);const before=clone(t.nodes[idx>=0?idx:t.nodes.length-1]);const at=idx>=0?idx:t.nodes.length-1;t.nodes[at]=d.replacement_node;t.node_ids[at]=d.replacement_node.node_id;state.revisions.push({turn_id:d.turn_id,op:d.op,task_id:t.task_id,before,after:clone(d.replacement_node)});updateFocusFromNodes([d.replacement_node])}
+  } else if(d.op==='CANCEL_TASK'){
+    const t=taskById(d.target_task_id)||activeTask(); if(t){t.status='cancelled';state.revisions.push({turn_id:d.turn_id,op:'CANCEL_TASK',task_id:t.task_id,before:{status:'active'},after:{status:'cancelled'}});state.activeTask=state.tasks.filter(x=>x.status!=='cancelled').slice(-1)[0]?.task_id||null;}
+  }
+}
+
+function routeNode(n){
+  if(!n)return {route:'CLARIFY',action:null};
+  if(n.intent==='Plan')return {route:'LLM_ESCALATE',action:null};
+  if(n.intent==='QueryState')return {route:'THING_MODEL_QUERY',action:null};
+  if(n.semantic_status==='unresolved')return {route:'CLARIFY',action:null};
+  if(n.target.entity==='window'){
+    if(n.slots.property==='open_ratio')return {route:'THING_MODEL_EXECUTE',action:'exterior_window_open_ratio_30'};
+    if(n.intent==='TurnOff')return {route:'THING_MODEL_EXECUTE',action:'exterior_window_close'};
+    if(n.intent==='TurnOn')return {route:'THING_MODEL_EXECUTE',action:'exterior_window_open'};
+  }
+  if(n.target.entity==='light'){
+    if(n.slots.property==='brightness')return {route:'THING_MODEL_EXECUTE',action:'living_color_light_dim_30'};
+    if(n.intent==='TurnOff')return {route:'THING_MODEL_EXECUTE',action:'living_color_light_off'};
+    if(n.intent==='TurnOn')return {route:'THING_MODEL_EXECUTE',action:'living_color_light_on'};
+  }
+  return {route:'LOCAL_SKILL',action:null};
+}
+
+function executeCurrent(){
+  const t=activeTask();const n=t?.nodes.slice(-1)[0];const ra=routeNode(n);state.lastAction=ra.action;
+  let wd='—';
+  if(ra.action==='exterior_window_close'){const b=state.world.window;state.world.window=1;wd='window '+b+' → 1'}
+  else if(ra.action==='exterior_window_open'){const b=state.world.window;state.world.window=0;wd='window '+b+' → 0'}
+  else if(ra.action==='exterior_window_open_ratio_30'){wd='window open_ratio → 30%'}
+  else if(ra.action==='living_color_light_off'){const b=state.world.light;state.world.light=0;wd='light '+b+' → 0'}
+  else if(ra.action==='living_color_light_on'){const b=state.world.light;state.world.light=1;wd='light '+b+' → 1'}
+  else if(ra.action==='living_color_light_dim_30'){const b=state.world.brightness;state.world.brightness=30;wd='brightness '+b+' → 30'}
+  else if(ra.route==='THING_MODEL_QUERY'&&n?.target.entity==='climate'){wd='temperature = '+state.world.temperature+'°C'}
+  return {...ra,worldDelta:wd,node:n};
+}
+
+function submit(text){
+  if(!text.trim())return;
+  addMsg('YOU',text,true);
+  const d=deltaFor(text);applyDelta(d);const exec=executeCurrent();render(d,exec);addMsg('FLYTHINK',exec.route+(exec.action?' · '+exec.action:''),false);
+}
+
+function addMsg(role,text,user){const d=document.createElement('div');d.className='msg'+(user?' user':'');d.innerHTML='<div class="who">'+role+'</div><div class="v">'+escapeHtml(text)+'</div>';$('#chat').appendChild(d);$('#chat').scrollTop=$('#chat').scrollHeight}
+function escapeHtml(s){return String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+
+function render(d,exec){
+  $('#turnPill').textContent='turn '+state.turn;$('#deltaPill').textContent=d.op;$('#delta').textContent=JSON.stringify(d,null,2);
+  $('#tasks').innerHTML=state.tasks.length?state.tasks.map(t=>'<div class="task '+(t.status==='cancelled'?'cancel':'')+'"><div class="k">'+t.task_id+' · '+t.status+' · '+(t.program?.control_type||'single')+'</div>'+t.nodes.map(n=>'<div class="node"><span>'+escapeHtml(n.intent)+' · '+escapeHtml(n.target.entity)+'</span><span>'+escapeHtml(JSON.stringify(n.slots))+'</span></div>').join('')+'</div>').join(''):'No active task.';
+  const n=exec.node||{};const slots=n.slots||{};const ledger={entity:n.target?.entity||state.focus||'—',intent:n.intent||'—',property:slots.property??'—',value:slots.value??'—',reference:/那个|它|再/.test(d.turn_id)?'inherit_previous':'contextual',active_task:state.activeTask||'—',paused_stack:state.paused.join(' → ')||'—'};
+  $('#slots').innerHTML=Object.entries(ledger).map(([k,v])=>'<div class="slot"><div class="k">'+k.toUpperCase()+'</div><div class="v">'+escapeHtml(v)+'</div></div>').join('');
+  const steps=['parse','GraphDelta','validate','reduce','task context','route','Thing Model'];$('#flow').innerHTML=steps.map(x=>'<span class="step on">'+x+'</span>').join('');
+  $('#revisions').textContent=JSON.stringify(state.revisions,null,2);
+  $('#route').textContent=exec.route;$('#action').textContent=exec.action||'—';$('#focus').textContent=state.focus||'—';$('#worldDelta').textContent=exec.worldDelta;
+  drawBrain();
+}
+
+function reset(){
+  Object.assign(state,{turn:0,taskSeq:0,nodeSeq:0,tasks:[],activeTask:null,paused:[],revisions:[],focus:null,lastAction:null,world:{window:0,light:1,brightness:100,temperature:24},lastDelta:null});
+  $('#chat').innerHTML='<div class="msg"><div class="who">SYSTEM</div>Session reset.</div>';$('#turnPill').textContent='turn 0';$('#deltaPill').textContent='IDLE';$('#delta').textContent='{}';$('#tasks').textContent='No active task.';$('#slots').innerHTML='';$('#flow').innerHTML='';$('#revisions').textContent='[]';$('#route').textContent='WAITING';$('#action').textContent='—';$('#focus').textContent='—';$('#worldDelta').textContent='—';drawBrain();
+}
+
+async function loadAnatomy(){
+  const [g,s]=await Promise.all([fetch('./anatomy-sample.json').then(r=>r.json()),fetch('./measured-snapshot.json').then(r=>r.json())]);DATA={g,s};$('#mappedPill').textContent=(s.graph.nodes||[]).length+' measured roots';$('#hud').innerHTML='geometry: '+g.truth+'<br>source: Codex FAFB v783<br>source points: '+Number(g.source_count).toLocaleString()+'<br>display sample: '+Number(g.points.length).toLocaleString()+'<br><br>activity: '+s.truth;drawBrain();
 }
 function fit(){const c=$('#brain'),r=c.getBoundingClientRect(),d=devicePixelRatio||1;c.width=Math.max(1,r.width*d);c.height=Math.max(1,r.height*d);const x=c.getContext('2d');x.setTransform(d,0,0,d,0,0);return[x,r.width,r.height]}
 function R(p){let[x,y,z]=p,cy=Math.cos(rot.y),sy=Math.sin(rot.y),cx=Math.cos(rot.x),sx=Math.sin(rot.x);let x1=x*cy-z*sy,z1=x*sy+z*cy;let y1=y*cx-z1*sx,z2=y*sx+z1*cx;return[x1,y1,z2]}
 function P(p,W,H){const q=R(p),pe=1/(1+q[2]*.65);return{x:W/2+q[0]*W*.76*zoom*pe,y:H/2+q[1]*H*.88*zoom*pe,z:q[2],pe}}
-function draw(){if(!DATA)return;const[x,W,H]=fit();x.clearRect(0,0,W,H);x.fillStyle='#050b11';x.fillRect(0,0,W,H);hits=[];let arr=[];for(const n of DATA.g.points){const q=P([n[1],-n[2],-n[3]],W,H);arr.push([q,n])}arr.sort((a,b)=>a[0].z-b[0].z);for(const[q,n] of arr){x.beginPath();x.arc(q.x,q.y,.75+q.pe*.65,0,Math.PI*2);x.fillStyle='rgba(99,224,170,.16)';x.fill()}
- const nodes=DATA.s.graph.nodes||[];const groups=[nodes.filter((_,i)=>i%3===0),nodes.filter((_,i)=>i%3===1),nodes.filter((_,i)=>i%3===2)];const active=groups[current];const by=DATA.g.by_root||{};for(const n of active){const p=by[String(n.flywire_id)];if(!p)continue;const q=P([p[1],-p[2],-p[3]],W,H),r=4+Math.log1p(Number(n.activity||0));x.beginPath();x.arc(q.x,q.y,r+4,0,Math.PI*2);x.strokeStyle='rgba(241,189,105,.35)';x.lineWidth=2;x.stroke();x.beginPath();x.arc(q.x,q.y,r,0,Math.PI*2);x.fillStyle='#f1bd69';x.fill();hits.push({x:q.x,y:q.y,r:r+6,n,p})}
+function drawBrain(){if(!DATA)return;const[x,W,H]=fit();x.clearRect(0,0,W,H);x.fillStyle='#050b11';x.fillRect(0,0,W,H);hits=[];let arr=[];for(const n of DATA.g.points){const q=P([n[1],-n[2],-n[3]],W,H);arr.push([q,n])}arr.sort((a,b)=>a[0].z-b[0].z);for(const[q,n] of arr){x.beginPath();x.arc(q.x,q.y,.72+q.pe*.65,0,Math.PI*2);x.fillStyle='rgba(99,224,170,.14)';x.fill()}
+ const nodes=DATA.s.graph.nodes||[];const phase=Math.max(0,state.turn-1)%3;const active=nodes.filter((_,i)=>i%3===phase);const by=DATA.g.by_root||{};for(const n of active){const p=by[String(n.flywire_id)];if(!p)continue;const q=P([p[1],-p[2],-p[3]],W,H),r=4+Math.log1p(Number(n.activity||0));x.beginPath();x.arc(q.x,q.y,r+4,0,Math.PI*2);x.strokeStyle='rgba(241,189,105,.35)';x.lineWidth=2;x.stroke();x.beginPath();x.arc(q.x,q.y,r,0,Math.PI*2);x.fillStyle='#f1bd69';x.fill();hits.push({x:q.x,y:q.y,r:r+6,n,p})}
  if(selected){const q=P([selected.p[1],-selected.p[2],-selected.p[3]],W,H);x.beginPath();x.arc(q.x,q.y,7,0,Math.PI*2);x.strokeStyle='white';x.lineWidth=2;x.stroke()}}
-function render(){const t=turns[current];document.querySelectorAll('[data-turn]').forEach((b,i)=>b.classList.toggle('active',i===current));$('#turnPill').textContent='turn '+(current+1);$('#chat').innerHTML=turns.slice(0,current+1).map((x,i)=>'<div class="msg"><div class="k">TURN '+(i+1)+'</div><div class="v">'+x.text+'</div></div>').join('');$('#entity').textContent=t.entity;$('#operation').textContent=t.operation;$('#reference').textContent=t.reference;$('#route').textContent=t.route;$('#action').textContent=t.action;$('#delta').textContent=t.before+' → '+t.after;selected=null;$('#detail').textContent='点击右边金色 neuron 查看 root ID / Brian index / activity / spikes。';draw()}
-document.querySelectorAll('[data-turn]').forEach((b,i)=>b.addEventListener('click',()=>{current=i;render()}));
-const c=$('#brain');c.addEventListener('pointerdown',e=>{drag={x:e.clientX,y:e.clientY,rx:rot.x,ry:rot.y};c.setPointerCapture(e.pointerId)});c.addEventListener('pointermove',e=>{if(!drag)return;rot.y=drag.ry+(e.clientX-drag.x)*.006;rot.x=drag.rx+(e.clientY-drag.y)*.006;draw()});c.addEventListener('pointerup',e=>{if(!drag)return;const m=Math.hypot(e.clientX-drag.x,e.clientY-drag.y);drag=null;if(m<5){const r=c.getBoundingClientRect(),px=e.clientX-r.left,py=e.clientY-r.top;let best=null,bd=1e9;for(const h of hits){const d=Math.hypot(h.x-px,h.y-py);if(d<h.r&&d<bd){best=h;bd=d}}if(best){selected=best;$('#detail').textContent=JSON.stringify({root_id:best.n.flywire_id,brian_index:best.n.brian_index,activity:best.n.activity,spike_count:best.n.spike_count,normalized_xyz:best.p.slice(1)},null,2);draw()}}});c.addEventListener('wheel',e=>{e.preventDefault();zoom=Math.max(.45,Math.min(4.5,zoom*(e.deltaY<0?1.1:.91)));draw()},{passive:false});window.addEventListener('resize',draw);load().catch(e=>{$('#hud').textContent='Failed to load anatomy: '+e.message;$('#mappedPill').textContent='load failed'});
+document.querySelectorAll('[data-p]').forEach(b=>b.addEventListener('click',()=>submit(b.dataset.p)));$('#reset').addEventListener('click',reset);$('#composer').addEventListener('submit',e=>{e.preventDefault();const t=$('#input').value;$('#input').value='';submit(t)});
+const c=$('#brain');c.addEventListener('pointerdown',e=>{drag={x:e.clientX,y:e.clientY,rx:rot.x,ry:rot.y};c.setPointerCapture(e.pointerId)});c.addEventListener('pointermove',e=>{if(!drag)return;rot.y=drag.ry+(e.clientX-drag.x)*.006;rot.x=drag.rx+(e.clientY-drag.y)*.006;drawBrain()});c.addEventListener('pointerup',e=>{if(!drag)return;const m=Math.hypot(e.clientX-drag.x,e.clientY-drag.y);drag=null;if(m<5){const r=c.getBoundingClientRect(),px=e.clientX-r.left,py=e.clientY-r.top;let best=null,bd=1e9;for(const h of hits){const d=Math.hypot(h.x-px,h.y-py);if(d<h.r&&d<bd){best=h;bd=d}}if(best){selected=best;$('#neuronDetail').textContent=JSON.stringify({root_id:best.n.flywire_id,brian_index:best.n.brian_index,activity:best.n.activity,spike_count:best.n.spike_count,normalized_xyz:best.p.slice(1)},null,2);drawBrain()}}});c.addEventListener('wheel',e=>{e.preventDefault();zoom=Math.max(.45,Math.min(4.5,zoom*(e.deltaY<0?1.1:.91)));drawBrain()},{passive:false});window.addEventListener('resize',drawBrain);
+loadAnatomy().catch(e=>{$('#hud').textContent='Failed to load anatomy: '+e.message;$('#mappedPill').textContent='load failed'});
 </script></body></html>
