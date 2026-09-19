@@ -1,0 +1,109 @@
+name: Publish Static Demo Branch
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: static-demo-publish
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Build real anatomy static site
+        run: |
+          set -euo pipefail
+          mkdir -p _site
+          cp index.html _site/index.html
+
+          curl -L --fail --retry 4 --retry-all-errors \
+            'https://storage.googleapis.com/flywire-data/codex/data/fafb/783/coordinates.csv.gz' \
+            -o /tmp/coordinates.csv.gz
+
+          python - <<'PY'
+          import base64, csv, gzip, json, math
+          from pathlib import Path
+
+          raw=base64.b64decode(Path('data/measured-snapshot.json.gz.b64').read_text().strip())
+          snap=json.loads(gzip.decompress(raw).decode('utf-8'))
+          Path('_site/measured-snapshot.json').write_text(
+              json.dumps(snap,separators=(',',':')),encoding='utf-8')
+
+          measured_roots={str(n['flywire_id']) for n in snap['graph']['nodes']}
+          rows=[]
+          measured={}
+          with gzip.open('/tmp/coordinates.csv.gz','rt',newline='') as f:
+              r=csv.DictReader(f)
+              for row in r:
+                  rid=str(row['root_id'])
+                  vals=[float(v) for v in row['position'].strip().strip('[]').replace(',',' ').split()[:3]]
+                  rows.append((rid,*vals))
+                  if rid in measured_roots:
+                      measured[rid]=vals
+
+          cols=[[r[i] for r in rows] for i in (1,2,3)]
+          def pct(a,p):
+              a=sorted(a)
+              x=(len(a)-1)*p
+              lo=int(math.floor(x)); hi=int(math.ceil(x))
+              if lo==hi:return a[lo]
+              return a[lo]*(hi-x)+a[hi]*(x-lo)
+
+          lo=[pct(c,.005) for c in cols]
+          hi=[pct(c,.995) for c in cols]
+          center=[(a+b)/2 for a,b in zip(lo,hi)]
+          scale=max(b-a for a,b in zip(lo,hi))
+
+          step=max(1,len(rows)//36000)
+          sample=[[rid,(x-center[0])/scale,(y-center[1])/scale,(z-center[2])/scale]
+                  for rid,x,y,z in rows[::step]]
+          by_root={rid:[rid,(xyz[0]-center[0])/scale,(xyz[1]-center[1])/scale,(xyz[2]-center[2])/scale]
+                   for rid,xyz in measured.items()}
+
+          out={
+              'truth':'measured_flywire_coordinate_derivative',
+              'dataset':'FlyWire FAFB v783',
+              'source':'https://storage.googleapis.com/flywire-data/codex/data/fafb/783/coordinates.csv.gz',
+              'source_count':len(rows),
+              'display_sampling_step':step,
+              'normalization':{'center':center,'scale':scale,'percentile_bounds':'0.5-99.5'},
+              'points':sample,
+              'by_root':by_root,
+          }
+          Path('_site/anatomy-sample.json').write_text(
+              json.dumps(out,separators=(',',':')),encoding='utf-8')
+
+          assert len(rows)>100000
+          assert len(by_root)>=90
+          print('source points',len(rows))
+          print('display sample',len(sample))
+          print('measured roots mapped',len(by_root))
+          PY
+
+          touch _site/.nojekyll
+
+      - name: Publish gh-pages branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          cd _site
+          git init -b gh-pages
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add .
+          git commit -m "Publish FlyThink anatomy demo"
+          git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git push --force origin gh-pages
