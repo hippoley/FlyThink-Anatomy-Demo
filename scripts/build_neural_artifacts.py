@@ -42,9 +42,15 @@ authority=[[int(i),float(v[i])] for i in idx]
 
 training=json.loads(Path('data/semantic-training.json').read_text(encoding='utf-8'))
 examples=[]
+semantic_templates={}
 for label,texts in training.get('paraphrases',{}).items():
     for text in texts:
         examples.append({'label':label,'text':text})
+    rr=np.random.default_rng(seed_for('semantic:'+label))
+    sv=np.zeros(DIM,np.float32)
+    sidx=rr.choice(DIM,size=24,replace=False)
+    sv[sidx]=rr.uniform(.55,1.0,len(sidx)).astype(np.float32)
+    semantic_templates[label]=[[int(i),float(sv[i])] for i in sidx]
 
 out={
  'truth':'developmental_fly_inspired_product_runtime_not_measured_flywire',
@@ -54,6 +60,7 @@ out={
  'recurrent_edges':edges,
  'templates':templates,
  'authority_delta':authority,
+ 'semantic_templates':semantic_templates,
  'training':{
    'source':training.get('source'),
    'split':training.get('split'),
