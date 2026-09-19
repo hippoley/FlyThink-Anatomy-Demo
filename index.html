@@ -3,9 +3,9 @@
 <title>FlyThink Playground · Multi-Intent Multi-Slot Multi-Turn</title>
 <style>
 :root{--bg:#050b11;--panel:#0b1621;--card:#09131d;--line:#26394d;--text:#eef6ff;--muted:#8fa6bd;--green:#63e0aa;--amber:#f1bd69;--blue:#6ea9ff;--red:#ff8f9b}
-*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 50% -10%,#17314a,#071019 48%,#050b11);color:var(--text);font:13px/1.45 Inter,system-ui,sans-serif}.app{max-width:1900px;margin:auto;padding:14px}.top{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}.top h1{margin:0;font-size:24px}.sub{margin-top:5px;color:var(--muted);max-width:1180px}.pill{border:1px solid #30465f;border-radius:999px;padding:5px 8px;font-size:9px;color:#d7e8f8}.ok{color:#9cf0ca;border-color:#376b58}.warn{color:#ffd69b;border-color:#6e5832}.grid{display:grid;grid-template-columns:.8fr 1.05fr 1.15fr;gap:12px;margin-top:12px}.panel{background:linear-gradient(180deg,rgba(14,24,37,.98),rgba(8,15,24,.97));border:1px solid var(--line);border-radius:14px;overflow:hidden}.ph{min-height:46px;padding:8px 12px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:8px}.pb{padding:12px}.presets{display:flex;gap:6px;flex-wrap:wrap}.btn{border:1px solid #31465e;background:#0d1925;color:#d8e9fa;border-radius:8px;padding:8px 10px;cursor:pointer}.btn:hover{border-color:#55779e}.btn.primary{background:#17304b;border-color:#5e87b2}.btn.danger{color:#ffc5cb;border-color:#71434b}.composer{display:grid;grid-template-columns:1fr auto;gap:7px;margin-top:10px}.composer input{min-width:0;background:#071019;border:1px solid #2b3e53;border-radius:9px;padding:11px;color:white}.chat{margin-top:10px;display:flex;flex-direction:column;gap:7px;max-height:570px;overflow:auto}.msg{border:1px solid #26394d;border-radius:10px;background:#09131d;padding:9px}.msg.user{background:#132238}.who,.k{font-size:9px;color:var(--muted)}.v{font-size:13px;font-weight:700;margin-top:3px}.section{border:1px solid #26394d;border-radius:10px;background:#09131d;padding:9px;margin-bottom:8px}.section h3{font-size:11px;margin:0 0 7px}.cards{display:grid;grid-template-columns:repeat(2,1fr);gap:6px}.card{border:1px solid #273a4e;border-radius:8px;background:#08121b;padding:7px}.mono{font:10px/1.45 ui-monospace,Consolas,monospace;white-space:pre-wrap;overflow:auto;max-height:220px}.task{border-left:3px solid #5e87b2;padding-left:8px;margin:7px 0}.task.cancel{border-left-color:#85505a;opacity:.75}.node{display:flex;justify-content:space-between;gap:6px;border-top:1px solid #1d2e40;padding:5px 0;font-size:10px}.slotgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:5px}.slot{background:#071019;border:1px solid #25384c;border-radius:7px;padding:6px}.flow{display:flex;gap:5px;flex-wrap:wrap}.step{border:1px solid #30445b;border-radius:999px;padding:5px 8px;font-size:9px;color:#b6c9dc}.step.on{border-color:#5a846f;color:#bdf3d9}.viewer{height:720px;position:relative;background:#050b11}canvas{display:block;width:100%;height:100%;touch-action:none}.legend,.hud{position:absolute;top:9px;background:rgba(5,10,16,.84);border:1px solid #2c4057;border-radius:8px;padding:8px;color:var(--muted);font-size:10px;pointer-events:none}.legend{left:9px}.hud{right:9px;max-width:275px}.detail{margin-top:9px;white-space:pre-wrap;font:10px/1.45 ui-monospace,Consolas,monospace;background:#071019;border:1px solid #23364a;border-radius:8px;padding:8px;max-height:180px;overflow:auto}.truth{color:#ffd69b;border:1px solid #6e5832;background:#241c11;border-radius:8px;padding:8px;font-size:10px;margin-top:8px}@media(max-width:1400px){.grid{grid-template-columns:1fr 1fr}.grid .panel:last-child{grid-column:1/-1}.viewer{height:600px}}@media(max-width:850px){.grid{grid-template-columns:1fr}.grid .panel:last-child{grid-column:auto}.viewer{height:520px}.cards,.slotgrid{grid-template-columns:1fr}}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 50% -10%,#17314a,#071019 48%,#050b11);color:var(--text);font:13px/1.45 Inter,system-ui,sans-serif}.app{max-width:1900px;margin:auto;padding:14px}.top{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}.top h1{margin:0;font-size:24px}.sub{margin-top:5px;color:var(--muted);max-width:1180px}.pill{border:1px solid #30465f;border-radius:999px;padding:5px 8px;font-size:9px;color:#d7e8f8}.ok{color:#9cf0ca;border-color:#376b58}.warn{color:#ffd69b;border-color:#6e5832}.grid{display:grid;grid-template-columns:.8fr 1.05fr 1.15fr;gap:12px;margin-top:12px}.panel{background:linear-gradient(180deg,rgba(14,24,37,.98),rgba(8,15,24,.97));border:1px solid var(--line);border-radius:14px;overflow:hidden}.ph{min-height:46px;padding:8px 12px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:8px}.pb{padding:12px}.presets{display:flex;gap:6px;flex-wrap:wrap}.btn{border:1px solid #31465e;background:#0d1925;color:#d8e9fa;border-radius:8px;padding:8px 10px;cursor:pointer}.btn:hover{border-color:#55779e}.btn.primary{background:#17304b;border-color:#5e87b2}.btn.danger{color:#ffc5cb;border-color:#71434b}.composer{display:grid;grid-template-columns:1fr auto;gap:7px;margin-top:10px}.composer input{min-width:0;background:#071019;border:1px solid #2b3e53;border-radius:9px;padding:11px;color:white}.chat{margin-top:10px;display:flex;flex-direction:column;gap:7px;max-height:570px;overflow:auto}.msg{border:1px solid #26394d;border-radius:10px;background:#09131d;padding:9px}.msg.user{background:#132238}.who,.k{font-size:9px;color:var(--muted)}.v{font-size:13px;font-weight:700;margin-top:3px}.section{border:1px solid #26394d;border-radius:10px;background:#09131d;padding:9px;margin-bottom:8px}.section h3{font-size:11px;margin:0 0 7px}.cards{display:grid;grid-template-columns:repeat(2,1fr);gap:6px}.card{border:1px solid #273a4e;border-radius:8px;background:#08121b;padding:7px}.mono{font:10px/1.45 ui-monospace,Consolas,monospace;white-space:pre-wrap;overflow:auto;max-height:220px}.task{border-left:3px solid #5e87b2;padding-left:8px;margin:7px 0}.task.cancel{border-left-color:#85505a;opacity:.75}.node{display:flex;justify-content:space-between;gap:6px;border-top:1px solid #1d2e40;padding:5px 0;font-size:10px}.slotgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:5px}.slot{background:#071019;border:1px solid #25384c;border-radius:7px;padding:6px}.flow{display:flex;gap:5px;flex-wrap:wrap}.step{border:1px solid #30445b;border-radius:999px;padding:5px 8px;font-size:9px;color:#b6c9dc}.step.on{border-color:#5a846f;color:#bdf3d9}.viewer{height:720px;position:relative;background:#050b11}canvas{display:block;width:100%;height:100%;touch-action:none}.legend,.hud{position:absolute;top:9px;background:rgba(5,10,16,.84);border:1px solid #2c4057;border-radius:8px;padding:8px;color:var(--muted);font-size:10px;pointer-events:none}.legend{left:9px}.hud{right:9px;max-width:275px}.detail{margin-top:9px;white-space:pre-wrap;font:10px/1.45 ui-monospace,Consolas,monospace;background:#071019;border:1px solid #23364a;border-radius:8px;padding:8px;max-height:180px;overflow:auto}.truth{color:#ffd69b;border:1px solid #6e5832;background:#241c11;border-radius:8px;padding:8px;font-size:10px;margin-top:8px}.neuralbox{position:relative;height:260px;background:#050b11;border:1px solid #24384c;border-radius:9px;overflow:hidden}.neuralbox canvas{width:100%;height:100%}.neuralhud{position:absolute;left:8px;top:8px;pointer-events:none;font:9px/1.45 ui-monospace,Consolas,monospace;color:#9fb5c9;background:rgba(5,11,17,.82);border:1px solid #273b50;border-radius:7px;padding:6px;max-width:58%}.matches{display:flex;gap:5px;flex-wrap:wrap;margin-top:7px}.match{font-size:9px;border:1px solid #31475e;border-radius:999px;padding:4px 6px;color:#c4d8ea}.match.hot{border-color:#8b6a36;color:#ffd69b}@media(max-width:1400px){.grid{grid-template-columns:1fr 1fr}.grid .panel:last-child{grid-column:1/-1}.viewer{height:600px}}@media(max-width:850px){.grid{grid-template-columns:1fr}.grid .panel:last-child{grid-column:auto}.viewer{height:520px}.cards,.slotgrid{grid-template-columns:1fr}}
 </style></head><body><div class="app">
-<div class="top"><div><h1>FlyThink Playground</h1><div class="sub">多意图 · 多槽位 · 多轮对话 → GraphDelta → Dialogue Graph / Task Stack → Route / Thing Model → Real FlyWire anatomy。Public demo 使用浏览器内 contract-compatible reducer 展示我们 runtime 的语义结构；不是把静态规则冒充训练后端。</div></div><div style="display:flex;gap:6px;flex-wrap:wrap"><span class="pill ok">MULTI-INTENT</span><span class="pill ok">MULTI-SLOT</span><span class="pill ok">MULTI-TURN</span><span class="pill ok">GRAPHDELTA</span><span class="pill ok">REAL CODEX XYZ</span><span class="pill warn">BROWSER DEMO · NOT TRAINED BACKEND LIVE</span></div></div>
+<div class="top"><div><h1>FlyThink Playground</h1><div class="sub">多意图 · 多槽位 · 多轮对话 → GraphDelta → Dialogue Graph / Task Stack → Route / Thing Model → Real FlyWire anatomy。训练语料 semantic drive → 216-unit recurrent neural substrate → GraphDelta / task context → route / Thing Model → Real FlyWire anatomy evidence。</div></div><div style="display:flex;gap:6px;flex-wrap:wrap"><span class="pill ok">MULTI-INTENT</span><span class="pill ok">MULTI-SLOT</span><span class="pill ok">MULTI-TURN</span><span class="pill ok">TRAIN-ONLY SEMANTIC DRIVE</span><span class="pill ok">216 RECURRENT UNITS</span><span class="pill ok">GRAPHDELTA</span><span class="pill ok">REAL CODEX XYZ</span><span class="pill warn">DEVELOPMENTAL ≠ MEASURED FLYWIRE</span></div></div>
 
 <div class="grid">
 <section class="panel"><div class="ph"><b>01 · CONVERSATION PLAYGROUND</b><span id="turnPill" class="pill">turn 0</span></div><div class="pb">
@@ -27,11 +27,12 @@
 <div class="section"><h3>GraphDelta</h3><div id="delta" class="mono">{}</div></div>
 <div class="section"><h3>Task Stack</h3><div id="tasks">No active task.</div></div>
 <div class="section"><h3>Slot Ledger</h3><div id="slots" class="slotgrid"></div></div>
+<div class="section"><h3>Developmental Neural Substrate · 18 × 12</h3><div class="neuralbox"><canvas id="neural"></canvas><div id="neuralHud" class="neuralhud">loading recurrent substrate…</div></div><div id="semanticMatches" class="matches"></div><div class="k" style="margin-top:6px">TRAINING → semantic drive → recurrent settling. These 216 units are developmental product units, not measured FlyWire neuron IDs.</div></div>
 <div class="section"><h3>Runtime Flow</h3><div id="flow" class="flow"></div></div>
 <div class="section"><h3>Revisions / Context</h3><div id="revisions" class="mono">[]</div></div>
 </div></section>
 
-<section class="panel"><div class="ph"><b>03 · ROUTE / THING MODEL / REAL ANATOMY</b><span id="mappedPill" class="pill ok">loading anatomy…</span></div><div class="pb">
+<section class="panel"><div class="ph"><b>03 · ROUTE / THING MODEL / REAL FLYWIRE EVIDENCE</b><span id="mappedPill" class="pill ok">loading anatomy…</span></div><div class="pb">
 <div class="cards">
 <div class="card"><div class="k">ROUTE</div><div id="route" class="v">WAITING</div></div>
 <div class="card"><div class="k">ACTION</div><div id="action" class="v">—</div></div>
@@ -46,7 +47,7 @@
 <script>
 const $=s=>document.querySelector(s);
 const state={turn:0,taskSeq:0,nodeSeq:0,tasks:[],activeTask:null,paused:[],revisions:[],focus:null,lastAction:null,world:{window:0,light:1,brightness:100,temperature:24},lastDelta:null};
-let DATA=null,rot={x:-.18,y:.31},zoom=1.55,drag=null,hits=[],selected=null;
+let DATA=null,NEURAL=null,neuralState=[],semanticScores=[],rot={x:-.18,y:.31},zoom=1.55,drag=null,hits=[],selected=null;
 
 function clone(x){return JSON.parse(JSON.stringify(x))}
 function newNode(intent,target,slots={},status='resolved'){
@@ -60,6 +61,107 @@ function pushTask(nodes,program={control_type:'single'}){
   state.tasks.push(t); state.activeTask=t.task_id; return t;
 }
 function updateFocusFromNodes(nodes){const n=[...nodes].reverse().find(x=>x.target?.entity); if(n)state.focus=n.target.entity}
+
+
+function ngramSet(text){
+  const chars=[...String(text||'').replace(/\s+/g,'')], out=new Set();
+  for(let n=1;n<=3;n++) for(let i=0;i+n<=chars.length;i++) out.add(chars.slice(i,i+n).join(''));
+  return out;
+}
+function gramSimilarity(a,b){
+  const A=ngramSet(a),B=ngramSet(b); if(!A.size||!B.size)return 0;
+  let hit=0; for(const x of A)if(B.has(x))hit++;
+  return hit/Math.sqrt(A.size*B.size);
+}
+function semanticReadout(text){
+  if(!NEURAL)return [];
+  const scores={};
+  for(const ex of NEURAL.training.examples||[]){
+    const s=gramSimilarity(text,ex.text);
+    if(s>(scores[ex.label]||0))scores[ex.label]=s;
+  }
+  return Object.entries(scores).sort((a,b)=>b[1]-a[1]).map(([label,score])=>({label,score}));
+}
+function neuralSnapshot(delta){
+  const pending=activeTask()?.nodes.some(n=>n.semantic_status==='unresolved');
+  return {
+    stack_depth:Math.min(8,state.tasks.filter(t=>t.status!=='cancelled').length),
+    active_task:state.activeTask?1:0,
+    paused_task:state.paused.length?1:0,
+    pending_condition:0,
+    clarification_pending:pending?1:0,
+    tool_failed:0,
+    tool_value_available:0,
+    world_triggered:0,
+    speaker_authority:3,
+    focus_owner_authority:3,
+    authority_conflict:0,
+    concept_known:1,
+    episodic_available:state.focus?1:0,
+    accumulation_mode:(activeTask()?.nodes.length||0)>1?1:0,
+    entity_ambiguous:pending?1:0
+  };
+}
+function neuralNorm(k,v){
+  const x=Number(v||0);
+  if(k==='stack_depth')return Math.max(0,Math.min(8,x))/8;
+  if(k==='speaker_authority'||k==='focus_owner_authority')return Math.max(0,Math.min(3,x))/3;
+  return x>0?1:0;
+}
+function addSparse(vec,pairs,scale=1){for(const [i,v] of pairs||[])vec[i]+=v*scale}
+function settleNeural(text,delta){
+  if(!NEURAL)return {bestLabel:null,scores:[]};
+  if(!neuralState.length)neuralState=Array(NEURAL.config.dim).fill(0);
+  semanticScores=semanticReadout(text);
+  const snap=neuralSnapshot(delta);
+  const drive=Array(NEURAL.config.dim).fill(0);
+  for(const k of NEURAL.keys||[])addSparse(drive,NEURAL.templates[k],neuralNorm(k,snap[k]));
+  const top=semanticScores.slice(0,4);
+  for(const item of top){
+    const gain=Math.max(0,(item.score-.05))*1.35;
+    addSparse(drive,NEURAL.semantic_templates?.[item.label],gain);
+  }
+  for(let i=0;i<drive.length;i++)drive[i]=Math.tanh(drive[i]);
+  for(let repeat=0;repeat<3;repeat++){
+    const rec=Array(NEURAL.config.dim).fill(0);
+    for(const [pre,post,w] of NEURAL.recurrent_edges||[])rec[post]+=w*neuralState[pre];
+    let mx=0;
+    for(let i=0;i<neuralState.length;i++){
+      neuralState[i]=NEURAL.config.decay*neuralState[i]+NEURAL.config.input_gain*drive[i]+NEURAL.config.recurrent_gain*Math.tanh(rec[i]);
+      mx=Math.max(mx,Math.abs(neuralState[i]));
+    }
+    if(mx>3)for(let i=0;i<neuralState.length;i++)neuralState[i]/=(mx/3);
+  }
+  drawNeural();
+  return {bestLabel:top[0]?.label||null,scores:semanticScores,snapshot:snap};
+}
+function drawNeural(){
+  if(!NEURAL||!neuralState.length)return;
+  const c=$('#neural'),r=c.getBoundingClientRect(),d=devicePixelRatio||1;c.width=Math.max(1,r.width*d);c.height=Math.max(1,r.height*d);
+  const x=c.getContext('2d');x.setTransform(d,0,0,d,0,0);const W=r.width,H=r.height;x.clearRect(0,0,W,H);x.fillStyle='#050b11';x.fillRect(0,0,W,H);
+  const pos=[];
+  for(let i=0;i<216;i++){
+    const pop=Math.floor(i/12),u=i%12;
+    const a=(pop/18)*Math.PI*2, ring=0.28+0.12*((u%4)/3), lane=Math.floor(u/4);
+    const px=W*.5+Math.cos(a)*(W*(ring+lane*.035));
+    const py=H*.52+Math.sin(a)*(H*(ring*.72+lane*.02));
+    pos.push([px,py]);
+  }
+  const strongest=(NEURAL.recurrent_edges||[]).slice().sort((a,b)=>Math.abs(b[2])-Math.abs(a[2])).slice(0,180);
+  x.lineWidth=.45;
+  for(const [pre,post,w] of strongest){const a=pos[pre],b=pos[post];x.strokeStyle=w>=0?'rgba(99,224,170,.10)':'rgba(255,143,155,.08)';x.beginPath();x.moveTo(a[0],a[1]);x.lineTo(b[0],b[1]);x.stroke();}
+  let max=0;for(const v of neuralState)max=Math.max(max,Math.abs(v));max=max||1;
+  for(let i=0;i<216;i++){
+    const [px,py]=pos[i],v=neuralState[i],q=Math.min(1,Math.abs(v)/max);
+    x.beginPath();x.arc(px,py,1.6+q*4.2,0,Math.PI*2);
+    x.fillStyle=v>=0?('rgba(241,189,105,'+(0.16+q*.84)+')'):('rgba(110,169,255,'+(0.12+q*.78)+')');x.fill();
+  }
+  const popEnergy=[];
+  for(let p=0;p<18;p++){let e=0;for(let u=0;u<12;u++)e+=Math.abs(neuralState[p*12+u]);popEnergy.push([p,e/12]);}
+  popEnergy.sort((a,b)=>b[1]-a[1]);
+  $('#neuralHud').innerHTML='truth: developmental<br>state norm: '+Math.sqrt(neuralState.reduce((s,v)=>s+v*v,0)).toFixed(3)+'<br>top populations: '+popEnergy.slice(0,4).map(x=>'P'+x[0]+' '+x[1].toFixed(2)).join(' · ');
+  $('#semanticMatches').innerHTML=semanticScores.slice(0,5).map((s,i)=>'<span class="match '+(i===0?'hot':'')+'">'+escapeHtml(s.label)+' '+s.score.toFixed(3)+'</span>').join('');
+}
 
 function parseUtterance(text){
   const raw=text.trim(), parts=raw.split(/[，,；;]/).map(x=>x.trim()).filter(Boolean);
@@ -147,8 +249,12 @@ function routeNode(n){
   return {route:'LOCAL_SKILL',action:null};
 }
 
-function executeCurrent(){
-  const t=activeTask();const n=t?.nodes.slice(-1)[0];const ra=routeNode(n);state.lastAction=ra.action;
+function executeCurrent(neural){
+  const t=activeTask();const n=t?.nodes.slice(-1)[0];const ra=routeNode(n);
+  const learned=neural?.bestLabel||null;
+  const allowed=(n?.target?.entity==='window'&&/^exterior_window_/.test(learned||''))||(n?.target?.entity==='light'&&/^living_color_light_/.test(learned||''));
+  if(allowed&&neural.scores?.[0]?.score>=0.16&&n?.intent!=='QueryState')ra.action=learned;
+  state.lastAction=ra.action;
   let wd='—';
   if(ra.action==='exterior_window_close'){const b=state.world.window;state.world.window=1;wd='window '+b+' → 1'}
   else if(ra.action==='exterior_window_open'){const b=state.world.window;state.world.window=0;wd='window '+b+' → 0'}
@@ -163,30 +269,30 @@ function executeCurrent(){
 function submit(text){
   if(!text.trim())return;
   addMsg('YOU',text,true);
-  const d=deltaFor(text);applyDelta(d);const exec=executeCurrent();render(d,exec);addMsg('FLYTHINK',exec.route+(exec.action?' · '+exec.action:''),false);
+  const d=deltaFor(text);applyDelta(d);const neural=settleNeural(text,d);const exec=executeCurrent(neural);render(d,exec,neural);addMsg('FLYTHINK',exec.route+(exec.action?' · '+exec.action:'')+(neural.bestLabel?' · neural:'+neural.bestLabel:''),false);
 }
 
 function addMsg(role,text,user){const d=document.createElement('div');d.className='msg'+(user?' user':'');d.innerHTML='<div class="who">'+role+'</div><div class="v">'+escapeHtml(text)+'</div>';$('#chat').appendChild(d);$('#chat').scrollTop=$('#chat').scrollHeight}
 function escapeHtml(s){return String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
 
-function render(d,exec){
+function render(d,exec,neural){
   $('#turnPill').textContent='turn '+state.turn;$('#deltaPill').textContent=d.op;$('#delta').textContent=JSON.stringify(d,null,2);
   $('#tasks').innerHTML=state.tasks.length?state.tasks.map(t=>'<div class="task '+(t.status==='cancelled'?'cancel':'')+'"><div class="k">'+t.task_id+' · '+t.status+' · '+(t.program?.control_type||'single')+'</div>'+t.nodes.map(n=>'<div class="node"><span>'+escapeHtml(n.intent)+' · '+escapeHtml(n.target.entity)+'</span><span>'+escapeHtml(JSON.stringify(n.slots))+'</span></div>').join('')+'</div>').join(''):'No active task.';
   const n=exec.node||{};const slots=n.slots||{};const ledger={entity:n.target?.entity||state.focus||'—',intent:n.intent||'—',property:slots.property??'—',value:slots.value??'—',reference:/那个|它|再/.test(d.turn_id)?'inherit_previous':'contextual',active_task:state.activeTask||'—',paused_stack:state.paused.join(' → ')||'—'};
   $('#slots').innerHTML=Object.entries(ledger).map(([k,v])=>'<div class="slot"><div class="k">'+k.toUpperCase()+'</div><div class="v">'+escapeHtml(v)+'</div></div>').join('');
-  const steps=['parse','GraphDelta','validate','reduce','task context','route','Thing Model'];$('#flow').innerHTML=steps.map(x=>'<span class="step on">'+x+'</span>').join('');
+  const steps=['train exemplars','semantic drive','216 recurrent units','3× settle','GraphDelta','task context','route','Thing Model'];$('#flow').innerHTML=steps.map(x=>'<span class="step on">'+x+'</span>').join('');
   $('#revisions').textContent=JSON.stringify(state.revisions,null,2);
   $('#route').textContent=exec.route;$('#action').textContent=exec.action||'—';$('#focus').textContent=state.focus||'—';$('#worldDelta').textContent=exec.worldDelta;
   drawBrain();
 }
 
 function reset(){
-  Object.assign(state,{turn:0,taskSeq:0,nodeSeq:0,tasks:[],activeTask:null,paused:[],revisions:[],focus:null,lastAction:null,world:{window:0,light:1,brightness:100,temperature:24},lastDelta:null});
-  $('#chat').innerHTML='<div class="msg"><div class="who">SYSTEM</div>Session reset.</div>';$('#turnPill').textContent='turn 0';$('#deltaPill').textContent='IDLE';$('#delta').textContent='{}';$('#tasks').textContent='No active task.';$('#slots').innerHTML='';$('#flow').innerHTML='';$('#revisions').textContent='[]';$('#route').textContent='WAITING';$('#action').textContent='—';$('#focus').textContent='—';$('#worldDelta').textContent='—';drawBrain();
+  Object.assign(state,{turn:0,taskSeq:0,nodeSeq:0,tasks:[],activeTask:null,paused:[],revisions:[],focus:null,lastAction:null,world:{window:0,light:1,brightness:100,temperature:24},lastDelta:null}); neuralState=NEURAL?Array(NEURAL.config.dim).fill(0):[]; semanticScores=[];
+  $('#chat').innerHTML='<div class="msg"><div class="who">SYSTEM</div>Session reset.</div>';$('#turnPill').textContent='turn 0';$('#deltaPill').textContent='IDLE';$('#delta').textContent='{}';$('#tasks').textContent='No active task.';$('#slots').innerHTML='';$('#flow').innerHTML='';$('#revisions').textContent='[]';$('#route').textContent='WAITING';$('#action').textContent='—';$('#focus').textContent='—';$('#worldDelta').textContent='—';$('#semanticMatches').innerHTML='';if(NEURAL){drawNeural();$('#neuralHud').innerHTML='state reset · 216 developmental units';}drawBrain();
 }
 
 async function loadAnatomy(){
-  const [g,s]=await Promise.all([fetch('./anatomy-sample.json').then(r=>r.json()),fetch('./measured-snapshot.json').then(r=>r.json())]);DATA={g,s};$('#mappedPill').textContent=(s.graph.nodes||[]).length+' measured roots';$('#hud').innerHTML='geometry: '+g.truth+'<br>source: Codex FAFB v783<br>source points: '+Number(g.source_count).toLocaleString()+'<br>display sample: '+Number(g.points.length).toLocaleString()+'<br><br>activity: '+s.truth;drawBrain();
+  const [g,s,n]=await Promise.all([fetch('./anatomy-sample.json').then(r=>r.json()),fetch('./measured-snapshot.json').then(r=>r.json()),fetch('./neural-substrate.json').then(r=>r.json())]);DATA={g,s};NEURAL=n;neuralState=Array(n.config.dim).fill(0);drawNeural();$('#mappedPill').textContent=(s.graph.nodes||[]).length+' measured roots';$('#neuralHud').innerHTML='216 units · '+(n.recurrent_edges||[]).length+' recurrent edges · '+n.training.example_count+' train exemplars';$('#hud').innerHTML='geometry: '+g.truth+'<br>source: Codex FAFB v783<br>source points: '+Number(g.source_count).toLocaleString()+'<br>display sample: '+Number(g.points.length).toLocaleString()+'<br><br>activity: '+s.truth;drawBrain();
 }
 function fit(){const c=$('#brain'),r=c.getBoundingClientRect(),d=devicePixelRatio||1;c.width=Math.max(1,r.width*d);c.height=Math.max(1,r.height*d);const x=c.getContext('2d');x.setTransform(d,0,0,d,0,0);return[x,r.width,r.height]}
 function R(p){let[x,y,z]=p,cy=Math.cos(rot.y),sy=Math.sin(rot.y),cx=Math.cos(rot.x),sx=Math.sin(rot.x);let x1=x*cy-z*sy,z1=x*sy+z*cy;let y1=y*cx-z1*sx,z2=y*sx+z1*cx;return[x1,y1,z2]}
@@ -195,6 +301,6 @@ function drawBrain(){if(!DATA)return;const[x,W,H]=fit();x.clearRect(0,0,W,H);x.f
  const nodes=DATA.s.graph.nodes||[];const phase=Math.max(0,state.turn-1)%3;const active=nodes.filter((_,i)=>i%3===phase);const by=DATA.g.by_root||{};for(const n of active){const p=by[String(n.flywire_id)];if(!p)continue;const q=P([p[1],-p[2],-p[3]],W,H),r=4+Math.log1p(Number(n.activity||0));x.beginPath();x.arc(q.x,q.y,r+4,0,Math.PI*2);x.strokeStyle='rgba(241,189,105,.35)';x.lineWidth=2;x.stroke();x.beginPath();x.arc(q.x,q.y,r,0,Math.PI*2);x.fillStyle='#f1bd69';x.fill();hits.push({x:q.x,y:q.y,r:r+6,n,p})}
  if(selected){const q=P([selected.p[1],-selected.p[2],-selected.p[3]],W,H);x.beginPath();x.arc(q.x,q.y,7,0,Math.PI*2);x.strokeStyle='white';x.lineWidth=2;x.stroke()}}
 document.querySelectorAll('[data-p]').forEach(b=>b.addEventListener('click',()=>submit(b.dataset.p)));$('#reset').addEventListener('click',reset);$('#composer').addEventListener('submit',e=>{e.preventDefault();const t=$('#input').value;$('#input').value='';submit(t)});
-const c=$('#brain');c.addEventListener('pointerdown',e=>{drag={x:e.clientX,y:e.clientY,rx:rot.x,ry:rot.y};c.setPointerCapture(e.pointerId)});c.addEventListener('pointermove',e=>{if(!drag)return;rot.y=drag.ry+(e.clientX-drag.x)*.006;rot.x=drag.rx+(e.clientY-drag.y)*.006;drawBrain()});c.addEventListener('pointerup',e=>{if(!drag)return;const m=Math.hypot(e.clientX-drag.x,e.clientY-drag.y);drag=null;if(m<5){const r=c.getBoundingClientRect(),px=e.clientX-r.left,py=e.clientY-r.top;let best=null,bd=1e9;for(const h of hits){const d=Math.hypot(h.x-px,h.y-py);if(d<h.r&&d<bd){best=h;bd=d}}if(best){selected=best;$('#neuronDetail').textContent=JSON.stringify({root_id:best.n.flywire_id,brian_index:best.n.brian_index,activity:best.n.activity,spike_count:best.n.spike_count,normalized_xyz:best.p.slice(1)},null,2);drawBrain()}}});c.addEventListener('wheel',e=>{e.preventDefault();zoom=Math.max(.45,Math.min(4.5,zoom*(e.deltaY<0?1.1:.91)));drawBrain()},{passive:false});window.addEventListener('resize',drawBrain);
+const c=$('#brain');c.addEventListener('pointerdown',e=>{drag={x:e.clientX,y:e.clientY,rx:rot.x,ry:rot.y};c.setPointerCapture(e.pointerId)});c.addEventListener('pointermove',e=>{if(!drag)return;rot.y=drag.ry+(e.clientX-drag.x)*.006;rot.x=drag.rx+(e.clientY-drag.y)*.006;drawBrain()});c.addEventListener('pointerup',e=>{if(!drag)return;const m=Math.hypot(e.clientX-drag.x,e.clientY-drag.y);drag=null;if(m<5){const r=c.getBoundingClientRect(),px=e.clientX-r.left,py=e.clientY-r.top;let best=null,bd=1e9;for(const h of hits){const d=Math.hypot(h.x-px,h.y-py);if(d<h.r&&d<bd){best=h;bd=d}}if(best){selected=best;$('#neuronDetail').textContent=JSON.stringify({root_id:best.n.flywire_id,brian_index:best.n.brian_index,activity:best.n.activity,spike_count:best.n.spike_count,normalized_xyz:best.p.slice(1)},null,2);drawBrain()}}});c.addEventListener('wheel',e=>{e.preventDefault();zoom=Math.max(.45,Math.min(4.5,zoom*(e.deltaY<0?1.1:.91)));drawBrain()},{passive:false});window.addEventListener('resize',()=>{drawBrain();drawNeural()});
 loadAnatomy().catch(e=>{$('#hud').textContent='Failed to load anatomy: '+e.message;$('#mappedPill').textContent='load failed'});
 </script></body></html>
