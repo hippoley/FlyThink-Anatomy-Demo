@@ -60,10 +60,12 @@ def compile_from_registry(reason=None):
     )
     print('registry fallback capability index',len(rows),'models',out['model_count'],'full',len(full),'reason',reason)
 
+full_payload=Path('data/capability-index.full.b64')
 parts=sorted(Path('data').glob('capability-index.full.part*.b64'))
-if parts:
+sources=[full_payload] if full_payload.exists() else parts
+if sources:
     try:
-        encoded=''.join(''.join(p.read_text(encoding='utf-8').split()) for p in parts)
+        encoded=''.join(''.join(p.read_text(encoding='utf-8').split()) for p in sources)
         encoded += '=' * (-len(encoded) % 4)
         raw=base64.b64decode(encoded,validate=True)
         data=gzip.decompress(raw)
@@ -72,9 +74,10 @@ if parts:
         assert out.get('models')==46
         assert out.get('count')==len(out.get('rows',[]))
         assert out.get('count',0)>=700
+        assert len(set(row[0] for row in out.get('rows',[])))>=40
         Path('_site/capability-index.json').write_bytes(data)
-        print('full capability index',out['count'],'capabilities from',out['models'],'models')
+        print('full capability index',out['count'],'capabilities from',out['models'],'models','source',sources[0])
     except Exception as exc:
         raise RuntimeError('invalid full 46-model capability artifact') from exc
 else:
-    compile_from_registry(reason='full_capability_parts_missing')
+    compile_from_registry(reason='full_capability_payload_missing')
