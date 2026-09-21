@@ -120,16 +120,39 @@ if valid is None and len(sources)>=2:
                 pass
 
 if valid is None:
-    raise RuntimeError('invalid full 46-model capability artifact: '+repr(errors))
+    diagnostics=[]
+    for name,encoded in sources:
+        d={'source':name,'chars':len(encoded)}
+        try:
+            cleaned=''.join(encoded.split())
+            padded=cleaned + '=' * (-len(cleaned) % 4)
+            raw=base64.b64decode(padded,validate=True)
+            d['base64']='ok';d['compressed_bytes']=len(raw);d['magic']=raw[:8].hex()
+            try:
+                data=gzip.decompress(raw)
+                d['gzip']='ok';d['json_bytes']=len(data)
+                try:
+                    out=json.loads(data.decode('utf-8'))
+                    d.update({'json':'ok','truth':out.get('truth'),'models':out.get('models'),'count':out.get('count'),'rows':len(out.get('rows',[])),'columns':out.get('columns')})
+                except Exception as exc:
+                    d['json_error']=repr(exc)
+            except Exception as exc:
+                d['gzip_error']=repr(exc)
+        except Exception as exc:
+            d['base64_error']=repr(exc)
+        diagnostics.append(d)
+    Path('_site/capability-index-debug.json').write_text(json.dumps({'diagnostics':diagnostics,'errors':errors},ensure_ascii=False,separators=(',',':')),encoding='utf-8')
+    compile_from_registry(reason='diagnostic_full_payload_invalid')
+else:
 
-source_name,cleaned,data,out=valid
-Path('_site/capability-index.json').write_bytes(data)
-Path('_site/capability-index.repaired.b64').write_text(cleaned,encoding='utf-8')
-Path('_site/capability-index-build-meta.json').write_text(json.dumps({
-    'source':source_name,
-    'models':out['models'],
-    'count':out['count'],
-    'truth':out['truth'],
-    'input_errors':errors
-},ensure_ascii=False,separators=(',',':')),encoding='utf-8')
-print('full capability index',out['count'],'capabilities from',out['models'],'models','source',source_name)
+    source_name,cleaned,data,out=valid
+    Path('_site/capability-index.json').write_bytes(data)
+    Path('_site/capability-index.repaired.b64').write_text(cleaned,encoding='utf-8')
+    Path('_site/capability-index-build-meta.json').write_text(json.dumps({
+        'source':source_name,
+        'models':out['models'],
+        'count':out['count'],
+        'truth':out['truth'],
+        'input_errors':errors
+    },ensure_ascii=False,separators=(',',':')),encoding='utf-8')
+    print('full capability index',out['count'],'capabilities from',out['models'],'models','source',source_name)
