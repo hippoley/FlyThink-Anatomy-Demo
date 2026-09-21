@@ -1,0 +1,237 @@
+{
+  "source": "全产品物模型定义(3).rar",
+  "sha256": "3a5e67efd5847d70761076506500d001cbed36b1d19dca60ed286eb72ae5d60c",
+  "count": 46,
+  "models": [
+    {
+      "model": "KCWQ-WF01",
+      "file": "KCWQ-WF01.json",
+      "size_bytes": 24666
+    },
+    {
+      "model": "KDPA-M104",
+      "file": "KDPA-M104.json",
+      "size_bytes": 15114
+    },
+    {
+      "model": "KDPA-M304",
+      "file": "KDPA-M304.json",
+      "size_bytes": 23044
+    },
+    {
+      "model": "KKCA-WD01",
+      "file": "KKCA-WD01.json",
+      "size_bytes": 28148
+    },
+    {
+      "model": "KKCA-WX01",
+      "file": "KKCA-WX01.json",
+      "size_bytes": 20235
+    },
+    {
+      "model": "KKSB-Z001",
+      "file": "KKSB-Z001.json",
+      "size_bytes": 8814
+    },
+    {
+      "model": "KKTA-Z006",
+      "file": "KKTA-Z006.json",
+      "size_bytes": 29313
+    },
+    {
+      "model": "KKTA-Z012",
+      "file": "KKTA-Z012.json",
+      "size_bytes": 52138
+    },
+    {
+      "model": "KKTA-ZCH1",
+      "file": "KKTA-ZCH1.json",
+      "size_bytes": 4650
+    },
+    {
+      "model": "KSNC-0001",
+      "file": "KSNC-0001.json",
+      "size_bytes": 6651
+    },
+    {
+      "model": "KZKA-M001",
+      "file": "KZKA-M001.json",
+      "size_bytes": 8169
+    },
+    {
+      "model": "LGTJ-0001",
+      "file": "LGTJ-0001.json",
+      "size_bytes": 13854
+    },
+    {
+      "model": "LIGHT_GROUP",
+      "file": "LIGHT_GROUP.json",
+      "size_bytes": 9860
+    },
+    {
+      "model": "LT-ZHW600",
+      "file": "LT-ZHW600.json",
+      "size_bytes": 11654
+    },
+    {
+      "model": "MIR-HE300",
+      "file": "MIR-HE300.json",
+      "size_bytes": 11905
+    },
+    {
+      "model": "MIR-IR100",
+      "file": "MIR-IR100.json",
+      "size_bytes": 8478
+    },
+    {
+      "model": "MRHJ-0001",
+      "file": "MRHJ-0001.json",
+      "size_bytes": 23415
+    },
+    {
+      "model": "MZWS-XT01",
+      "file": "MZWS-XT01.json",
+      "size_bytes": 16210
+    },
+    {
+      "model": "NKHD-ZB01",
+      "file": "NKHD-ZB01.json",
+      "size_bytes": 8534
+    },
+    {
+      "model": "RH-3IR01-YK16",
+      "file": "RH-3IR01-YK16.json",
+      "size_bytes": 19257
+    },
+    {
+      "model": "ZM-111",
+      "file": "ZM-111.json",
+      "size_bytes": 29302
+    },
+    {
+      "model": "AWGD-Z001",
+      "file": "AWGD-Z001.json",
+      "size_bytes": 3725
+    },
+    {
+      "model": "AWGD-ZA01",
+      "file": "AWGD-ZA01.json",
+      "size_bytes": 12489
+    },
+    {
+      "model": "AWGD-ZH01",
+      "file": "AWGD-ZH01.json",
+      "size_bytes": 7395
+    },
+    {
+      "model": "AWGD-ZX01",
+      "file": "AWGD-ZX01.json",
+      "size_bytes": 8025
+    },
+    {
+      "model": "CJLJ-0001",
+      "file": "CJLJ-0001.json",
+      "size_bytes": 15651
+    },
+    {
+      "model": "CJSJ-0001",
+      "file": "CJSJ-0001.json",
+      "size_bytes": 15651
+    },
+    {
+      "model": "CWDS-CA01",
+      "file": "CWDS-CA01.json",
+      "size_bytes": 59375
+    },
+    {
+      "model": "CWDS-CM01",
+      "file": "CWDS-CM01.json",
+      "size_bytes": 47564
+    },
+    {
+      "model": "CWLS-DJ01",
+      "file": "CWLS-DJ01.json",
+      "size_bytes": 15686
+    },
+    {
+      "model": "CWLS-DJ02",
+      "file": "CWLS-DJ02.json",
+      "size_bytes": 15775
+    },
+    {
+      "model": "DQDZ-LC12",
+      "file": "DQDZ-LC12.json",
+      "size_bytes": 8737
+    },
+    {
+      "model": "DQDZ-LC24",
+      "file": "DQDZ-LC24.json",
+      "size_bytes": 8737
+    },
+    {
+      "model": "DQDZ-LL12",
+      "file": "DQDZ-LL12.json",
+      "size_bytes": 7085
+    },
+    {
+      "model": "DQDZ-LL24",
+      "file": "DQDZ-LL24.json",
+      "size_bytes": 7085
+    },
+    {
+      "model": "DQDZ-Y15L",
+      "file": "DQDZ-Y15L.json",
+      "size_bytes": 7085
+    },
+    {
+      "model": "DQDZ-Y15R",
+      "file": "DQDZ-Y15R.json",
+      "size_bytes": 12493
+    },
+    {
+      "model": "DQDZ-Y150",
+      "file": "DQDZ-Y150.json",
+      "size_bytes": 8737
+    },
+    {
+      "model": "KAFS-W115",
+      "file": "KAFS-W115.json",
+      "size_bytes": 2622
+    },
+    {
+      "model": "KCGE-Z000",
+      "file": "KCGE-Z000.json",
+      "size_bytes": 8298
+    },
+    {
+      "model": "KCGH-Z201",
+      "file": "KCGH-Z201.json",
+      "size_bytes": 14698
+    },
+    {
+      "model": "KCGL-Z001",
+      "file": "KCGL-Z001.json",
+      "size_bytes": 10800
+    },
+    {
+      "model": "KCGL-Z101",
+      "file": "KCGL-Z101.json",
+      "size_bytes": 10718
+    },
+    {
+      "model": "KCGM-Z001",
+      "file": "KCGM-Z001.json",
+      "size_bytes": 5634
+    },
+    {
+      "model": "KCGS-Z001",
+      "file": "KCGS-Z001.json",
+      "size_bytes": 8871
+    },
+    {
+      "model": "KCGY-Z001",
+      "file": "KCGY-Z001.json",
+      "size_bytes": 8892
+    }
+  ]
+}
