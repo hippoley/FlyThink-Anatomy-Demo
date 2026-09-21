@@ -116,6 +116,7 @@ Every push to `main` runs:
 - developmental neural artifact export
 - real anatomy data build
 - root-ID mapping checks
+- projection-pool / measured-replay disjointness checks
 - static public build publication to `gh-pages`
 
 ## Status
