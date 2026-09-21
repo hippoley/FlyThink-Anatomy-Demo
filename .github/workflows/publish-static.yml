@@ -32,7 +32,7 @@ jobs:
           s=Path('index.html').read_text(encoding='utf-8')
           js=s.split('<script>',1)[1].rsplit('</script>',1)[0]
           Path('/tmp/flythink-app.js').write_text(js,encoding='utf-8')
-          required=['Corpus Mutation Lab','Multi-turn Corpus Composer','Multi-turn Regression Lab','Persistent state tree','Grounding Decision Trace','resolutionGrid','capabilityCandidateForNode','capability_candidates','contract_derived_goal_plan_not_hidden_ground_truth','hybrid-state-goal-interrupt','goal_plan_contract','capability_schema_missing','stateTree','rawStateTree','intentTree','treePatchNode','runComposer','runBenchmark','diagnoseBenchmarkTurn','instance_grounding','state_tree_loss','duplicate_state_node','turnComposer','composerResults','benchCases','runAsSequence','semanticMatches','neuralBridge','projection_pool','neural','brain']
+          required=['Corpus Mutation Lab','Multi-turn Corpus Composer','Multi-turn Regression Lab','Persistent state tree','Grounding Decision Trace','resolutionGrid','goalSemanticReadout','goal_training','train_only_goal_semantic_readout','goal_semantic_readout','capabilityCandidateForNode','capability_candidates','contract_derived_goal_plan_not_hidden_ground_truth','hybrid-state-goal-interrupt','goal_plan_contract','capability_schema_missing','stateTree','rawStateTree','intentTree','treePatchNode','runComposer','runBenchmark','diagnoseBenchmarkTurn','instance_grounding','state_tree_loss','duplicate_state_node','turnComposer','composerResults','benchCases','runAsSequence','semanticMatches','neuralBridge','projection_pool','neural','brain']
           missing=[x for x in required if x not in s]
           assert not missing, missing
           PY
