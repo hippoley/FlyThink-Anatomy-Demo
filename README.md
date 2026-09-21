@@ -63,6 +63,26 @@ Running a composed scenario resets the session and records, for every turn:
 
 This makes interruption/resume, revision, inherited references and cross-room behavior inspectable as a sequence rather than only as a final answer.
 
+## Multi-turn Regression Lab
+
+The public playground also includes a deterministic batch regression lab. It can generate 12–48 synthetic-but-structured dialogue sequences, each 4–10 turns long, from bounded home-control primitives. These sequences exercise interruption/resume, revision, coreference, cross-room inheritance and cancellation.
+
+Each turn is checked independently across multiple layers:
+
+- GraphDelta operation
+- entity and room resolution
+- interruption / paused-task stack
+- resume target
+- revision / cancellation semantics
+- semantic neural readout
+- runtime route
+- expected action
+- real Thing Model grounding
+
+Failures are grouped by cause (for example `coreference`, `semantic_readout`, `resume_stack`, `action_grounding`). Any generated or failing sequence can be loaded directly into the Multi-turn Corpus Composer for reproduction and inspection.
+
+The generated batch is an evaluation surface, not additional training data.
+
 ## Neural path
 
 The public build visualizes this pipeline:
