@@ -60,10 +60,10 @@ details{margin-top:14px;border:1px solid #202b38;border-radius:14px;background:#
 <section class="stage">
 <div class="panel chatShell"><div class="panelhead"><b>Conversation</b><span id="turnPill" class="pill">turn 0</span></div><div class="panelbody" style="display:flex;flex-direction:column;flex:1">
 <div class="corpusStudio">
-<div class="corpusTop"><div><div class="corpusTitle">Dialogue Essence · Corpus Mutation Lab</div><div class="corpusMeta" id="corpusMeta">loading train-only exemplars…</div></div><div class="presets" style="margin:0"><button class="btn mut" id="sampleCorpus" type="button">抽一条语料</button><button class="btn mut" id="reset" type="button">Reset</button></div></div>
+<div class="corpusTop"><div><div class="corpusTitle">Dialogue Essence · Corpus Mutation Lab</div><div class="corpusMeta" id="corpusMeta">loading train-only exemplars…</div><div class="corpusMeta" style="margin-top:3px">NEGATION · MULTI-INTENT · NER/AREA · COREFERENCE · CROSS-ROOM · REVISION · INTERRUPTION · SCENARIO · OOD</div></div><div class="presets" style="margin:0"><button class="btn mut" id="sampleCorpus" type="button">抽一条语料</button><button class="btn mut" id="reset" type="button">Reset</button></div></div>
 <textarea id="input" class="draft">把客厅外窗关上，客厅灯也关了</textarea>
 <div class="mutationBar">
-<button class="btn mut" data-mutate="reorder" type="button">换语序</button>
+<button class="btn mut" data-mutate="reorder" type="button">换语序</button><button class="btn mut" data-mutate="negation" type="button">否定意图</button><button class="btn mut" data-mutate="crossroom" type="button">跨房间</button><button class="btn mut" data-mutate="coref" type="button">指代消解</button><button class="btn mut" data-mutate="areaalias" type="button">房间别名</button>
 <button class="btn mut" data-mutate="slots" type="button">换槽位表达</button>
 <button class="btn mut" data-mutate="interrupt" type="button">插入打断</button>
 <button class="btn mut" data-mutate="revise" type="button">插入修改</button>
@@ -186,10 +186,10 @@ function lexicalDecisionHeads(text){
     ['plan',/规划|总结|解释|为什么/,.72]
   ];
   for(const [o,re,s] of ops)if(re.test(t)){op=o;opScore=s;break}
-  const pron=/它|那个|这个|再|还是/.test(t);
+  const pron=/它|那个|这个|再|还是|刚才那个|那个也/.test(t);
   const explicit=/外窗|窗户|灯|纱窗|空调|温度/.test(t);
   const ambiguity=pron&&!explicit ? (state.focus?.18:.76) : (/有点|看起来|可能|应该/.test(t)?.42:.12);
-  const homeEvidence=/窗|灯|纱窗|温度|空调|闷|雨|亮|睡觉|看电影/.test(t);
+  const homeEvidence=/窗|灯|纱窗|温度|空调|闷|雨|亮|睡觉|看电影|客厅|大厅|主卧|大卧室|次卧|客卧|儿童房|孩子房|书房|工作间|厨房|阳台|露台/.test(t);
   const ood=/比特币|股票|医疗诊断|法律意见|写代码|新闻|天气预报/.test(t)? .92 : (homeEvidence?.12:.58);
   return {entity:{label:entity,score:entityScore},operation:{label:op,score:opScore},ambiguity,ood};
 }
@@ -220,6 +220,14 @@ function mutateDraft(kind){
   if(!t)t='把客厅外窗关上';
   if(kind==='reorder'){
     const ps=t.split(/[，,；;]/).map(x=>x.trim()).filter(Boolean);if(ps.length>1)t=ps.reverse().join('，');else t='先'+t.replace(/^先/,'')+'，完成后告诉我';
+  }else if(kind==='negation'){
+    t=/打开|开启|弄开/.test(t)?t.replace(/打开|开启|弄开/,'不要打开'):('刚才那条先别执行，'+t);
+  }else if(kind==='crossroom'){
+    const rooms=['主卧','次卧','儿童房','书房','厨房','阳台'];const r=randomChoice(rooms);t=t+'，'+r+'那个也做一样的';
+  }else if(kind==='coref'){
+    t=t+'，然后那个也照刚才这样';
+  }else if(kind==='areaalias'){
+    const map=[['客厅','大厅'],['主卧','大卧室'],['次卧','客卧'],['儿童房','孩子房'],['书房','工作间'],['卫生间','洗手间'],['餐厅','饭厅'],['玄关','门口'],['阳台','露台']];for(const [a,b] of map){if(t.includes(a)){t=t.replace(a,b);break}}
   }else if(kind==='slots'){
     for(const [base,alts] of Object.entries(SLOT_SYNONYMS)){if(t.includes(base)){t=t.replace(base,randomChoice(alts));break}}
   }else if(kind==='interrupt'){
