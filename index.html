@@ -204,7 +204,7 @@ developmental projection, not measured FlyWire activity.\n\nThing Model archive:
 </div>
 <script>
 const $=s=>document.querySelector(s);
-const state={turn:0,taskSeq:0,nodeSeq:0,tasks:[],activeTask:null,paused:[],revisions:[],focus:null,lastArea:'客厅',lastAction:null,thingValues:{},lastDelta:null};
+const state={turn:0,taskSeq:0,nodeSeq:0,tasks:[],activeTask:null,paused:[],revisions:[],focus:null,focusKey:null,lastArea:'客厅',lastAction:null,thingValues:{},intentTree:{},lastDelta:null};
 let DATA=null,NEURAL=null,THINGREG=null,neuralState=[],semanticScores=[],projectedRoots=[],unitToRoot=[],decisionHeads=null,currentCorpusCase=null,composerTurns=[],composerResults=[],composerSeq=0,composerDragId=null,composerInspectIndex=null,benchmarkScenarios=[],benchmarkResults=[],benchmarkRunSeq=0,rot={x:-.18,y:.31},zoom=1.55,drag=null,hits=[],neuralHits=[],selected=null,pulseT=0,pulseRAF=null,pulseStart=0,pulseUntil=0;
 
 function clone(x){return JSON.parse(JSON.stringify(x))}
@@ -218,9 +218,51 @@ function pushTask(nodes,program={control_type:'single'}){
   state.taskSeq++; const t={task_id:'task:'+state.taskSeq,status:'active',node_ids:nodes.map(n=>n.node_id),nodes,program,created_turn_id:'turn:'+state.turn};
   state.tasks.push(t); state.activeTask=t.task_id; return t;
 }
-function updateFocusFromNodes(nodes){const n=[...nodes].reverse().find(x=>x.target?.entity); if(n)state.focus=n.target.entity}
-
-
+function instanceKey(node){
+  const entity=node?.target?.entity||'unknown',area=node?.slots?.area||state.lastArea||'unknown',name=node?.slots?.entity_name||canonicalEntityName(entity,area)||entity;
+  return area+'::'+name;
+}
+function nodePropertyKey(node){return node?.slots?.property||'state'}
+function updateFocusFromNodes(nodes){
+  const n=[...nodes].reverse().find(x=>x.target?.entity);
+  if(n){state.focus=n.target.entity;state.focusKey=instanceKey(n);if(n.slots?.area)state.lastArea=n.slots.area}
+}
+function focusedTreeNode(){
+  if(state.focusKey&&state.intentTree[state.focusKey])return state.intentTree[state.focusKey];
+  const vals=Object.values(state.intentTree);return vals.length?vals[vals.length-1]:null;
+}
+function mergeSemanticNode(base,patch){
+  if(!base)return clone(patch);if(!patch)return clone(base);
+  return {...clone(base),...clone(patch),target:{...(base.target||{}),...(patch.target||{})},slots:{...(base.slots||{}),...(patch.slots||{})},node_id:patch.node_id||base.node_id,source_turn_id:patch.source_turn_id||base.source_turn_id};
+}
+function treePatchNode(node,turnId,mode='upsert'){
+  if(!node?.target?.entity)return;
+  const key=instanceKey(node),property=nodePropertyKey(node),existing=state.intentTree[key]||{instance_key:key,area:node.slots?.area||state.lastArea,entity:node.target.entity,entity_name:node.slots?.entity_name||canonicalEntityName(node.target.entity,node.slots?.area||state.lastArea),properties:{},status:'active',created_turn_id:turnId};
+  const before=clone(existing);
+  existing.area=node.slots?.area||existing.area;existing.entity=node.target.entity||existing.entity;existing.entity_name=node.slots?.entity_name||existing.entity_name;existing.status='active';existing.updated_turn_id=turnId;
+  const oldProp=existing.properties[property]||{};
+  existing.properties[property]={...oldProp,intent:node.intent,value:node.slots?.value!==undefined?node.slots.value:oldProp.value,slots:{...(oldProp.slots||{}),...(node.slots||{})},node_id:node.node_id,updated_turn_id:turnId};
+  state.intentTree[key]=existing;state.focusKey=key;state.focus=node.target.entity;
+  state.revisions.push({turn_id:turnId,op:'STATE_TREE_'+mode.toUpperCase(),instance_key:key,property,before,after:clone(existing)});
+}
+function treeRemoveTask(task,turnId,reason='cancel'){
+  if(!task)return;
+  for(const node of task.nodes||[]){
+    const key=instanceKey(node),property=nodePropertyKey(node),entry=state.intentTree[key];if(!entry)continue;
+    const before=clone(entry);
+    delete entry.properties[property];
+    if(!Object.keys(entry.properties).length){entry.status='removed';entry.removed_turn_id=turnId;entry.remove_reason=reason}
+    entry.updated_turn_id=turnId;
+    state.revisions.push({turn_id:turnId,op:'STATE_TREE_REMOVE',instance_key:key,property,before,after:clone(entry),reason});
+  }
+}
+function findPatchIndex(task,node){
+  if(!task||!node)return -1;
+  const key=instanceKey(node),prop=nodePropertyKey(node);
+  for(let i=task.nodes.length-1;i>=0;i--){const n=task.nodes[i];if(instanceKey(n)===key&&nodePropertyKey(n)===prop)return i}
+  for(let i=task.nodes.length-1;i>=0;i--){const n=task.nodes[i];if(instanceKey(n)===key)return i}
+  return -1;
+}
 
 const SLOT_SYNONYMS={
   '客厅':['客厅','大厅','厅里'],
@@ -264,10 +306,10 @@ function intentFromLastAction(){
   return null;
 }
 const SCENARIOS=[
-  {text:'外面开始下雨了，屋里没人，我不想雨飘进来',entity:'window',operation:'close',action:'exterior_window_close',confidence:.84},
-  {text:'准备看电影了，客厅有点刺眼',entity:'light',operation:'set_value',action:'living_color_light_dim_30',confidence:.78},
-  {text:'屋里很闷，但是外面空气看起来不错',entity:'window',operation:'open',action:'exterior_window_open',confidence:.72},
-  {text:'准备睡觉了，客厅不用这么亮',entity:'light',operation:'close',action:'living_color_light_off',confidence:.69}
+  {text:'外面开始下雨了，屋里没人，我不想雨飘进来',entity:'window',operation:'close',action:'exterior_window_close',confidence:.84,goal:'rain_protection',plan:[{entity:'window',intent:'TurnOff',property:'motorControl',value:1}]},
+  {text:'准备看电影了，客厅有点刺眼',entity:'light',operation:'set_value',action:'living_color_light_dim_30',confidence:.78,goal:'movie_comfort',plan:[{entity:'light',intent:'SetValue',property:'brightness',value:30},{entity:'light',intent:'SetValue',property:'colorTemperature',value:3000}]},
+  {text:'屋里很闷，但是外面空气看起来不错',entity:'window',operation:'open',action:'exterior_window_open',confidence:.72,goal:'ventilation',plan:[{entity:'window',intent:'TurnOn',property:'motorControl',value:0}]},
+  {text:'准备睡觉了，客厅不用这么亮',entity:'light',operation:'set_value',action:'living_color_light_dim_30',confidence:.69,goal:'sleep_transition',plan:[{entity:'light',intent:'SetValue',property:'brightness',value:30},{entity:'light',intent:'SetValue',property:'colorTemperature',value:3000}]}
 ];
 function pct(x){return Math.max(0,Math.min(100,Math.round((Number(x)||0)*100)))}
 function setHead(id,label,score){$('#'+id).textContent=label+' · '+pct(score)+'%';$('#'+id+'Bar').style.width=pct(score)+'%'}
@@ -458,7 +500,7 @@ function renderComposerResults(){
   renderTurnComposer();
 }
 function composerSnapshot(){
-  return {activeTask:state.activeTask,paused:[...state.paused],focus:state.focus,lastArea:state.lastArea,lastAction:state.lastAction,tasks:clone(state.tasks),revisions:clone(state.revisions),thingValues:clone(state.thingValues)};
+  return {activeTask:state.activeTask,paused:[...state.paused],focus:state.focus,focusKey:state.focusKey,lastArea:state.lastArea,lastAction:state.lastAction,tasks:clone(state.tasks),intentTree:clone(state.intentTree),revisions:clone(state.revisions),thingValues:clone(state.thingValues)};
 }
 function composerLedger(result){
   const nodes=result?.exec?.nodes||[];
@@ -850,27 +892,31 @@ function parseUtterance(text){
   if(isResume) return {type:'resume'};
   if(heads.ood>.72)return {type:'ood',nodes:[newNode('Plan','llm',{reason:'ood_escalation'})]};
   if(scenario&&scenario.match>.22&&heads.ambiguity<.55){
-    const slots=scenario.operation==='set_value'?{property:'brightness',value:30}:{property:scenario.entity==='light'?'power':'motorControl',value:scenario.operation==='close'?(scenario.entity==='light'?false:1):(scenario.entity==='light'?true:0)};
-    return {type:'scenario',nodes:[newNode(scenario.operation==='set_value'?'SetValue':scenario.operation==='close'?'TurnOff':'TurnOn',scenario.entity,slots)],scenario};
+    const area=canonicalArea(raw)||state.lastArea||'客厅';
+    const plan=scenario.plan||[{entity:scenario.entity,intent:scenario.operation==='set_value'?'SetValue':scenario.operation==='close'?'TurnOff':'TurnOn',property:scenario.operation==='set_value'?'brightness':scenario.entity==='light'?'power':'motorControl',value:scenario.operation==='set_value'?30:(scenario.entity==='light'?(scenario.operation!=='close'):scenario.operation==='close'?1:0)}];
+    const nodes=plan.map(step=>newNode(step.intent,step.entity,{property:step.property,value:step.value,area,area_source:canonicalArea(raw)?'explicit':'inherited',entity_name:canonicalEntityName(step.entity,area),goal:scenario.goal}));
+    return {type:'scenario',nodes,parallel:nodes.length>1,scenario:{...scenario,area,planned_actions:nodes.length}};
   }
   const nodes=[];
   let previousIntent=null, previousEntity=null, previousArea=null;
   for(const p of parts){
     let entity=null,intent=null,slots={};
-    const explicitArea=canonicalArea(p);
-    const area=explicitArea||previousArea||state.lastArea||'客厅';
+    const explicitArea=canonicalArea(p),focusedBefore=focusedTreeNode();
+    const area=explicitArea||previousArea||(inherit&&focusedBefore?.area)||state.lastArea||'客厅';
     if(/外窗|窗户|窗扇|开窗器/.test(p))entity='window';
     else if(/灯|彩灯|RGB/.test(p))entity='light';
     else if(/温度|空调/.test(p))entity='climate';
     else if(/纱窗|防虫网/.test(p))entity='screen';
     else if((inherit||/做一样的|照刚才/.test(p))&&(previousEntity||state.focus))entity=previousEntity||state.focus;
 
+    if(!explicitArea&&inherit&&focusedBefore?.area&&!previousArea)state.lastArea=focusedBefore.area;
+    const percent=p.match(/(?:百分之\s*)?(\d{1,3})\s*%?/),kelvin=p.match(/(\d{4})\s*[kK]/);
     if(/做一样的|照刚才/.test(p)){intent=previousIntent||intentFromLastAction();}
     else if(/查询|现在|多少|开着吗|关着吗|温度/.test(p) && entity==='climate'){intent='QueryState';slots.property='temperature';}
     else if(/查询|状态|开着吗|关着吗/.test(p)){intent='QueryState';slots.property='state';}
-    else if(/色温|开尔文|3000K|3000k|三千/.test(p)){intent='SetValue';slots.property='colorTemperature';slots.value=3000;}
-    else if(/调暗|亮度/.test(p)){intent='SetValue';slots.property='brightness';slots.value=30;}
-    else if(/开一点/.test(p)){intent='SetValue';slots.property='open_ratio';slots.value=30;}
+    else if(/色温|开尔文|\d{4}\s*[kK]|三千/.test(p)){intent='SetValue';slots.property='colorTemperature';slots.value=kelvin?Number(kelvin[1]):3000;}
+    else if(/调暗|亮度/.test(p)){intent='SetValue';slots.property='brightness';slots.value=percent?Math.max(0,Math.min(100,Number(percent[1]))):30;}
+    else if(/开一点|开度|开到|开至/.test(p)){intent='SetValue';slots.property='open_ratio';slots.value=percent?Math.max(0,Math.min(100,Number(percent[1]))):30;}
     else if(/关/.test(p)){intent='TurnOff';slots.property=entity==='light'?'power':'motorControl';slots.value=entity==='light'?false:1;}
     else if(/开/.test(p)){intent='TurnOn';slots.property=entity==='light'?'power':'motorControl';slots.value=entity==='light'?true:0;}
     else if(/规划|总结|解释|写一份/.test(p)){entity='llm';intent='Plan';}
@@ -909,13 +955,14 @@ function deltaFor(text){
     return {contract_version:'homeflow.graph_delta.v1',op:'UPDATE_TASK',turn_id,commit_policy:'final_only',target_task_id:target,nodes:[],metadata:{control:'resume'},source:'browser_contract_demo'};
   }
   if(p.type==='revise'&&activeTask()){
-    return {contract_version:'homeflow.graph_delta.v1',op:'REVISE_NODE',turn_id,commit_policy:'final_only',target_task_id:state.activeTask,target_node_id:activeTask().node_ids.slice(-1)[0],replacement_node:p.nodes[0]||newNode('Clarify',state.focus,{},'unresolved'),source:'browser_contract_demo'};
+    const replacement=p.nodes[0]||newNode('Clarify',state.focus,{},'unresolved'),idx=findPatchIndex(activeTask(),replacement),targetNode=idx>=0?activeTask().nodes[idx]:activeTask().nodes.slice(-1)[0];
+    return {contract_version:'homeflow.graph_delta.v1',op:'REVISE_NODE',turn_id,commit_policy:'final_only',target_task_id:state.activeTask,target_node_id:targetNode?.node_id,replacement_node:replacement,metadata:{state_tree_patch:true,patch_target:targetNode?instanceKey(targetNode):null},source:'browser_contract_demo'};
   }
   if(p.type==='ood'){
     return {contract_version:'homeflow.graph_delta.v1',op:'CREATE_TASK',turn_id,commit_policy:'never_commit',nodes:p.nodes,program:{control_type:'single'},metadata:{route_hint:'LLM_ESCALATE',ood:true},source:'browser_contract_demo'};
   }
   if(p.type==='scenario'){
-    return {contract_version:'homeflow.graph_delta.v1',op:activeTask()?'UPDATE_TASK':'CREATE_TASK',turn_id,commit_policy:'final_only',target_task_id:activeTask()?state.activeTask:undefined,nodes:p.nodes,program:{control_type:'single'},metadata:{scenario_inference:p.scenario},source:'browser_contract_demo'};
+    return {contract_version:'homeflow.graph_delta.v1',op:activeTask()?'UPDATE_TASK':'CREATE_TASK',turn_id,commit_policy:'final_only',target_task_id:activeTask()?state.activeTask:undefined,nodes:p.nodes,program:{control_type:p.parallel?'parallel':'single'},metadata:{scenario_inference:p.scenario,state_tree_patch:true},source:'browser_contract_demo'};
   }
   if(p.type==='interrupt'){
     if(state.activeTask)state.paused.push(state.activeTask);
@@ -928,14 +975,38 @@ function deltaFor(text){
 function applyDelta(d){
   state.lastDelta=d;
   if(d.op==='CREATE_TASK'){
-    const t=pushTask(d.nodes||[],d.program||{}); updateFocusFromNodes(t.nodes);
+    const t=pushTask(d.nodes||[],d.program||{});for(const n of t.nodes)treePatchNode(n,d.turn_id,'create');updateFocusFromNodes(t.nodes);
   } else if(d.op==='UPDATE_TASK'){
     if(d.metadata?.control==='resume'){state.activeTask=d.target_task_id;if(taskById(state.activeTask))taskById(state.activeTask).status='active';}
-    else {const t=taskById(d.target_task_id)||activeTask(); if(t){for(const n of d.nodes||[]){t.nodes.push(n);t.node_ids.push(n.node_id)} updateFocusFromNodes(d.nodes||[])}}
+    else {
+      const t=taskById(d.target_task_id)||activeTask();
+      if(t){
+        for(const n of d.nodes||[]){
+          const idx=findPatchIndex(t,n);
+          if(idx>=0){
+            const before=clone(t.nodes[idx]),merged=mergeSemanticNode(t.nodes[idx],n);
+            t.nodes[idx]=merged;t.node_ids[idx]=merged.node_id;
+            state.revisions.push({turn_id:d.turn_id,op:'PATCH_NODE',task_id:t.task_id,before,after:clone(merged),instance_key:instanceKey(merged),property:nodePropertyKey(merged)});
+            treePatchNode(merged,d.turn_id,'patch');
+          }else{
+            t.nodes.push(n);t.node_ids.push(n.node_id);treePatchNode(n,d.turn_id,'append');
+          }
+        }
+        updateFocusFromNodes(d.nodes||[]);
+      }
+    }
   } else if(d.op==='REVISE_NODE'){
-    const t=taskById(d.target_task_id)||activeTask(); if(t&&d.replacement_node){const idx=t.node_ids.indexOf(d.target_node_id);const before=clone(t.nodes[idx>=0?idx:t.nodes.length-1]);const at=idx>=0?idx:t.nodes.length-1;t.nodes[at]=d.replacement_node;t.node_ids[at]=d.replacement_node.node_id;state.revisions.push({turn_id:d.turn_id,op:d.op,task_id:t.task_id,before,after:clone(d.replacement_node)});updateFocusFromNodes([d.replacement_node])}
+    const t=taskById(d.target_task_id)||activeTask();
+    if(t&&d.replacement_node){
+      let idx=t.node_ids.indexOf(d.target_node_id);if(idx<0)idx=findPatchIndex(t,d.replacement_node);if(idx<0)idx=t.nodes.length-1;
+      const before=clone(t.nodes[idx]),merged=mergeSemanticNode(t.nodes[idx],d.replacement_node);
+      t.nodes[idx]=merged;t.node_ids[idx]=merged.node_id;
+      state.revisions.push({turn_id:d.turn_id,op:d.op,task_id:t.task_id,before,after:clone(merged),instance_key:instanceKey(merged),property:nodePropertyKey(merged)});
+      treePatchNode(merged,d.turn_id,'revise');updateFocusFromNodes([merged]);
+    }
   } else if(d.op==='CANCEL_TASK'){
-    const t=taskById(d.target_task_id)||activeTask(); if(t){t.status='cancelled';state.revisions.push({turn_id:d.turn_id,op:'CANCEL_TASK',task_id:t.task_id,before:{status:'active'},after:{status:'cancelled'}});state.activeTask=state.tasks.filter(x=>x.status!=='cancelled').slice(-1)[0]?.task_id||null;}
+    const t=taskById(d.target_task_id)||activeTask();
+    if(t){t.status='cancelled';treeRemoveTask(t,d.turn_id,d.metadata?.negation?'negation':'cancel');state.revisions.push({turn_id:d.turn_id,op:'CANCEL_TASK',task_id:t.task_id,before:{status:'active'},after:{status:'cancelled'}});state.activeTask=state.tasks.filter(x=>x.status!=='cancelled').slice(-1)[0]?.task_id||null;}
   }
 }
 
@@ -981,7 +1052,7 @@ function bindingForAction(action,node,route){
   if(!map)return {route:'CLARIFY',action:null,requested_action:action,node,binding:null,grounding_status:'BLOCKED',grounding_reason:'action_has_no_real_thing_model_binding',worldDelta:null};
   const base=THINGREG.bindings?.[map.key];
   if(!base)return {route:'CLARIFY',action:null,requested_action:action,node,binding:null,grounding_status:'BLOCKED',grounding_reason:'binding_key_missing_from_uploaded_registry:'+map.key,worldDelta:null};
-  const requestedValue=map.value!==undefined?map.value:base.value;
+  const requestedValue=node?.slots?.value!==undefined&&['window.position','light.brightness','light.colorTemperature'].includes(map.key)?node.slots.value:(map.value!==undefined?map.value:base.value);
   const check=validateRealBinding(base,requestedValue,'write');
   const area=node?.slots?.area||state.lastArea||null;
   const entityName=node?.slots?.entity_name||canonicalEntityName(base.model.startsWith('CWDS')?(base.module==='motor_2'?'screen':'window'):'light',area);
@@ -1012,7 +1083,8 @@ function bindingForAction(action,node,route){
     source_truth:THINGREG.truth
   };
   if(!check.ok)return {route:'CLARIFY',action:null,requested_action:action,node,binding:b,grounding_status:'BLOCKED',grounding_reason:check.reason,worldDelta:null};
-  const stateKey=realSchemaPath({model:b.model_code,module:b.module_code,property:b.property_code});
+  const schemaPath=realSchemaPath({model:b.model_code,module:b.module_code,property:b.property_code});
+  const stateKey=(entityName||area||'unscoped')+'::'+schemaPath;
   const before=Object.prototype.hasOwnProperty.call(state.thingValues,stateKey)?state.thingValues[stateKey]:'UNOBSERVED';
   state.thingValues[stateKey]=requestedValue;
   return {route,action,node,binding:b,grounding_status:'ALLOW',grounding_reason:check.reason,worldDelta:{key:stateKey,before,after:requestedValue,truth:'session_state_not_live_device_telemetry'}};
@@ -1040,7 +1112,8 @@ function bindingForQuery(node,route){
     source_archive_sha256:THINGREG.source_archive_sha256,source_truth:THINGREG.truth
   };
   if(!check.ok)return {route:'CLARIFY',action:null,node,binding:b,grounding_status:'BLOCKED',grounding_reason:check.reason,query:null};
-  const stateKey=realSchemaPath({model:b.model_code,module:b.module_code,property:b.property_code});
+  const schemaPath=realSchemaPath({model:b.model_code,module:b.module_code,property:b.property_code}),instanceName=b.dialogue_entity_name||b.dialogue_area||'unscoped';
+  const stateKey=instanceName+'::'+schemaPath;
   const value=Object.prototype.hasOwnProperty.call(state.thingValues,stateKey)?state.thingValues[stateKey]:'NO_LIVE_TELEMETRY_IN_STATIC_DEMO';
   return {route,action:null,node,binding:b,grounding_status:'READ_SCHEMA_VALID',grounding_reason:check.reason,query:{schema_path:stateKey,value,truth:'schema_is_real_device_value_not_live'}};
 }
@@ -1080,10 +1153,12 @@ function executeCurrent(neural,d){
   for(const n of fallback){
     const ra=routeNode(n);
     const learned=neural?.bestLabel||null;
-    const allowed=(n?.target?.entity==='window'&&/^exterior_window_/.test(learned||''))||
+    // Semantic readout is evidence, never authority over a resolved structured slot/property/value.
+    // It may only supply an action when the structured router has no executable action.
+    const learnedCompatible=(n?.target?.entity==='window'&&/^exterior_window_/.test(learned||''))||
       (n?.target?.entity==='light'&&/^living_color_light_/.test(learned||''))||
       (n?.target?.entity==='screen'&&/^insect_screen_/.test(learned||''));
-    if(allowed&&neural.scores?.[0]?.score>=0.16&&n?.intent!=='QueryState')ra.action=learned;
+    if(!ra.action&&ra.route==='LOCAL_SKILL'&&learnedCompatible&&neural.scores?.[0]?.score>=0.22&&n?.intent!=='QueryState')ra.action=learned;
 
     if(ra.route==='THING_MODEL_EXECUTE'&&ra.action){
       outputs.push(bindingForAction(ra.action,n,ra.route));
@@ -1180,7 +1255,7 @@ function render(d,exec,neural){
 }
 
 function resetRuntimeState(){
-  Object.assign(state,{turn:0,taskSeq:0,nodeSeq:0,tasks:[],activeTask:null,paused:[],revisions:[],focus:null,lastArea:'客厅',lastAction:null,thingValues:{},lastDelta:null});
+  Object.assign(state,{turn:0,taskSeq:0,nodeSeq:0,tasks:[],activeTask:null,paused:[],revisions:[],focus:null,focusKey:null,lastArea:'客厅',lastAction:null,thingValues:{},intentTree:{},lastDelta:null});
   neuralState=NEURAL?Array(NEURAL.config.dim).fill(0):[];semanticScores=[];projectedRoots=[];currentCorpusCase=null;
 }
 function reset(){
