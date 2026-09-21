@@ -57,7 +57,7 @@ details{margin-top:14px;border:1px solid #202b38;border-radius:14px;background:#
 
 <section class="hero">
 <div><div class="eyebrow">Fly-inspired home intelligence · public research preview</div><h1>Talk to a home.<br><span>Watch its neural state change.</span></h1><p class="lead">输入一句自然语言，观察训练语料如何形成 semantic drive、216 个 recurrent units 如何保持多轮上下文，以及动作如何落到 Thing Model。右侧真实 FlyWire anatomy 作为独立证据层展示。</p></div>
-<aside class="engine"><div class="engineTitle">Who is reasoning?</div><div class="engineMain">Structured decision heads + train-only exemplars + 216-unit recurrent substrate</div><div class="engineSub">先做 bounded Choice / confidence / OOD 判断；只有开放场景或低置信度才升级 LLM。不是“真实果蝇脑直接理解中文”。</div><div class="pipeline"><span class="pipe">Text</span><span class="arrow">→</span><span class="pipe">Semantic drive</span><span class="arrow">→</span><span class="pipe">Recurrent state</span><span class="arrow">→</span><span class="pipe">GraphDelta</span><span class="arrow">→</span><span class="pipe">Action</span></div></aside>
+<aside class="engine"><div class="engineTitle">Who is reasoning?</div><div class="engineMain">Learned dialogue heads + 216-unit recurrent substrate + deterministic Thing Model gate</div><div class="engineSub">GitHub Actions 真实训练出的权重先预测 dialogue family / intent / context / OOD；216-unit recurrent state 承接多轮状态；46-model gate 负责最终约束。</div><div class="pipeline"><span class="pipe">Text</span><span class="arrow">→</span><span class="pipe">Semantic drive</span><span class="arrow">→</span><span class="pipe">Recurrent state</span><span class="arrow">→</span><span class="pipe">GraphDelta</span><span class="arrow">→</span><span class="pipe">Action</span></div></aside>
 </section>
 
 <section class="stage">
@@ -243,8 +243,8 @@ developmental projection, not measured FlyWire activity.\n\nThing Model archive:
 <script>
 const $=s=>document.querySelector(s);
 const GOAL_PLAN_TRUTH='contract_derived_goal_plan_not_hidden_ground_truth';
-const state={turn:0,taskSeq:0,nodeSeq:0,tasks:[],activeTask:null,paused:[],revisions:[],focus:null,focusKey:null,lastArea:'客厅',lastAction:null,thingValues:{},intentTree:{},lastDelta:null};
-let DATA=null,NEURAL=null,THINGREG=null,CAPINDEX=null,neuralState=[],semanticScores=[],projectedRoots=[],unitToRoot=[],decisionHeads=null,currentCorpusCase=null,composerTurns=[],composerResults=[],composerSeq=0,composerDragId=null,composerInspectIndex=null,benchmarkScenarios=[],benchmarkResults=[],benchmarkRunSeq=0,essenceBatch=[],essenceResults=[],rot={x:-.18,y:.31},zoom=1.55,drag=null,hits=[],neuralHits=[],selected=null,pulseT=0,pulseRAF=null,pulseStart=0,pulseUntil=0,pulseSpeed=1,pulsePaused=false,pulseBaseReal=0,pulseBaseVirtual=0;
+const state={turn:0,taskSeq:0,nodeSeq:0,tasks:[],activeTask:null,paused:[],revisions:[],focus:null,focusKey:null,lastArea:'客厅',lastAction:null,thingValues:{},intentTree:{},utteranceHistory:[],lastDelta:null};
+let DATA=null,NEURAL=null,LEARNED=null,THINGREG=null,CAPINDEX=null,neuralState=[],semanticScores=[],projectedRoots=[],unitToRoot=[],decisionHeads=null,currentCorpusCase=null,composerTurns=[],composerResults=[],composerSeq=0,composerDragId=null,composerInspectIndex=null,benchmarkScenarios=[],benchmarkResults=[],benchmarkRunSeq=0,essenceBatch=[],essenceResults=[],rot={x:-.18,y:.31},zoom=1.55,drag=null,hits=[],neuralHits=[],selected=null,pulseT=0,pulseRAF=null,pulseStart=0,pulseUntil=0,pulseSpeed=1,pulsePaused=false,pulseBaseReal=0,pulseBaseVirtual=0;
 
 function clone(x){return JSON.parse(JSON.stringify(x))}
 function normalizeThingRegistry(raw){
@@ -524,6 +524,71 @@ function buildGoalPlan(scenario,area,raw){
 }
 function pct(x){return Math.max(0,Math.min(100,Math.round((Number(x)||0)*100)))}
 function setHead(id,label,score){$('#'+id).textContent=label+' · '+pct(score)+'%';$('#'+id+'Bar').style.width=pct(score)+'%'}
+
+function fnv1a32(s){
+  let h=2166136261>>>0;
+  for(const ch of String(s||'')){h^=ch.codePointAt(0);h=Math.imul(h,16777619)>>>0}
+  return h>>>0;
+}
+function learnedFeatureSet(text){
+  if(!LEARNED)return new Set();
+  const dim=LEARNED.feature.dim||2048,s=[...String(text||'').replace(/\s+/g,'')],out=new Set();
+  for(const n of (LEARNED.feature.ngrams||[1,2,3]))for(let i=0;i+n<=s.length;i++)out.add(fnv1a32(s.slice(i,i+n).join(''))%dim);
+  return out;
+}
+function learnedModelText(text){
+  const hist=(state.utteranceHistory||[]).slice(-4).join(' ');
+  return (hist?'[H]'+hist+' ':'')+'[U]'+String(text||'');
+}
+function learnedHead(name,text){
+  const head=LEARNED?.heads?.[name];if(!head)return null;
+  const fs=learnedFeatureSet(learnedModelText(text)),scale=1/Math.sqrt(Math.max(1,fs.size)),logits=[];
+  for(let c=0;c<head.labels.length;c++){
+    let z=Number(head.bias?.[c]||0);
+    for(const pair of (head.weights?.[c]||[]))if(fs.has(pair[0]))z+=Number(pair[1])*scale;
+    logits.push(z);
+  }
+  const m=Math.max(...logits),ex=logits.map(x=>Math.exp(Math.min(30,x-m))),den=ex.reduce((a,b)=>a+b,0)||1,probs=ex.map(x=>x/den);
+  const idx=probs.indexOf(Math.max(...probs));
+  return {label:head.labels[idx],score:probs[idx],probabilities:Object.fromEntries(head.labels.map((l,i)=>[l,probs[i]])),logits};
+}
+function learnedActionFromHeads(raw){
+  if(!raw)return null;
+  const dev=raw.device?.label,intent=raw.primary_intent?.label;
+  const map={
+    'window|Open':'exterior_window_open','window|Close':'exterior_window_close',
+    'light|TurnOn':'living_color_light_on','light|TurnOff':'living_color_light_off',
+    'light|AdjustValue':'living_color_light_dim_30'
+  };
+  return map[dev+'|'+intent]||null;
+}
+function learnedDecisionHeads(text){
+  if(!LEARNED)return null;
+  const raw={};
+  for(const name of ['family','context_operation','primary_intent','device','needs_context','ood','multi_intent'])raw[name]=learnedHead(name,text);
+  if(!raw.family||!raw.primary_intent)return null;
+  const fallback=lexicalDecisionHeads(text);
+  let entity=raw.device.label,entityScore=raw.device.score;
+  if(raw.ood?.label==='yes'&&raw.ood.score>.6){entity='none';entityScore=raw.ood.score}
+  if(/温度|空调/.test(text)){entity=fallback.entity.label;entityScore=Math.max(fallback.entity.score,entityScore*.65)}
+  if(/纱窗|防虫网/.test(text)){entity=fallback.entity.label;entityScore=Math.max(fallback.entity.score,entityScore*.65)}
+  const intent=raw.primary_intent.label;
+  const opMap={Open:'open',TurnOn:'open',Close:'close',TurnOff:'close',AdjustValue:'set_value',SetValue:'set_value',QueryState:'query',GoalRequest:'plan',Reject:'clarify',None:'clarify'};
+  const operation=opMap[intent]||fallback.operation.label;
+  const opScore=raw.primary_intent.score;
+  const needsProb=raw.needs_context?.probabilities?.yes||0;
+  const oodProb=raw.ood?.probabilities?.yes||0;
+  return {
+    entity:{label:entity,score:entityScore},
+    operation:{label:operation,score:opScore},
+    ambiguity:needsProb,
+    ood:oodProb,
+    source:'learned_compact_dialogue_decision_model',
+    learned:raw,
+    learned_action:learnedActionFromHeads(raw)
+  };
+}
+
 function lexicalDecisionHeads(text){
   const t=String(text||'');
   let entity='none',entityScore=.26;
@@ -597,7 +662,7 @@ function jevShapedContract(text,h){
     ambiguous:{type:'noul',noul:Number(h.ambiguity.toFixed(3))},
     ood:{type:'noul',noul:Number(h.ood.toFixed(3))}
   };
-  return {request:{state:statePayload,questions},response:{answers,policy:{clarify_if_ambiguity_gte:.55,escalate_if_ood_gte:.55,execute_only_after_schema_grounding:true}}};
+  return {request:{state:statePayload,questions},response:{answers,inference:{source:h.source||'lexical_fallback',family:h.learned?.family?.label||null,context_operation:h.learned?.context_operation?.label||null,primary_intent:h.learned?.primary_intent?.label||null,multi_intent:h.learned?.multi_intent?.label||null,learned_action:h.learned_action||null},policy:{clarify_if_ambiguity_gte:.55,escalate_if_ood_gte:.55,execute_only_after_schema_grounding:true}}};
 }
 function renderDecisionContract(text,h){
   const d=jevShapedContract(text,h);window.__decisionContract=d;
@@ -606,8 +671,8 @@ function renderDecisionContract(text,h){
 }
 
 function updateDecisionHeads(text){
-  const h=lexicalDecisionHeads(text), scenario=inferScenario(text);
-  if(scenario&&scenario.match>.20){
+  const h=learnedDecisionHeads(text)||lexicalDecisionHeads(text), scenario=inferScenario(text);
+  if(scenario&&scenario.match>.20&&(!h.learned||h.learned.family?.label==='scenario_inference'||h.operation.score<.62)){
     h.entity={label:scenario.entity,score:Math.max(h.entity.score,scenario.confidence*scenario.match+.35)};
     h.operation={label:scenario.operation,score:Math.max(h.operation.score,scenario.confidence*scenario.match+.32)};
   }
@@ -622,7 +687,7 @@ function updateDecisionHeads(text){
   }
   $('#scenarioNote').textContent=scenario&&scenario.match>.16
     ? 'Goal：'+scenario.goal+' · semantic needs '+needs.map(x=>x.entity+'.'+x.property+'='+String(x.value)).join(' + ')+' · commit gate '+(gatePreview?.gate||'pending')+' · '+(gatePreview?.gates||[]).map(x=>x.need.property+': top '+String(x.top_score)+' / margin '+String(x.margin)).join(' · ')+' · source '+(scenario.inference_source||'scenario_similarity')
-    : (h.ood>.55?'当前表达超出 bounded home decision → LLM_ESCALATE。':'当前表达留在 bounded local decision layer；如 capability margin 不足会先 CLARIFY，而不是硬执行。');
+    : (h.ood>.55?'当前表达超出 bounded home decision → LLM_ESCALATE · source '+(h.source||'fallback'):'当前表达留在 bounded local decision layer · '+(h.learned?.family?.label||'fallback')+' · source '+(h.source||'fallback')+'；capability margin 不足会先 CLARIFY。');
   return h;
 }
 function randomChoice(a){return a[Math.floor(Math.random()*a.length)]}
@@ -1117,6 +1182,8 @@ function settleNeural(text,delta,opts={}){
   if(!NEURAL)return {bestLabel:null,scores:[]};
   if(!neuralState.length)neuralState=Array(NEURAL.config.dim).fill(0);
   semanticScores=semanticReadout(text);
+  const learnedNow=learnedDecisionHeads(text), learnedAction=learnedNow?.learned_action;
+  if(learnedAction){const sc=Math.max(learnedNow.learned?.primary_intent?.score||0,learnedNow.learned?.family?.score||0);semanticScores=[{label:learnedAction,score:Math.min(.999,sc),source:'learned_dialogue_model'},...semanticScores.filter(x=>x.label!==learnedAction)];}
   const snap=neuralSnapshot(delta);
   const drive=Array(NEURAL.config.dim).fill(0);
   for(const k of NEURAL.keys||[])addSparse(drive,NEURAL.templates[k],neuralNorm(k,snap[k]));
@@ -1661,7 +1728,7 @@ function executeCurrent(neural,d){
 function submit(text,opts={}){
   if(!text.trim())return null;
   if(!opts.silent)addMsg('YOU',text,true);
-  const d=deltaFor(text);applyDelta(d);const neural=settleNeural(text,d,{silent:!!opts.silent});const exec=executeCurrent(neural,d);
+  const d=deltaFor(text);applyDelta(d);const neural=settleNeural(text,d,{silent:!!opts.silent});const exec=executeCurrent(neural,d);state.utteranceHistory.push(String(text));if(state.utteranceHistory.length>8)state.utteranceHistory=state.utteranceHistory.slice(-8);
   if(!opts.silent){render(d,exec,neural,text);renderCorpusEval(text,neural);startPulse();addMsg('FLYTHINK',exec.route+(exec.actions.length?' · '+exec.actions.join(' + '):'')+(neural.bestLabel?' · neural:'+neural.bestLabel:''),false);}
   return {delta:clone(d),neural:clone(neural),exec:clone(exec)};
 }
@@ -1789,7 +1856,7 @@ function render(d,exec,neural,text=''){
 }
 
 function resetRuntimeState(){
-  Object.assign(state,{turn:0,taskSeq:0,nodeSeq:0,tasks:[],activeTask:null,paused:[],revisions:[],focus:null,focusKey:null,lastArea:'客厅',lastAction:null,thingValues:{},intentTree:{},lastDelta:null});
+  Object.assign(state,{turn:0,taskSeq:0,nodeSeq:0,tasks:[],activeTask:null,paused:[],revisions:[],focus:null,focusKey:null,lastArea:'客厅',lastAction:null,thingValues:{},intentTree:{},utteranceHistory:[],lastDelta:null});
   neuralState=NEURAL?Array(NEURAL.config.dim).fill(0):[];semanticScores=[];projectedRoots=[];currentCorpusCase=null;
 }
 function reset(){
@@ -1798,21 +1865,22 @@ function reset(){
 }
 
 async function loadAnatomy(){
-  const [g,snap,n,tr,ci]=await Promise.all([
+  const [g,snap,n,lm,tr,ci]=await Promise.all([
     fetch('./anatomy-sample.json').then(r=>r.json()),
     fetch('./measured-snapshot.json').then(r=>r.json()),
     fetch('./neural-substrate.json').then(r=>r.json()),
+    fetch('./learned-dialogue-model.json').then(r=>r.json()),
     fetch('./real-home-thing-model-registry.json').then(r=>r.json()),
     fetch('./capability-index.json').then(r=>r.json())
   ]);
-  DATA={g,s:snap};NEURAL=n;THINGREG=normalizeThingRegistry(tr);CAPINDEX=normalizeCapabilityIndex(ci);
+  DATA={g,s:snap};NEURAL=n;LEARNED=lm;THINGREG=normalizeThingRegistry(tr);CAPINDEX=normalizeCapabilityIndex(ci);
   if(THINGREG.source_archive_sha256!==THING_MODEL_SOURCE_SHA256)throw new Error('Thing Model registry SHA mismatch');
   if(CAPINDEX.truth!=='compiled_from_all_46_fixed_user_uploaded_thing_models'||Number(CAPINDEX.models)!==46||Number(CAPINDEX.count)<700)throw new Error('Full 46-model capability index unavailable');
   populateModelBrowser();
   neuralState=Array(n.config.dim).fill(0);buildUnitToRootMap();projectActiveUnits();drawNeural();
   $('#mappedPill').textContent=(snap.graph.nodes||[]).length+' measured · '+(g.projection_pool||[]).length+' projection';
   $('#neuralHud').innerHTML='216 units · '+(n.recurrent_edges||[]).length+' recurrent edges · '+n.training.example_count+' action + '+(n.goal_training?.example_count||0)+' goal train exemplars';
-  $('#corpusMeta').textContent=n.training.example_count+' action train seeds · '+(n.goal_training?.example_count||0)+' goal curriculum · '+(n.mutation_pool?.count||0)+' derived eval mutations · '+CAPINDEX.count+' global capabilities';
+  $('#corpusMeta').textContent='LEARNED '+lm.version+' · '+lm.training.train_rows+' train / '+lm.training.dev_rows+' dev · family '+Math.round((lm.metrics?.family?.accuracy||0)*100)+'% · context '+Math.round((lm.metrics?.context_operation?.accuracy||0)*100)+'% · '+CAPINDEX.count+' global capabilities';
   initEssenceFilters();buildEssenceBatch();updateDecisionHeads($('#input').value);
   $('#hud').innerHTML='geometry: '+g.truth+'<br>source: Codex FAFB v783<br>source points: '+Number(g.source_count).toLocaleString()+'<br>display sample: '+Number(g.points.length).toLocaleString()+'<br>projection pool: '+Number((g.projection_pool||[]).length).toLocaleString()+' roots<br>measured replay: '+Number((snap.graph.nodes||[]).length).toLocaleString()+' roots<br><br>Thing Models: '+CAPINDEX.models+' · capabilities: '+CAPINDEX.count+'<br>activity: '+snap.truth;
   drawBrain();
