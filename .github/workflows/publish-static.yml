@@ -67,6 +67,21 @@ jobs:
               },ensure_ascii=False),encoding='utf-8')
           PY
           python scripts/build_capability_index.py
+          python - <<'PY'
+          import json
+          from collections import Counter
+          from pathlib import Path
+          ci=json.loads(Path('_site/capability-index.json').read_text(encoding='utf-8'))
+          assert ci['truth']=='compiled_from_all_46_fixed_user_uploaded_thing_models'
+          assert ci['sha']=='3a5e67efd5847d70761076506500d001cbed36b1d19dca60ed286eb72ae5d60c'
+          assert ci['models']==46
+          assert ci['count']==794==len(ci['rows'])
+          assert len({r[0] for r in ci['rows']})==46
+          assert Counter(r[4] for r in ci['rows'])==Counter({'p':664,'s':55,'e':75})
+          meta=json.loads(Path('_site/capability-index-build-meta.json').read_text(encoding='utf-8'))
+          assert meta['capabilities']==794 and meta['models']==46
+          print('verified global capability index: 46 models / 794 capabilities')
+          PY
 
           curl -L --fail --retry 4 --retry-all-errors \
             'https://storage.googleapis.com/flywire-data/codex/data/fafb/783/coordinates.csv.gz' \
