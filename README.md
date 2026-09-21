@@ -79,6 +79,12 @@ Scenario expressions can emit a small goal plan (for example movie comfort → b
 
 The Regression Lab includes state/value patch families and checks for `state_tree_loss`, `duplicate_state_node`, `property_slot`, `value_slot`, `instance_grounding`, and scenario-plan failures.
 
+## Goal/state curriculum
+
+Scenario awareness now has a separate train-only curriculum in `data/goal-state-curriculum.json`: 40 phrases across rain protection, movie comfort, ventilation, sleep transition, and leave-home goals. The build creates dedicated `goal:*` semantic templates for the 216-unit developmental substrate.
+
+The goal curriculum is kept separate from generated public stress episodes. Goal recognition can therefore be inspected as a train-only semantic readout while the Regression Lab uses different wording and multi-turn composition for stress evaluation. This remains a developmental exemplar-driven runtime, not a claim of a fully trained production model.
+
 ## Grounding decision trace and goal capability retrieval
 
 Each executable node now exposes a compact provenance trace for room, device instance, property, operation, value, state-tree mutation, and final real-schema binding. The trace distinguishes explicit, inherited/coreference, corrected, and scenario-derived values so a wrong action can be localized to the grounding stage that produced it.
