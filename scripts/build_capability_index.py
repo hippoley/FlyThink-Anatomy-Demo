@@ -75,7 +75,6 @@ if parts:
         Path('_site/capability-index.json').write_bytes(data)
         print('full capability index',out['count'],'capabilities from',out['models'],'models')
     except Exception as exc:
-        print('warning: invalid full capability artifact; rebuilding from registry:',repr(exc))
-        compile_from_registry(reason='invalid_full_capability_parts')
+        raise RuntimeError('invalid full 46-model capability artifact') from exc
 else:
     compile_from_registry(reason='full_capability_parts_missing')
