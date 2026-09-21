@@ -133,7 +133,7 @@ developmental projection, not measured FlyWire activity.</div></div>
 </div>
 <script>
 const $=s=>document.querySelector(s);
-const state={turn:0,taskSeq:0,nodeSeq:0,tasks:[],activeTask:null,paused:[],revisions:[],focus:null,lastAction:null,world:{window:0,light:1,brightness:100,temperature:24},lastDelta:null};
+const state={turn:0,taskSeq:0,nodeSeq:0,tasks:[],activeTask:null,paused:[],revisions:[],focus:null,lastArea:'客厅',lastAction:null,world:{window:0,light:1,brightness:100,temperature:24},lastDelta:null};
 let DATA=null,NEURAL=null,neuralState=[],semanticScores=[],projectedRoots=[],unitToRoot=[],decisionHeads=null,rot={x:-.18,y:.31},zoom=1.55,drag=null,hits=[],selected=null,pulseT=0,pulseRAF=null,pulseUntil=0;
 
 function clone(x){return JSON.parse(JSON.stringify(x))}
@@ -159,6 +159,39 @@ const SLOT_SYNONYMS={
   '打开':['打开','开启','弄开'],
   '调暗':['调暗','亮度调低','暗一点']
 };
+const AREA_ALIASES={
+  '客厅':'客厅','大厅':'客厅','厅里':'客厅',
+  '主卧':'主卧','大卧室':'主卧','大卧':'主卧',
+  '次卧':'次卧','客卧':'次卧','次卧室':'次卧',
+  '儿童房':'儿童房','孩子房':'儿童房','小孩房':'儿童房',
+  '书房':'书房','工作间':'书房',
+  '厨房':'厨房',
+  '卫生间':'卫生间','洗手间':'卫生间','厕所':'卫生间',
+  '餐厅':'餐厅','饭厅':'餐厅',
+  '玄关':'玄关','门口':'玄关','入口':'玄关',
+  '阳台':'阳台','露台':'阳台'
+};
+function canonicalArea(text){
+  const hits=Object.keys(AREA_ALIASES).filter(k=>String(text||'').includes(k)).sort((a,b)=>b.length-a.length);
+  return hits.length?AREA_ALIASES[hits[0]]:null;
+}
+function canonicalEntityName(entity,area){
+  if(!area)return null;
+  if(entity==='window')return area+'外窗';
+  if(entity==='light')return area+'主灯';
+  if(entity==='climate')return area+'空调';
+  if(entity==='screen')return area+'纱窗';
+  return null;
+}
+function intentFromLastAction(){
+  const a=String(state.lastAction||'');
+  if(a.includes('window_close'))return 'TurnOff';
+  if(a.includes('window_open'))return 'TurnOn';
+  if(a.includes('light_off'))return 'TurnOff';
+  if(a.includes('light_on'))return 'TurnOn';
+  if(a.includes('dim'))return 'SetValue';
+  return null;
+}
 const SCENARIOS=[
   {text:'外面开始下雨了，屋里没人，我不想雨飘进来',entity:'window',operation:'close',action:'exterior_window_close',confidence:.84},
   {text:'准备看电影了，客厅有点刺眼',entity:'light',operation:'set_value',action:'living_color_light_dim_30',confidence:.78},
@@ -366,12 +399,14 @@ function drawNeural(){
 
 function parseUtterance(text){
   const raw=text.trim(), heads=updateDecisionHeads(raw), scenario=inferScenario(raw), parts=raw.split(/[，,；;]/).map(x=>x.trim()).filter(Boolean);
-  const isCancel=/算了|取消|别执行|不用了/.test(raw);
+  const isCancel=/算了|取消|别执行|不用了|撤销/.test(raw);
+  const isNegation=/不要打开|不要开启|别把.*打开|先别动|不要动/.test(raw);
   const isResume=/继续刚才|继续之前|恢复刚才|接着刚才/.test(raw);
   const isInterrupt=/先别管|先放一放|先暂停/.test(raw);
-  const correction=/还是|改成|改为|换成|开一点|关一点/.test(raw);
-  const inherit=/那个|它|再/.test(raw);
+  const correction=/还是|改成|改为|换成|开一点|关一点|不对|说反了/.test(raw);
+  const inherit=/那个|它|再|做一样的|照刚才/.test(raw);
   if(isCancel) return {type:'cancel'};
+  if(isNegation) return {type:'negation',nodes:[newNode('Reject',state.focus||heads.entity.label,{negated_operation:heads.operation.label,area:canonicalArea(raw)||state.lastArea})]};
   if(isResume) return {type:'resume'};
   if(heads.ood>.72)return {type:'ood',nodes:[newNode('Plan','llm',{reason:'ood_escalation'})]};
   if(scenario&&scenario.match>.22&&heads.ambiguity<.55){
@@ -379,21 +414,35 @@ function parseUtterance(text){
     return {type:'scenario',nodes:[newNode(scenario.operation==='set_value'?'SetValue':scenario.operation==='close'?'TurnOff':'TurnOn',scenario.entity,slots)],scenario};
   }
   const nodes=[];
+  let previousIntent=null, previousEntity=null, previousArea=null;
   for(const p of parts){
     let entity=null,intent=null,slots={};
+    const explicitArea=canonicalArea(p);
+    const area=explicitArea||previousArea||state.lastArea||'客厅';
     if(/外窗|窗户|窗扇|开窗器/.test(p))entity='window';
     else if(/灯|彩灯|RGB/.test(p))entity='light';
     else if(/温度|空调/.test(p))entity='climate';
-    else if(inherit && state.focus)entity=state.focus;
+    else if(/纱窗|防虫网/.test(p))entity='screen';
+    else if((inherit||/做一样的|照刚才/.test(p))&&(previousEntity||state.focus))entity=previousEntity||state.focus;
 
-    if(/查询|现在|多少|开着吗|关着吗|温度/.test(p) && entity==='climate'){intent='QueryState';slots.property='temperature';}
+    if(/做一样的|照刚才/.test(p)){intent=previousIntent||intentFromLastAction();}
+    else if(/查询|现在|多少|开着吗|关着吗|温度/.test(p) && entity==='climate'){intent='QueryState';slots.property='temperature';}
     else if(/查询|状态|开着吗|关着吗/.test(p)){intent='QueryState';slots.property='state';}
     else if(/调暗|亮度/.test(p)){intent='SetValue';slots.property='brightness';slots.value=30;}
     else if(/开一点/.test(p)){intent='SetValue';slots.property='open_ratio';slots.value=30;}
     else if(/关/.test(p)){intent='TurnOff';slots.property=entity==='light'?'power':'motorControl';slots.value=entity==='light'?false:1;}
     else if(/开/.test(p)){intent='TurnOn';slots.property=entity==='light'?'power':'motorControl';slots.value=entity==='light'?true:0;}
     else if(/规划|总结|解释|写一份/.test(p)){entity='llm';intent='Plan';}
-    if(entity&&intent)nodes.push(newNode(intent,entity,slots));
+
+    if(entity&&intent){
+      slots.area=area;
+      const en=canonicalEntityName(entity,area);if(en)slots.entity_name=en;
+      if(!explicitArea&&area)slots.area_source='inherited';
+      if(explicitArea)slots.area_source='explicit';
+      nodes.push(newNode(intent,entity,slots));
+      previousIntent=intent;previousEntity=entity;previousArea=area;
+      state.lastArea=area;
+    }
   }
   if(!nodes.length && inherit && state.focus){
     nodes.push(newNode('Clarify',state.focus,{},'unresolved'));
@@ -407,6 +456,12 @@ function deltaFor(text){
   const turn_id='turn:'+state.turn;
   if(p.type==='cancel'){
     return {contract_version:'homeflow.graph_delta.v1',op:'CANCEL_TASK',turn_id,commit_policy:'immediate_cancel',target_task_id:state.activeTask,source:'browser_contract_demo'};
+  }
+  if(p.type==='negation'){
+    if(state.activeTask){
+      return {contract_version:'homeflow.graph_delta.v1',op:'CANCEL_TASK',turn_id,commit_policy:'immediate_cancel',target_task_id:state.activeTask,nodes:p.nodes,metadata:{negation:true},source:'browser_contract_demo'};
+    }
+    return {contract_version:'homeflow.graph_delta.v1',op:'CREATE_TASK',turn_id,commit_policy:'never_commit',nodes:p.nodes,program:{control_type:'single'},metadata:{negation:true,rejected:true},source:'browser_contract_demo'};
   }
   if(p.type==='resume'){
     const target=state.paused.pop()||state.tasks.filter(t=>t.status==='active').slice(-2,-1)[0]?.task_id||state.activeTask;
@@ -490,7 +545,7 @@ function escapeHtml(s){return String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','
 function render(d,exec,neural){
   $('#turnPill').textContent='turn '+state.turn;$('#deltaPill').textContent=d.op;$('#delta').textContent=JSON.stringify(d,null,2);
   $('#tasks').innerHTML=state.tasks.length?state.tasks.map(t=>'<div class="task '+(t.status==='cancelled'?'cancel':'')+'"><div class="k">'+t.task_id+' · '+t.status+' · '+(t.program?.control_type||'single')+'</div>'+t.nodes.map(n=>'<div class="node"><span>'+escapeHtml(n.intent)+' · '+escapeHtml(n.target.entity)+'</span><span>'+escapeHtml(JSON.stringify(n.slots))+'</span></div>').join('')+'</div>').join(''):'No active task.';
-  const n=exec.node||{};const slots=n.slots||{};const ledger={entity:n.target?.entity||state.focus||'—',intent:n.intent||'—',property:slots.property??'—',value:slots.value??'—',reference:/那个|它|再/.test(d.turn_id)?'inherit_previous':'contextual',active_task:state.activeTask||'—',paused_stack:state.paused.join(' → ')||'—'};
+  const n=exec.node||{};const slots=n.slots||{};const ledger={entity:n.target?.entity||state.focus||'—',entity_name:slots.entity_name??'—',area:slots.area??state.lastArea??'—',intent:n.intent||'—',property:slots.property??'—',value:slots.value??'—',reference:(slots.area_source==='inherited'||/那个|它|再/.test(JSON.stringify(d)))?'inherit_previous':'explicit/contextual',active_task:state.activeTask||'—',paused_stack:state.paused.join(' → ')||'—'};
   $('#slots').innerHTML=Object.entries(ledger).map(([k,v])=>'<div class="slot"><div class="k">'+k.toUpperCase()+'</div><div class="v">'+escapeHtml(v)+'</div></div>').join('');
   const steps=['train exemplars','semantic drive','216 recurrent units','3× settle','GraphDelta','task context','route','Thing Model'];$('#flow').innerHTML=steps.map(x=>'<span class="step on">'+x+'</span>').join('');
   $('#revisions').textContent=JSON.stringify(state.revisions,null,2);
@@ -499,7 +554,7 @@ function render(d,exec,neural){
 }
 
 function reset(){
-  Object.assign(state,{turn:0,taskSeq:0,nodeSeq:0,tasks:[],activeTask:null,paused:[],revisions:[],focus:null,lastAction:null,world:{window:0,light:1,brightness:100,temperature:24},lastDelta:null}); neuralState=NEURAL?Array(NEURAL.config.dim).fill(0):[]; semanticScores=[]; projectedRoots=[];
+  Object.assign(state,{turn:0,taskSeq:0,nodeSeq:0,tasks:[],activeTask:null,paused:[],revisions:[],focus:null,lastArea:'客厅',lastAction:null,world:{window:0,light:1,brightness:100,temperature:24},lastDelta:null}); neuralState=NEURAL?Array(NEURAL.config.dim).fill(0):[]; semanticScores=[]; projectedRoots=[];
   $('#chat').innerHTML='<div class="msg"><div class="who">SYSTEM</div>Session reset.</div>';$('#input').value='把客厅外窗关上，客厅灯也关了';updateDecisionHeads($('#input').value);$('#turnPill').textContent='turn 0';$('#deltaPill').textContent='IDLE';$('#delta').textContent='{}';$('#tasks').textContent='No active task.';$('#slots').innerHTML='';$('#flow').innerHTML='';$('#revisions').textContent='[]';$('#route').textContent='WAITING';$('#action').textContent='—';$('#focus').textContent='—';$('#worldDelta').textContent='—';$('#semanticMatches').innerHTML='';if(NEURAL){drawNeural();$('#neuralHud').innerHTML='state reset · 216 developmental units';}drawBrain();
 }
 
