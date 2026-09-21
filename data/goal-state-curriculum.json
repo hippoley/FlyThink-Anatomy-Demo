@@ -1,0 +1,118 @@
+{
+  "truth": "contract_derived_training_curriculum_separate_from_public_stress_eval",
+  "source": "fixed_home_goal_contract_and_immutable_thing_model_capabilities",
+  "split": "train_only",
+  "leakage_rule": "phrases here are not reused verbatim by generated public stress episodes",
+  "goals": {
+    "rain_protection": [
+      "雨势起来了，帮我避免窗边进水",
+      "开始飘雨了，家里开口先保护起来",
+      "天气转雨，别让雨水从窗这边进来",
+      "雨越来越大，先处理可能进水的窗",
+      "外面雨起来了，家里要防飘雨",
+      "帮我把房间切到防雨状态",
+      "雨天家里没人，开口别留风险",
+      "现在需要做一下窗边防雨"
+    ],
+    "movie_comfort": [
+      "进入观影状态，灯光柔一点",
+      "我要开始看片了，把灯光调舒服些",
+      "准备观影，别让灯光太刺激",
+      "看屏幕的时候环境光柔和一点",
+      "给我一个适合看影片的灯光",
+      "观影时把亮度和色温收舒服些",
+      "我要看投影了，环境光调整一下",
+      "切到适合看电影的灯光状态"
+    ],
+    "ventilation": [
+      "房间空气发闷，想换换气",
+      "这里有点憋，帮我通通风",
+      "室内有点不透气，做一下自然通风",
+      "想让屋里空气流动起来",
+      "房间闷住了，给我透透气",
+      "现在适合自然换气，帮我处理一下",
+      "屋里空气不流通，开一点通风",
+      "让房间先换一会儿气"
+    ],
+    "sleep_transition": [
+      "我要休息了，灯光收柔和些",
+      "准备入睡，把环境灯光调整一下",
+      "睡前灯别这么刺激",
+      "要睡了，给我一个更柔和的光",
+      "进入睡前状态，把灯光降下来",
+      "准备休息，灯光暖一点暗一点",
+      "睡觉前把房间光线处理舒服",
+      "我要躺下了，灯光切到睡前状态"
+    ],
+    "leave_home": [
+      "准备离开家，把容易忘的灯窗处理好",
+      "我要出门一阵，帮我收一下家里的灯和窗",
+      "现在离家，把灯和窗的状态处理安全",
+      "人要走了，家里的灯别留着，窗也处理一下",
+      "切到离家状态，把灯窗收好",
+      "我要走了，检查并处理还亮着的灯和开着的窗",
+      "家里马上没人，把灯光和窗户收一下",
+      "出门前帮我把灯窗状态整理好"
+    ]
+  },
+  "goal_contract": {
+    "rain_protection": [
+      {
+        "entity": "window",
+        "property": "motorControl",
+        "intent": "TurnOff",
+        "value": 1
+      }
+    ],
+    "movie_comfort": [
+      {
+        "entity": "light",
+        "property": "brightness",
+        "intent": "SetValue",
+        "value": 30
+      },
+      {
+        "entity": "light",
+        "property": "colorTemperature",
+        "intent": "SetValue",
+        "value": 3000
+      }
+    ],
+    "ventilation": [
+      {
+        "entity": "window",
+        "property": "motorControl",
+        "intent": "TurnOn",
+        "value": 0
+      }
+    ],
+    "sleep_transition": [
+      {
+        "entity": "light",
+        "property": "brightness",
+        "intent": "SetValue",
+        "value": 30
+      },
+      {
+        "entity": "light",
+        "property": "colorTemperature",
+        "intent": "SetValue",
+        "value": 3000
+      }
+    ],
+    "leave_home": [
+      {
+        "entity": "light",
+        "property": "power",
+        "intent": "TurnOff",
+        "value": false
+      },
+      {
+        "entity": "window",
+        "property": "motorControl",
+        "intent": "TurnOff",
+        "value": 1
+      }
+    ]
+  }
+}
