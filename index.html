@@ -441,7 +441,8 @@ function parseUtterance(text){
     if(/做一样的|照刚才/.test(p)){intent=previousIntent||intentFromLastAction();}
     else if(/查询|现在|多少|开着吗|关着吗|温度/.test(p) && entity==='climate'){intent='QueryState';slots.property='temperature';}
     else if(/查询|状态|开着吗|关着吗/.test(p)){intent='QueryState';slots.property='state';}
-    else if(/色温|开尔文|3000K|3000k|三千/.test(p)){intent='SetValue';slots.property='colorTemperature';slots.value=3000;}\n    else if(/调暗|亮度/.test(p)){intent='SetValue';slots.property='brightness';slots.value=30;}
+    else if(/色温|开尔文|3000K|3000k|三千/.test(p)){intent='SetValue';slots.property='colorTemperature';slots.value=3000;}
+    else if(/调暗|亮度/.test(p)){intent='SetValue';slots.property='brightness';slots.value=30;}
     else if(/开一点/.test(p)){intent='SetValue';slots.property='open_ratio';slots.value=30;}
     else if(/关/.test(p)){intent='TurnOff';slots.property=entity==='light'?'power':'motorControl';slots.value=entity==='light'?false:1;}
     else if(/开/.test(p)){intent='TurnOn';slots.property=entity==='light'?'power':'motorControl';slots.value=entity==='light'?true:0;}
