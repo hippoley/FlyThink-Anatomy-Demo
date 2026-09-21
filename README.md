@@ -79,6 +79,14 @@ Scenario expressions can emit a small goal plan (for example movie comfort → b
 
 The Regression Lab includes state/value patch families and checks for `state_tree_loss`, `duplicate_state_node`, `property_slot`, `value_slot`, `instance_grounding`, and scenario-plan failures.
 
+## Grounding decision trace and goal capability retrieval
+
+Each executable node now exposes a compact provenance trace for room, device instance, property, operation, value, state-tree mutation, and final real-schema binding. The trace distinguishes explicit, inherited/coreference, corrected, and scenario-derived values so a wrong action can be localized to the grounding stage that produced it.
+
+Goal/scenario expressions now retrieve a candidate capability set before execution. Candidate actions are resolved through the immutable runtime binding registry and expose the actual `model_code → module → property` path when available. The public goal plans are explicitly labeled contract-derived; they are not represented as hidden benchmark truth.
+
+The generated stress suite also contains hybrid 4–10 turn episodes that mix value patches, cross-room references, goal planning, interruption/resume, and cancellation in one sequence. New diagnostics include `goal_resolution`, `goal_plan_contract`, `capability_retrieval`, and `capability_schema_missing`.
+
 ## Multi-turn Regression Lab
 
 The public playground also includes a deterministic batch regression lab. It can generate 12–48 synthetic-but-structured dialogue sequences, each 4–10 turns long, from bounded home-control primitives. These sequences exercise interruption/resume, revision, coreference, cross-room inheritance and cancellation.
