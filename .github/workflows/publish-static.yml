@@ -44,6 +44,7 @@ jobs:
           mkdir -p _site
           cp index.html _site/index.html
           python scripts/build_neural_artifacts.py
+          python scripts/train_browser_dialogue_model.py
           python - <<'PY'
           import base64,gzip,json
           from pathlib import Path
