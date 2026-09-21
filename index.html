@@ -39,7 +39,7 @@ radial-gradient(circle at 52% 46%,rgba(80,121,170,.10),transparent 38%),#070b10}
 .legend,.hud{position:absolute;background:rgba(7,11,16,.80);backdrop-filter:blur(10px);border:1px solid #253444;border-radius:11px;padding:9px 10px;font-size:10px;color:#94a4b5;pointer-events:none}
 .legend{left:12px;bottom:12px}.hud{right:12px;top:12px;max-width:275px}.legend .row{display:flex;align-items:center;gap:7px;margin:3px 0}.dot{width:7px;height:7px;border-radius:50%}.dot.blue{background:var(--blue)}.dot.gold{background:var(--gold)}.dot.base{background:#52786a}
 .neuronDetail{position:absolute;right:12px;bottom:12px;max-width:310px;white-space:pre-wrap;font:9px/1.45 ui-monospace,Consolas,monospace;color:#aebdcb;background:rgba(7,11,16,.84);border:1px solid #253444;border-radius:11px;padding:9px;max-height:150px;overflow:auto}
-.turnstrip{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:14px}.metric{background:#0c1118;border:1px solid #1f2a36;border-radius:14px;padding:12px}.metric .k{margin-bottom:4px}.metric .v{font-size:15px}
+.turnstrip{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:14px}.bindings{margin-top:14px;background:linear-gradient(180deg,#0d131b,#0a0f15);border:1px solid var(--line);border-radius:var(--radius);padding:14px}.bindingGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.bindingCard{background:#090e14;border:1px solid #213040;border-radius:12px;padding:10px}.bindingCard .actionName{font-size:13px;font-weight:760;margin:4px 0}.bindingMeta{font:9px/1.5 ui-monospace,Consolas,monospace;color:#8fa2b5;white-space:pre-wrap}.bindingDelta{margin-top:7px;font-size:11px;color:#c5d2df}.bindingRoute{font-size:9px;color:#7f91a3;text-transform:uppercase;letter-spacing:.08em}.metric{background:#0c1118;border:1px solid #1f2a36;border-radius:14px;padding:12px}.metric .k{margin-bottom:4px}.metric .v{font-size:15px}
 .reasoning{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}.section{background:linear-gradient(180deg,#0d131b,#0a0f15);border:1px solid var(--line);border-radius:var(--radius);padding:14px}.sectiontitle{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}.sectiontitle h3{font-size:13px;margin:0}.sectiontitle span{font-size:10px;color:#71849a}
 .neuralbox{position:relative;height:330px;background:radial-gradient(circle at center,rgba(74,116,178,.08),transparent 44%),#070b10;border:1px solid #213040;border-radius:14px;overflow:hidden}.neuralbox canvas{display:block;width:100%;height:100%}.neuralhud{position:absolute;left:9px;top:9px;pointer-events:none;font:9px/1.45 ui-monospace,Consolas,monospace;color:#9fb0c0;background:rgba(7,11,16,.82);border:1px solid #263747;border-radius:9px;padding:7px;max-width:62%}
 .matches{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}.match{font-size:9px;border:1px solid #2b3c4f;border-radius:999px;padding:5px 7px;color:#aebdcb}.match.hot{border-color:#735d37;color:#f0d6a7;background:#18140d}
@@ -47,8 +47,8 @@ radial-gradient(circle at 52% 46%,rgba(80,121,170,.10),transparent 38%),#070b10}
 .task{border-left:2px solid #688eb9;padding-left:8px;margin:7px 0}.task.cancel{border-left-color:#86515a;opacity:.72}.node{display:flex;justify-content:space-between;gap:6px;border-top:1px solid #192530;padding:5px 0;font-size:10px}.slotgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:5px}.slot{background:#070c12;border:1px solid #1f2d3b;border-radius:8px;padding:7px}.flow{display:flex;gap:5px;flex-wrap:wrap}.step{border:1px solid #2b3a4b;border-radius:999px;padding:5px 7px;font-size:9px;color:#9eb0c2}.step.on{border-color:#476d5d;color:#bce8d3;background:#0d1713}
 details{margin-top:14px;border:1px solid #202b38;border-radius:14px;background:#0a0f15;overflow:hidden}summary{cursor:pointer;padding:12px 14px;color:#c8d2dc;font-size:12px;font-weight:680;list-style:none}summary::-webkit-details-marker{display:none}.advanced{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;padding:0 12px 12px}
 .footer{display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;color:#687a8d;font-size:10px;padding:22px 4px 0}
-@media(max-width:1080px){.hero{grid-template-columns:1fr}.engine{border-left:0;border-top:1px solid #283542;padding:16px 0 0}.stage,.reasoning{grid-template-columns:1fr}.viewer,.brainStage{height:560px;min-height:560px}.turnstrip{grid-template-columns:1fr 1fr}.advanced{grid-template-columns:1fr 1fr}}
-@media(max-width:900px){.decisionHeads{grid-template-columns:1fr 1fr}}@media(max-width:680px){.app{width:min(100% - 18px,1540px);padding-top:14px}.nav{padding-bottom:12px}.navmeta{display:none}.hero{padding:18px 2px 24px}.hero h1{font-size:42px}.stage{grid-template-columns:1fr}.chatShell{min-height:520px}.viewer,.brainStage{height:470px;min-height:470px}.turnstrip,.reasoning,.stackgrid,.advanced{grid-template-columns:1fr}.composer{grid-template-columns:1fr}.btn.primary{min-height:44px}}
+@media(max-width:1080px){.bindingGrid{grid-template-columns:1fr 1fr}.hero{grid-template-columns:1fr}.engine{border-left:0;border-top:1px solid #283542;padding:16px 0 0}.stage,.reasoning{grid-template-columns:1fr}.viewer,.brainStage{height:560px;min-height:560px}.turnstrip{grid-template-columns:1fr 1fr}.advanced{grid-template-columns:1fr 1fr}}
+@media(max-width:900px){.decisionHeads{grid-template-columns:1fr 1fr}}@media(max-width:680px){.bindingGrid{grid-template-columns:1fr}.app{width:min(100% - 18px,1540px);padding-top:14px}.nav{padding-bottom:12px}.navmeta{display:none}.hero{padding:18px 2px 24px}.hero h1{font-size:42px}.stage{grid-template-columns:1fr}.chatShell{min-height:520px}.viewer,.brainStage{height:470px;min-height:470px}.turnstrip,.reasoning,.stackgrid,.advanced{grid-template-columns:1fr}.composer{grid-template-columns:1fr}.btn.primary{min-height:44px}}
 </style></head><body><div class="app">
 <nav class="nav"><div class="brand"><span class="mark"></span>FlyThink <span style="color:#687a8d;font-weight:540">Research Playground</span></div><div class="navmeta"><span class="tag live">Interactive</span><span class="tag">Multi-turn</span><span class="tag truth">Truth-separated</span></div></nav>
 
@@ -95,10 +95,11 @@ details{margin-top:14px;border:1px solid #202b38;border-radius:14px;background:#
 
 <div class="turnstrip">
 <div class="metric"><div class="k">Route</div><div id="route" class="v">WAITING</div></div>
-<div class="metric"><div class="k">Action</div><div id="action" class="v">—</div></div>
+<div class="metric"><div class="k">Actions</div><div id="action" class="v">—</div></div>
 <div class="metric"><div class="k">Focus</div><div id="focus" class="v">—</div></div>
-<div class="metric"><div class="k">World delta</div><div id="worldDelta" class="v">—</div></div>
+<div class="metric"><div class="k">World deltas</div><div id="worldDelta" class="v">—</div></div>
 </div>
+<section class="bindings"><div class="sectiontitle"><h3>Thing Model outputs</h3><span id="bindingCount">0 bindings</span></div><div id="bindingGrid" class="bindingGrid"><div class="bindingCard"><div class="bindingRoute">No output yet</div><div class="bindingMeta">Run a turn that targets one or more devices.</div></div></div></section>
 
 <section class="reasoning">
 <div class="section"><div class="sectiontitle"><h3>Developmental neural substrate</h3><span>18 populations × 12 units</span></div>
@@ -133,7 +134,7 @@ developmental projection, not measured FlyWire activity.</div></div>
 </div>
 <script>
 const $=s=>document.querySelector(s);
-const state={turn:0,taskSeq:0,nodeSeq:0,tasks:[],activeTask:null,paused:[],revisions:[],focus:null,lastArea:'客厅',lastAction:null,world:{window:0,light:1,brightness:100,temperature:24},lastDelta:null};
+const state={turn:0,taskSeq:0,nodeSeq:0,tasks:[],activeTask:null,paused:[],revisions:[],focus:null,lastArea:'客厅',lastAction:null,world:{window:0,screen:0,light:1,brightness:100,colorTemperature:4000,temperature:24},lastDelta:null};
 let DATA=null,NEURAL=null,neuralState=[],semanticScores=[],projectedRoots=[],unitToRoot=[],decisionHeads=null,rot={x:-.18,y:.31},zoom=1.55,drag=null,hits=[],selected=null,pulseT=0,pulseRAF=null,pulseUntil=0;
 
 function clone(x){return JSON.parse(JSON.stringify(x))}
@@ -498,6 +499,35 @@ function applyDelta(d){
   }
 }
 
+
+const THING_BINDINGS={
+  exterior_window_close:{entity:'window',entity_id:'physical_dev_home_001.window.combo01',product_model:'CWDS-CA01',module:'motor_1',interaction:'motorControl',code:'motorControl',value:1},
+  exterior_window_open:{entity:'window',entity_id:'physical_dev_home_001.window.combo01',product_model:'CWDS-CA01',module:'motor_1',interaction:'motorControl',code:'motorControl',value:0},
+  insect_screen_close:{entity:'screen',entity_id:'physical_dev_home_001.window.combo01',product_model:'CWDS-CA01',module:'motor_2',interaction:'motorControl',code:'motorControl',value:1},
+  insect_screen_open:{entity:'screen',entity_id:'physical_dev_home_001.window.combo01',product_model:'CWDS-CA01',module:'motor_2',interaction:'motorControl',code:'motorControl',value:0},
+  living_color_light_off:{entity:'light',entity_id:'physical_dev_home_001.light.rgb01',product_model:'DQDZ-Y15R',module:'light',interaction:'power',code:'power',value:false},
+  living_color_light_on:{entity:'light',entity_id:'physical_dev_home_001.light.rgb01',product_model:'DQDZ-Y15R',module:'light',interaction:'power',code:'power',value:true},
+  living_color_light_dim_30:{entity:'light',entity_id:'physical_dev_home_001.light.rgb01',product_model:'DQDZ-Y15R',module:'light',interaction:'brightness',code:'brightness',value:30},
+  living_color_light_warm_3000k:{entity:'light',entity_id:'physical_dev_home_001.light.rgb01',product_model:'DQDZ-Y15R',module:'light',interaction:'colorTemperature',code:'colorTemperature',value:3000}
+};
+function worldKeyForBinding(b){
+  if(b.entity==='window')return b.module==='motor_2'?'screen':'window';
+  if(b.entity==='light'){
+    if(b.code==='brightness')return 'brightness';
+    if(b.code==='colorTemperature')return 'colorTemperature';
+    return 'light';
+  }
+  return b.entity;
+}
+function bindingForAction(action,node,route){
+  const base=THING_BINDINGS[action];
+  if(!base)return {route,action,node,binding:null,worldDelta:null};
+  const b={...base,area:node?.slots?.area||state.lastArea||'客厅',entity_name:node?.slots?.entity_name||canonicalEntityName(base.entity,node?.slots?.area||state.lastArea||'客厅')};
+  const key=worldKeyForBinding(b),before=state.world[key],after=b.value;
+  state.world[key]=after;
+  return {route,action,node,binding:b,worldDelta:{key,before,after}};
+}
+
 function routeNode(n){
   if(!n)return {route:'CLARIFY',action:null};
   if(n.intent==='Plan')return {route:'LLM_ESCALATE',action:null};
@@ -508,6 +538,10 @@ function routeNode(n){
     if(n.intent==='TurnOff')return {route:'THING_MODEL_EXECUTE',action:'exterior_window_close'};
     if(n.intent==='TurnOn')return {route:'THING_MODEL_EXECUTE',action:'exterior_window_open'};
   }
+  if(n.target.entity==='screen'){
+    if(n.intent==='TurnOff')return {route:'THING_MODEL_EXECUTE',action:'insect_screen_close'};
+    if(n.intent==='TurnOn')return {route:'THING_MODEL_EXECUTE',action:'insect_screen_open'};
+  }
   if(n.target.entity==='light'){
     if(n.slots.property==='brightness')return {route:'THING_MODEL_EXECUTE',action:'living_color_light_dim_30'};
     if(n.intent==='TurnOff')return {route:'THING_MODEL_EXECUTE',action:'living_color_light_off'};
@@ -516,27 +550,51 @@ function routeNode(n){
   return {route:'LOCAL_SKILL',action:null};
 }
 
-function executeCurrent(neural){
-  const t=activeTask();const n=t?.nodes.slice(-1)[0];const ra=routeNode(n);
-  const learned=neural?.bestLabel||null;
-  const allowed=(n?.target?.entity==='window'&&/^exterior_window_/.test(learned||''))||(n?.target?.entity==='light'&&/^living_color_light_/.test(learned||''));
-  if(allowed&&neural.scores?.[0]?.score>=0.16&&n?.intent!=='QueryState')ra.action=learned;
-  state.lastAction=ra.action;
-  let wd='—';
-  if(ra.action==='exterior_window_close'){const b=state.world.window;state.world.window=1;wd='window '+b+' → 1'}
-  else if(ra.action==='exterior_window_open'){const b=state.world.window;state.world.window=0;wd='window '+b+' → 0'}
-  else if(ra.action==='exterior_window_open_ratio_30'){wd='window open_ratio → 30%'}
-  else if(ra.action==='living_color_light_off'){const b=state.world.light;state.world.light=0;wd='light '+b+' → 0'}
-  else if(ra.action==='living_color_light_on'){const b=state.world.light;state.world.light=1;wd='light '+b+' → 1'}
-  else if(ra.action==='living_color_light_dim_30'){const b=state.world.brightness;state.world.brightness=30;wd='brightness '+b+' → 30'}
-  else if(ra.route==='THING_MODEL_QUERY'&&n?.target.entity==='climate'){wd='temperature = '+state.world.temperature+'°C'}
-  return {...ra,worldDelta:wd,node:n};
+function nodesForCurrentTurn(d){
+  if(Array.isArray(d?.nodes)&&d.nodes.length)return d.nodes;
+  if(d?.replacement_node)return [d.replacement_node];
+  return [];
+}
+function executeCurrent(neural,d){
+  const nodes=nodesForCurrentTurn(d);
+  const fallback=nodes.length?nodes:(activeTask()?.nodes.slice(-1)||[]);
+  const outputs=[];
+  for(const n of fallback){
+    const ra=routeNode(n);
+    const learned=neural?.bestLabel||null;
+    const allowed=(n?.target?.entity==='window'&&/^exterior_window_/.test(learned||''))||
+      (n?.target?.entity==='light'&&/^living_color_light_/.test(learned||''))||
+      (n?.target?.entity==='screen'&&/^insect_screen_/.test(learned||''));
+    if(allowed&&neural.scores?.[0]?.score>=0.16&&n?.intent!=='QueryState')ra.action=learned;
+
+    if(ra.route==='THING_MODEL_EXECUTE'&&ra.action){
+      outputs.push(bindingForAction(ra.action,n,ra.route));
+    }else if(ra.route==='THING_MODEL_QUERY'){
+      let value=null;
+      if(n?.target?.entity==='climate')value=state.world.temperature;
+      else if(n?.target?.entity==='window')value=state.world.window;
+      else if(n?.target?.entity==='screen')value=state.world.screen;
+      else if(n?.target?.entity==='light')value=state.world.light;
+      outputs.push({route:ra.route,action:null,node:n,binding:null,query:{entity:n.target.entity,value}});
+    }else{
+      outputs.push({route:ra.route,action:ra.action,node:n,binding:null,worldDelta:null});
+    }
+  }
+  state.lastAction=outputs.filter(x=>x.action).map(x=>x.action).join(',');
+  const routes=[...new Set(outputs.map(x=>x.route))];
+  return {
+    route:routes.length===1?routes[0]:routes.join(' + '),
+    actions:outputs.filter(x=>x.action).map(x=>x.action),
+    outputs,
+    nodes:fallback,
+    worldDeltas:outputs.filter(x=>x.worldDelta).map(x=>x.worldDelta)
+  };
 }
 
 function submit(text){
   if(!text.trim())return;
   addMsg('YOU',text,true);
-  const d=deltaFor(text);applyDelta(d);const neural=settleNeural(text,d);const exec=executeCurrent(neural);render(d,exec,neural);startPulse();addMsg('FLYTHINK',exec.route+(exec.action?' · '+exec.action:'')+(neural.bestLabel?' · neural:'+neural.bestLabel:''),false);
+  const d=deltaFor(text);applyDelta(d);const neural=settleNeural(text,d);const exec=executeCurrent(neural,d);render(d,exec,neural);startPulse();addMsg('FLYTHINK',exec.route+(exec.actions.length?' · '+exec.actions.join(' + '):'')+(neural.bestLabel?' · neural:'+neural.bestLabel:''),false);
 }
 
 function addMsg(role,text,user){const d=document.createElement('div');d.className='msg'+(user?' user':'');d.innerHTML='<div class="who">'+role+'</div><div class="v">'+escapeHtml(text)+'</div>';$('#chat').appendChild(d);$('#chat').scrollTop=$('#chat').scrollHeight}
@@ -545,17 +603,19 @@ function escapeHtml(s){return String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','
 function render(d,exec,neural){
   $('#turnPill').textContent='turn '+state.turn;$('#deltaPill').textContent=d.op;$('#delta').textContent=JSON.stringify(d,null,2);
   $('#tasks').innerHTML=state.tasks.length?state.tasks.map(t=>'<div class="task '+(t.status==='cancelled'?'cancel':'')+'"><div class="k">'+t.task_id+' · '+t.status+' · '+(t.program?.control_type||'single')+'</div>'+t.nodes.map(n=>'<div class="node"><span>'+escapeHtml(n.intent)+' · '+escapeHtml(n.target.entity)+'</span><span>'+escapeHtml(JSON.stringify(n.slots))+'</span></div>').join('')+'</div>').join(''):'No active task.';
-  const n=exec.node||{};const slots=n.slots||{};const ledger={entity:n.target?.entity||state.focus||'—',entity_name:slots.entity_name??'—',area:slots.area??state.lastArea??'—',intent:n.intent||'—',property:slots.property??'—',value:slots.value??'—',reference:(slots.area_source==='inherited'||/那个|它|再/.test(JSON.stringify(d)))?'inherit_previous':'explicit/contextual',active_task:state.activeTask||'—',paused_stack:state.paused.join(' → ')||'—'};
+  const n=exec.nodes?.[0]||{};const slots=n.slots||{};const ledger={entities:(exec.nodes||[]).map(x=>x.target?.entity).filter(Boolean).join(' + ')||state.focus||'—',entity_names:(exec.nodes||[]).map(x=>x.slots?.entity_name).filter(Boolean).join(' + ')||'—',areas:[...new Set((exec.nodes||[]).map(x=>x.slots?.area).filter(Boolean))].join(' + ')||state.lastArea||'—',intents:(exec.nodes||[]).map(x=>x.intent).filter(Boolean).join(' + ')||'—',properties:(exec.nodes||[]).map(x=>x.slots?.property).filter(Boolean).join(' + ')||'—',values:(exec.nodes||[]).map(x=>String(x.slots?.value)).filter(x=>x!=='undefined').join(' + ')||'—',active_task:state.activeTask||'—',paused_stack:state.paused.join(' → ')||'—'};
   $('#slots').innerHTML=Object.entries(ledger).map(([k,v])=>'<div class="slot"><div class="k">'+k.toUpperCase()+'</div><div class="v">'+escapeHtml(v)+'</div></div>').join('');
   const steps=['train exemplars','semantic drive','216 recurrent units','3× settle','GraphDelta','task context','route','Thing Model'];$('#flow').innerHTML=steps.map(x=>'<span class="step on">'+x+'</span>').join('');
   $('#revisions').textContent=JSON.stringify(state.revisions,null,2);
-  $('#route').textContent=exec.route;$('#action').textContent=exec.action||'—';$('#focus').textContent=state.focus||'—';$('#worldDelta').textContent=exec.worldDelta;
+  $('#route').textContent=exec.route;$('#action').textContent=exec.actions.length?exec.actions.join(' · '):'—';$('#focus').textContent=state.focus||'—';$('#worldDelta').textContent=exec.worldDeltas.length?exec.worldDeltas.map(x=>x.key+' '+x.before+' → '+x.after).join(' · '):'—';
+  $('#bindingCount').textContent=exec.outputs.length+' outputs';
+  $('#bindingGrid').innerHTML=exec.outputs.length?exec.outputs.map(o=>{const b=o.binding;if(b){return '<div class="bindingCard"><div class="bindingRoute">'+escapeHtml(o.route)+'</div><div class="actionName">'+escapeHtml(o.action)+'</div><div class="bindingMeta">entity_id: '+escapeHtml(b.entity_id)+'\nproduct_model: '+escapeHtml(b.product_model)+'\nmodule: '+escapeHtml(b.module)+'\ninteraction: '+escapeHtml(b.interaction)+'\ncode: '+escapeHtml(b.code)+'\narea: '+escapeHtml(b.area)+'\nentity_name: '+escapeHtml(b.entity_name)+'</div><div class="bindingDelta">'+escapeHtml(o.worldDelta.key)+' '+escapeHtml(o.worldDelta.before)+' → '+escapeHtml(o.worldDelta.after)+'</div></div>';}if(o.query){return '<div class="bindingCard"><div class="bindingRoute">THING_MODEL_QUERY</div><div class="actionName">'+escapeHtml(o.query.entity)+'</div><div class="bindingMeta">query result: '+escapeHtml(o.query.value)+'</div></div>';}return '<div class="bindingCard"><div class="bindingRoute">'+escapeHtml(o.route)+'</div><div class="actionName">'+escapeHtml(o.action||'no physical binding')+'</div></div>';}).join(''):'<div class="bindingCard"><div class="bindingRoute">No output</div></div>';
   drawBrain();
 }
 
 function reset(){
-  Object.assign(state,{turn:0,taskSeq:0,nodeSeq:0,tasks:[],activeTask:null,paused:[],revisions:[],focus:null,lastArea:'客厅',lastAction:null,world:{window:0,light:1,brightness:100,temperature:24},lastDelta:null}); neuralState=NEURAL?Array(NEURAL.config.dim).fill(0):[]; semanticScores=[]; projectedRoots=[];
-  $('#chat').innerHTML='<div class="msg"><div class="who">SYSTEM</div>Session reset.</div>';$('#input').value='把客厅外窗关上，客厅灯也关了';updateDecisionHeads($('#input').value);$('#turnPill').textContent='turn 0';$('#deltaPill').textContent='IDLE';$('#delta').textContent='{}';$('#tasks').textContent='No active task.';$('#slots').innerHTML='';$('#flow').innerHTML='';$('#revisions').textContent='[]';$('#route').textContent='WAITING';$('#action').textContent='—';$('#focus').textContent='—';$('#worldDelta').textContent='—';$('#semanticMatches').innerHTML='';if(NEURAL){drawNeural();$('#neuralHud').innerHTML='state reset · 216 developmental units';}drawBrain();
+  Object.assign(state,{turn:0,taskSeq:0,nodeSeq:0,tasks:[],activeTask:null,paused:[],revisions:[],focus:null,lastArea:'客厅',lastAction:null,world:{window:0,screen:0,light:1,brightness:100,colorTemperature:4000,temperature:24},lastDelta:null}); neuralState=NEURAL?Array(NEURAL.config.dim).fill(0):[]; semanticScores=[]; projectedRoots=[];
+  $('#chat').innerHTML='<div class="msg"><div class="who">SYSTEM</div>Session reset.</div>';$('#input').value='把客厅外窗关上，客厅灯也关了';updateDecisionHeads($('#input').value);$('#turnPill').textContent='turn 0';$('#deltaPill').textContent='IDLE';$('#delta').textContent='{}';$('#tasks').textContent='No active task.';$('#slots').innerHTML='';$('#flow').innerHTML='';$('#revisions').textContent='[]';$('#route').textContent='WAITING';$('#action').textContent='—';$('#focus').textContent='—';$('#worldDelta').textContent='—';$('#bindingCount').textContent='0 bindings';$('#bindingGrid').innerHTML='<div class="bindingCard"><div class="bindingRoute">No output yet</div></div>';$('#semanticMatches').innerHTML='';if(NEURAL){drawNeural();$('#neuralHud').innerHTML='state reset · 216 developmental units';}drawBrain();
 }
 
 async function loadAnatomy(){
