@@ -38,6 +38,9 @@ def unpack(row):
         'context_operation':context,
         'primary_intent':primary,
         'device':device,
+        'needs_context':'yes' if family in {'coreference','cross_room','revision','interruption_resume'} else 'no',
+        'ood':'yes' if family=='ood_escalation' else 'no',
+        'multi_intent':'yes' if family=='multi_intent' else 'no',
     }
 
 class Perceptron:
@@ -78,7 +81,7 @@ def evaluate(model, rows, field):
 def main():
     train=build(seed=17,variants_per_family=120)
     dev=build(seed=29,variants_per_family=35)
-    fields=('family','context_operation','primary_intent','device')
+    fields=('family','context_operation','primary_intent','device','needs_context','ood','multi_intent')
     models={}
     rng=random.Random(SEED)
     prepared=[(feats(unpack(r)[0]),unpack(r)[1]) for r in train]
