@@ -33,7 +33,10 @@ def unpack(row):
     family=row['scenario_type']
     tm=(row.get('metadata') or {}).get('thing_model_fixed','none')
     device='window' if tm=='CWDS-CA01' else ('light' if tm=='DQDZ-Y15R' else 'none')
-    return src.get('utterance',''), {
+    history=' '.join(str(x.get('text','')) for x in (src.get('history') or [])[-4:])
+    utterance=src.get('utterance','')
+    model_text=(('[H]'+history+' ') if history else '')+'[U]'+utterance
+    return model_text, {
         'family':family,
         'context_operation':context,
         'primary_intent':primary,
@@ -75,7 +78,7 @@ def evaluate(model, rows, field):
     for row in rows:
         text,y=unpack(row); pred,z=model.predict(feats(text)); prob=softmax(z); c=max(prob)
         ok+=pred==y[field]; conf.append(c)
-        if pred!=y[field] and len(errors)<12:errors.append({'text':text,'gold':y[field],'pred':pred,'confidence':round(c,4)})
+        if pred!=y[field] and len(errors)<12:errors.append({'model_text':text,'gold':y[field],'pred':pred,'confidence':round(c,4)})
     return {'accuracy':ok/max(1,len(rows)),'mean_confidence':sum(conf)/max(1,len(conf)),'errors':errors}
 
 def main():
@@ -112,7 +115,7 @@ def main():
         'train_rows':len(train),'dev_rows':len(dev),
         'families':sorted({r['scenario_type'] for r in train}),
         'epochs_max':EPOCHS,
-        'note':'dev uses a distinct generator seed; no dev rows are used for weight updates'
+        'note':'features include up to four history turns plus current utterance; dev uses a distinct generator seed and no dev rows are used for weight updates'
       },
       'heads':{f:models[f].export() for f in fields},
       'metrics':metrics,
