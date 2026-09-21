@@ -347,10 +347,21 @@ function lexicalDecisionHeads(text){
   const ood=/比特币|股票|医疗诊断|法律意见|写代码|新闻|天气预报/.test(t)? .92 : (homeEvidence?.12:.58);
   return {entity:{label:entity,score:entityScore},operation:{label:op,score:opScore},ambiguity,ood};
 }
+function goalSemanticReadout(text){
+  if(!NEURAL?.goal_training?.examples?.length)return [];
+  const scores={};
+  for(const ex of NEURAL.goal_training.examples){const sc=gramSimilarity(text,ex.text);if(sc>(scores[ex.goal]||0))scores[ex.goal]=sc}
+  return Object.entries(scores).sort((a,b)=>b[1]-a[1]).map(([goal,score])=>({goal,score}));
+}
 function inferScenario(text){
   const raw=String(text||'');
   const explicit=SCENARIOS.find(s=>s.pattern?.test(raw));
   if(explicit)return {...explicit,match:1,inference_source:'contract_goal_rule'};
+  const learnedGoal=goalSemanticReadout(raw)[0];
+  if(learnedGoal?.score>.20){
+    const hit=SCENARIOS.find(s=>s.goal===learnedGoal.goal);
+    if(hit)return {...hit,match:learnedGoal.score,inference_source:'train_only_goal_semantic_readout'};
+  }
   let best=null;
   for(const s of SCENARIOS){const sc=gramSimilarity(raw,s.text);if(!best||sc>best.match)best={...s,match:sc,inference_source:'train_free_scenario_similarity'}}
   if(best&&best.match>.16)return best;
@@ -667,6 +678,7 @@ function diagnoseBenchmarkTurn(turn,result,pre,post){
     const sc=result?.delta?.metadata?.scenario_inference;
     if(!sc?.goal)fail.push('scenario_goal');
     if(e.goal&&sc?.goal!==e.goal)fail.push('goal_resolution');
+    if(e.goal&&!(result?.neural?.scores||[]).slice(0,5).some(x=>x.label==='goal:'+e.goal))fail.push('goal_semantic_readout');
     if(!(result?.exec?.nodes||[]).length)fail.push('scenario_plan_empty');
     if((sc?.planned_actions||0)>1&&(result?.exec?.nodes||[]).length<2)fail.push('multi_device_plan');
     if(!(sc?.capability_candidates||[]).length)fail.push('capability_retrieval');
@@ -781,7 +793,7 @@ function gramSimilarity(a,b){
 function semanticReadout(text){
   if(!NEURAL)return [];
   const scores={};
-  for(const ex of NEURAL.training.examples||[]){
+  for(const ex of [...(NEURAL.training.examples||[]),...(NEURAL.goal_training?.examples||[])]){
     const s=gramSimilarity(text,ex.text);
     if(s>(scores[ex.label]||0))scores[ex.label]=s;
   }
@@ -1446,7 +1458,7 @@ function reset(){
 }
 
 async function loadAnatomy(){
-  const [g,s,n,tr]=await Promise.all([fetch('./anatomy-sample.json').then(r=>r.json()),fetch('./measured-snapshot.json').then(r=>r.json()),fetch('./neural-substrate.json').then(r=>r.json()),fetch('./real-home-thing-model-registry.json').then(r=>r.json())]);DATA={g,s};NEURAL=n;THINGREG=tr;if(THINGREG.source_archive_sha256!==THING_MODEL_SOURCE_SHA256)throw new Error('Thing Model registry SHA mismatch');populateModelBrowser();neuralState=Array(n.config.dim).fill(0);buildUnitToRootMap();projectActiveUnits();drawNeural();$('#mappedPill').textContent=(s.graph.nodes||[]).length+' measured · '+(g.projection_pool||[]).length+' projection';$('#neuralHud').innerHTML='216 units · '+(n.recurrent_edges||[]).length+' recurrent edges · '+n.training.example_count+' train exemplars';$('#corpusMeta').textContent=n.training.example_count+' train seeds · '+(n.mutation_pool?.count||0)+' derived eval mutations · no dev/test leakage';updateDecisionHeads($('#input').value);$('#hud').innerHTML='geometry: '+g.truth+'<br>source: Codex FAFB v783<br>source points: '+Number(g.source_count).toLocaleString()+'<br>display sample: '+Number(g.points.length).toLocaleString()+'<br>projection pool: '+Number((g.projection_pool||[]).length).toLocaleString()+' roots<br>measured replay: '+Number((s.graph.nodes||[]).length).toLocaleString()+' roots<br><br>activity: '+s.truth;drawBrain();
+  const [g,s,n,tr]=await Promise.all([fetch('./anatomy-sample.json').then(r=>r.json()),fetch('./measured-snapshot.json').then(r=>r.json()),fetch('./neural-substrate.json').then(r=>r.json()),fetch('./real-home-thing-model-registry.json').then(r=>r.json())]);DATA={g,s};NEURAL=n;THINGREG=tr;if(THINGREG.source_archive_sha256!==THING_MODEL_SOURCE_SHA256)throw new Error('Thing Model registry SHA mismatch');populateModelBrowser();neuralState=Array(n.config.dim).fill(0);buildUnitToRootMap();projectActiveUnits();drawNeural();$('#mappedPill').textContent=(s.graph.nodes||[]).length+' measured · '+(g.projection_pool||[]).length+' projection';$('#neuralHud').innerHTML='216 units · '+(n.recurrent_edges||[]).length+' recurrent edges · '+n.training.example_count+' action + '+(n.goal_training?.example_count||0)+' goal train exemplars';$('#corpusMeta').textContent=n.training.example_count+' action train seeds · '+(n.goal_training?.example_count||0)+' goal curriculum · '+(n.mutation_pool?.count||0)+' derived eval mutations · train/eval phrases separated';updateDecisionHeads($('#input').value);$('#hud').innerHTML='geometry: '+g.truth+'<br>source: Codex FAFB v783<br>source points: '+Number(g.source_count).toLocaleString()+'<br>display sample: '+Number(g.points.length).toLocaleString()+'<br>projection pool: '+Number((g.projection_pool||[]).length).toLocaleString()+' roots<br>measured replay: '+Number((s.graph.nodes||[]).length).toLocaleString()+' roots<br><br>activity: '+s.truth;drawBrain();
 }
 function fit(){const c=$('#brain'),r=c.getBoundingClientRect(),d=devicePixelRatio||1;c.width=Math.max(1,r.width*d);c.height=Math.max(1,r.height*d);const x=c.getContext('2d');x.setTransform(d,0,0,d,0,0);return[x,r.width,r.height]}
 function R(p){let[x,y,z]=p,cy=Math.cos(rot.y),sy=Math.sin(rot.y),cx=Math.cos(rot.x),sx=Math.sin(rot.x);let x1=x*cy-z*sy,z1=x*sy+z*cy;let y1=y*cx-z1*sx,z2=y*sx+z1*cx;return[x1,y1,z2]}
