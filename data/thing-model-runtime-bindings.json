@@ -1,0 +1,137 @@
+{
+  "source_sha256": "3a5e67efd5847d70761076506500d001cbed36b1d19dca60ed286eb72ae5d60c",
+  "truth": "runtime_bound_subset_of_immutable_full_thing_model_baseline",
+  "actions": {
+    "exterior_window_close": {
+      "entity_id": "physical_dev_home_001.window.combo01",
+      "product_model": "CWDS-CA01",
+      "module": "motor_1",
+      "interaction": "property",
+      "code": "motorControl",
+      "value": 1,
+      "value_contract": {
+        "kind": "enum",
+        "allowed": [
+          0,
+          1,
+          2
+        ]
+      },
+      "semantic_role": "exterior_window"
+    },
+    "exterior_window_open": {
+      "entity_id": "physical_dev_home_001.window.combo01",
+      "product_model": "CWDS-CA01",
+      "module": "motor_1",
+      "interaction": "property",
+      "code": "motorControl",
+      "value": 0,
+      "value_contract": {
+        "kind": "enum",
+        "allowed": [
+          0,
+          1,
+          2
+        ]
+      },
+      "semantic_role": "exterior_window"
+    },
+    "insect_screen_close": {
+      "entity_id": "physical_dev_home_001.window.combo01",
+      "product_model": "CWDS-CA01",
+      "module": "motor_2",
+      "interaction": "property",
+      "code": "motorControl",
+      "value": 1,
+      "value_contract": {
+        "kind": "enum",
+        "allowed": [
+          0,
+          1,
+          2
+        ]
+      },
+      "semantic_role": "insect_screen"
+    },
+    "insect_screen_open": {
+      "entity_id": "physical_dev_home_001.window.combo01",
+      "product_model": "CWDS-CA01",
+      "module": "motor_2",
+      "interaction": "property",
+      "code": "motorControl",
+      "value": 0,
+      "value_contract": {
+        "kind": "enum",
+        "allowed": [
+          0,
+          1,
+          2
+        ]
+      },
+      "semantic_role": "insect_screen"
+    },
+    "living_color_light_off": {
+      "entity_id": "physical_dev_home_001.light.rgb01",
+      "product_model": "DQDZ-Y15R",
+      "module": "light",
+      "interaction": "property",
+      "code": "power",
+      "value": false,
+      "value_contract": {
+        "kind": "bool"
+      },
+      "semantic_role": "light"
+    },
+    "living_color_light_on": {
+      "entity_id": "physical_dev_home_001.light.rgb01",
+      "product_model": "DQDZ-Y15R",
+      "module": "light",
+      "interaction": "property",
+      "code": "power",
+      "value": true,
+      "value_contract": {
+        "kind": "bool"
+      },
+      "semantic_role": "light"
+    },
+    "living_color_light_dim_30": {
+      "entity_id": "physical_dev_home_001.light.rgb01",
+      "product_model": "DQDZ-Y15R",
+      "module": "light",
+      "interaction": "property",
+      "code": "brightness",
+      "value": 30,
+      "value_contract": {
+        "kind": "range",
+        "minimum": 1,
+        "maximum": 100
+      },
+      "semantic_role": "light"
+    },
+    "living_color_light_warm_3000k": {
+      "entity_id": "physical_dev_home_001.light.rgb01",
+      "product_model": "DQDZ-Y15R",
+      "module": "light",
+      "interaction": "property",
+      "code": "colorTemperature",
+      "value": 3000,
+      "value_contract": {
+        "kind": "range",
+        "minimum": 2700,
+        "maximum": 6500
+      },
+      "semantic_role": "light"
+    }
+  },
+  "initial_world": {
+    "physical_dev_home_001.window.combo01": {
+      "CWDS-CA01|motor_1|property|motorControl": 0,
+      "CWDS-CA01|motor_2|property|motorControl": 0
+    },
+    "physical_dev_home_001.light.rgb01": {
+      "DQDZ-Y15R|light|property|power": true,
+      "DQDZ-Y15R|light|property|brightness": 80,
+      "DQDZ-Y15R|light|property|colorTemperature": 5000
+    }
+  }
+}
