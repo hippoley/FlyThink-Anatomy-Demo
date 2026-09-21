@@ -169,7 +169,7 @@ details{margin-top:14px;border:1px solid #202b38;border-radius:14px;background:#
 <section class="bindings"><div class="sectiontitle"><h3>Real Home Thing Model Execution</h3><span id="bindingCount">registry loading…</span></div>
 <div class="truthnote" style="margin:0 0 10px">执行不是落到演示字段，而是必须通过你上传的真实物模型：<strong>Action → model_code → module → property → op permission → datatype / enum / range → requested value</strong>。找不到或权限不匹配就 fail closed。</div>
 <div id="bindingGrid" class="bindingGrid"><div class="bindingCard"><div class="bindingRoute">Loading registry</div><div class="bindingMeta">Waiting for uploaded real-home Thing Model registry.</div></div></div>
-<div class="registryLine"><span class="registryStat" id="registryModels">46 models</span><span class="registryStat" id="registryProps">— properties</span><span class="registryStat" id="registryServices">— services</span><span class="registryStat" id="registryEvents">— events</span></div>
+<div class="registryLine"><span class="registryStat" id="registryModels">46 models</span><span class="registryStat" id="registryProps">— properties</span><span class="registryStat" id="registryServices">— services</span><span class="registryStat" id="registryEvents">— events</span><span class="registryStat" id="capabilityIndexStat">capability index loading…</span></div>
 <div class="archiveMeta" id="registryTruth">source archive SHA256: loading…</div>
 <div class="modelBrowser">
   <div class="sectiontitle"><h3>Full Thing Model Inspector</h3><span>all definitions come from uploaded archive</span></div>
@@ -852,7 +852,11 @@ function diagnoseBenchmarkTurn(turn,result,pre,post){
     if(!(result?.exec?.nodes||[]).length)fail.push('scenario_plan_empty');
     if((sc?.planned_actions||0)>1&&(result?.exec?.nodes||[]).length<2)fail.push('multi_device_plan');
     if(!(sc?.capability_candidates||[]).length)fail.push('capability_retrieval');
-    if((sc?.capability_candidates||[]).some(c=>c.route==='THING_MODEL_EXECUTE'&&!c.schema_available))fail.push('capability_schema_missing');
+    if(sc?.truth!=='goal_semantic_state_plus_global_46_model_capability_retrieval')fail.push('global_capability_retrieval');
+    if(!(sc?.selected_capabilities||[]).length)fail.push('capability_selection_empty');
+    if((sc?.selected_capabilities||[]).some(c=>!CAPINDEX?.capabilities?.some(x=>x.capability_id===c.capability_id)))fail.push('capability_schema_missing');
+    if((sc?.selected_capabilities||[]).some(c=>!capabilityValueCheck(capabilityById(c.capability_id),c.need?.value,'write').ok))fail.push('capability_constraint_filter');
+    if((result?.exec?.nodes||[]).some(n=>n.slots?.goal&&!n.slots?.capability_id))fail.push('fixed_binding_fallback');
     if(e.plan_signature?.length){
       const actual=(result?.exec?.nodes||[]).map(n=>n.target?.entity+'|'+n.slots?.property+'|'+String(n.slots?.value));
       for(const sig of e.plan_signature)if(!actual.includes(sig))fail.push('goal_plan_contract');
@@ -1601,17 +1605,22 @@ function registryStats(){
 function renderModelInspector(code){
   const entry=THINGREG?.models?.[code]; if(!entry)return;
   const raw=entry.raw||{}, counts=entry.counts||{}, md=entry.metadata||raw.metadata||{};
+  const caps=(CAPINDEX?.capabilities||[]).filter(c=>c.model===code);
   $('#modelFacts').innerHTML=[
     ['Product',entry.title||raw.title||code],
     ['Model code',code],
     ['ProductKey',md.productKey||'—'],
     ['Version',md.version||'—'],
-    ['Modules',counts.modules??Object.keys(raw.modules||{}).length],
-    ['Properties',counts.properties??'—'],
-    ['Services',counts.services??'—'],
-    ['Events',counts.events??'—']
+    ['Modules',counts.modules??new Set(caps.map(c=>c.module)).size],
+    ['Properties',counts.properties??caps.filter(c=>c.kind==='p').length],
+    ['Services',counts.services??caps.filter(c=>c.kind==='s').length],
+    ['Events',counts.events??caps.filter(c=>c.kind==='e').length]
   ].map(([k,v])=>'<div class="modelFact"><div class="k">'+escapeHtml(k)+'</div><div class="v">'+escapeHtml(String(v))+'</div></div>').join('');
-  $('#modelRaw').textContent=JSON.stringify(raw,null,2);
+  $('#modelRaw').textContent=entry.full_schema?JSON.stringify(raw,null,2):JSON.stringify({
+    truth:'capability_index_projection_of_fixed_uploaded_model',
+    model_code:code,product_title:entry.title,metadata:entry.metadata,
+    capability_count:caps.length,capabilities:caps
+  },null,2);
 }
 function populateModelBrowser(){
   const models=Object.values(THINGREG?.models||{}).sort((a,b)=>String(a.model_code).localeCompare(String(b.model_code)));
@@ -1621,6 +1630,7 @@ function populateModelBrowser(){
   $('#registryProps').textContent=stats.properties+' properties';
   $('#registryServices').textContent=stats.services+' services';
   $('#registryEvents').textContent=stats.events+' events';
+  $('#capabilityIndexStat').textContent=(CAPINDEX?.count||CAPINDEX?.capabilities?.length||0)+' global capabilities';
   $('#registryTruth').innerHTML='truth: <strong>'+escapeHtml(THINGREG.truth)+'</strong> · source archive SHA256: <strong>'+escapeHtml(THINGREG.source_archive_sha256)+'</strong>';
   const first=models[0]?.model_code;if(first){$('#modelSelect').value=first;renderModelInspector(first)}
 }
@@ -1637,7 +1647,7 @@ function resolutionEvidence(node,text,delta,output){
   return {
     instance:key,area,area_source:areaSource,
     entity,entity_source:goal?'scenario-derived':(entityExplicit?'explicit':'context/coreference'),
-    property,property_source:goal?'goal-plan contract':(propertyExplicit?'explicit':'inherited/corrected'),
+    property,property_source:goal?(node?.slots?.retrieval_truth?'global capability selection':'goal-plan contract'):(propertyExplicit?'explicit':'inherited/corrected'),
     operation:node?.intent||'—',
     value:value===undefined?'—':value,value_source:goal?'goal-plan contract':(valueExplicit?'explicit':'inherited/default'),
     tree_mutation:rev?.op||delta?.op||'—',goal,
@@ -1650,7 +1660,10 @@ function renderResolutionTrace(delta,exec,text,snapshot=null){
   const nodes=exec?.nodes||[],scenario=delta?.metadata?.scenario_inference;mode.textContent=scenario?.goal?'goal-plan · '+scenario.goal:'state-tree grounding';
   if(!nodes.length){el.innerHTML='<div class="resolutionCard"><div class="resolutionPath">'+escapeHtml(delta?.op||'NO OP')+' · no executable node this turn</div></div>';return;}
   const outputs=exec?.outputs||[];
-  const candidateHtml=scenario?.capability_candidates?.length?'<div class="resolutionCard"><div class="resolutionPath"><strong>Capability candidates</strong><br>'+scenario.capability_candidates.map(c=>escapeHtml(c.entity+'.'+c.property+' → '+(c.action||c.route)+' → '+(c.model_code?c.model_code+'/'+c.module_code+'/'+c.property_code:'no fixed binding'))).join('<br>')+'</div><span class="resolutionBadge inherited">contract-derived candidate set</span></div>':'';
+  const visibleCandidates=(scenario?.capability_candidates||[]).filter(c=>c.selected).concat((scenario?.capability_candidates||[]).filter(c=>!c.selected).slice(0,10));
+  const candidateHtml=visibleCandidates.length?'<div class="resolutionCard"><div class="resolutionPath"><strong>Global Capability Retrieval</strong><br>'+visibleCandidates.map(c=>
+    escapeHtml((c.selected?'✓ ':'')+'#'+c.rank+' '+Number(c.score||0).toFixed(2)+' · '+(c.product_title||c.model_code)+' · '+c.model_code+'/'+c.module_code+'/'+c.property_code+' · '+(c.ops||[]).join(',')+' · '+(c.constraint_ok?'ALLOW':'FILTER:'+c.filter_reason))
+  ).join('<br>')+'</div><span class="resolutionBadge inherited">'+escapeHtml((CAPINDEX?.models||46)+' models · '+(CAPINDEX?.count||CAPINDEX?.capabilities?.length||0)+' capabilities · ranked + constrained')+'</span></div>':'';
   el.innerHTML=candidateHtml+nodes.map((n,i)=>{
     const o=outputs[i]||{},e=resolutionEvidence(n,text,delta,o),src=[e.area_source,e.entity_source,e.property_source,e.value_source].join(' · ');
     const inherited=/inherited|context|coreference|corrected/.test(src),blocked=e.grounding==='BLOCKED';
