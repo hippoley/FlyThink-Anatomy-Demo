@@ -47,7 +47,7 @@ radial-gradient(circle at 52% 46%,rgba(80,121,170,.10),transparent 38%),#070b10}
 .matches{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}.match{font-size:9px;border:1px solid #2b3c4f;border-radius:999px;padding:5px 7px;color:#aebdcb}.match.hot{border-color:#735d37;color:#f0d6a7;background:#18140d}
 .neuralBridge{margin-top:10px;border:1px solid #223244;border-radius:12px;background:linear-gradient(180deg,#0a1118,#080d13);padding:10px}.bridgeHead{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:8px}.bridgeTitle{font-size:11px;font-weight:760;color:#dce7f2}.bridgeMeta{font-size:9px;color:#74889d;text-align:right}.bridgeRows{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.bridgeRow{border:1px solid #203142;background:#080e14;border-radius:9px;padding:7px 8px;cursor:pointer;transition:.16s ease;min-width:0}.bridgeRow:hover{border-color:#496b91;background:#0d1722}.bridgeRow.hot{border-color:#5a84b2;box-shadow:inset 0 0 18px rgba(110,169,255,.08)}.bridgeRoute{font:9px/1.45 ui-monospace,Consolas,monospace;color:#9eb4c8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.bridgeAct{font-size:9px;color:#6ea9ff;margin-top:2px}.bridgeTruth{margin-top:7px;font-size:9px;color:#71859a}
 .stackgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.subcard{background:#090e14;border:1px solid #202d3a;border-radius:12px;padding:10px;min-width:0}.mono{font:9px/1.5 ui-monospace,Consolas,monospace;white-space:pre-wrap;overflow:auto;max-height:190px;color:#9eafbf}
-.task{border-left:2px solid #688eb9;padding-left:8px;margin:7px 0}.task.cancel{border-left-color:#86515a;opacity:.72}.node{display:flex;justify-content:space-between;gap:6px;border-top:1px solid #192530;padding:5px 0;font-size:10px}.slotgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:5px}.slot{background:#070c12;border:1px solid #1f2d3b;border-radius:8px;padding:7px}.flow{display:flex;gap:5px;flex-wrap:wrap}.step{border:1px solid #2b3a4b;border-radius:999px;padding:5px 7px;font-size:9px;color:#9eb0c2}.step.on{border-color:#476d5d;color:#bce8d3;background:#0d1713}
+.stateTree{display:flex;flex-direction:column;gap:6px;margin-top:7px}.treeDevice{border:1px solid #213243;border-radius:9px;background:#070d13;padding:8px}.treeDevice.focused{border-color:#547ca7;box-shadow:inset 0 0 16px rgba(110,169,255,.07)}.treeDevice.removed{opacity:.5;border-style:dashed}.treeHead{display:flex;justify-content:space-between;gap:8px;font-size:9px;color:#a8b9c9}.treeProps{display:flex;gap:5px;flex-wrap:wrap;margin-top:6px}.treeProp{border:1px solid #2a3d50;border-radius:8px;padding:5px 6px;font:8.5px/1.35 ui-monospace,Consolas,monospace;color:#8fa5b9}.treeProp strong{color:#d9e4ee}.task{border-left:2px solid #688eb9;padding-left:8px;margin:7px 0}.task.cancel{border-left-color:#86515a;opacity:.72}.node{display:flex;justify-content:space-between;gap:6px;border-top:1px solid #192530;padding:5px 0;font-size:10px}.slotgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:5px}.slot{background:#070c12;border:1px solid #1f2d3b;border-radius:8px;padding:7px}.flow{display:flex;gap:5px;flex-wrap:wrap}.step{border:1px solid #2b3a4b;border-radius:999px;padding:5px 7px;font-size:9px;color:#9eb0c2}.step.on{border-color:#476d5d;color:#bce8d3;background:#0d1713}
 details{margin-top:14px;border:1px solid #202b38;border-radius:14px;background:#0a0f15;overflow:hidden}summary{cursor:pointer;padding:12px 14px;color:#c8d2dc;font-size:12px;font-weight:680;list-style:none}summary::-webkit-details-marker{display:none}.advanced{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;padding:0 12px 12px}
 .footer{display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;color:#687a8d;font-size:10px;padding:22px 4px 0}
 @media(max-width:1080px){.modelBrowserTop{grid-template-columns:1fr}.modelFacts{grid-template-columns:1fr 1fr}.bindingGrid{grid-template-columns:1fr 1fr}.hero{grid-template-columns:1fr}.engine{border-left:0;border-top:1px solid #283542;padding:16px 0 0}.stage,.reasoning{grid-template-columns:1fr}.viewer,.brainStage{height:560px;min-height:560px}.turnstrip{grid-template-columns:1fr 1fr}.advanced{grid-template-columns:1fr 1fr}}
@@ -89,7 +89,7 @@ details{margin-top:14px;border:1px solid #202b38;border-radius:14px;background:#
     <div class="mtsToolbar">
       <button class="btn" type="button" data-composer-template="interrupt">打断→恢复</button>
       <button class="btn" type="button" data-composer-template="revision">修改→指代</button>
-      <button class="btn" type="button" data-composer-template="crossroom">跨房间链</button>
+      <button class="btn" type="button" data-composer-template="crossroom">跨房间链</button><button class="btn" type="button" data-composer-template="statepatch">状态树维护</button><button class="btn" type="button" data-composer-template="goal">目标→设备计划</button>
     </div>
   </div>
   <div class="mtsBody">
@@ -183,6 +183,7 @@ details{margin-top:14px;border:1px solid #202b38;border-radius:14px;background:#
 <div class="subcard"><div class="k">Task stack</div><div id="tasks">No active task.</div></div>
 <div class="subcard"><div class="k">Slot ledger</div><div id="slots" class="slotgrid"></div></div>
 </div>
+<div class="subcard" style="margin-top:8px"><div class="k">Persistent state tree · patch by default</div><div class="headSmall">未提到的节点/槽位保持；同一实例+property 默认 PATCH；新实例/property 才 APPEND；明确 cancel/negation 才 REMOVE。</div><div id="stateTree" class="stateTree"><div class="headSmall">No persistent state yet.</div></div></div>
 <div class="subcard" style="margin-top:8px"><div class="k">Runtime flow</div><div id="flow" class="flow" style="margin-top:7px"></div></div>
 </div>
 </section>
@@ -446,6 +447,20 @@ const COMPOSER_TEMPLATES={
     ['interrupt','等等，先查一下客厅现在温度'],
     ['resume','继续之前那个'],
     ['coref','那个也一样']
+  ],
+  statepatch:[
+    ['turn','把客厅灯亮度调到70%'],
+    ['correction','那个改成30%'],
+    ['crossroom','主卧灯也调到45%'],
+    ['coref','客厅那个再改成55%'],
+    ['turn','把客厅外窗开到40%'],
+    ['correction','那个改成20%']
+  ],
+  goal:[
+    ['turn','准备看电影了，客厅有点刺眼'],
+    ['turn','外面开始下雨了，屋里没人，我不想雨飘进来'],
+    ['turn','屋里很闷，但是外面空气看起来不错'],
+    ['turn','准备睡觉了，客厅不用这么亮']
   ]
 };
 function composerTurn(type='turn',text=''){
@@ -525,7 +540,7 @@ function inspectComposerResult(i){
   $('#delta').textContent=JSON.stringify(r.delta||{},null,2);
   $('#tasks').innerHTML=renderTaskSnapshot(r.snapshot?.tasks||[]);
   const ledger=composerLedger(r);$('#slots').innerHTML=Object.entries(ledger).map(([k,v])=>'<div class="slot"><div class="k">'+escapeHtml(k.toUpperCase())+'</div><div class="v">'+escapeHtml(Array.isArray(v)?(v.join(' + ')||'—'):String(v??'—'))+'</div></div>').join('');
-  $('#revisions').textContent=JSON.stringify(r.snapshot?.revisions||[],null,2);
+  $('#revisions').textContent=JSON.stringify(r.snapshot?.revisions||[],null,2);renderStateTree(r.snapshot?.intentTree||{},r.snapshot?.focusKey||null);
   $('#route').textContent=r.exec?.route||'—';$('#action').textContent=r.exec?.actions?.join(' · ')||'—';$('#focus').textContent=r.snapshot?.focus||'—';
   $('#worldDelta').textContent=r.exec?.worldDeltas?.length?r.exec.worldDeltas.map(x=>x.key+' '+x.before+' → '+x.after).join(' · '):'—';
   $('#bindingCount').textContent='historical T'+(i+1)+' · '+(r.exec?.outputs?.length||0)+' outputs';
@@ -908,8 +923,9 @@ function parseUtterance(text){
     else if(/温度|空调/.test(p))entity='climate';
     else if(/纱窗|防虫网/.test(p))entity='screen';
     else if((inherit||/做一样的|照刚才/.test(p))&&(previousEntity||state.focus))entity=previousEntity||state.focus;
+    else if(correction&&focusedBefore?.entity)entity=focusedBefore.entity;
 
-    if(!explicitArea&&inherit&&focusedBefore?.area&&!previousArea)state.lastArea=focusedBefore.area;
+    if(!explicitArea&&(inherit||correction)&&focusedBefore?.area&&!previousArea)state.lastArea=focusedBefore.area;
     const percent=p.match(/(?:百分之\s*)?(\d{1,3})\s*%?/),kelvin=p.match(/(\d{4})\s*[kK]/);
     if(/做一样的|照刚才/.test(p)){intent=previousIntent||intentFromLastAction();}
     else if(/查询|现在|多少|开着吗|关着吗|温度/.test(p) && entity==='climate'){intent='QueryState';slots.property='temperature';}
@@ -917,6 +933,7 @@ function parseUtterance(text){
     else if(/色温|开尔文|\d{4}\s*[kK]|三千/.test(p)){intent='SetValue';slots.property='colorTemperature';slots.value=kelvin?Number(kelvin[1]):3000;}
     else if(/调暗|亮度/.test(p)){intent='SetValue';slots.property='brightness';slots.value=percent?Math.max(0,Math.min(100,Number(percent[1]))):30;}
     else if(/开一点|开度|开到|开至/.test(p)){intent='SetValue';slots.property='open_ratio';slots.value=percent?Math.max(0,Math.min(100,Number(percent[1]))):30;}
+    else if(correction&&percent&&focusedBefore){const props=Object.keys(focusedBefore.properties||{});intent='SetValue';slots.property=props.slice(-1)[0]||(entity==='window'?'open_ratio':'brightness');slots.value=Math.max(0,Math.min(100,Number(percent[1])));}
     else if(/关/.test(p)){intent='TurnOff';slots.property=entity==='light'?'power':'motorControl';slots.value=entity==='light'?false:1;}
     else if(/开/.test(p)){intent='TurnOn';slots.property=entity==='light'?'power':'motorControl';slots.value=entity==='light'?true:0;}
     else if(/规划|总结|解释|写一份/.test(p)){entity='llm';intent='Plan';}
@@ -946,7 +963,10 @@ function deltaFor(text){
   }
   if(p.type==='negation'){
     if(state.activeTask){
-      return {contract_version:'homeflow.graph_delta.v1',op:'CANCEL_TASK',turn_id,commit_policy:'immediate_cancel',target_task_id:state.activeTask,nodes:p.nodes,metadata:{negation:true},source:'browser_contract_demo'};
+      const reject=p.nodes?.[0],focus=focusedTreeNode(),entity=reject?.target?.entity&&reject.target.entity!=='none'?reject.target.entity:(focus?.entity||state.focus),area=reject?.slots?.area||focus?.area||state.lastArea;
+      const probe={target:{entity},slots:{area,entity_name:canonicalEntityName(entity,area),property:Object.keys(focus?.properties||{}).slice(-1)[0]||'state'}};
+      const idx=findPatchIndex(activeTask(),probe),target=idx>=0?activeTask().nodes[idx]:null;
+      return {contract_version:'homeflow.graph_delta.v1',op:'REMOVE_NODE',turn_id,commit_policy:'immediate_remove',target_task_id:state.activeTask,target_node_id:target?.node_id,remove_probe:probe,nodes:p.nodes,metadata:{negation:true,state_tree_remove:true},source:'browser_contract_demo'};
     }
     return {contract_version:'homeflow.graph_delta.v1',op:'CREATE_TASK',turn_id,commit_policy:'never_commit',nodes:p.nodes,program:{control_type:'single'},metadata:{negation:true,rejected:true},source:'browser_contract_demo'};
   }
@@ -1003,6 +1023,12 @@ function applyDelta(d){
       t.nodes[idx]=merged;t.node_ids[idx]=merged.node_id;
       state.revisions.push({turn_id:d.turn_id,op:d.op,task_id:t.task_id,before,after:clone(merged),instance_key:instanceKey(merged),property:nodePropertyKey(merged)});
       treePatchNode(merged,d.turn_id,'revise');updateFocusFromNodes([merged]);
+    }
+  } else if(d.op==='REMOVE_NODE'){
+    const t=taskById(d.target_task_id)||activeTask();
+    if(t){
+      let idx=t.node_ids.indexOf(d.target_node_id);if(idx<0&&d.remove_probe)idx=findPatchIndex(t,d.remove_probe);
+      if(idx>=0){const [before]=t.nodes.splice(idx,1);t.node_ids.splice(idx,1);const key=instanceKey(before),prop=nodePropertyKey(before),entry=state.intentTree[key];if(entry){const treeBefore=clone(entry);delete entry.properties[prop];if(!Object.keys(entry.properties).length){entry.status='removed';entry.removed_turn_id=d.turn_id;entry.remove_reason='negation'}entry.updated_turn_id=d.turn_id;state.revisions.push({turn_id:d.turn_id,op:'STATE_TREE_REMOVE',instance_key:key,property:prop,before:treeBefore,after:clone(entry),reason:'negation'})}state.revisions.push({turn_id:d.turn_id,op:'REMOVE_NODE',task_id:t.task_id,before,after:null});}
     }
   } else if(d.op==='CANCEL_TASK'){
     const t=taskById(d.target_task_id)||activeTask();
@@ -1142,13 +1168,14 @@ function routeNode(n){
 }
 
 function nodesForCurrentTurn(d){
+  if(d?.op==='REMOVE_NODE'||d?.op==='CANCEL_TASK')return [];
   if(Array.isArray(d?.nodes)&&d.nodes.length)return d.nodes;
   if(d?.replacement_node)return [d.replacement_node];
   return [];
 }
 function executeCurrent(neural,d){
   const nodes=nodesForCurrentTurn(d);
-  const fallback=nodes.length?nodes:(activeTask()?.nodes.slice(-1)||[]);
+  const fallback=nodes.length?nodes:((d?.op==='REMOVE_NODE'||d?.op==='CANCEL_TASK')?[]:(activeTask()?.nodes.slice(-1)||[]));
   const outputs=[];
   for(const n of fallback){
     const ra=routeNode(n);
@@ -1239,13 +1266,19 @@ function populateModelBrowser(){
   const first=models[0]?.model_code;if(first){$('#modelSelect').value=first;renderModelInspector(first)}
 }
 
+function renderStateTree(tree=state.intentTree,focusKey=state.focusKey){
+  const el=$('#stateTree');if(!el)return;
+  const entries=Object.values(tree||{});
+  if(!entries.length){el.innerHTML='<div class="headSmall">No persistent state yet.</div>';return;}
+  el.innerHTML=entries.map(x=>'<div class="treeDevice '+(x.instance_key===focusKey?'focused ':'')+(x.status==='removed'?'removed':'')+'"><div class="treeHead"><strong>'+escapeHtml(x.entity_name||x.instance_key)+'</strong><span>'+escapeHtml(x.status||'active')+' · '+escapeHtml(x.area||'—')+'</span></div><div class="treeProps">'+Object.entries(x.properties||{}).map(([k,p])=>'<span class="treeProp"><strong>'+escapeHtml(k)+'</strong> · '+escapeHtml(p.intent||'—')+' · '+escapeHtml(String(p.value??'—'))+'</span>').join('')+'</div></div>').join('');
+}
 function render(d,exec,neural){
   $('#turnPill').textContent='turn '+state.turn;$('#deltaPill').textContent=d.op;$('#delta').textContent=JSON.stringify(d,null,2);
   $('#tasks').innerHTML=state.tasks.length?state.tasks.map(t=>'<div class="task '+(t.status==='cancelled'?'cancel':'')+'"><div class="k">'+t.task_id+' · '+t.status+' · '+(t.program?.control_type||'single')+'</div>'+t.nodes.map(n=>'<div class="node"><span>'+escapeHtml(n.intent)+' · '+escapeHtml(n.target.entity)+'</span><span>'+escapeHtml(JSON.stringify(n.slots))+'</span></div>').join('')+'</div>').join(''):'No active task.';
   const n=exec.nodes?.[0]||{};const slots=n.slots||{};const ledger={entities:(exec.nodes||[]).map(x=>x.target?.entity).filter(Boolean).join(' + ')||state.focus||'—',entity_names:(exec.nodes||[]).map(x=>x.slots?.entity_name).filter(Boolean).join(' + ')||'—',areas:[...new Set((exec.nodes||[]).map(x=>x.slots?.area).filter(Boolean))].join(' + ')||state.lastArea||'—',intents:(exec.nodes||[]).map(x=>x.intent).filter(Boolean).join(' + ')||'—',properties:(exec.nodes||[]).map(x=>x.slots?.property).filter(Boolean).join(' + ')||'—',values:(exec.nodes||[]).map(x=>String(x.slots?.value)).filter(x=>x!=='undefined').join(' + ')||'—',active_task:state.activeTask||'—',paused_stack:state.paused.join(' → ')||'—'};
   $('#slots').innerHTML=Object.entries(ledger).map(([k,v])=>'<div class="slot"><div class="k">'+k.toUpperCase()+'</div><div class="v">'+escapeHtml(v)+'</div></div>').join('');
   const steps=['train exemplars','semantic drive','216 recurrent units','3× settle','GraphDelta','task context','route','Thing Model'];$('#flow').innerHTML=steps.map(x=>'<span class="step on">'+x+'</span>').join('');
-  $('#revisions').textContent=JSON.stringify(state.revisions,null,2);
+  $('#revisions').textContent=JSON.stringify(state.revisions,null,2);renderStateTree();
   $('#route').textContent=exec.route;$('#action').textContent=exec.actions.length?exec.actions.join(' · '):'—';$('#focus').textContent=state.focus||'—';$('#worldDelta').textContent=exec.worldDeltas.length?exec.worldDeltas.map(x=>x.key+' '+x.before+' → '+x.after).join(' · '):'—';
   $('#bindingCount').textContent=exec.outputs.length+' outputs · '+(THINGREG?.model_count||0)+' real models loaded';
   $('#bindingGrid').innerHTML=exec.outputs.length?exec.outputs.map(renderBindingCard).join(''):'<div class="bindingCard"><div class="bindingRoute">No output</div></div>';
@@ -1260,7 +1293,7 @@ function resetRuntimeState(){
 }
 function reset(){
   resetRuntimeState();
-  $('#chat').innerHTML='<div class="msg"><div class="who">SYSTEM</div>Session reset.</div>';$('#input').value='把客厅外窗关上，客厅灯也关了';updateDecisionHeads($('#input').value);$('#turnPill').textContent='turn 0';$('#deltaPill').textContent='IDLE';$('#delta').textContent='{}';$('#tasks').textContent='No active task.';$('#slots').innerHTML='';$('#flow').innerHTML='';$('#revisions').textContent='[]';$('#route').textContent='WAITING';$('#action').textContent='—';$('#focus').textContent='—';$('#worldDelta').textContent='—';$('#bindingCount').textContent=(THINGREG?.model_count||0)+' real models loaded';$('#bindingGrid').innerHTML='<div class="bindingCard"><div class="bindingRoute">No output yet</div></div>';$('#semanticMatches').innerHTML='';$('#corpusCase').textContent='Corpus case · 抽取一条语料后，这里会显示 train seed、mutation provenance、expected model 与本轮 readout 对比。';$('#bridgeRows').innerHTML='';$('#bridgeMeta').textContent=DATA?.g?.projection_pool?.length?(DATA.g.projection_pool.length+' projection roots · no active turn'):'projection pool unavailable';if(NEURAL){drawNeural();$('#neuralHud').innerHTML='state reset · 216 developmental units';}drawBrain();
+  $('#chat').innerHTML='<div class="msg"><div class="who">SYSTEM</div>Session reset.</div>';$('#input').value='把客厅外窗关上，客厅灯也关了';updateDecisionHeads($('#input').value);$('#turnPill').textContent='turn 0';$('#deltaPill').textContent='IDLE';$('#delta').textContent='{}';$('#tasks').textContent='No active task.';$('#slots').innerHTML='';renderStateTree();$('#flow').innerHTML='';$('#revisions').textContent='[]';$('#route').textContent='WAITING';$('#action').textContent='—';$('#focus').textContent='—';$('#worldDelta').textContent='—';$('#bindingCount').textContent=(THINGREG?.model_count||0)+' real models loaded';$('#bindingGrid').innerHTML='<div class="bindingCard"><div class="bindingRoute">No output yet</div></div>';$('#semanticMatches').innerHTML='';$('#corpusCase').textContent='Corpus case · 抽取一条语料后，这里会显示 train seed、mutation provenance、expected model 与本轮 readout 对比。';$('#bridgeRows').innerHTML='';$('#bridgeMeta').textContent=DATA?.g?.projection_pool?.length?(DATA.g.projection_pool.length+' projection roots · no active turn'):'projection pool unavailable';if(NEURAL){drawNeural();$('#neuralHud').innerHTML='state reset · 216 developmental units';}drawBrain();
 }
 
 async function loadAnatomy(){
