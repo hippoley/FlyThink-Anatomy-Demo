@@ -670,6 +670,7 @@ function diagnoseBenchmarkTurn(turn,result,pre,post){
     if(!(result?.exec?.nodes||[]).length)fail.push('scenario_plan_empty');
     if((sc?.planned_actions||0)>1&&(result?.exec?.nodes||[]).length<2)fail.push('multi_device_plan');
     if(!(sc?.capability_candidates||[]).length)fail.push('capability_retrieval');
+    if((sc?.capability_candidates||[]).some(c=>c.route==='THING_MODEL_EXECUTE'&&!c.schema_available))fail.push('capability_schema_missing');
     if(e.plan_signature?.length){
       const actual=(result?.exec?.nodes||[]).map(n=>n.target?.entity+'|'+n.slots?.property+'|'+String(n.slots?.value));
       for(const sig of e.plan_signature)if(!actual.includes(sig))fail.push('goal_plan_contract');
@@ -1002,7 +1003,7 @@ function parseUtterance(text){
     const area=canonicalArea(raw)||state.lastArea||'客厅';
     const plan=scenario.plan||[{entity:scenario.entity,intent:scenario.operation==='set_value'?'SetValue':scenario.operation==='close'?'TurnOff':'TurnOn',property:scenario.operation==='set_value'?'brightness':scenario.entity==='light'?'power':'motorControl',value:scenario.operation==='set_value'?30:(scenario.entity==='light'?(scenario.operation!=='close'):scenario.operation==='close'?1:0)}];
     const nodes=plan.map(step=>newNode(step.intent,step.entity,{property:step.property,value:step.value,area,area_source:canonicalArea(raw)?'explicit':'inherited',entity_name:canonicalEntityName(step.entity,area),goal:scenario.goal}));
-    const capability_candidates=nodes.map(n=>{const ra=routeNode(n);return {entity:n.target.entity,property:n.slots.property,operation:n.intent,value:n.slots.value,action:ra.action,route:ra.route}});
+    const capability_candidates=nodes.map(capabilityCandidateForNode);
     return {type:'scenario',nodes,parallel:nodes.length>1,scenario:{...scenario,area,planned_actions:nodes.length,capability_candidates,truth:'contract_derived_goal_plan_not_hidden_ground_truth'}};
   }
   const nodes=[];
@@ -1242,6 +1243,16 @@ function bindingForQuery(node,route){
   return {route,action:null,node,binding:b,grounding_status:'READ_SCHEMA_VALID',grounding_reason:check.reason,query:{schema_path:stateKey,value,truth:'schema_is_real_device_value_not_live'}};
 }
 
+function capabilityCandidateForNode(n){
+  const ra=routeNode(n),map=ACTION_TO_REGISTRY_BINDING[ra.action],base=map&&THINGREG?.bindings?.[map.key];
+  return {
+    entity:n?.target?.entity||null,property:n?.slots?.property||null,operation:n?.intent||null,value:n?.slots?.value,
+    action:ra.action,route:ra.route,binding_key:map?.key||null,
+    model_code:base?.model||null,module_code:base?.module||null,property_code:base?.property||null,
+    schema_available:!!base,
+    truth:'candidate_derived_from_fixed_runtime_binding_registry'
+  };
+}
 function routeNode(n){
   if(!n)return {route:'CLARIFY',action:null};
   if(n.intent==='Plan')return {route:'LLM_ESCALATE',action:null};
@@ -1389,7 +1400,7 @@ function renderResolutionTrace(delta,exec,text,snapshot=null){
   const nodes=exec?.nodes||[],scenario=delta?.metadata?.scenario_inference;mode.textContent=scenario?.goal?'goal-plan · '+scenario.goal:'state-tree grounding';
   if(!nodes.length){el.innerHTML='<div class="resolutionCard"><div class="resolutionPath">'+escapeHtml(delta?.op||'NO OP')+' · no executable node this turn</div></div>';return;}
   const outputs=exec?.outputs||[];
-  const candidateHtml=scenario?.capability_candidates?.length?'<div class="resolutionCard"><div class="resolutionPath"><strong>Capability candidates</strong><br>'+scenario.capability_candidates.map(c=>escapeHtml(c.entity+'.'+c.property+' → '+(c.action||c.route))).join('<br>')+'</div><span class="resolutionBadge inherited">contract-derived candidate set</span></div>':'';
+  const candidateHtml=scenario?.capability_candidates?.length?'<div class="resolutionCard"><div class="resolutionPath"><strong>Capability candidates</strong><br>'+scenario.capability_candidates.map(c=>escapeHtml(c.entity+'.'+c.property+' → '+(c.action||c.route)+' → '+(c.model_code?c.model_code+'/'+c.module_code+'/'+c.property_code:'no fixed binding'))).join('<br>')+'</div><span class="resolutionBadge inherited">contract-derived candidate set</span></div>':'';
   el.innerHTML=candidateHtml+nodes.map((n,i)=>{
     const o=outputs[i]||{},e=resolutionEvidence(n,text,delta,o),src=[e.area_source,e.entity_source,e.property_source,e.value_source].join(' · ');
     const inherited=/inherited|context|coreference|corrected/.test(src),blocked=e.grounding==='BLOCKED';
