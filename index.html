@@ -80,6 +80,7 @@ details{margin-top:14px;border:1px solid #202b38;border-radius:14px;background:#
 <div class="headCard"><div class="k">OOD / escalate</div><div id="headOod" class="v">—</div><div class="headBar"><div id="headOodBar" class="headFill"></div></div></div>
 </div>
 <div id="scenarioNote" class="scenarioNote">结构化 decision-head 会先判断 bounded home action；低置信度 / 开放场景再升级 LLM。</div>
+<div id="corpusCase" class="scenarioNote">Corpus case · 抽取一条语料后，这里会显示 train seed、mutation provenance、expected model 与本轮 readout 对比。</div>
 </div>
 <div id="chat" class="chat"><div class="msg"><div class="who">FlyThink</div><div class="v">你可以编辑、重排、加打断、加修改，再运行这一轮。右侧会显示结构化决策和神经传播。</div></div></div>
 <form id="composer" class="composer"><button class="btn primary" type="submit">Run mutated turn</button><button class="btn" type="button" id="runAsSequence">按句拆成多轮运行</button></form>
@@ -161,7 +162,7 @@ developmental projection, not measured FlyWire activity.\n\nThing Model archive:
 <script>
 const $=s=>document.querySelector(s);
 const state={turn:0,taskSeq:0,nodeSeq:0,tasks:[],activeTask:null,paused:[],revisions:[],focus:null,lastArea:'客厅',lastAction:null,thingValues:{},lastDelta:null};
-let DATA=null,NEURAL=null,THINGREG=null,neuralState=[],semanticScores=[],projectedRoots=[],unitToRoot=[],decisionHeads=null,rot={x:-.18,y:.31},zoom=1.55,drag=null,hits=[],neuralHits=[],selected=null,pulseT=0,pulseRAF=null,pulseStart=0,pulseUntil=0;
+let DATA=null,NEURAL=null,THINGREG=null,neuralState=[],semanticScores=[],projectedRoots=[],unitToRoot=[],decisionHeads=null,currentCorpusCase=null,rot={x:-.18,y:.31},zoom=1.55,drag=null,hits=[],neuralHits=[],selected=null,pulseT=0,pulseRAF=null,pulseStart=0,pulseUntil=0;
 
 function clone(x){return JSON.parse(JSON.stringify(x))}
 function newNode(intent,target,slots={},status='resolved'){
@@ -276,6 +277,7 @@ function updateDecisionHeads(text){
 }
 function randomChoice(a){return a[Math.floor(Math.random()*a.length)]}
 function mutateDraft(kind){
+  currentCorpusCase=null;$('#corpusCase').textContent='Manual mutation · expected label cleared; run the mutated turn to inspect the new decision.';
   let t=$('#input').value.trim();
   if(!t)t='把客厅外窗关上';
   if(kind==='reorder'){
@@ -306,9 +308,23 @@ function mutateDraft(kind){
   $('#input').value=t;updateDecisionHeads(t);
 }
 function sampleCorpus(){
-  const ex=NEURAL?.training?.examples||[];
+  const pool=NEURAL?.mutation_pool?.cases||[];
+  const ex=pool.length?pool:(NEURAL?.training?.examples||[]);
   if(!ex.length)return;
-  const item=randomChoice(ex);$('#input').value=item.text;updateDecisionHeads(item.text);
+  const item=randomChoice(ex);
+  currentCorpusCase=pool.length?item:{text:item.text,expected_label:item.label,mutation_chain:['train_seed'],seed_text:item.text,case_id:'seed'};
+  $('#input').value=currentCorpusCase.text;updateDecisionHeads(currentCorpusCase.text);
+  $('#corpusCase').innerHTML='<strong>'+escapeHtml(currentCorpusCase.case_id||'case')+'</strong> · expected <strong>'+escapeHtml(currentCorpusCase.expected_label)+'</strong> · '+escapeHtml((currentCorpusCase.mutation_chain||[]).join(' → '))+'<br><span class="headSmall">seed: '+escapeHtml(currentCorpusCase.seed_text||'—')+'</span>';
+}
+function renderCorpusEval(text,neural){
+  const el=$('#corpusCase');if(!el)return;
+  if(!currentCorpusCase||String(currentCorpusCase.text).trim()!==String(text).trim()){
+    el.textContent='Free-form turn · no frozen expected label. Inspect decision heads, semantic matches, GraphDelta and Thing Model grounding.';
+    return;
+  }
+  const pred=neural?.bestLabel||'none',expected=currentCorpusCase.expected_label||'—',ok=pred===expected;
+  const score=neural?.scores?.[0]?.score??0;
+  el.innerHTML='<strong>'+escapeHtml(currentCorpusCase.case_id||'case')+'</strong> · expected <strong>'+escapeHtml(expected)+'</strong> · readout <strong>'+escapeHtml(pred)+'</strong> · '+(ok?'MATCH':'MISMATCH')+' · score '+Number(score).toFixed(3)+'<br><span class="headSmall">'+escapeHtml((currentCorpusCase.mutation_chain||[]).join(' → '))+'</span>';
 }
 function splitSequence(text){
   return String(text||'').split(/[。！？!?\n]+|(?:，?等等，?)|(?:，?然后，?)|(?:，?接着，?)/).map(x=>x.trim()).filter(Boolean).slice(0,8);
@@ -803,7 +819,7 @@ function executeCurrent(neural,d){
 function submit(text){
   if(!text.trim())return;
   addMsg('YOU',text,true);
-  const d=deltaFor(text);applyDelta(d);const neural=settleNeural(text,d);const exec=executeCurrent(neural,d);render(d,exec,neural);startPulse();addMsg('FLYTHINK',exec.route+(exec.actions.length?' · '+exec.actions.join(' + '):'')+(neural.bestLabel?' · neural:'+neural.bestLabel:''),false);
+  const d=deltaFor(text);applyDelta(d);const neural=settleNeural(text,d);const exec=executeCurrent(neural,d);render(d,exec,neural);renderCorpusEval(text,neural);startPulse();addMsg('FLYTHINK',exec.route+(exec.actions.length?' · '+exec.actions.join(' + '):'')+(neural.bestLabel?' · neural:'+neural.bestLabel:''),false);
 }
 
 function addMsg(role,text,user){const d=document.createElement('div');d.className='msg'+(user?' user':'');d.innerHTML='<div class="who">'+role+'</div><div class="v">'+escapeHtml(text)+'</div>';$('#chat').appendChild(d);$('#chat').scrollTop=$('#chat').scrollHeight}
@@ -874,12 +890,12 @@ function render(d,exec,neural){
 }
 
 function reset(){
-  Object.assign(state,{turn:0,taskSeq:0,nodeSeq:0,tasks:[],activeTask:null,paused:[],revisions:[],focus:null,lastArea:'客厅',lastAction:null,thingValues:{},lastDelta:null}); neuralState=NEURAL?Array(NEURAL.config.dim).fill(0):[]; semanticScores=[]; projectedRoots=[];
-  $('#chat').innerHTML='<div class="msg"><div class="who">SYSTEM</div>Session reset.</div>';$('#input').value='把客厅外窗关上，客厅灯也关了';updateDecisionHeads($('#input').value);$('#turnPill').textContent='turn 0';$('#deltaPill').textContent='IDLE';$('#delta').textContent='{}';$('#tasks').textContent='No active task.';$('#slots').innerHTML='';$('#flow').innerHTML='';$('#revisions').textContent='[]';$('#route').textContent='WAITING';$('#action').textContent='—';$('#focus').textContent='—';$('#worldDelta').textContent='—';$('#bindingCount').textContent=(THINGREG?.model_count||0)+' real models loaded';$('#bindingGrid').innerHTML='<div class="bindingCard"><div class="bindingRoute">No output yet</div></div>';$('#semanticMatches').innerHTML='';$('#bridgeRows').innerHTML='';$('#bridgeMeta').textContent=DATA?.g?.projection_pool?.length?(DATA.g.projection_pool.length+' projection roots · no active turn'):'projection pool unavailable';if(NEURAL){drawNeural();$('#neuralHud').innerHTML='state reset · 216 developmental units';}drawBrain();
+  Object.assign(state,{turn:0,taskSeq:0,nodeSeq:0,tasks:[],activeTask:null,paused:[],revisions:[],focus:null,lastArea:'客厅',lastAction:null,thingValues:{},lastDelta:null}); neuralState=NEURAL?Array(NEURAL.config.dim).fill(0):[]; semanticScores=[]; projectedRoots=[];currentCorpusCase=null;
+  $('#chat').innerHTML='<div class="msg"><div class="who">SYSTEM</div>Session reset.</div>';$('#input').value='把客厅外窗关上，客厅灯也关了';updateDecisionHeads($('#input').value);$('#turnPill').textContent='turn 0';$('#deltaPill').textContent='IDLE';$('#delta').textContent='{}';$('#tasks').textContent='No active task.';$('#slots').innerHTML='';$('#flow').innerHTML='';$('#revisions').textContent='[]';$('#route').textContent='WAITING';$('#action').textContent='—';$('#focus').textContent='—';$('#worldDelta').textContent='—';$('#bindingCount').textContent=(THINGREG?.model_count||0)+' real models loaded';$('#bindingGrid').innerHTML='<div class="bindingCard"><div class="bindingRoute">No output yet</div></div>';$('#semanticMatches').innerHTML='';$('#corpusCase').textContent='Corpus case · 抽取一条语料后，这里会显示 train seed、mutation provenance、expected model 与本轮 readout 对比。';$('#bridgeRows').innerHTML='';$('#bridgeMeta').textContent=DATA?.g?.projection_pool?.length?(DATA.g.projection_pool.length+' projection roots · no active turn'):'projection pool unavailable';if(NEURAL){drawNeural();$('#neuralHud').innerHTML='state reset · 216 developmental units';}drawBrain();
 }
 
 async function loadAnatomy(){
-  const [g,s,n,tr]=await Promise.all([fetch('./anatomy-sample.json').then(r=>r.json()),fetch('./measured-snapshot.json').then(r=>r.json()),fetch('./neural-substrate.json').then(r=>r.json()),fetch('./real-home-thing-model-registry.json').then(r=>r.json())]);DATA={g,s};NEURAL=n;THINGREG=tr;if(THINGREG.source_archive_sha256!==THING_MODEL_SOURCE_SHA256)throw new Error('Thing Model registry SHA mismatch');populateModelBrowser();neuralState=Array(n.config.dim).fill(0);buildUnitToRootMap();projectActiveUnits();drawNeural();$('#mappedPill').textContent=(s.graph.nodes||[]).length+' measured · '+(g.projection_pool||[]).length+' projection';$('#neuralHud').innerHTML='216 units · '+(n.recurrent_edges||[]).length+' recurrent edges · '+n.training.example_count+' train exemplars';$('#corpusMeta').textContent=n.training.example_count+' public train exemplars · combinatorial mutation enabled';updateDecisionHeads($('#input').value);$('#hud').innerHTML='geometry: '+g.truth+'<br>source: Codex FAFB v783<br>source points: '+Number(g.source_count).toLocaleString()+'<br>display sample: '+Number(g.points.length).toLocaleString()+'<br>projection pool: '+Number((g.projection_pool||[]).length).toLocaleString()+' roots<br>measured replay: '+Number((s.graph.nodes||[]).length).toLocaleString()+' roots<br><br>activity: '+s.truth;drawBrain();
+  const [g,s,n,tr]=await Promise.all([fetch('./anatomy-sample.json').then(r=>r.json()),fetch('./measured-snapshot.json').then(r=>r.json()),fetch('./neural-substrate.json').then(r=>r.json()),fetch('./real-home-thing-model-registry.json').then(r=>r.json())]);DATA={g,s};NEURAL=n;THINGREG=tr;if(THINGREG.source_archive_sha256!==THING_MODEL_SOURCE_SHA256)throw new Error('Thing Model registry SHA mismatch');populateModelBrowser();neuralState=Array(n.config.dim).fill(0);buildUnitToRootMap();projectActiveUnits();drawNeural();$('#mappedPill').textContent=(s.graph.nodes||[]).length+' measured · '+(g.projection_pool||[]).length+' projection';$('#neuralHud').innerHTML='216 units · '+(n.recurrent_edges||[]).length+' recurrent edges · '+n.training.example_count+' train exemplars';$('#corpusMeta').textContent=n.training.example_count+' train seeds · '+(n.mutation_pool?.count||0)+' derived eval mutations · no dev/test leakage';updateDecisionHeads($('#input').value);$('#hud').innerHTML='geometry: '+g.truth+'<br>source: Codex FAFB v783<br>source points: '+Number(g.source_count).toLocaleString()+'<br>display sample: '+Number(g.points.length).toLocaleString()+'<br>projection pool: '+Number((g.projection_pool||[]).length).toLocaleString()+' roots<br>measured replay: '+Number((s.graph.nodes||[]).length).toLocaleString()+' roots<br><br>activity: '+s.truth;drawBrain();
 }
 function fit(){const c=$('#brain'),r=c.getBoundingClientRect(),d=devicePixelRatio||1;c.width=Math.max(1,r.width*d);c.height=Math.max(1,r.height*d);const x=c.getContext('2d');x.setTransform(d,0,0,d,0,0);return[x,r.width,r.height]}
 function R(p){let[x,y,z]=p,cy=Math.cos(rot.y),sy=Math.sin(rot.y),cx=Math.cos(rot.x),sx=Math.sin(rot.x);let x1=x*cy-z*sy,z1=x*sy+z*cy;let y1=y*cx-z1*sx,z2=y*sx+z1*cx;return[x1,y1,z2]}
@@ -943,7 +959,7 @@ function drawBrain(){if(!DATA)return;const[x,W,H]=fit();x.clearRect(0,0,W,H);x.f
  if(showProjection) for(const pr of projectedRoots){const p=by[String(pr.root_id)];if(!p)continue;const q=P([p[1],-p[2],-p[3]],W,H),pulse=(pStage===4?((pProg+pr.rank*.09)%1):0),r=4.5+Math.min(5,Math.abs(pr.activation)*2.2);x.beginPath();x.arc(q.x,q.y,r+5+pulse*13,0,Math.PI*2);x.strokeStyle='rgba(110,169,255,'+(0.48*(1-pulse))+')';x.lineWidth=2;x.stroke();x.beginPath();x.arc(q.x,q.y,r,0,Math.PI*2);x.fillStyle='#6ea9ff';x.fill();hits.push({kind:'developmental_projection',x:q.x,y:q.y,r:r+7,p,pr});}
  const nodes=DATA.s.graph.nodes||[];const phase=Math.max(0,state.turn-1)%3;const active=nodes.filter((_,i)=>i%3===phase);for(const n of active){const p=by[String(n.flywire_id)];if(!p)continue;const q=P([p[1],-p[2],-p[3]],W,H),r=4+Math.log1p(Number(n.activity||0));x.beginPath();x.arc(q.x,q.y,r+4,0,Math.PI*2);x.strokeStyle='rgba(241,189,105,.35)';x.lineWidth=2;x.stroke();x.beginPath();x.arc(q.x,q.y,r,0,Math.PI*2);x.fillStyle='#f1bd69';x.fill();hits.push({kind:'measured',x:q.x,y:q.y,r:r+6,n,p})}
  if(selected&&selected.p){const q=P([selected.p[1],-selected.p[2],-selected.p[3]],W,H);x.beginPath();x.arc(q.x,q.y,7,0,Math.PI*2);x.strokeStyle='white';x.lineWidth=2;x.stroke()}}
-document.querySelectorAll('[data-p]').forEach(b=>b.addEventListener('click',()=>{const t=b.dataset.p;$('#input').value=t;updateDecisionHeads(t)}));document.querySelectorAll('[data-mutate]').forEach(b=>b.addEventListener('click',()=>mutateDraft(b.dataset.mutate)));$('#sampleCorpus').addEventListener('click',sampleCorpus);$('#reset').addEventListener('click',reset);$('#composer').addEventListener('submit',e=>{e.preventDefault();const t=$('#input').value;submit(t)});$('#runAsSequence').addEventListener('click',()=>{const seq=splitSequence($('#input').value);for(const t of seq)submit(t)});$('#input').addEventListener('input',e=>updateDecisionHeads(e.target.value));
+document.querySelectorAll('[data-p]').forEach(b=>b.addEventListener('click',()=>{const t=b.dataset.p;$('#input').value=t;updateDecisionHeads(t)}));document.querySelectorAll('[data-mutate]').forEach(b=>b.addEventListener('click',()=>mutateDraft(b.dataset.mutate)));$('#sampleCorpus').addEventListener('click',sampleCorpus);$('#reset').addEventListener('click',reset);$('#composer').addEventListener('submit',e=>{e.preventDefault();const t=$('#input').value;submit(t)});$('#runAsSequence').addEventListener('click',()=>{currentCorpusCase=null;const seq=splitSequence($('#input').value);for(const t of seq)submit(t)});$('#input').addEventListener('input',e=>{currentCorpusCase=null;$('#corpusCase').textContent='Edited free-form turn · expected label cleared.';updateDecisionHeads(e.target.value)});
 $('#modelSelect').addEventListener('change',e=>renderModelInspector(e.target.value));
 $('#bridgeRows').addEventListener('click',e=>{const row=e.target.closest('[data-bridge-root]');if(row)selectProjectedRoot(row.dataset.bridgeRoot)});
 const nc=$('#neural');nc.addEventListener('click',e=>{const r=nc.getBoundingClientRect(),px=e.clientX-r.left,py=e.clientY-r.top;let best=null,bd=1e9;for(const h of neuralHits){const d=Math.hypot(h.x-px,h.y-py);if(d<h.r&&d<bd){best=h;bd=d}}if(best){const root=unitToRoot[best.unit];if(root)selectProjectedRoot(root)}});
