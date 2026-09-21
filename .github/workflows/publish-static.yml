@@ -47,7 +47,9 @@ jobs:
           python - <<'PY'
           import base64,gzip
           from pathlib import Path
-          raw=base64.b64decode(Path('data/real-home-thing-model-registry.json.gz.b64').read_text().strip())
+          encoded=''.join(Path('data/real-home-thing-model-registry.json.gz.b64').read_text().split())
+          encoded += '=' * (-len(encoded) % 4)
+          raw=base64.b64decode(encoded)
           data=gzip.decompress(raw)
           Path('_site/real-home-thing-model-registry.json').write_bytes(data)
           print('real home thing-model registry bytes',len(data))
