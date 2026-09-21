@@ -61,7 +61,9 @@ jobs:
           import base64, csv, gzip, json, math
           from pathlib import Path
 
-          raw=base64.b64decode(Path('data/measured-snapshot.json.gz.b64').read_text().strip())
+          encoded=''.join(Path('data/measured-snapshot.json.gz.b64').read_text().split())
+          encoded += '=' * (-len(encoded) % 4)
+          raw=base64.b64decode(encoded)
           snap=json.loads(gzip.decompress(raw).decode('utf-8'))
           Path('_site/measured-snapshot.json').write_text(
               json.dumps(snap,separators=(',',':')),encoding='utf-8')
