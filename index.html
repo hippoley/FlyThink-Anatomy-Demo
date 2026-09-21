@@ -128,7 +128,7 @@ details{margin-top:14px;border:1px solid #202b38;border-radius:14px;background:#
 
 <section class="benchmarkLab">
   <div class="benchHead">
-    <div><div class="benchTitle">Multi-turn Regression Lab</div><div class="benchSub">自动生成 4–10 turn 困难链路并逐轮回归：GraphDelta、task stack、指代/房间继承、打断恢复、semantic readout、route 与真实 Thing Model grounding。失败样本可一键装回 Composer。</div></div>
+    <div><div class="benchTitle">Multi-turn Regression Lab</div><div class="benchSub">自动生成 4–10 turn public contract-derived stress suite：状态树 patch、目标→能力规划、GraphDelta、指代/房间继承、打断恢复、route 与真实 Thing Model grounding。它不是 hidden benchmark ground truth；失败样本可一键装回 Composer。</div></div>
     <div class="benchControls">
       <select id="benchDepth" class="benchSelect"><option value="mixed">4–10 turns</option><option value="short">4–6 turns</option><option value="long">7–10 turns</option></select>
       <select id="benchCount" class="benchSelect"><option value="12">12 cases</option><option value="24" selected>24 cases</option><option value="48">48 cases</option></select>
@@ -367,7 +367,7 @@ function updateDecisionHeads(text){
   setHead('headAmb',h.ambiguity>.5?'needs context':'bounded',h.ambiguity);
   setHead('headOod',h.ood>.55?'escalate LLM':'local',h.ood);
   $('#scenarioNote').textContent=scenario&&scenario.match>.16
-    ? '情景推断候选：'+scenario.action+' · scenario match '+pct(scenario.match)+'% · action confidence '+pct(scenario.confidence)+'%'
+    ? 'Goal：'+scenario.goal+' · '+(scenario.plan||[]).map(x=>x.entity+'.'+x.property+'='+String(x.value)).join(' + ')+' · source '+(scenario.inference_source||'scenario_similarity')+' · confidence '+pct(scenario.confidence)+'%'
     : (h.ood>.55?'当前表达超出 bounded home decision，建议 OOD → LLM_ESCALATE。':'当前表达可以留在本地结构化 decision layer。');
   return h;
 }
@@ -604,8 +604,27 @@ function generateGoalCase(rand,id,length){
     '准备睡觉了，客厅不用这么亮',
     '我要出门了，家里别亮着，窗也别开着'
   ];
-  const turns=Array.from({length:Math.min(length,8)},(_,i)=>generatedTurn('turn',goals[i%goals.length],{scenario:true}));
-  return {id:'case-'+String(id).padStart(2,'0'),family:'goal-to-device-plan',length:turns.length,turns};
+  const turns=Array.from({length:Math.min(length,8)},(_,i)=>{
+    const text=goals[i%goals.length],sc=SCENARIOS.find(x=>x.pattern?.test(text))||inferScenario(text);
+    return generatedTurn('turn',text,{scenario:true,goal:sc?.goal,plan_signature:(sc?.plan||[]).map(x=>x.entity+'|'+x.property+'|'+String(x.value))});
+  });
+  return {id:'case-'+String(id).padStart(2,'0'),family:'goal-to-device-plan',truth:'contract_derived_public_stress_suite',length:turns.length,turns};
+}
+function generateHybridStateGoalCase(rand,id,length){
+  const a0=pickSeeded(rand,['客厅','书房']),a1=pickSeeded(rand,['主卧','次卧']);
+  const turns=[
+    generatedTurn('turn','把'+a0+'灯亮度调到70%',{op:'CREATE_TASK',entity:'light',area:a0,property:'brightness',value:70,route:'THING_MODEL_EXECUTE'}),
+    generatedTurn('correction','那个改成30%',{op:'REVISE_NODE',entity:'light',area:a0,property:'brightness',value:30,route:'THING_MODEL_EXECUTE',patch_existing:true}),
+    generatedTurn('turn','准备看电影了，'+a0+'有点刺眼',{op:'UPDATE_TASK',scenario:true,goal:'movie_comfort'}),
+    generatedTurn('crossroom',a1+'灯也调到45%',{op:'UPDATE_TASK',entity:'light',area:a1,property:'brightness',value:45,route:'THING_MODEL_EXECUTE',append_instance:true}),
+    generatedTurn('interrupt','先别管这个，先帮我查一下客厅现在温度',{op:'CREATE_TASK',entity:'climate',area:'客厅',route:'THING_MODEL_QUERY',pause_previous:true}),
+    generatedTurn('resume','继续刚才那个',{op:'UPDATE_TASK',resume_previous:true}),
+    generatedTurn('turn','外面开始下雨了，屋里没人，我不想雨飘进来',{op:'UPDATE_TASK',scenario:true,goal:'rain_protection'}),
+    generatedTurn('turn','把客厅外窗开到40%',{op:'UPDATE_TASK',entity:'window',area:'客厅',property:'open_ratio',value:40,route:'THING_MODEL_EXECUTE'}),
+    generatedTurn('correction','那个改成20%',{op:'REVISE_NODE',entity:'window',area:'客厅',property:'open_ratio',value:20,route:'THING_MODEL_EXECUTE',patch_existing:true}),
+    generatedTurn('cancel','算了，取消刚才那个',{op:'CANCEL_TASK'})
+  ];
+  return {id:'case-'+String(id).padStart(2,'0'),family:'hybrid-state-goal-interrupt',truth:'contract_derived_public_stress_suite',length,turns:turns.slice(0,length)};
 }
 function generateBenchmarkCase(rand,id,length){
   const areas=['客厅','主卧','次卧','书房','儿童房','阳台'];
@@ -632,8 +651,9 @@ function generateBenchmark(){
   benchmarkRunSeq++;benchmarkResults=[];
   benchmarkScenarios=Array.from({length:count},(_,i)=>{
     const length=depth==='short'?(4+Math.floor(rand()*3)):depth==='long'?(7+Math.floor(rand()*4)):(4+Math.floor(rand()*7));
-    if(i%4===1)return generateValuePatchCase(rand,i+1,length);
-    if(i%4===3)return generateGoalCase(rand,i+1,length);
+    if(i%5===1)return generateValuePatchCase(rand,i+1,length);
+    if(i%5===2)return generateHybridStateGoalCase(rand,i+1,length);
+    if(i%5===3)return generateGoalCase(rand,i+1,length);
     return generateBenchmarkCase(rand,i+1,length);
   });
   renderBenchmark();
@@ -646,8 +666,14 @@ function diagnoseBenchmarkTurn(turn,result,pre,post){
   if(e.scenario){
     const sc=result?.delta?.metadata?.scenario_inference;
     if(!sc?.goal)fail.push('scenario_goal');
+    if(e.goal&&sc?.goal!==e.goal)fail.push('goal_resolution');
     if(!(result?.exec?.nodes||[]).length)fail.push('scenario_plan_empty');
     if((sc?.planned_actions||0)>1&&(result?.exec?.nodes||[]).length<2)fail.push('multi_device_plan');
+    if(!(sc?.capability_candidates||[]).length)fail.push('capability_retrieval');
+    if(e.plan_signature?.length){
+      const actual=(result?.exec?.nodes||[]).map(n=>n.target?.entity+'|'+n.slots?.property+'|'+String(n.slots?.value));
+      for(const sig of e.plan_signature)if(!actual.includes(sig))fail.push('goal_plan_contract');
+    }
   }
   if(e.entity&&!actualEntities(result).includes(e.entity))fail.push(turn.type==='coref'?'coreference':'entity_resolution');
   if(e.area&&!actualAreas(result).includes(e.area))fail.push(turn.type==='crossroom'?'area_inheritance':'area_resolution');
@@ -976,7 +1002,8 @@ function parseUtterance(text){
     const area=canonicalArea(raw)||state.lastArea||'客厅';
     const plan=scenario.plan||[{entity:scenario.entity,intent:scenario.operation==='set_value'?'SetValue':scenario.operation==='close'?'TurnOff':'TurnOn',property:scenario.operation==='set_value'?'brightness':scenario.entity==='light'?'power':'motorControl',value:scenario.operation==='set_value'?30:(scenario.entity==='light'?(scenario.operation!=='close'):scenario.operation==='close'?1:0)}];
     const nodes=plan.map(step=>newNode(step.intent,step.entity,{property:step.property,value:step.value,area,area_source:canonicalArea(raw)?'explicit':'inherited',entity_name:canonicalEntityName(step.entity,area),goal:scenario.goal}));
-    return {type:'scenario',nodes,parallel:nodes.length>1,scenario:{...scenario,area,planned_actions:nodes.length}};
+    const capability_candidates=nodes.map(n=>{const ra=routeNode(n);return {entity:n.target.entity,property:n.slots.property,operation:n.intent,value:n.slots.value,action:ra.action,route:ra.route}});
+    return {type:'scenario',nodes,parallel:nodes.length>1,scenario:{...scenario,area,planned_actions:nodes.length,capability_candidates,truth:'contract_derived_goal_plan_not_hidden_ground_truth'}};
   }
   const nodes=[];
   let previousIntent=null, previousEntity=null, previousArea=null;
@@ -1359,10 +1386,11 @@ function resolutionEvidence(node,text,delta,output){
 }
 function renderResolutionTrace(delta,exec,text,snapshot=null){
   const el=$('#resolutionGrid'),mode=$('#resolutionMode');if(!el||!mode)return;
-  const nodes=exec?.nodes||[];mode.textContent=delta?.metadata?.scenario_inference?.goal?'goal-plan':'state-tree grounding';
+  const nodes=exec?.nodes||[],scenario=delta?.metadata?.scenario_inference;mode.textContent=scenario?.goal?'goal-plan · '+scenario.goal:'state-tree grounding';
   if(!nodes.length){el.innerHTML='<div class="resolutionCard"><div class="resolutionPath">'+escapeHtml(delta?.op||'NO OP')+' · no executable node this turn</div></div>';return;}
   const outputs=exec?.outputs||[];
-  el.innerHTML=nodes.map((n,i)=>{
+  const candidateHtml=scenario?.capability_candidates?.length?'<div class="resolutionCard"><div class="resolutionPath"><strong>Capability candidates</strong><br>'+scenario.capability_candidates.map(c=>escapeHtml(c.entity+'.'+c.property+' → '+(c.action||c.route))).join('<br>')+'</div><span class="resolutionBadge inherited">contract-derived candidate set</span></div>':'';
+  el.innerHTML=candidateHtml+nodes.map((n,i)=>{
     const o=outputs[i]||{},e=resolutionEvidence(n,text,delta,o),src=[e.area_source,e.entity_source,e.property_source,e.value_source].join(' · ');
     const inherited=/inherited|context|coreference|corrected/.test(src),blocked=e.grounding==='BLOCKED';
     return '<div class="resolutionCard"><div class="resolutionPath">'+escapeHtml(e.instance)+'<br>'+escapeHtml(e.binding)+'</div><div class="resolutionWhy">'+
