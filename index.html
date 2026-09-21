@@ -1405,18 +1405,66 @@ function bindingForQuery(node,route){
   return {route,action:null,node,binding:b,grounding_status:'READ_SCHEMA_VALID',grounding_reason:check.reason,query:{schema_path:stateKey,value,truth:'schema_is_real_device_value_not_live'}};
 }
 
+function capabilityById(id){return CAPINDEX?.capabilities?.find(c=>c.capability_id===id)||null}
 function capabilityCandidateForNode(n){
+  if(n?.slots?.capability_id){
+    const c=capabilityById(n.slots.capability_id),check=capabilityValueCheck(c,n.slots?.value,n.intent==='QueryState'?'read':'write');
+    return {
+      entity:n?.target?.entity||null,property:n?.slots?.property||null,operation:n?.intent||null,value:n?.slots?.value,
+      action:c?'capability:'+c.capability_id:null,route:check.ok?(n.intent==='QueryState'?'THING_MODEL_QUERY':'THING_MODEL_EXECUTE'):'CLARIFY',
+      binding_key:c?.capability_id||null,model_code:c?.model||null,module_code:c?.module||null,property_code:c?.code||null,
+      schema_available:!!c,constraint_ok:check.ok,filter_reason:check.reason,
+      truth:'candidate_from_global_46_model_capability_index'
+    };
+  }
   const ra=routeNode(n),map=ACTION_TO_REGISTRY_BINDING[ra.action],base=map&&THINGREG?.bindings?.[map.key];
   return {
     entity:n?.target?.entity||null,property:n?.slots?.property||null,operation:n?.intent||null,value:n?.slots?.value,
     action:ra.action,route:ra.route,binding_key:map?.key||null,
     model_code:base?.model||null,module_code:base?.module||null,property_code:base?.property||null,
     schema_available:!!base,
-    truth:'candidate_derived_from_fixed_runtime_binding_registry'
+    truth:'legacy_fixed_binding_fallback'
   };
+}
+function bindingForCapability(node,route='THING_MODEL_EXECUTE'){
+  const c=capabilityById(node?.slots?.capability_id);
+  if(!c)return {route:'CLARIFY',action:null,requested_action:node?.slots?.capability_id||null,node,binding:null,grounding_status:'BLOCKED',grounding_reason:'capability_missing_from_global_index',worldDelta:null};
+  const mode=node?.intent==='QueryState'?'read':(c.kind==='s'?'execute':'write');
+  const value=node?.slots?.value;
+  const check=capabilityValueCheck(c,value,mode);
+  const area=node?.slots?.area||state.lastArea||null;
+  const entityName=node?.slots?.entity_name||canonicalEntityName(node?.target?.entity,area)||[area,c.product||c.model].filter(Boolean).join('');
+  const binding={
+    binding_key:c.capability_id,model_code:c.model,product_title:c.product,product_id:null,productKey:null,category:null,version:null,
+    module_code:c.module,module_title:c.module_title||null,module_identifier:c.module||null,
+    property_code:c.code,property_title:c.title||c.code,property_id:null,dataType:c.dataType||null,op:c.ops||[],
+    enum:c.enum||[],minimum:c.min,maximum:c.max,unit:c.unit,request_value:value,
+    dialogue_area:area,dialogue_entity_name:entityName,
+    source_archive_sha256:THING_MODEL_SOURCE_SHA256,source_truth:CAPINDEX?.truth||'global_capability_index',
+    capability_index_rank:node?.slots?.capability_rank||null,capability_score:node?.slots?.capability_score||null
+  };
+  if(!check.ok)return {route:'CLARIFY',action:null,requested_action:'capability:'+c.capability_id,node,binding,grounding_status:'BLOCKED',grounding_reason:check.reason,worldDelta:null};
+  const schemaPath=[c.model,c.module,c.code].join(' → '),stateKey=(entityName||area||'unscoped')+'::'+schemaPath;
+  if(mode==='read'){
+    const current=Object.prototype.hasOwnProperty.call(state.thingValues,stateKey)?state.thingValues[stateKey]:'NO_LIVE_TELEMETRY_IN_STATIC_DEMO';
+    return {route:'THING_MODEL_QUERY',action:null,node,binding,grounding_status:'READ_SCHEMA_VALID',grounding_reason:'validated_against_full_46_model_capability_index',query:{schema_path:stateKey,value:current,truth:'schema_is_real_device_value_not_live'},worldDelta:null};
+  }
+  if(c.kind==='s'){
+    return {route,action:'capability:'+c.capability_id,node,binding,grounding_status:'ALLOW',grounding_reason:'service_validated_against_full_46_model_capability_index',worldDelta:null};
+  }
+  const before=Object.prototype.hasOwnProperty.call(state.thingValues,stateKey)?state.thingValues[stateKey]:'UNOBSERVED';
+  state.thingValues[stateKey]=value;
+  return {route,action:'capability:'+c.capability_id,node,binding,grounding_status:'ALLOW',grounding_reason:'validated_against_full_46_model_capability_index',worldDelta:{key:stateKey,before,after:value,truth:'session_state_not_live_device_telemetry'}};
 }
 function routeNode(n){
   if(!n)return {route:'CLARIFY',action:null};
+  if(n.slots?.capability_id){
+    const c=capabilityById(n.slots.capability_id);
+    if(!c)return {route:'CLARIFY',action:null};
+    if(n.intent==='QueryState'&&(c.ops||[]).includes('read'))return {route:'THING_MODEL_QUERY',action:null,capability_id:c.capability_id};
+    if((c.kind==='p'&&(c.ops||[]).includes('write'))||c.kind==='s')return {route:'THING_MODEL_EXECUTE',action:'capability:'+c.capability_id,capability_id:c.capability_id};
+    return {route:'CLARIFY',action:null,capability_id:c.capability_id};
+  }
   if(n.intent==='Plan')return {route:'LLM_ESCALATE',action:null};
   if(n.intent==='QueryState')return {route:'THING_MODEL_QUERY',action:null};
   if(n.semantic_status==='unresolved')return {route:'CLARIFY',action:null};
@@ -1458,7 +1506,9 @@ function executeCurrent(neural,d){
       (n?.target?.entity==='screen'&&/^insect_screen_/.test(learned||''));
     if(!ra.action&&ra.route==='LOCAL_SKILL'&&learnedCompatible&&neural.scores?.[0]?.score>=0.22&&n?.intent!=='QueryState')ra.action=learned;
 
-    if(ra.route==='THING_MODEL_EXECUTE'&&ra.action){
+    if(n?.slots?.capability_id&&(ra.route==='THING_MODEL_EXECUTE'||ra.route==='THING_MODEL_QUERY')){
+      outputs.push(bindingForCapability(n,ra.route));
+    }else if(ra.route==='THING_MODEL_EXECUTE'&&ra.action){
       outputs.push(bindingForAction(ra.action,n,ra.route));
     }else if(ra.route==='THING_MODEL_QUERY'){
       outputs.push(bindingForQuery(n,ra.route));
