@@ -933,6 +933,8 @@ function parseUtterance(text){
     else if(/色温|开尔文|\d{4}\s*[kK]|三千/.test(p)){intent='SetValue';slots.property='colorTemperature';slots.value=kelvin?Number(kelvin[1]):3000;}
     else if(/调暗|亮度/.test(p)){intent='SetValue';slots.property='brightness';slots.value=percent?Math.max(0,Math.min(100,Number(percent[1]))):30;}
     else if(/开一点|开度|开到|开至/.test(p)){intent='SetValue';slots.property='open_ratio';slots.value=percent?Math.max(0,Math.min(100,Number(percent[1]))):30;}
+    else if(percent&&entity==='light'&&/调到|调成|设为|设置为/.test(p)){intent='SetValue';slots.property='brightness';slots.value=Math.max(0,Math.min(100,Number(percent[1])));}
+    else if(percent&&entity==='window'&&/调到|调成|设为|设置为|开到/.test(p)){intent='SetValue';slots.property='open_ratio';slots.value=Math.max(0,Math.min(100,Number(percent[1])));}
     else if(correction&&percent&&focusedBefore){const props=Object.keys(focusedBefore.properties||{});intent='SetValue';slots.property=props.slice(-1)[0]||(entity==='window'?'open_ratio':'brightness');slots.value=Math.max(0,Math.min(100,Number(percent[1])));}
     else if(/关/.test(p)){intent='TurnOff';slots.property=entity==='light'?'power':'motorControl';slots.value=entity==='light'?false:1;}
     else if(/开/.test(p)){intent='TurnOn';slots.property=entity==='light'?'power':'motorControl';slots.value=entity==='light'?true:0;}
