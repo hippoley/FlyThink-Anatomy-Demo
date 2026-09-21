@@ -44,6 +44,14 @@ jobs:
           mkdir -p _site
           cp index.html _site/index.html
           python scripts/build_neural_artifacts.py
+          python - <<'PY'
+          import base64,gzip
+          from pathlib import Path
+          raw=base64.b64decode(Path('data/real-home-thing-model-registry.json.gz.b64').read_text().strip())
+          data=gzip.decompress(raw)
+          Path('_site/real-home-thing-model-registry.json').write_bytes(data)
+          print('real home thing-model registry bytes',len(data))
+          PY
 
           curl -L --fail --retry 4 --retry-all-errors \
             'https://storage.googleapis.com/flywire-data/codex/data/fafb/783/coordinates.csv.gz' \
