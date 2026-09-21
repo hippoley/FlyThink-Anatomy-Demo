@@ -191,6 +191,7 @@ details{margin-top:14px;border:1px solid #202b38;border-radius:14px;background:#
 <details><summary>Open advanced trace · GraphDelta / revisions / raw state</summary><div class="advanced">
 <div class="subcard"><div class="k">GraphDelta</div><div id="delta" class="mono">{}</div></div>
 <div class="subcard"><div class="k">Revisions / context</div><div id="revisions" class="mono">[]</div></div>
+<div class="subcard"><div class="k">Raw persistent state tree</div><div id="rawStateTree" class="mono">{}</div></div>
 <div class="subcard"><div class="k">Interpretation</div><div class="mono">Product inference truth:
 developmental_fly_inspired_product_runtime
 
@@ -540,7 +541,7 @@ function inspectComposerResult(i){
   $('#delta').textContent=JSON.stringify(r.delta||{},null,2);
   $('#tasks').innerHTML=renderTaskSnapshot(r.snapshot?.tasks||[]);
   const ledger=composerLedger(r);$('#slots').innerHTML=Object.entries(ledger).map(([k,v])=>'<div class="slot"><div class="k">'+escapeHtml(k.toUpperCase())+'</div><div class="v">'+escapeHtml(Array.isArray(v)?(v.join(' + ')||'—'):String(v??'—'))+'</div></div>').join('');
-  $('#revisions').textContent=JSON.stringify(r.snapshot?.revisions||[],null,2);renderStateTree(r.snapshot?.intentTree||{},r.snapshot?.focusKey||null);
+  $('#revisions').textContent=JSON.stringify(r.snapshot?.revisions||[],null,2);$('#rawStateTree').textContent=JSON.stringify(r.snapshot?.intentTree||{},null,2);renderStateTree(r.snapshot?.intentTree||{},r.snapshot?.focusKey||null);
   $('#route').textContent=r.exec?.route||'—';$('#action').textContent=r.exec?.actions?.join(' · ')||'—';$('#focus').textContent=r.snapshot?.focus||'—';
   $('#worldDelta').textContent=r.exec?.worldDeltas?.length?r.exec.worldDeltas.map(x=>x.key+' '+x.before+' → '+x.after).join(' · '):'—';
   $('#bindingCount').textContent='historical T'+(i+1)+' · '+(r.exec?.outputs?.length||0)+' outputs';
@@ -571,6 +572,30 @@ function deviceCommand(entity,op,area){
 }
 function oppositeOp(op){return op==='open'?'close':'open'}
 function generatedTurn(type,text,expected={}){return {type,text,expected}}
+function generateValuePatchCase(rand,id,length){
+  const a0=pickSeeded(rand,['客厅','书房','儿童房']),a1=pickSeeded(rand,['主卧','次卧','阳台'].filter(x=>x!==a0));
+  const turns=[
+    generatedTurn('turn','把'+a0+'灯亮度调到70%',{op:'CREATE_TASK',entity:'light',area:a0,property:'brightness',value:70,route:'THING_MODEL_EXECUTE'}),
+    generatedTurn('correction','那个改成30%',{op:'REVISE_NODE',entity:'light',area:a0,property:'brightness',value:30,route:'THING_MODEL_EXECUTE',patch_existing:true}),
+    generatedTurn('crossroom',a1+'灯也调到45%',{op:'UPDATE_TASK',entity:'light',area:a1,property:'brightness',value:45,route:'THING_MODEL_EXECUTE',append_instance:true}),
+    generatedTurn('coref',a0+'那个再改成55%',{op:'REVISE_NODE',entity:'light',area:a0,property:'brightness',value:55,route:'THING_MODEL_EXECUTE',patch_existing:true}),
+    generatedTurn('turn','把'+a0+'外窗开到40%',{op:'UPDATE_TASK',entity:'window',area:a0,property:'open_ratio',value:40,route:'THING_MODEL_EXECUTE',append_instance:true}),
+    generatedTurn('correction','那个改成20%',{op:'REVISE_NODE',entity:'window',area:a0,property:'open_ratio',value:20,route:'THING_MODEL_EXECUTE',patch_existing:true}),
+    generatedTurn('crossroom',a1+'外窗开到35%',{op:'UPDATE_TASK',entity:'window',area:a1,property:'open_ratio',value:35,route:'THING_MODEL_EXECUTE',append_instance:true}),
+    generatedTurn('coref',a0+'那个再改成25%',{op:'REVISE_NODE',entity:'window',area:a0,property:'open_ratio',value:25,route:'THING_MODEL_EXECUTE',patch_existing:true})
+  ];
+  return {id:'case-'+String(id).padStart(2,'0'),family:'state-tree-value-patch',length,turns:turns.slice(0,Math.min(length,turns.length))};
+}
+function generateGoalCase(rand,id,length){
+  const goals=[
+    '准备看电影了，客厅有点刺眼',
+    '外面开始下雨了，屋里没人，我不想雨飘进来',
+    '屋里很闷，但是外面空气看起来不错',
+    '准备睡觉了，客厅不用这么亮'
+  ];
+  const turns=Array.from({length:Math.min(length,8)},(_,i)=>generatedTurn('turn',goals[i%goals.length],{scenario:true}));
+  return {id:'case-'+String(id).padStart(2,'0'),family:'goal-to-device-plan',length:turns.length,turns};
+}
 function generateBenchmarkCase(rand,id,length){
   const areas=['客厅','主卧','次卧','书房','儿童房','阳台'];
   const entity=pickSeeded(rand,['window','light']),baseOp=pickSeeded(rand,['open','close']);
@@ -596,6 +621,8 @@ function generateBenchmark(){
   benchmarkRunSeq++;benchmarkResults=[];
   benchmarkScenarios=Array.from({length:count},(_,i)=>{
     const length=depth==='short'?(4+Math.floor(rand()*3)):depth==='long'?(7+Math.floor(rand()*4)):(4+Math.floor(rand()*7));
+    if(i%4===1)return generateValuePatchCase(rand,i+1,length);
+    if(i%4===3)return generateGoalCase(rand,i+1,length);
     return generateBenchmarkCase(rand,i+1,length);
   });
   renderBenchmark();
@@ -605,6 +632,12 @@ function actualAreas(result){return (result?.exec?.nodes||[]).map(n=>n.slots?.ar
 function diagnoseBenchmarkTurn(turn,result,pre,post){
   const e=turn.expected||{},fail=[];
   if(e.op&&result?.delta?.op!==e.op)fail.push('graph_delta');
+  if(e.scenario){
+    const sc=result?.delta?.metadata?.scenario_inference;
+    if(!sc?.goal)fail.push('scenario_goal');
+    if(!(result?.exec?.nodes||[]).length)fail.push('scenario_plan_empty');
+    if((sc?.planned_actions||0)>1&&(result?.exec?.nodes||[]).length<2)fail.push('multi_device_plan');
+  }
   if(e.entity&&!actualEntities(result).includes(e.entity))fail.push(turn.type==='coref'?'coreference':'entity_resolution');
   if(e.area&&!actualAreas(result).includes(e.area))fail.push(turn.type==='crossroom'?'area_inheritance':'area_resolution');
   if(e.pause_previous&&pre.activeTask&&!post.paused.includes(pre.activeTask))fail.push('interruption_stack');
@@ -617,7 +650,29 @@ function diagnoseBenchmarkTurn(turn,result,pre,post){
   if(e.route&&!String(result?.exec?.route||'').includes(e.route))fail.push('route');
   if(e.action&&!((result?.exec?.actions||[]).includes(e.action)))fail.push('action_grounding');
   if((result?.exec?.outputs||[]).some(o=>o.grounding_status==='BLOCKED'))fail.push('thing_model_grounding');
-  if((e.entity||e.action)&&!(result?.exec?.nodes||[]).length)fail.push('empty_parse');
+  if(e.property){
+    const node=(result?.exec?.nodes||[]).find(n=>n.target?.entity===e.entity&&n.slots?.area===e.area);
+    if(!node||node.slots?.property!==e.property)fail.push('property_slot');
+    if(e.value!==undefined&&Number(node?.slots?.value)!==Number(e.value))fail.push('value_slot');
+  }
+  if(e.entity&&e.area&&(result?.exec?.worldDeltas||[]).length){
+    const expectedName=canonicalEntityName(e.entity,e.area);
+    if(expectedName&&!(result.exec.worldDeltas||[]).some(d=>String(d.key||'').startsWith(expectedName+'::')))fail.push('instance_grounding');
+  }
+  if(!['CANCEL_TASK','REMOVE_NODE'].includes(result?.delta?.op)){
+    for(const [key,beforeEntry] of Object.entries(pre.intentTree||{})){
+      const afterEntry=post.intentTree?.[key];
+      if(!afterEntry){fail.push('state_tree_loss');continue}
+      for(const prop of Object.keys(beforeEntry.properties||{}))if(!afterEntry.properties?.[prop])fail.push('state_tree_loss');
+    }
+  }
+  const active=post.tasks?.find(t=>t.task_id===post.activeTask);
+  if(active){
+    const seen=new Set();
+    for(const n of active.nodes||[]){const k=instanceKey(n)+'::'+nodePropertyKey(n);if(seen.has(k))fail.push('duplicate_state_node');seen.add(k)}
+  }
+  if(e.patch_existing&&result?.delta?.op==='CREATE_TASK')fail.push('patch_became_new_task');
+  if((e.entity||e.action||e.property)&&!(result?.exec?.nodes||[]).length)fail.push('empty_parse');
   return [...new Set(fail)];
 }
 function runBenchmark(){
@@ -1280,7 +1335,7 @@ function render(d,exec,neural){
   const n=exec.nodes?.[0]||{};const slots=n.slots||{};const ledger={entities:(exec.nodes||[]).map(x=>x.target?.entity).filter(Boolean).join(' + ')||state.focus||'—',entity_names:(exec.nodes||[]).map(x=>x.slots?.entity_name).filter(Boolean).join(' + ')||'—',areas:[...new Set((exec.nodes||[]).map(x=>x.slots?.area).filter(Boolean))].join(' + ')||state.lastArea||'—',intents:(exec.nodes||[]).map(x=>x.intent).filter(Boolean).join(' + ')||'—',properties:(exec.nodes||[]).map(x=>x.slots?.property).filter(Boolean).join(' + ')||'—',values:(exec.nodes||[]).map(x=>String(x.slots?.value)).filter(x=>x!=='undefined').join(' + ')||'—',active_task:state.activeTask||'—',paused_stack:state.paused.join(' → ')||'—'};
   $('#slots').innerHTML=Object.entries(ledger).map(([k,v])=>'<div class="slot"><div class="k">'+k.toUpperCase()+'</div><div class="v">'+escapeHtml(v)+'</div></div>').join('');
   const steps=['train exemplars','semantic drive','216 recurrent units','3× settle','GraphDelta','task context','route','Thing Model'];$('#flow').innerHTML=steps.map(x=>'<span class="step on">'+x+'</span>').join('');
-  $('#revisions').textContent=JSON.stringify(state.revisions,null,2);renderStateTree();
+  $('#revisions').textContent=JSON.stringify(state.revisions,null,2);$('#rawStateTree').textContent=JSON.stringify(state.intentTree,null,2);renderStateTree();
   $('#route').textContent=exec.route;$('#action').textContent=exec.actions.length?exec.actions.join(' · '):'—';$('#focus').textContent=state.focus||'—';$('#worldDelta').textContent=exec.worldDeltas.length?exec.worldDeltas.map(x=>x.key+' '+x.before+' → '+x.after).join(' · '):'—';
   $('#bindingCount').textContent=exec.outputs.length+' outputs · '+(THINGREG?.model_count||0)+' real models loaded';
   $('#bindingGrid').innerHTML=exec.outputs.length?exec.outputs.map(renderBindingCard).join(''):'<div class="bindingCard"><div class="bindingRoute">No output</div></div>';
@@ -1295,7 +1350,7 @@ function resetRuntimeState(){
 }
 function reset(){
   resetRuntimeState();
-  $('#chat').innerHTML='<div class="msg"><div class="who">SYSTEM</div>Session reset.</div>';$('#input').value='把客厅外窗关上，客厅灯也关了';updateDecisionHeads($('#input').value);$('#turnPill').textContent='turn 0';$('#deltaPill').textContent='IDLE';$('#delta').textContent='{}';$('#tasks').textContent='No active task.';$('#slots').innerHTML='';renderStateTree();$('#flow').innerHTML='';$('#revisions').textContent='[]';$('#route').textContent='WAITING';$('#action').textContent='—';$('#focus').textContent='—';$('#worldDelta').textContent='—';$('#bindingCount').textContent=(THINGREG?.model_count||0)+' real models loaded';$('#bindingGrid').innerHTML='<div class="bindingCard"><div class="bindingRoute">No output yet</div></div>';$('#semanticMatches').innerHTML='';$('#corpusCase').textContent='Corpus case · 抽取一条语料后，这里会显示 train seed、mutation provenance、expected model 与本轮 readout 对比。';$('#bridgeRows').innerHTML='';$('#bridgeMeta').textContent=DATA?.g?.projection_pool?.length?(DATA.g.projection_pool.length+' projection roots · no active turn'):'projection pool unavailable';if(NEURAL){drawNeural();$('#neuralHud').innerHTML='state reset · 216 developmental units';}drawBrain();
+  $('#chat').innerHTML='<div class="msg"><div class="who">SYSTEM</div>Session reset.</div>';$('#input').value='把客厅外窗关上，客厅灯也关了';updateDecisionHeads($('#input').value);$('#turnPill').textContent='turn 0';$('#deltaPill').textContent='IDLE';$('#delta').textContent='{}';$('#tasks').textContent='No active task.';$('#slots').innerHTML='';renderStateTree();$('#flow').innerHTML='';$('#revisions').textContent='[]';$('#rawStateTree').textContent='{}';$('#route').textContent='WAITING';$('#action').textContent='—';$('#focus').textContent='—';$('#worldDelta').textContent='—';$('#bindingCount').textContent=(THINGREG?.model_count||0)+' real models loaded';$('#bindingGrid').innerHTML='<div class="bindingCard"><div class="bindingRoute">No output yet</div></div>';$('#semanticMatches').innerHTML='';$('#corpusCase').textContent='Corpus case · 抽取一条语料后，这里会显示 train seed、mutation provenance、expected model 与本轮 readout 对比。';$('#bridgeRows').innerHTML='';$('#bridgeMeta').textContent=DATA?.g?.projection_pool?.length?(DATA.g.projection_pool.length+' projection roots · no active turn'):'projection pool unavailable';if(NEURAL){drawNeural();$('#neuralHud').innerHTML='state reset · 216 developmental units';}drawBrain();
 }
 
 async function loadAnatomy(){
