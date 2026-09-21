@@ -1099,12 +1099,15 @@ const ACTION_TO_REGISTRY_BINDING={
   exterior_window_close:{key:'window.close'},
   exterior_window_open:{key:'window.open'},
   exterior_window_open_ratio_30:{key:'window.position',value:30},
+  exterior_window_set_position:{key:'window.position'},
   insect_screen_close:{key:'screen.close'},
   insect_screen_open:{key:'screen.open'},
   living_color_light_off:{key:'light.off'},
   living_color_light_on:{key:'light.on'},
   living_color_light_dim_30:{key:'light.brightness',value:30},
-  living_color_light_warm_3000k:{key:'light.colorTemperature',value:3000}
+  living_color_light_set_brightness:{key:'light.brightness'},
+  living_color_light_warm_3000k:{key:'light.colorTemperature',value:3000},
+  living_color_light_set_color_temperature:{key:'light.colorTemperature'}
 };
 function getRealProperty(binding){
   const model=THINGREG?.models?.[binding.model]?.raw;
@@ -1207,7 +1210,7 @@ function routeNode(n){
   if(n.intent==='QueryState')return {route:'THING_MODEL_QUERY',action:null};
   if(n.semantic_status==='unresolved')return {route:'CLARIFY',action:null};
   if(n.target.entity==='window'){
-    if(n.slots.property==='open_ratio')return {route:'THING_MODEL_EXECUTE',action:'exterior_window_open_ratio_30'};
+    if(n.slots.property==='open_ratio')return {route:'THING_MODEL_EXECUTE',action:'exterior_window_set_position'};
     if(n.intent==='TurnOff')return {route:'THING_MODEL_EXECUTE',action:'exterior_window_close'};
     if(n.intent==='TurnOn')return {route:'THING_MODEL_EXECUTE',action:'exterior_window_open'};
   }
@@ -1216,8 +1219,8 @@ function routeNode(n){
     if(n.intent==='TurnOn')return {route:'THING_MODEL_EXECUTE',action:'insect_screen_open'};
   }
   if(n.target.entity==='light'){
-    if(n.slots.property==='colorTemperature')return {route:'THING_MODEL_EXECUTE',action:'living_color_light_warm_3000k'};
-    if(n.slots.property==='brightness')return {route:'THING_MODEL_EXECUTE',action:'living_color_light_dim_30'};
+    if(n.slots.property==='colorTemperature')return {route:'THING_MODEL_EXECUTE',action:'living_color_light_set_color_temperature'};
+    if(n.slots.property==='brightness')return {route:'THING_MODEL_EXECUTE',action:'living_color_light_set_brightness'};
     if(n.intent==='TurnOff')return {route:'THING_MODEL_EXECUTE',action:'living_color_light_off'};
     if(n.intent==='TurnOn')return {route:'THING_MODEL_EXECUTE',action:'living_color_light_on'};
   }
