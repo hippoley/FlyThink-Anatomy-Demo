@@ -41,11 +41,22 @@ v[idx]=rr.choice([-1.,1.],len(idx))
 authority=[[int(i),float(v[i])] for i in idx]
 
 training=json.loads(Path('data/semantic-training.json').read_text(encoding='utf-8'))
+goal_training=json.loads(Path('data/goal-state-curriculum.json').read_text(encoding='utf-8'))
 examples=[]
+goal_examples=[]
 semantic_templates={}
 for label,texts in training.get('paraphrases',{}).items():
     for text in texts:
-        examples.append({'label':label,'text':text})
+        examples.append({'label':label,'text':text,'kind':'device_action'})
+    rr=np.random.default_rng(seed_for('semantic:'+label))
+    sv=np.zeros(DIM,np.float32)
+    sidx=rr.choice(DIM,size=24,replace=False)
+    sv[sidx]=rr.uniform(.55,1.0,len(sidx)).astype(np.float32)
+    semantic_templates[label]=[[int(i),float(sv[i])] for i in sidx]
+for goal,texts in goal_training.get('goals',{}).items():
+    label='goal:'+goal
+    for text in texts:
+        goal_examples.append({'label':label,'goal':goal,'text':text,'kind':'goal_state'})
     rr=np.random.default_rng(seed_for('semantic:'+label))
     sv=np.zeros(DIM,np.float32)
     sidx=rr.choice(DIM,size=24,replace=False)
@@ -106,6 +117,15 @@ out={
    'example_count':len(examples),
    'examples':examples,
  },
+ 'goal_training':{
+   'truth':goal_training.get('truth'),
+   'source':goal_training.get('source'),
+   'split':goal_training.get('split'),
+   'leakage_rule':goal_training.get('leakage_rule'),
+   'example_count':len(goal_examples),
+   'examples':goal_examples,
+   'goal_contract':goal_training.get('goal_contract',{}),
+ },
  'mutation_pool':{
    'truth':'train_derived_public_eval_mutations_not_training',
    'count':len(mutation_cases),
@@ -114,5 +134,7 @@ out={
 }
 Path('_site/neural-substrate.json').write_text(json.dumps(out,separators=(',',':')),encoding='utf-8')
 Path('_site/semantic-training.json').write_text(json.dumps(training,separators=(',',':')),encoding='utf-8')
+Path('_site/goal-state-curriculum.json').write_text(json.dumps(goal_training,separators=(',',':')),encoding='utf-8')
 assert len(mutation_cases)>=300
-print('neural dim',DIM,'recurrent edges',len(edges),'training examples',len(examples),'mutation cases',len(mutation_cases))
+assert len(goal_examples)>=40
+print('neural dim',DIM,'recurrent edges',len(edges),'action training examples',len(examples),'goal training examples',len(goal_examples),'mutation cases',len(mutation_cases))
