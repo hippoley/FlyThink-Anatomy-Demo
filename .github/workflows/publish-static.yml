@@ -32,7 +32,7 @@ jobs:
           s=Path('index.html').read_text(encoding='utf-8')
           js=s.split('<script>',1)[1].rsplit('</script>',1)[0]
           Path('/tmp/flythink-app.js').write_text(js,encoding='utf-8')
-          required=['Corpus Mutation Lab','runAsSequence','semanticMatches','neural','brain']
+          required=['Corpus Mutation Lab','runAsSequence','semanticMatches','neuralBridge','projection_pool','neural','brain']
           missing=[x for x in required if x not in s]
           assert not missing, missing
           PY
@@ -108,10 +108,23 @@ jobs:
           scale=max(b-a for a,b in zip(lo,hi))
 
           step=max(1,len(rows)//36000)
+          sample_rows=rows[::step]
           sample=[[rid,(x-center[0])/scale,(y-center[1])/scale,(z-center[2])/scale]
-                  for rid,x,y,z in rows[::step]]
+                  for rid,x,y,z in sample_rows]
+
+          # Keep developmental projection roots structurally separate from measured replay roots.
+          # We derive a deterministic pool from the real coordinate table and explicitly exclude
+          # every root that appears in the gold measured fixture.
+          projection_candidates=[r for r in sample_rows if r[0] not in measured_roots]
+          pool_target=512
+          pool_step=max(1,len(projection_candidates)//pool_target)
+          projection_rows=projection_candidates[::pool_step][:pool_target]
+          projection_pool=[rid for rid,_,_,_ in projection_rows]
+
           by_root={rid:[rid,(xyz[0]-center[0])/scale,(xyz[1]-center[1])/scale,(xyz[2]-center[2])/scale]
                    for rid,xyz in measured.items()}
+          for rid,x,y,z in projection_rows:
+              by_root[rid]=[rid,(x-center[0])/scale,(y-center[1])/scale,(z-center[2])/scale]
 
           out={
               'truth':'measured_flywire_coordinate_derivative',
@@ -122,15 +135,20 @@ jobs:
               'normalization':{'center':center,'scale':scale,'percentile_bounds':'0.5-99.5'},
               'points':sample,
               'by_root':by_root,
+              'projection_pool':projection_pool,
+              'measured_root_ids':sorted(measured_roots),
           }
           Path('_site/anatomy-sample.json').write_text(
               json.dumps(out,separators=(',',':')),encoding='utf-8')
 
           assert len(rows)>100000
-          assert len(by_root)>=90
+          assert len(measured)>=90
+          assert len(projection_pool)>=216
+          assert not (set(projection_pool) & measured_roots)
           print('source points',len(rows))
           print('display sample',len(sample))
-          print('measured roots mapped',len(by_root))
+          print('measured roots mapped',len(measured))
+          print('developmental projection pool',len(projection_pool))
           PY
 
           touch _site/.nojekyll

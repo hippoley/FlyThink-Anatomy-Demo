@@ -80,6 +80,8 @@ Three truth domains are kept separate:
 - **blue** — visualization projection of the current developmental neural state
 - **gold** — measured FlyWire replay evidence
 
+The blue projection now uses a deterministic **projection pool that explicitly excludes every measured replay root**. The UI exposes a clickable **Neural Bridge** showing the strongest developmental unit, population, activation and mapped anatomy root for the current turn.
+
 Blue does **not** mean those FlyWire neurons literally executed the Chinese command.
 
 ## What is doing the reasoning?
