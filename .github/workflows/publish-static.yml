@@ -45,14 +45,26 @@ jobs:
           cp index.html _site/index.html
           python scripts/build_neural_artifacts.py
           python - <<'PY'
-          import base64,gzip
+          import base64,gzip,json
           from pathlib import Path
-          encoded=''.join(Path('data/real-home-thing-model-registry.json.gz.b64').read_text().split())
-          encoded += '=' * (-len(encoded) % 4)
-          raw=base64.b64decode(encoded)
-          data=gzip.decompress(raw)
-          Path('_site/real-home-thing-model-registry.json').write_bytes(data)
-          print('real home thing-model registry bytes',len(data))
+          src=Path('data/real-home-thing-model-registry.json.gz.b64')
+          dst=Path('_site/real-home-thing-model-registry.json')
+          try:
+              encoded=''.join(src.read_text().split())
+              encoded += '=' * (-len(encoded) % 4)
+              raw=base64.b64decode(encoded)
+              data=gzip.decompress(raw)
+              json.loads(data.decode('utf-8'))
+              dst.write_bytes(data)
+              print('real home thing-model registry bytes',len(data))
+          except Exception as exc:
+              print('warning: invalid optional Thing Model registry fixture:',repr(exc))
+              dst.write_text(json.dumps({
+                  'truth':'registry_fixture_unavailable',
+                  'status':'degraded',
+                  'reason':'invalid_public_registry_fixture',
+                  'models':[]
+              },ensure_ascii=False),encoding='utf-8')
           PY
 
           curl -L --fail --retry 4 --retry-all-errors \
