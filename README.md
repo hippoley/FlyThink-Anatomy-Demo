@@ -63,6 +63,22 @@ Running a composed scenario resets the session and records, for every turn:
 
 This makes interruption/resume, revision, inherited references and cross-room behavior inspectable as a sequence rather than only as a final answer.
 
+## Persistent dialogue state and grounding-first execution
+
+The browser runtime now maintains a persistent instance-scoped state tree instead of treating every utterance as a fresh command. Its default update semantics are:
+
+- same room + device instance + property → patch the existing node;
+- new room/device/property → append a new branch;
+- omitted slots remain unchanged;
+- explicit cancellation or negation is required to remove state;
+- room/device session values are keyed by device instance plus the real model/module/property schema path.
+
+Structured `entity / property / operation / value` resolution is authoritative once resolved. The developmental semantic readout remains evidence for inspection and fallback; it can no longer overwrite a resolved structured action merely because a train exemplar is lexically similar.
+
+Scenario expressions can emit a small goal plan (for example movie comfort → brightness + color temperature) before every action is independently validated against the uploaded real Thing Model registry.
+
+The Regression Lab includes state/value patch families and checks for `state_tree_loss`, `duplicate_state_node`, `property_slot`, `value_slot`, `instance_grounding`, and scenario-plan failures.
+
 ## Multi-turn Regression Lab
 
 The public playground also includes a deterministic batch regression lab. It can generate 12–48 synthetic-but-structured dialogue sequences, each 4–10 turns long, from bounded home-control primitives. These sequences exercise interruption/resume, revision, coreference, cross-room inheritance and cancellation.
