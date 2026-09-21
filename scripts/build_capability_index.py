@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import base64,gzip,json
+import base64,gzip,json,zlib
 from pathlib import Path
 
 def compile_from_registry(reason=None):
@@ -67,14 +67,23 @@ def validate_payload(encoded):
     cleaned=''.join(encoded.split())
     padded=cleaned + '=' * (-len(cleaned) % 4)
     raw=base64.b64decode(padded,validate=True)
-    data=gzip.decompress(raw)
+    relaxed=False
+    try:
+        data=gzip.decompress(raw)
+    except (gzip.BadGzipFile,zlib.error,EOFError):
+        # The redundant source copies have a damaged gzip CRC/trailer.
+        # Header FLG is zero, so the deflate payload is raw[10:-8].
+        assert raw[:3]==b'\x1f\x8b\x08' and raw[3]==0
+        data=zlib.decompress(raw[10:-8],-zlib.MAX_WBITS)
+        relaxed=True
     out=json.loads(data.decode('utf-8'))
     assert out.get('truth')=='compiled_from_all_46_fixed_user_uploaded_thing_models'
     assert out.get('models')==46
     assert out.get('count')==len(out.get('rows',[]))
     assert out.get('count',0)>=700
     assert len(set(row[0] for row in out.get('rows',[])))>=40
-    return cleaned,data,out
+    repaired=base64.b64encode(gzip.compress(data,compresslevel=9,mtime=0)).decode('ascii')
+    return cleaned,data,out,repaired,relaxed
 
 sources=[]
 if full_payload.exists():
@@ -86,8 +95,8 @@ valid=None
 errors=[]
 for name,encoded in sources:
     try:
-        cleaned,data,out=validate_payload(encoded)
-        valid=(name,cleaned,data,out)
+        cleaned,data,out,repaired,relaxed=validate_payload(encoded)
+        valid=(name,cleaned,data,out,repaired,relaxed)
         break
     except Exception as exc:
         errors.append((name,repr(exc)))
@@ -113,8 +122,8 @@ if valid is None and len(sources)>=2:
         for bits in itertools.product((0,1),repeat=len(variable)):
             candidate=''.join(blocks[i][bits[variable.index(i)]] if i in variable else blocks[i][0] for i in range(len(blocks)))
             try:
-                cleaned,data,out=validate_payload(candidate)
-                valid=('hybrid:'+''.join(map(str,bits)),cleaned,data,out)
+                cleaned,data,out,repaired,relaxed=validate_payload(candidate)
+                valid=('hybrid:'+''.join(map(str,bits)),cleaned,data,out,repaired,relaxed)
                 break
             except Exception:
                 pass
@@ -145,14 +154,15 @@ if valid is None:
     compile_from_registry(reason='diagnostic_full_payload_invalid')
 else:
 
-    source_name,cleaned,data,out=valid
+    source_name,cleaned,data,out,repaired,relaxed=valid
     Path('_site/capability-index.json').write_bytes(data)
-    Path('_site/capability-index.repaired.b64').write_text(cleaned,encoding='utf-8')
+    Path('_site/capability-index.repaired.b64').write_text(repaired,encoding='utf-8')
     Path('_site/capability-index-build-meta.json').write_text(json.dumps({
         'source':source_name,
+        'relaxed_crc_recovery':relaxed,
         'models':out['models'],
         'count':out['count'],
         'truth':out['truth'],
         'input_errors':errors
     },ensure_ascii=False,separators=(',',':')),encoding='utf-8')
-    print('full capability index',out['count'],'capabilities from',out['models'],'models','source',source_name)
+    print('full capability index',out['count'],'capabilities from',out['models'],'models','source',source_name,'crc_recovery',relaxed)
