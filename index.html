@@ -476,7 +476,7 @@ function buildGoalPlan(scenario,area,raw){
       area,area_source:canonicalArea(raw)?'explicit':'inherited',
       entity_name:canonicalEntityName(entity,area)||area+(c.product||entity),
       goal:scenario.goal,capability_id:c.capability_id,model_code:c.model,module_code:c.module,
-      capability_score:Number(choice.score.toFixed(3)),retrieval_truth:'global_46_model_capability_retrieval'
+      capability_score:Number(choice.score.toFixed(3)),capability_rank:retrieval.ranked.findIndex(x=>x.capability.capability_id===c.capability_id)+1,retrieval_truth:'global_46_model_capability_retrieval'
     });
     nodes.push(node);
     selected.push({
@@ -547,8 +547,9 @@ function updateDecisionHeads(text){
   setHead('headEntity',h.entity.label,h.entity.score);setHead('headOp',h.operation.label,h.operation.score);
   setHead('headAmb',h.ambiguity>.5?'needs context':'bounded',h.ambiguity);
   setHead('headOod',h.ood>.55?'escalate LLM':'local',h.ood);
+  const needs=scenario?goalNeeds(scenario.goal):[];
   $('#scenarioNote').textContent=scenario&&scenario.match>.16
-    ? 'Goal：'+scenario.goal+' · '+(scenario.plan||[]).map(x=>x.entity+'.'+x.property+'='+String(x.value)).join(' + ')+' · source '+(scenario.inference_source||'scenario_similarity')+' · confidence '+pct(scenario.confidence)+'%'
+    ? 'Goal：'+scenario.goal+' · semantic needs '+needs.map(x=>x.entity+'.'+x.property+'='+String(x.value)).join(' + ')+' · capability target resolved later from '+(CAPINDEX?.count||'…')+' global capabilities · source '+(scenario.inference_source||'scenario_similarity')+' · confidence '+pct(scenario.confidence)+'%'
     : (h.ood>.55?'当前表达超出 bounded home decision，建议 OOD → LLM_ESCALATE。':'当前表达可以留在本地结构化 decision layer。');
   return h;
 }
@@ -1709,7 +1710,24 @@ function reset(){
 }
 
 async function loadAnatomy(){
-  const [g,s,n,tr]=await Promise.all([fetch('./anatomy-sample.json').then(r=>r.json()),fetch('./measured-snapshot.json').then(r=>r.json()),fetch('./neural-substrate.json').then(r=>r.json()),fetch('./real-home-thing-model-registry.json').then(r=>r.json())]);DATA={g,s};NEURAL=n;THINGREG=tr;if(THINGREG.source_archive_sha256!==THING_MODEL_SOURCE_SHA256)throw new Error('Thing Model registry SHA mismatch');populateModelBrowser();neuralState=Array(n.config.dim).fill(0);buildUnitToRootMap();projectActiveUnits();drawNeural();$('#mappedPill').textContent=(s.graph.nodes||[]).length+' measured · '+(g.projection_pool||[]).length+' projection';$('#neuralHud').innerHTML='216 units · '+(n.recurrent_edges||[]).length+' recurrent edges · '+n.training.example_count+' action + '+(n.goal_training?.example_count||0)+' goal train exemplars';$('#corpusMeta').textContent=n.training.example_count+' action train seeds · '+(n.goal_training?.example_count||0)+' goal curriculum · '+(n.mutation_pool?.count||0)+' derived eval mutations · train/eval phrases separated';initEssenceFilters();buildEssenceBatch();updateDecisionHeads($('#input').value);$('#hud').innerHTML='geometry: '+g.truth+'<br>source: Codex FAFB v783<br>source points: '+Number(g.source_count).toLocaleString()+'<br>display sample: '+Number(g.points.length).toLocaleString()+'<br>projection pool: '+Number((g.projection_pool||[]).length).toLocaleString()+' roots<br>measured replay: '+Number((s.graph.nodes||[]).length).toLocaleString()+' roots<br><br>activity: '+s.truth;drawBrain();
+  const [g,snap,n,tr,ci]=await Promise.all([
+    fetch('./anatomy-sample.json').then(r=>r.json()),
+    fetch('./measured-snapshot.json').then(r=>r.json()),
+    fetch('./neural-substrate.json').then(r=>r.json()),
+    fetch('./real-home-thing-model-registry.json').then(r=>r.json()),
+    fetch('./capability-index.json').then(r=>r.json())
+  ]);
+  DATA={g,s:snap};NEURAL=n;THINGREG=normalizeThingRegistry(tr);CAPINDEX=normalizeCapabilityIndex(ci);
+  if(THINGREG.source_archive_sha256!==THING_MODEL_SOURCE_SHA256)throw new Error('Thing Model registry SHA mismatch');
+  if(CAPINDEX.truth!=='compiled_from_all_46_fixed_user_uploaded_thing_models'||Number(CAPINDEX.models)!==46||Number(CAPINDEX.count)<700)throw new Error('Full 46-model capability index unavailable');
+  populateModelBrowser();
+  neuralState=Array(n.config.dim).fill(0);buildUnitToRootMap();projectActiveUnits();drawNeural();
+  $('#mappedPill').textContent=(snap.graph.nodes||[]).length+' measured · '+(g.projection_pool||[]).length+' projection';
+  $('#neuralHud').innerHTML='216 units · '+(n.recurrent_edges||[]).length+' recurrent edges · '+n.training.example_count+' action + '+(n.goal_training?.example_count||0)+' goal train exemplars';
+  $('#corpusMeta').textContent=n.training.example_count+' action train seeds · '+(n.goal_training?.example_count||0)+' goal curriculum · '+(n.mutation_pool?.count||0)+' derived eval mutations · '+CAPINDEX.count+' global capabilities';
+  initEssenceFilters();buildEssenceBatch();updateDecisionHeads($('#input').value);
+  $('#hud').innerHTML='geometry: '+g.truth+'<br>source: Codex FAFB v783<br>source points: '+Number(g.source_count).toLocaleString()+'<br>display sample: '+Number(g.points.length).toLocaleString()+'<br>projection pool: '+Number((g.projection_pool||[]).length).toLocaleString()+' roots<br>measured replay: '+Number((snap.graph.nodes||[]).length).toLocaleString()+' roots<br><br>Thing Models: '+CAPINDEX.models+' · capabilities: '+CAPINDEX.count+'<br>activity: '+snap.truth;
+  drawBrain();
 }
 function fit(){const c=$('#brain'),r=c.getBoundingClientRect(),d=devicePixelRatio||1;c.width=Math.max(1,r.width*d);c.height=Math.max(1,r.height*d);const x=c.getContext('2d');x.setTransform(d,0,0,d,0,0);return[x,r.width,r.height]}
 function R(p){let[x,y,z]=p,cy=Math.cos(rot.y),sy=Math.sin(rot.y),cx=Math.cos(rot.x),sx=Math.sin(rot.x);let x1=x*cy-z*sy,z1=x*sy+z*cy;let y1=y*cx-z1*sx,z2=y*sx+z1*cx;return[x1,y1,z2]}
