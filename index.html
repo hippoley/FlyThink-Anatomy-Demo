@@ -234,6 +234,7 @@ developmental projection, not measured FlyWire activity.\n\nThing Model archive:
 </div>
 <script>
 const $=s=>document.querySelector(s);
+const GOAL_PLAN_TRUTH='contract_derived_goal_plan_not_hidden_ground_truth';
 const state={turn:0,taskSeq:0,nodeSeq:0,tasks:[],activeTask:null,paused:[],revisions:[],focus:null,focusKey:null,lastArea:'客厅',lastAction:null,thingValues:{},intentTree:{},lastDelta:null};
 let DATA=null,NEURAL=null,THINGREG=null,CAPINDEX=null,neuralState=[],semanticScores=[],projectedRoots=[],unitToRoot=[],decisionHeads=null,currentCorpusCase=null,composerTurns=[],composerResults=[],composerSeq=0,composerDragId=null,composerInspectIndex=null,benchmarkScenarios=[],benchmarkResults=[],benchmarkRunSeq=0,essenceBatch=[],essenceResults=[],rot={x:-.18,y:.31},zoom=1.55,drag=null,hits=[],neuralHits=[],selected=null,pulseT=0,pulseRAF=null,pulseStart=0,pulseUntil=0,pulseSpeed=1,pulsePaused=false,pulseBaseReal=0,pulseBaseVirtual=0;
 
