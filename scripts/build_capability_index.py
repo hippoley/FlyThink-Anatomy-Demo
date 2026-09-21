@@ -60,12 +60,23 @@ def compile_from_registry(reason=None):
     )
     print('registry fallback capability index',len(rows),'models',out['model_count'],'full',len(full),'reason',reason)
 
-full_payload=Path('data/capability-index.full.b64')
-parts=sorted(Path('data').glob('capability-index.full.part*.b64'))
-sources=[full_payload] if full_payload.exists() else parts
-if sources:
+parts=[Path('data/capability-index.full.part1.b64'),Path('data/capability-index.full.part2.b64'),Path('data/capability-index.full.part3.b64')]
+if all(p.exists() for p in parts):
     try:
-        encoded=''.join(''.join(p.read_text(encoding='utf-8').split()) for p in sources)
+        import hashlib
+        expected=[
+            '171bd000bb52a2ad08d238216ad4834218741d42fe7a02bf3d4fd1f130da2d5f',
+            'd49158539bd79cc20a38af7a0277af601cc9c8fbf5e77c07c780393e7e0c06f7',
+            'c71ab0d15e2c945cc07073400b68d2e1a9cf0e42eec201ccf5b5f6344e8b76db'
+        ]
+        chunks=[''.join(p.read_text(encoding='utf-8').split()) for p in parts]
+        for i,(chunk,want) in enumerate(zip(chunks,expected),1):
+            got=hashlib.sha256(chunk.encode()).hexdigest()
+            print('capability payload part',i,'len',len(chunk),'sha256',got,'expected',want)
+            assert got==want, f'capability payload part {i} checksum mismatch'
+        encoded=''.join(chunks)
+        assert len(encoded)==15944
+        assert hashlib.sha256(encoded.encode()).hexdigest()=='525b890d69616512dced2651302e90f0164842dabf7f1615d7a688731dd8682b'
         encoded += '=' * (-len(encoded) % 4)
         raw=base64.b64decode(encoded,validate=True)
         data=gzip.decompress(raw)
@@ -76,7 +87,7 @@ if sources:
         assert out.get('count',0)>=700
         assert len(set(row[0] for row in out.get('rows',[])))>=40
         Path('_site/capability-index.json').write_bytes(data)
-        print('full capability index',out['count'],'capabilities from',out['models'],'models','source',sources[0])
+        print('full capability index',out['count'],'capabilities from',out['models'],'models','source','3 checksummed parts')
     except Exception as exc:
         raise RuntimeError('invalid full 46-model capability artifact') from exc
 else:
