@@ -39,7 +39,7 @@ radial-gradient(circle at 52% 46%,rgba(80,121,170,.10),transparent 38%),#070b10}
 .legend,.hud{position:absolute;background:rgba(7,11,16,.80);backdrop-filter:blur(10px);border:1px solid #253444;border-radius:11px;padding:9px 10px;font-size:10px;color:#94a4b5;pointer-events:none}
 .legend{left:12px;bottom:12px}.hud{right:12px;top:12px;max-width:275px}.legend .row{display:flex;align-items:center;gap:7px;margin:3px 0}.dot{width:7px;height:7px;border-radius:50%}.dot.blue{background:var(--blue)}.dot.gold{background:var(--gold)}.dot.base{background:#52786a}
 .neuronDetail{position:absolute;right:12px;bottom:12px;max-width:310px;white-space:pre-wrap;font:9px/1.45 ui-monospace,Consolas,monospace;color:#aebdcb;background:rgba(7,11,16,.84);border:1px solid #253444;border-radius:11px;padding:9px;max-height:150px;overflow:auto}
-.turnstrip{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:14px}.bindings{margin-top:14px;background:linear-gradient(180deg,#0d131b,#0a0f15);border:1px solid var(--line);border-radius:var(--radius);padding:14px}.bindingGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.bindingCard{background:#090e14;border:1px solid #213040;border-radius:12px;padding:10px}.bindingCard .actionName{font-size:13px;font-weight:760;margin:4px 0}.bindingMeta{font:9px/1.5 ui-monospace,Consolas,monospace;color:#8fa2b5;white-space:pre-wrap}.bindingDelta{margin-top:7px;font-size:11px;color:#c5d2df}.bindingRoute{font-size:9px;color:#7f91a3;text-transform:uppercase;letter-spacing:.08em}.metric{background:#0c1118;border:1px solid #1f2a36;border-radius:14px;padding:12px}.metric .k{margin-bottom:4px}.metric .v{font-size:15px}
+.turnstrip{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:14px}.bindings{margin-top:14px;background:linear-gradient(180deg,#0d131b,#0a0f15);border:1px solid var(--line);border-radius:var(--radius);padding:14px}.bindingGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.bindingCard{background:#090e14;border:1px solid #213040;border-radius:12px;padding:11px;min-width:0}.bindingCard.allow{border-color:#295744}.bindingCard.grounding{border-color:#6b5634}.bindingCard .actionName{font-size:13px;font-weight:760;margin:4px 0}.bindingMeta{font:9px/1.55 ui-monospace,Consolas,monospace;color:#8fa2b5;white-space:pre-wrap;overflow-wrap:anywhere}.bindingDelta{margin-top:8px;font-size:11px;color:#c5d2df}.bindingRoute{font-size:9px;color:#7f91a3;text-transform:uppercase;letter-spacing:.08em}.bindingStatus{display:inline-flex;margin-top:7px;padding:4px 7px;border-radius:999px;border:1px solid #315e4b;color:#bfead7;font-size:9px}.bindingStatus.warn{border-color:#705b36;color:#efd39c}.archiveMeta{margin-top:9px;font-size:10px;color:#778b9f}.metric{background:#0c1118;border:1px solid #1f2a36;border-radius:14px;padding:12px}.metric .k{margin-bottom:4px}.metric .v{font-size:15px}
 .reasoning{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}.section{background:linear-gradient(180deg,#0d131b,#0a0f15);border:1px solid var(--line);border-radius:var(--radius);padding:14px}.sectiontitle{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}.sectiontitle h3{font-size:13px;margin:0}.sectiontitle span{font-size:10px;color:#71849a}
 .neuralbox{position:relative;height:330px;background:radial-gradient(circle at center,rgba(74,116,178,.08),transparent 44%),#070b10;border:1px solid #213040;border-radius:14px;overflow:hidden}.neuralbox canvas{display:block;width:100%;height:100%}.neuralhud{position:absolute;left:9px;top:9px;pointer-events:none;font:9px/1.45 ui-monospace,Consolas,monospace;color:#9fb0c0;background:rgba(7,11,16,.82);border:1px solid #263747;border-radius:9px;padding:7px;max-width:62%}
 .matches{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}.match{font-size:9px;border:1px solid #2b3c4f;border-radius:999px;padding:5px 7px;color:#aebdcb}.match.hot{border-color:#735d37;color:#f0d6a7;background:#18140d}
@@ -99,7 +99,7 @@ details{margin-top:14px;border:1px solid #202b38;border-radius:14px;background:#
 <div class="metric"><div class="k">Focus</div><div id="focus" class="v">—</div></div>
 <div class="metric"><div class="k">World deltas</div><div id="worldDelta" class="v">—</div></div>
 </div>
-<section class="bindings"><div class="sectiontitle"><h3>Thing Model outputs</h3><span id="bindingCount">0 bindings</span></div><div id="bindingGrid" class="bindingGrid"><div class="bindingCard"><div class="bindingRoute">No output yet</div><div class="bindingMeta">Run a turn that targets one or more devices.</div></div></div></section>
+<section class="bindings"><div class="sectiontitle"><h3>Execution grounding · Thing Model outputs</h3><span id="bindingCount">0 bindings</span></div><div class="truthnote" style="margin:0 0 10px">每个动作必须落到 <strong>Room → Entity instance → Product / Thing Model ID → Module → Interaction → Property code → Value</strong>。目标不完整时 fail closed。</div><div id="bindingGrid" class="bindingGrid"><div class="bindingCard"><div class="bindingRoute">No output yet</div><div class="bindingMeta">Run a turn that targets one or more devices.</div></div></div><div class="archiveMeta">Uploaded Thing Model archive detected: <strong>46 JSON model definitions</strong>. Current pinned executable subset: <strong>CWDS-CA01</strong> + <strong>DQDZ-Y15R</strong>.</div></section>
 
 <section class="reasoning">
 <div class="section"><div class="sectiontitle"><h3>Developmental neural substrate</h3><span>18 populations × 12 units</span></div>
@@ -127,7 +127,7 @@ Anatomy truth:
 measured_flywire_coordinate_derivative
 
 Blue anatomy mapping:
-developmental projection, not measured FlyWire activity.</div></div>
+developmental projection, not measured FlyWire activity.\n\nThing Model archive:\n46 JSON model definitions detected from uploaded RAR.\nPinned executable subset currently exposed here: CWDS-CA01 + DQDZ-Y15R.</div></div>
 </div></details>
 
 <footer class="footer"><span>FlyThink · public research playground</span><span>Multi-intent · Multi-slot · Multi-turn · Truth-separated neural visualization</span></footer>
@@ -500,16 +500,17 @@ function applyDelta(d){
 }
 
 
+const THING_MODEL_SOURCE_SHA256='3a5e67efd5847d70761076506500d001cbed36b1d19dca60ed286eb72ae5d60c';
 const THING_BINDINGS={
-  exterior_window_close:{entity:'window',entity_id:'physical_dev_home_001.window.combo01',product_model:'CWDS-CA01',module:'motor_1',interaction:'motorControl',code:'motorControl',value:1},
-  exterior_window_open:{entity:'window',entity_id:'physical_dev_home_001.window.combo01',product_model:'CWDS-CA01',module:'motor_1',interaction:'motorControl',code:'motorControl',value:0},
-  insect_screen_close:{entity:'screen',entity_id:'physical_dev_home_001.window.combo01',product_model:'CWDS-CA01',module:'motor_2',interaction:'motorControl',code:'motorControl',value:1},
-  insect_screen_open:{entity:'screen',entity_id:'physical_dev_home_001.window.combo01',product_model:'CWDS-CA01',module:'motor_2',interaction:'motorControl',code:'motorControl',value:0},
-  living_color_light_off:{entity:'light',entity_id:'physical_dev_home_001.light.rgb01',product_model:'DQDZ-Y15R',module:'light',interaction:'power',code:'power',value:false},
-  living_color_light_on:{entity:'light',entity_id:'physical_dev_home_001.light.rgb01',product_model:'DQDZ-Y15R',module:'light',interaction:'power',code:'power',value:true},
-  living_color_light_dim_30:{entity:'light',entity_id:'physical_dev_home_001.light.rgb01',product_model:'DQDZ-Y15R',module:'light',interaction:'brightness',code:'brightness',value:30},
-  living_color_light_warm_3000k:{entity:'light',entity_id:'physical_dev_home_001.light.rgb01',product_model:'DQDZ-Y15R',module:'light',interaction:'colorTemperature',code:'colorTemperature',value:3000}
-};
+  exterior_window_close:{entity:'window',entity_id:'physical_dev_home_001.window.combo01',product_model:'CWDS-CA01',module:'motor_1',interaction:'property',code:'motorControl',value:1,value_contract:{kind:'enum',allowed:[0,1,2]},semantic_role:'exterior_window'},
+  exterior_window_open:{entity:'window',entity_id:'physical_dev_home_001.window.combo01',product_model:'CWDS-CA01',module:'motor_1',interaction:'property',code:'motorControl',value:0,value_contract:{kind:'enum',allowed:[0,1,2]},semantic_role:'exterior_window'},
+  insect_screen_close:{entity:'screen',entity_id:'physical_dev_home_001.window.combo01',product_model:'CWDS-CA01',module:'motor_2',interaction:'property',code:'motorControl',value:1,value_contract:{kind:'enum',allowed:[0,1,2]},semantic_role:'insect_screen'},
+  insect_screen_open:{entity:'screen',entity_id:'physical_dev_home_001.window.combo01',product_model:'CWDS-CA01',module:'motor_2',interaction:'property',code:'motorControl',value:0,value_contract:{kind:'enum',allowed:[0,1,2]},semantic_role:'insect_screen'},
+  living_color_light_off:{entity:'light',entity_id:'physical_dev_home_001.light.rgb01',product_model:'DQDZ-Y15R',module:'light',interaction:'property',code:'power',value:false,value_contract:{kind:'bool'},semantic_role:'light'},
+  living_color_light_on:{entity:'light',entity_id:'physical_dev_home_001.light.rgb01',product_model:'DQDZ-Y15R',module:'light',interaction:'property',code:'power',value:true,value_contract:{kind:'bool'},semantic_role:'light'},
+  living_color_light_dim_30:{entity:'light',entity_id:'physical_dev_home_001.light.rgb01',product_model:'DQDZ-Y15R',module:'light',interaction:'property',code:'brightness',value:30,value_contract:{kind:'range',minimum:1,maximum:100},semantic_role:'light'},
+  living_color_light_warm_3000k:{entity:'light',entity_id:'physical_dev_home_001.light.rgb01',product_model:'DQDZ-Y15R',module:'light',interaction:'property',code:'colorTemperature',value:3000,value_contract:{kind:'range',minimum:2700,maximum:6500},semantic_role:'light'}
+}
 function worldKeyForBinding(b){
   if(b.entity==='window')return b.module==='motor_2'?'screen':'window';
   if(b.entity==='light'){
@@ -521,11 +522,17 @@ function worldKeyForBinding(b){
 }
 function bindingForAction(action,node,route){
   const base=THING_BINDINGS[action];
-  if(!base)return {route,action,node,binding:null,worldDelta:null};
-  const b={...base,area:node?.slots?.area||state.lastArea||'客厅',entity_name:node?.slots?.entity_name||canonicalEntityName(base.entity,node?.slots?.area||state.lastArea||'客厅')};
+  if(!base)return {route:'CLARIFY',action:null,node,binding:null,grounding_status:'NEEDS_GROUNDING',grounding_reason:'action_not_in_pinned_contract',worldDelta:null};
+  const area=node?.slots?.area||state.lastArea||'客厅';
+  const entityName=node?.slots?.entity_name||canonicalEntityName(base.entity,area);
+  const b={...base,area,entity_name:entityName,thing_model_id:base.product_model,thing_model_source_sha256:THING_MODEL_SOURCE_SHA256};
+  // The public demo has one pinned physical fixture per role. Never silently send a bedroom command to the living-room fixture.
+  if(area && area!=='客厅'){
+    return {route:'CLARIFY',action:null,requested_action:action,node,binding:b,grounding_status:'NEEDS_GROUNDING',grounding_reason:'no_verified_physical_entity_for_area:'+area,worldDelta:null};
+  }
   const key=worldKeyForBinding(b),before=state.world[key],after=b.value;
   state.world[key]=after;
-  return {route,action,node,binding:b,worldDelta:{key,before,after}};
+  return {route,action,node,binding:b,grounding_status:'ALLOW',grounding_reason:'pinned_v6_1_physical_contract_subset',worldDelta:{key,before,after}};
 }
 
 function routeNode(n){
@@ -584,7 +591,7 @@ function executeCurrent(neural,d){
   const routes=[...new Set(outputs.map(x=>x.route))];
   return {
     route:routes.length===1?routes[0]:routes.join(' + '),
-    actions:outputs.filter(x=>x.action).map(x=>x.action),
+    actions:outputs.filter(x=>x.action&&x.grounding_status!=='NEEDS_GROUNDING').map(x=>x.action),
     outputs,
     nodes:fallback,
     worldDeltas:outputs.filter(x=>x.worldDelta).map(x=>x.worldDelta)
@@ -609,7 +616,7 @@ function render(d,exec,neural){
   $('#revisions').textContent=JSON.stringify(state.revisions,null,2);
   $('#route').textContent=exec.route;$('#action').textContent=exec.actions.length?exec.actions.join(' · '):'—';$('#focus').textContent=state.focus||'—';$('#worldDelta').textContent=exec.worldDeltas.length?exec.worldDeltas.map(x=>x.key+' '+x.before+' → '+x.after).join(' · '):'—';
   $('#bindingCount').textContent=exec.outputs.length+' outputs';
-  $('#bindingGrid').innerHTML=exec.outputs.length?exec.outputs.map(o=>{const b=o.binding;if(b){return '<div class="bindingCard"><div class="bindingRoute">'+escapeHtml(o.route)+'</div><div class="actionName">'+escapeHtml(o.action)+'</div><div class="bindingMeta">entity_id: '+escapeHtml(b.entity_id)+'\nproduct_model: '+escapeHtml(b.product_model)+'\nmodule: '+escapeHtml(b.module)+'\ninteraction: '+escapeHtml(b.interaction)+'\ncode: '+escapeHtml(b.code)+'\narea: '+escapeHtml(b.area)+'\nentity_name: '+escapeHtml(b.entity_name)+'</div><div class="bindingDelta">'+escapeHtml(o.worldDelta.key)+' '+escapeHtml(o.worldDelta.before)+' → '+escapeHtml(o.worldDelta.after)+'</div></div>';}if(o.query){return '<div class="bindingCard"><div class="bindingRoute">THING_MODEL_QUERY</div><div class="actionName">'+escapeHtml(o.query.entity)+'</div><div class="bindingMeta">query result: '+escapeHtml(o.query.value)+'</div></div>';}return '<div class="bindingCard"><div class="bindingRoute">'+escapeHtml(o.route)+'</div><div class="actionName">'+escapeHtml(o.action||'no physical binding')+'</div></div>';}).join(''):'<div class="bindingCard"><div class="bindingRoute">No output</div></div>';
+  $('#bindingGrid').innerHTML=exec.outputs.length?exec.outputs.map(o=>{const b=o.binding;if(b){const allowed=o.grounding_status==='ALLOW';const delta=o.worldDelta?('<div class="bindingDelta">'+escapeHtml(o.worldDelta.key)+' '+escapeHtml(o.worldDelta.before)+' → '+escapeHtml(o.worldDelta.after)+'</div>'):'';return '<div class="bindingCard '+(allowed?'allow':'grounding')+'"><div class="bindingRoute">'+escapeHtml(o.route)+'</div><div class="actionName">'+escapeHtml(o.action||o.requested_action||'binding unresolved')+'</div><div class="bindingMeta">room: '+escapeHtml(b.area)+'\nentity_name: '+escapeHtml(b.entity_name)+'\nentity_id: '+escapeHtml(b.entity_id)+'\nproduct_model / thing_model_id: '+escapeHtml(b.product_model)+'\nmodule: '+escapeHtml(b.module)+'\ninteraction: '+escapeHtml(b.interaction)+'\nproperty code: '+escapeHtml(b.code)+'\nvalue: '+escapeHtml(String(b.value))+'\nvalue_contract: '+escapeHtml(JSON.stringify(b.value_contract))+'\nsemantic_role: '+escapeHtml(b.semantic_role)+'\ncontract_sha256: '+escapeHtml(b.thing_model_source_sha256)+'</div><span class="bindingStatus '+(allowed?'':'warn')+'">'+escapeHtml(o.grounding_status||'UNKNOWN')+'</span><div class="headSmall">'+escapeHtml(o.grounding_reason||'')+'</div>'+delta+'</div>';}if(o.query){return '<div class="bindingCard"><div class="bindingRoute">THING_MODEL_QUERY</div><div class="actionName">'+escapeHtml(o.query.entity)+'</div><div class="bindingMeta">room: '+escapeHtml(o.node?.slots?.area||state.lastArea)+'\nquery result: '+escapeHtml(o.query.value)+'</div></div>';}return '<div class="bindingCard grounding"><div class="bindingRoute">'+escapeHtml(o.route)+'</div><div class="actionName">'+escapeHtml(o.action||'no physical binding')+'</div><span class="bindingStatus warn">NO WRITE</span></div>';}).join(''):'<div class="bindingCard"><div class="bindingRoute">No output</div></div>';
   drawBrain();
 }
 
