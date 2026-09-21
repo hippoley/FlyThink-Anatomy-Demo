@@ -466,36 +466,61 @@ function goalNeeds(goal){
 }
 function buildGoalPlan(scenario,area,raw){
   const needs=goalNeeds(scenario?.goal);
-  const nodes=[],candidates=[],selected=[],rejected=[];
+  const nodes=[],candidates=[],selected=[],rejected=[],gates=[];
   for(const need of needs){
     const retrieval=retrieveCapabilities(scenario.goal,raw,need,10);
-    const choice=retrieval.accepted[0]||null;
+    const valid=retrieval.accepted||[];
+    const first=valid[0]||null,second=valid[1]||null;
+    const topScore=first?.score??-Infinity,secondScore=second?.score??-Infinity;
+    const margin=Number.isFinite(secondScore)?topScore-secondScore:topScore;
+    let gate='EXECUTE',reason='high_confidence_grounded_capability';
+    if(!first){gate='UNSUPPORTED';reason='no_schema_valid_capability'}
+    else if(topScore<10){gate='CLARIFY';reason='capability_score_below_commit_threshold'}
+    else if(Number.isFinite(secondScore)&&margin<1.25){gate='CLARIFY';reason='capability_margin_too_small'}
+    const gateInfo={
+      need:{entity:need.entity,property:need.property,value:need.value},
+      gate,reason,top_score:Number.isFinite(topScore)?Number(topScore.toFixed(3)):null,
+      second_score:Number.isFinite(secondScore)?Number(secondScore.toFixed(3)):null,
+      margin:Number.isFinite(margin)?Number(margin.toFixed(3)):null,
+      top_capability:first?.capability?.capability_id||null,
+      runner_up:second?.capability?.capability_id||null,
+      truth:'bounded_capability_commit_gate'
+    };
+    gates.push(gateInfo);
     for(const item of retrieval.top){
-      const chosen=choice&&item.capability_id===choice.capability.capability_id;
+      const chosen=gate==='EXECUTE'&&first&&item.capability_id===first.capability.capability_id;
       item.selected=!!chosen;
+      item.commit_gate=gate;item.commit_reason=reason;
       candidates.push({...item,need:{entity:need.entity,property:need.property,value:need.value}});
-      if(!chosen&&!item.constraint_ok)rejected.push(item);
+      if(!chosen&&(!item.constraint_ok||gate!=='EXECUTE'))rejected.push(item);
     }
-    if(!choice)continue;
-    const c=choice.capability;
-    const entity=need.entity||choice.entity||'device';
+    if(gate!=='EXECUTE'||!first)continue;
+    const cap=first.capability;
+    const entity=need.entity||first.entity||'device';
     const node=newNode(need.intent||'SetValue',entity,{
-      property:need.property||c.code,schema_property:c.code,value:need.value,
+      property:need.property||cap.code,schema_property:cap.code,value:need.value,
       area,area_source:canonicalArea(raw)?'explicit':'inherited',
-      entity_name:canonicalEntityName(entity,area)||area+(c.product||entity),
-      goal:scenario.goal,capability_id:c.capability_id,model_code:c.model,module_code:c.module,
-      capability_score:Number(choice.score.toFixed(3)),capability_rank:retrieval.ranked.findIndex(x=>x.capability.capability_id===c.capability_id)+1,retrieval_truth:'global_46_model_capability_retrieval'
+      entity_name:canonicalEntityName(entity,area)||area+(cap.product||entity),
+      goal:scenario.goal,capability_id:cap.capability_id,model_code:cap.model,module_code:cap.module,
+      capability_score:Number(first.score.toFixed(3)),
+      capability_margin:Number.isFinite(margin)?Number(margin.toFixed(3)):null,
+      capability_rank:retrieval.ranked.findIndex(x=>x.capability.capability_id===cap.capability_id)+1,
+      retrieval_truth:'global_46_model_capability_retrieval',
+      commit_gate:'EXECUTE'
     });
     nodes.push(node);
     selected.push({
-      capability_id:c.capability_id,score:Number(choice.score.toFixed(3)),model_code:c.model,
-      product_title:c.product,module_code:c.module,property_code:c.code,ops:c.ops||[],
-      dataType:c.dataType,enum:c.enum||[],minimum:c.min,maximum:c.max,unit:c.unit,
+      capability_id:cap.capability_id,score:Number(first.score.toFixed(3)),
+      margin:Number.isFinite(margin)?Number(margin.toFixed(3)):null,model_code:cap.model,
+      product_title:cap.product,module_code:cap.module,property_code:cap.code,ops:cap.ops||[],
+      dataType:cap.dataType,enum:cap.enum||[],minimum:cap.min,maximum:cap.max,unit:cap.unit,
       need:{entity:need.entity,property:need.property,value:need.value},
-      truth:'selected_after_global_retrieval_and_constraint_filter'
+      gate:'EXECUTE',truth:'selected_after_global_retrieval_constraint_filter_and_margin_gate'
     });
   }
-  return {nodes,candidates,selected,rejected,needs,truth:'goal_semantic_state_plus_global_46_model_capability_retrieval'};
+  const gate=gates.some(x=>x.gate==='UNSUPPORTED')?'UNSUPPORTED':gates.some(x=>x.gate==='CLARIFY')?'CLARIFY':'EXECUTE';
+  return {nodes,candidates,selected,rejected,needs,gates,gate,
+    truth:'goal_semantic_state_plus_global_46_model_capability_retrieval_plus_commit_gate'};
 }
 function pct(x){return Math.max(0,Math.min(100,Math.round((Number(x)||0)*100)))}
 function setHead(id,label,score){$('#'+id).textContent=label+' · '+pct(score)+'%';$('#'+id+'Bar').style.width=pct(score)+'%'}
@@ -591,9 +616,13 @@ function updateDecisionHeads(text){
   setHead('headAmb',h.ambiguity>.5?'needs context':'bounded',h.ambiguity);
   setHead('headOod',h.ood>.55?'escalate LLM':'local',h.ood);
   const needs=scenario?goalNeeds(scenario.goal):[];
+  let gatePreview=null;
+  if(scenario&&scenario.match>.16&&CAPINDEX?.capabilities?.length){
+    gatePreview=buildGoalPlan(scenario,canonicalArea(text)||state.lastArea||'客厅',text);
+  }
   $('#scenarioNote').textContent=scenario&&scenario.match>.16
-    ? 'Goal：'+scenario.goal+' · semantic needs '+needs.map(x=>x.entity+'.'+x.property+'='+String(x.value)).join(' + ')+' · capability target resolved later from '+(CAPINDEX?.count||'…')+' global capabilities · source '+(scenario.inference_source||'scenario_similarity')+' · confidence '+pct(scenario.confidence)+'%'
-    : (h.ood>.55?'当前表达超出 bounded home decision，建议 OOD → LLM_ESCALATE。':'当前表达可以留在本地结构化 decision layer。');
+    ? 'Goal：'+scenario.goal+' · semantic needs '+needs.map(x=>x.entity+'.'+x.property+'='+String(x.value)).join(' + ')+' · commit gate '+(gatePreview?.gate||'pending')+' · '+(gatePreview?.gates||[]).map(x=>x.need.property+': top '+String(x.top_score)+' / margin '+String(x.margin)).join(' · ')+' · source '+(scenario.inference_source||'scenario_similarity')
+    : (h.ood>.55?'当前表达超出 bounded home decision → LLM_ESCALATE。':'当前表达留在 bounded local decision layer；如 capability margin 不足会先 CLARIFY，而不是硬执行。');
   return h;
 }
 function randomChoice(a){return a[Math.floor(Math.random()*a.length)]}
@@ -1253,13 +1282,19 @@ function parseUtterance(text){
   if(scenario&&scenario.match>.22&&heads.ambiguity<.55){
     const area=canonicalArea(raw)||state.lastArea||'客厅';
     const planned=buildGoalPlan(scenario,area,raw);
-    const nodes=planned.nodes;
-    return {type:'scenario',nodes,parallel:nodes.length>1,scenario:{
-      ...scenario,plan:undefined,area,planned_actions:nodes.length,
+    const scenarioMeta={
+      ...scenario,plan:undefined,area,planned_actions:planned.nodes.length,
       capability_candidates:planned.candidates,selected_capabilities:planned.selected,
       rejected_capabilities:planned.rejected,goal_needs:planned.needs,
-      truth:planned.truth
-    }};
+      capability_gates:planned.gates,commit_gate:planned.gate,truth:planned.truth
+    };
+    if(planned.gate==='UNSUPPORTED'){
+      return {type:'ood',nodes:[newNode('Plan','llm',{reason:'bounded_goal_has_no_supported_capability',goal:scenario.goal})],scenario:scenarioMeta,unsupported:true};
+    }
+    if(planned.gate==='CLARIFY'){
+      return {type:'clarify',nodes:[newNode('Clarify',scenario.entity||heads.entity.label||'unknown',{reason:'capability_candidate_margin_or_score',goal:scenario.goal,candidate_gates:planned.gates},'unresolved')],scenario:scenarioMeta};
+    }
+    return {type:'scenario',nodes:planned.nodes,parallel:planned.nodes.length>1,scenario:scenarioMeta};
   }
   const nodes=[];
   let previousIntent=null, previousEntity=null, previousArea=null;
