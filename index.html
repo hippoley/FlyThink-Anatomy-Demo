@@ -633,7 +633,8 @@ function routeNode(n){
     if(n.intent==='TurnOn')return {route:'THING_MODEL_EXECUTE',action:'insect_screen_open'};
   }
   if(n.target.entity==='light'){
-    if(n.slots.property==='colorTemperature')return {route:'THING_MODEL_EXECUTE',action:'living_color_light_warm_3000k'};\n    if(n.slots.property==='brightness')return {route:'THING_MODEL_EXECUTE',action:'living_color_light_dim_30'};
+    if(n.slots.property==='colorTemperature')return {route:'THING_MODEL_EXECUTE',action:'living_color_light_warm_3000k'};
+    if(n.slots.property==='brightness')return {route:'THING_MODEL_EXECUTE',action:'living_color_light_dim_30'};
     if(n.intent==='TurnOff')return {route:'THING_MODEL_EXECUTE',action:'living_color_light_off'};
     if(n.intent==='TurnOn')return {route:'THING_MODEL_EXECUTE',action:'living_color_light_on'};
   }
