@@ -48,6 +48,21 @@ The decision layer exposes four bounded heads:
 
 This is intentionally closer to a structured decision model than a chat model.
 
+## Multi-turn Corpus Composer
+
+The playground now includes a turn-level composer for messy dialogue sequences. Each turn can be marked as a normal command, interruption, correction, resume, cross-room continuation, or coreference turn. Cards can be reordered by drag-and-drop.
+
+Running a composed scenario resets the session and records, for every turn:
+
+- expected GraphDelta operation
+- actual GraphDelta operation and match status
+- runtime route and Thing Model action
+- dialogue focus
+- active task and paused-task stack
+- semantic neural readout
+
+This makes interruption/resume, revision, inherited references and cross-room behavior inspectable as a sequence rather than only as a final answer.
+
 ## Neural path
 
 The public build visualizes this pipeline:
