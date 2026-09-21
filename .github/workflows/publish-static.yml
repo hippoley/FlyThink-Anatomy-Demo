@@ -66,6 +66,7 @@ jobs:
                   'models':[]
               },ensure_ascii=False),encoding='utf-8')
           PY
+          python scripts/build_capability_index.py
 
           curl -L --fail --retry 4 --retry-all-errors \
             'https://storage.googleapis.com/flywire-data/codex/data/fafb/783/coordinates.csv.gz' \
