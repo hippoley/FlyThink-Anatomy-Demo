@@ -1,0 +1,22 @@
+name: Train real FlyWire subgraph
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  train:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -r requirements-flywire.txt
+      - run: python scripts/train_flywire.py --download --neurons 512 --epochs 30
+      - name: Restore and verify inference
+        run: python scripts/infer_flywire.py '改成主卧的窗户' --history '打开客厅窗户'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: real-flywire-subgraph-checkpoint-and-evidence
+          path: artifacts/flywire/

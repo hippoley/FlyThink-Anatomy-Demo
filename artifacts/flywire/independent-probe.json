@@ -1,0 +1,15 @@
+{
+  "scope": "diagnostic_family_scores_not_device_commands",
+  "checkpoint_restore_verified": true,
+  "scores": {
+    "negation": 0.9985659718513489,
+    "revision": 0.000576861493755132,
+    "cross_room": 0.00044204265577718616,
+    "named_entity_area": 0.0003784587897825986,
+    "coreference": 3.337063026265241e-05,
+    "multi_intent": 2.27084569814906e-06,
+    "interruption_resume": 4.264144308763207e-07,
+    "scenario_inference": 3.574257334548747e-07,
+    "ood_escalation": 2.1128239779955038e-07
+  }
+}

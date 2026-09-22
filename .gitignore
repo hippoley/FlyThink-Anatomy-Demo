@@ -1,0 +1,4 @@
+data/flywire/
+artifacts/flywire/*.pt
+__pycache__/
+_site/
