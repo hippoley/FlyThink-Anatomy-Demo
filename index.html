@@ -63,7 +63,7 @@ details{margin-top:14px;border:1px solid #202b38;border-radius:14px;background:#
 <header class="hero"><div class="eyebrow">A conversation with your home</div><h1>说一句，再改一句。<br><span>看看家能否跟上你的意思。</span></h1><p class="lead">先试一句开灯指令，再换房间、改数值或插话。每一步的理解与变化，都在右边。</p><div class="journey"><strong>01 选个场景</strong><span>02 发送或改写</span><span>03 看结果，再接着说</span></div></header>
 <main class="stage" id="experience">
 <section class="panel chatShell"><div class="panelhead"><b>和家说话</b><button class="quietLink" id="reset" type="button">重新开始</button></div><div class="conversationBody">
-<label class="scenePicker" for="sceneSelect">从这里开始<select id="sceneSelect"><option value="revise">开灯，再调整亮度</option><option value="rooms">换个房间试试</option><option value="multi">一句话，两件事</option><option value="goal">只描述一个情景</option></select></label>
+<label class="scenePicker" for="sceneSelect">从这里开始<select id="sceneSelect"><option value="revise">开灯，再调整亮度</option><option value="rooms">换个房间试试</option><option value="multi">一句话，两件事</option><option value="goal">只描述一个情景</option><option value="roomGoals">多房间，不同目标</option><option value="constraint">矛盾条件，反推替代动作</option><option value="wholeHome">全屋、多房间、多物件</option></select></label>
 <p class="sceneNote">已准备好第一句；可以直接发送，也可以改写。切换场景会重新开始。</p>
 <div id="chat" class="chat" role="log" aria-live="polite"><div class="msg"><div class="who">FlyThink</div><div class="v">先发出下面这句。然后试着说「调到30%」，看看我能否接着理解。</div></div></div>
 <form id="composer" class="composer"><label class="srLabel" for="input">你想对家说什么？</label><textarea id="input" class="draft" rows="3" placeholder="例如：把客厅灯打开">把客厅灯打开</textarea><div class="sendRow"><span id="runtimeStatus" role="status">正在准备对话…</span><button id="sendTurn" class="btn primary" type="submit" disabled>发送</button></div></form>
@@ -358,12 +358,28 @@ function canonicalArea(text){
   const hits=Object.keys(AREA_ALIASES).filter(k=>String(text||'').includes(k)).sort((a,b)=>b.length-a.length);
   return hits.length?AREA_ALIASES[hits[0]]:null;
 }
+const HOME_AREAS=['客厅','主卧','次卧','儿童房','书房','厨房','卫生间','餐厅','玄关','阳台'];
+const HOME_INVENTORY={
+  '客厅':{light:'DQDZ-Y15R',window:'CWDS-CA01',screen:'CWDS-CA01',air:'AWGD-ZX01',climate:'AWGD-ZA01'},
+  '主卧':{light:'DQDZ-LC12',window:'CWLS-DJ01',air:'KZKA-M001',climate:'RH-3IR01-YK16'},
+  '次卧':{light:'DQDZ-LL12',window:'CWLS-DJ02',climate:'RH-3IR01-YK16'},
+  '儿童房':{light:'DQDZ-LC24',window:'CJSJ-0001',climate:'AWGD-ZA01'},
+  '书房':{light:'DQDZ-Y15L',window:'CJLJ-0001',air:'AWGD-ZX01',climate:'AWGD-ZA01'},
+  '厨房':{light:'LIGHT_GROUP',air:'KZKA-M001'},'卫生间':{light:'LIGHT_GROUP'},
+  '餐厅':{light:'DQDZ-Y150'},'玄关':{light:'LIGHT_GROUP'},'阳台':{light:'LIGHT_GROUP',window:'NKHD-ZB01'}
+};
+function areasInText(text){
+  const raw=String(text||''),hits=[];
+  for(const [alias,area] of Object.entries(AREA_ALIASES)){const at=raw.indexOf(alias);if(at>=0)hits.push({at,alias,area})}
+  return [...new Set(hits.sort((a,b)=>a.at-b.at||b.alias.length-a.alias.length).map(x=>x.area))];
+}
 function canonicalEntityName(entity,area){
   if(!area)return null;
   if(entity==='window')return area+'外窗';
   if(entity==='light')return area+'主灯';
   if(entity==='climate')return area+'空调';
   if(entity==='screen')return area+'纱窗';
+  if(entity==='air')return area+'新风';
   return null;
 }
 function intentFromLastAction(){
@@ -398,8 +414,45 @@ const CAPABILITY_PROP_ALIASES={
   colorTemperature:['colortemperature','色温','kelvin'],
   motorControl:['motorcontrol','电机控制','开','关','停止'],
   open_ratio:['motortargetposition','position','目标位置','开度','位置'],
-  targetTemperature:['targettemperature','目标温度','设定温度']
+  targetTemperature:['targettemperature','目标温度','设定温度'],
+  fanLevel:['fanlevel','风速档位','风速','档位']
 };
+
+function scenarioClauses(text){
+  const raw=String(text||''),parts=raw.split(/[，,；;。]|但是|但|同时|然后|另外/).map(x=>x.trim()).filter(Boolean);
+  let inherited=canonicalArea(raw)||state.lastArea||'客厅';
+  return parts.map(part=>{const area=canonicalArea(part)||inherited;if(canonicalArea(part))inherited=area;return {text:part,area}});
+}
+function composeGoalScenario(text){
+  const raw=String(text||''),explicitAreas=areasInText(raw),wholeHome=/全屋|整个家|所有房间|家里都|其他房间/.test(raw);
+  const clauses=scenarioClauses(raw),needs=[],evidence=[],constraints=[];
+  const push=(clause,need,why)=>{const area=need.area||clause.area||state.lastArea||'客厅';needs.push({...need,area,model_code:need.model_code||HOME_INVENTORY[area]?.[need.entity]||null});evidence.push({area,signal:why,text:clause.text})};
+  for(const clause of clauses){
+    const t=clause.text,forbidWindow=/不要|别|不能|不想|禁止/.test(t)&&/开窗|窗.*开/.test(t);
+    if(forbidWindow)constraints.push({area:clause.area,entity:'window',operation:'open',type:'forbid',source:t});
+    if(/看电影|观影|投影/.test(t)){push(clause,{entity:'light',intent:'SetValue',property:'brightness',value:30},'movie_glare');push(clause,{entity:'light',intent:'SetValue',property:'colorTemperature',value:3000},'movie_warmth')}
+    if(/准备睡觉|要睡了|睡着|睡眠|哄睡|睡前/.test(t)){push(clause,{entity:'light',intent:'SetValue',property:'brightness',value:15},'sleep_low_light');push(clause,{entity:'light',intent:'SetValue',property:'colorTemperature',value:3000},'sleep_warm_light')}
+    if(/太亮|刺眼|晃眼/.test(t)&&!/看电影|睡/.test(t))push(clause,{entity:'light',intent:'SetValue',property:'brightness',value:30},'excess_light');
+    if(/太暗|看不清|暗一点都不行/.test(t)){push(clause,{entity:'light',intent:'SetValue',property:'power',value:true},'insufficient_light');push(clause,{entity:'light',intent:'SetValue',property:'brightness',value:70},'insufficient_light')}
+    if(/太热|有点热|闷热/.test(t))push(clause,{entity:'climate',intent:'SetValue',property:'targetTemperature',value:24,product_hints:['空调']},'thermal_hot');
+    if(/太冷|有点冷/.test(t))push(clause,{entity:'climate',intent:'SetValue',property:'targetTemperature',value:26,product_hints:['空调']},'thermal_cold');
+  }
+  const stuffy=/闷|空气不好|透透气|通风/.test(raw),raining=/下雨|飘雨|雨大|进雨/.test(raw),windowForbidden=constraints.some(x=>x.entity==='window'&&x.operation==='open');
+  const stuffyClauses=clauses.filter(x=>/闷|空气不好|透透气|通风/.test(x.text));
+  const airAreas=stuffyClauses.length?[...new Set(stuffyClauses.map(x=>x.area))]:(explicitAreas.length?explicitAreas:[canonicalArea(raw)||state.lastArea||'客厅']);
+  if(stuffy){for(const area of airAreas){const clause={text:raw,area};if(raining||windowForbidden){push(clause,{entity:'air',intent:'SetValue',property:'power',value:true,product_hints:['新风','airfresh']},raining?'stuffy_rain_substitution':'window_forbidden_substitution');push(clause,{entity:'air',intent:'SetValue',property:'fanLevel',value:2,product_hints:['新风','airfresh']},'quiet_fresh_air')}else push(clause,{entity:'window',intent:'TurnOn',property:'motorControl',value:0},'natural_ventilation')}}
+  if(raining&&!stuffy){for(const area of airAreas)push({text:raw,area},{entity:'window',intent:'TurnOff',property:'motorControl',value:1},'rain_protection')}
+  if(/出门|离家|家里没人/.test(raw)){
+    const scope=wholeHome?HOME_AREAS.filter(a=>HOME_INVENTORY[a]?.light||HOME_INVENTORY[a]?.window):(explicitAreas.length?explicitAreas:['客厅','主卧','次卧','儿童房','书房']);
+    for(const area of scope){if(HOME_INVENTORY[area]?.light)push({text:raw,area},{entity:'light',intent:'TurnOff',property:'power',value:false},'leave_home_lights');if(HOME_INVENTORY[area]?.window)push({text:raw,area},{entity:'window',intent:'TurnOff',property:'motorControl',value:1},'leave_home_windows')}
+  }
+  const byKey=new Map(),conflicts=[];
+  for(const n of needs){const key=[n.area,n.entity,n.property].join('::'),prior=byKey.get(key);if(prior&&prior.value!==n.value)conflicts.push({key,area:n.area,entity:n.entity,property:n.property,values:[prior.value,n.value]});else byKey.set(key,n)}
+  const deduped=[...byKey.values()];
+  if(!deduped.length)return null;
+  return {text:raw,goal:'composed_home_goal',entity:deduped.length>1?'home':deduped[0].entity,operation:'plan',action:null,confidence:conflicts.length?.58:.86,match:1,
+    needs:deduped,evidence,constraints,conflicts,scope:[...new Set(deduped.map(x=>x.area))],inference_source:'compositional_room_object_goal_compiler'};
+}
 function capabilityText(c){
   return [c.product,c.model,c.module_title,c.module,c.title,c.code,c.desc,(c.enum||[]).map(x=>x.desc||x.code).join(' ')].filter(Boolean).join(' ').toLowerCase();
 }
@@ -463,6 +516,9 @@ function scoreCapability(c,need,goal,text){
   if(propHits){score+=Math.min(5,propHits*1.35);reasons.push('property_semantic')}
   if(entity.entity===need?.entity){score+=5;reasons.push('entity_match')}
   else if(entity.entity!=='other'){score-=1.5;reasons.push('entity_mismatch')}
+  if(need?.model_code){if(c.model===need.model_code){score+=12;reasons.push('room_inventory_model')}else{score-=3;reasons.push('different_inventory_model')}}
+  const productHints=(need?.product_hints||[]).map(x=>String(x).toLowerCase());
+  if(productHints.some(h=>hay.includes(h))){score+=5;reasons.push('product_hint')}
   const lex=gramSimilarity((text||'')+' '+(goal||''),hay);
   score+=lex*2.5;if(lex>.08)reasons.push('utterance_similarity');
   if(c.kind==='p'){score+=1;reasons.push('property')}
@@ -489,11 +545,11 @@ function retrieveCapabilities(goal,text,need,limit=10){
   }));
   return {ranked,accepted,top};
 }
-function goalNeeds(goal){
-  return clone(NEURAL?.goal_training?.goal_contract?.[goal]||[]);
+function goalNeeds(goal,scenario){
+  return clone(scenario?.needs||NEURAL?.goal_training?.goal_contract?.[goal]||[]);
 }
 function buildGoalPlan(scenario,area,raw){
-  const needs=goalNeeds(scenario?.goal);
+  const needs=goalNeeds(scenario?.goal,scenario);
   const nodes=[],candidates=[],selected=[],rejected=[],gates=[];
   for(const need of needs){
     const retrieval=retrieveCapabilities(scenario.goal,raw,need,10);
@@ -506,7 +562,7 @@ function buildGoalPlan(scenario,area,raw){
     else if(topScore<10){gate='CLARIFY';reason='capability_score_below_commit_threshold'}
     else if(Number.isFinite(secondScore)&&margin<1.25){gate='CLARIFY';reason='capability_margin_too_small'}
     const gateInfo={
-      need:{entity:need.entity,property:need.property,value:need.value},
+      need:{area:need.area||area,entity:need.entity,property:need.property,value:need.value},
       gate,reason,top_score:Number.isFinite(topScore)?Number(topScore.toFixed(3)):null,
       second_score:Number.isFinite(secondScore)?Number(secondScore.toFixed(3)):null,
       margin:Number.isFinite(margin)?Number(margin.toFixed(3)):null,
@@ -519,16 +575,17 @@ function buildGoalPlan(scenario,area,raw){
       const chosen=gate==='EXECUTE'&&first&&item.capability_id===first.capability.capability_id;
       item.selected=!!chosen;
       item.commit_gate=gate;item.commit_reason=reason;
-      candidates.push({...item,need:{entity:need.entity,property:need.property,value:need.value}});
+      candidates.push({...item,need:{area:need.area||area,entity:need.entity,property:need.property,value:need.value}});
       if(!chosen&&(!item.constraint_ok||gate!=='EXECUTE'))rejected.push(item);
     }
     if(gate!=='EXECUTE'||!first)continue;
     const cap=first.capability;
     const entity=need.entity||first.entity||'device';
+    const targetArea=need.area||area;
     const node=newNode(need.intent||'SetValue',entity,{
       property:need.property||cap.code,schema_property:cap.code,value:need.value,
-      area,area_source:canonicalArea(raw)?'explicit':'inherited',
-      entity_name:canonicalEntityName(entity,area)||area+(cap.product||entity),
+      area:targetArea,area_source:need.area?'scenario-derived':(canonicalArea(raw)?'explicit':'inherited'),
+      entity_name:canonicalEntityName(entity,targetArea)||targetArea+(cap.product||entity),
       goal:scenario.goal,capability_id:cap.capability_id,model_code:cap.model,module_code:cap.module,
       capability_score:Number(first.score.toFixed(3)),
       capability_margin:Number.isFinite(margin)?Number(margin.toFixed(3)):null,
@@ -542,7 +599,7 @@ function buildGoalPlan(scenario,area,raw){
       margin:Number.isFinite(margin)?Number(margin.toFixed(3)):null,model_code:cap.model,
       product_title:cap.product,module_code:cap.module,property_code:cap.code,ops:cap.ops||[],
       dataType:cap.dataType,enum:cap.enum||[],minimum:cap.min,maximum:cap.max,unit:cap.unit,
-      need:{entity:need.entity,property:need.property,value:need.value},
+      need:{area:targetArea,entity:need.entity,property:need.property,value:need.value},
       gate:'EXECUTE',truth:'selected_after_global_retrieval_constraint_filter_and_margin_gate'
     });
   }
@@ -651,6 +708,8 @@ function goalSemanticReadout(text){
 }
 function inferScenario(text){
   const raw=String(text||'');
+  const composed=composeGoalScenario(raw);
+  if(composed)return composed;
   const explicit=SCENARIOS.find(s=>s.pattern?.test(raw));
   if(explicit)return {...explicit,match:1,inference_source:'contract_goal_rule'};
   const learnedGoal=goalSemanticReadout(raw)[0];
@@ -722,7 +781,7 @@ function updateDecisionHeads(text){
   setHead('headEntity',h.entity.label,h.entity.score);setHead('headOp',h.operation.label,h.operation.score);
   setHead('headAmb',h.ambiguity>.5?'needs context':'bounded',h.ambiguity);
   setHead('headOod',h.ood>.55?'escalate LLM':'local',h.ood);
-  const needs=scenario?goalNeeds(scenario.goal):[];
+  const needs=scenario?goalNeeds(scenario.goal,scenario):[];
   let gatePreview=null;
   if(scenario&&scenario.match>.16&&CAPINDEX?.capabilities?.length){
     gatePreview=buildGoalPlan(scenario,canonicalArea(text)||state.lastArea||'客厅',text);
@@ -1409,8 +1468,11 @@ function parseUtterance(text){
   if(isResume) return {type:'resume'};
   if(heads.ood>=.55)return {type:'ood',nodes:[newNode('Plan','llm',{reason:'ood_escalation',ood_probability:heads.ood})]};
   if(heads.ambiguity>=.55&&!scenario)return {type:'clarify',nodes:[newNode('Clarify',state.focus||heads.entity.label||'unknown',{reason:'ambiguous_reference',ambiguity_probability:heads.ambiguity},'unresolved')]};
-  if(scenario&&scenario.match>.22&&heads.ambiguity<.55){
+  if(scenario&&scenario.match>.22&&(scenario.inference_source==='compositional_room_object_goal_compiler'||heads.ambiguity<.55)){
     const area=canonicalArea(raw)||state.lastArea||'客厅';
+    if(scenario.conflicts?.length){
+      return {type:'clarify',nodes:[newNode('Clarify',scenario.entity||'home',{reason:'contradictory_goal_state',goal:scenario.goal,conflicts:scenario.conflicts,areas:scenario.scope},'unresolved')],scenario:{...scenario,commit_gate:'CLARIFY'}};
+    }
     const planned=buildGoalPlan(scenario,area,raw);
     const scenarioMeta={
       ...scenario,plan:undefined,area,planned_actions:planned.nodes.length,
@@ -1495,7 +1557,7 @@ function deltaFor(text){
     return {contract_version:'homeflow.graph_delta.v1',op:'REVISE_NODE',turn_id,commit_policy:'final_only',target_task_id:state.activeTask,target_node_id:targetNode?.node_id,replacement_node:replacement,metadata:{state_tree_patch:true,patch_target:targetNode?instanceKey(targetNode):null},source:'browser_contract_demo'};
   }
   if(p.type==='clarify'){
-    return {contract_version:'homeflow.graph_delta.v1',op:'CREATE_TASK',turn_id,commit_policy:'never_commit',nodes:p.nodes,program:{control_type:'single'},metadata:{route_hint:'CLARIFY',clarification_required:true},source:'browser_contract_demo'};
+    return {contract_version:'homeflow.graph_delta.v1',op:'CREATE_TASK',turn_id,commit_policy:'never_commit',nodes:p.nodes,program:{control_type:'single'},metadata:{route_hint:'CLARIFY',clarification_required:true,scenario_inference:p.scenario||undefined},source:'browser_contract_demo'};
   }
   if(p.type==='ood'){
     return {contract_version:'homeflow.graph_delta.v1',op:'CREATE_TASK',turn_id,commit_policy:'never_commit',nodes:p.nodes,program:{control_type:'single'},metadata:{route_hint:'LLM_ESCALATE',ood:true},source:'browser_contract_demo'};
@@ -1792,7 +1854,10 @@ const STARTER_SCENES={
   revise:{draft:'把客厅灯打开',intro:'先发出下面这句。然后试着说「调到30%」，看看我能否接着理解。',next:'调到30%'},
   rooms:{draft:'把客厅灯打开',intro:'先控制客厅灯，再说「卧室的也打开」，试试房间切换。',next:'书房的也打开'},
   multi:{draft:'把客厅外窗关上，客厅灯也关了',intro:'试着一次说两件事。右边会分别显示每个设备的结果。',next:'把客厅灯打开'},
-  goal:{draft:'准备看电影了，客厅有点刺眼',intro:'先描述一个情景，看看系统能否推断动作；候选不确定时会停下来澄清。',next:'把客厅灯亮度调到30%'}
+  goal:{draft:'准备看电影了，客厅有点刺眼',intro:'先描述一个情景，看看系统能否推断动作；候选不确定时会停下来澄清。',next:'把客厅灯亮度调到30%'},
+  roomGoals:{draft:'客厅太亮，主卧太暗，书房又有点闷',intro:'一句话给三个房间不同目标。系统会拆成独立 frame，不把槽位混在一起。',next:'主卧调暖一点，书房不要开窗'},
+  constraint:{draft:'主卧很闷，外面下雨了，我又不想开窗',intro:'这句话的直接动作互相牵制。系统会保留「不开窗」约束，反推主卧新风。',next:'风速不要太高，孩子正在睡觉'},
+  wholeHome:{draft:'我要离家了，把全屋的灯关掉，窗也关好',intro:'全屋目标会展开为不同房间、不同物件的独立节点，再逐个经过真实物模型校验。',next:'儿童房的灯先别关'}
 };
 const visibleHomeState=new Map();
 function displayBindingValue(b,value){
@@ -1811,7 +1876,11 @@ function friendlyTurn(exec,d){
     const names=changes.map(o=>o.binding?.dialogue_entity_name||o.node?.slots?.entity_name||'设备');
     return {status:pending.length?'部分完成，仍需确认':'已更新模拟状态',title:pending.length?'有一部分还不能执行。':names.join('、')+'已更新。',detail:changes.map(o=>{const b=o.binding;return (b?.dialogue_entity_name||'设备')+' · '+(b?.property_title||b?.property_code||'状态')+'：'+displayBindingValue(b,o.worldDelta.after)}).join('；')+(pending.length?'。另有 '+pending.length+' 项被拦截，展开本轮依据查看原因。':''),blocked:pending.length>0};
   }
-  if(pending.length)return {status:'等待确认',title:'这一句还需要确认。',detail:'房间、设备或动作约束尚未明确，未写入设备状态。试着直接说出房间、设备和目标值。',blocked:true};
+  if(pending.length){
+    const conflicts=d?.metadata?.scenario_inference?.conflicts||[];
+    if(conflicts.length){const c=conflicts[0];return {status:'目标发生冲突',title:(c.area||'这个房间')+'需要你确认一个取舍。',detail:(c.area||'房间')+'的 '+(c.property||'状态')+' 同时被推断为 '+c.values.map(String).join(' 与 ')+'；本轮没有执行。请明确最终希望偏向哪一个。',blocked:true}}
+    return {status:'等待确认',title:'这一句还需要确认。',detail:'房间、设备或动作约束尚未明确，未写入设备状态。试着直接说出房间、设备和目标值。',blocked:true};
+  }
   if(queries.length)return {status:'查询结果',title:'这是当前可查询的状态。',detail:queries.map(o=>(o.binding?.dialogue_entity_name||'设备')+'：'+displayBindingValue(o.binding,o.query.value)).join('；'),blocked:false};
   if(['CANCEL_TASK','REMOVE_NODE'].includes(d?.op))return {status:'任务已取消',title:'已取消这项任务。',detail:'已记录取消；此前已写入的模拟设备状态不会自动回滚。',blocked:false};
   if(/LLM|AGENT|OOD/i.test(exec.route||''))return {status:'超出本地能力',title:'这件事需要进一步处理。',detail:'当前演示未连接外部智能体，本轮没有写入设备状态。',blocked:true};

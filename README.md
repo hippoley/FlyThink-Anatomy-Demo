@@ -212,3 +212,9 @@ Turn evidence appears after the first result. Corpus mutation, multi-turn compos
 Every result now includes a compact, automatically animated neural layer: the left side shows the 216-unit developmental recurrent state and the right side projects the strongest units onto real FlyWire coordinate roots. The coordinate projection is explicitly separated from measured neural activity.
 
 The public registry embeds all 46 original JSON schemas from `全产品物模型定义(8).rar` (archive SHA-256 `3a5e67efd5847d70761076506500d001cbed36b1d19dca60ed286eb72ae5d60c`). Run `python scripts/build_full_thing_registry.py` to verify 46/46 schema completeness; pass `--source-dir` only when rebuilding from the extracted archive.
+
+## Compositional room and object goals
+
+The bounded planner can now compile one utterance into independent room-scoped frames. It supports different goals in different rooms, whole-home expansion, multiple objects per room, and constraint substitution. For example, “主卧很闷，外面下雨了，我又不想开窗” preserves the no-open-window constraint and retrieves the main-bedroom fresh-air capabilities instead of forcing a window action.
+
+Conflicting values for the same room, entity and property do not execute. They produce one targeted clarification. Every inferred node remains subject to the room inventory, global 46-model capability retrieval, permission/type/enum/range validation and the existing score-and-margin commit gate.
