@@ -1,0 +1,2835 @@
+{
+  "truth": "real_flywire_subgraph_sequential_state_training",
+  "source_sha256": "445f996bf6c4b1803b9ba186189138a3061ff8623aa94c0abcf38af30a5bd48b",
+  "graph_sha256": "73d64a3c9d32fc38b98741fb345b34efd3a678db86f3f195e70e296ec4a7d9d2",
+  "neurons": 512,
+  "edges": 9692,
+  "seed": 783,
+  "epochs": 40,
+  "train_dialogues": 480,
+  "heldout_template_dialogues": 96,
+  "independent_dialogues": 6,
+  "turns_per_generated_dialogue": 8,
+  "limitations": [
+    "bounded 3 rooms, 2 object types, 2 properties",
+    "synthetic labels; separate test phrase templates",
+    "OOD pending flag only, no OOD generation",
+    "no full-brain training or device execution",
+    "readout state is learned prediction, not guaranteed persistent runtime state"
+  ],
+  "runs": {
+    "real": {
+      "heldout": {
+        "state_exact": 0.171875,
+        "goal_grid_exact": 0.2239583283662796,
+        "dialogue_exact": 0.0,
+        "operation_accuracy": 0.6588541865348816,
+        "focus_accuracy": 0.5494791865348816,
+        "ood_memory_accuracy": 0.8619791865348816,
+        "per_operation_state_exact": {
+          "add": 0.25217390060424805,
+          "revise": 0.1221374049782753,
+          "retract": 0.0,
+          "clear": 0.4545454680919647,
+          "pause": 0.0,
+          "resume": 0.07999999821186066,
+          "retain": 0.0793650820851326,
+          "ood": 0.0
+        },
+        "active_slot_accuracy": 0.3878205120563507
+      },
+      "independent": {
+        "state_exact": 0.375,
+        "goal_grid_exact": 0.5,
+        "dialogue_exact": 0.0,
+        "operation_accuracy": 0.75,
+        "focus_accuracy": 0.7916666865348816,
+        "ood_memory_accuracy": 0.9166666865348816,
+        "per_operation_state_exact": {
+          "add": 0.5454545617103577,
+          "revise": 0.0,
+          "retract": 0.0,
+          "clear": 0.5,
+          "pause": 1.0,
+          "resume": 1.0,
+          "retain": 0.0,
+          "ood": 0.0
+        },
+        "active_slot_accuracy": 0.6363636255264282
+      },
+      "reset_memory": {
+        "state_exact": 0.2096354216337204,
+        "goal_grid_exact": 0.2356770783662796,
+        "dialogue_exact": 0.0,
+        "operation_accuracy": 0.7526041865348816,
+        "focus_accuracy": 0.5026041865348816,
+        "ood_memory_accuracy": 0.8671875,
+        "per_operation_state_exact": {
+          "add": 0.3072463870048523,
+          "revise": 0.0,
+          "retract": 0.1428571492433548,
+          "clear": 1.0,
+          "pause": 0.0,
+          "resume": 0.0,
+          "retain": 0.0,
+          "ood": 0.0833333358168602
+        },
+        "active_slot_accuracy": 0.18141025304794312
+      },
+      "disconnect_at_inference": {
+        "state_exact": 0.1588541716337204,
+        "goal_grid_exact": 0.1979166716337204,
+        "dialogue_exact": 0.0,
+        "operation_accuracy": 0.5598958134651184,
+        "focus_accuracy": 0.52734375,
+        "ood_memory_accuracy": 0.8502604365348816,
+        "per_operation_state_exact": {
+          "add": 0.208695650100708,
+          "revise": 0.015267175622284412,
+          "retract": 0.020408162847161293,
+          "clear": 0.8636363744735718,
+          "pause": 0.0,
+          "resume": 0.019999999552965164,
+          "retain": 0.095238097012043,
+          "ood": 0.0416666679084301
+        },
+        "active_slot_accuracy": 0.07371795177459717
+      },
+      "changed_internal_gains": 9692,
+      "loss": [
+        5.70084015528361,
+        3.5659871737162274,
+        2.2955253601074217,
+        1.6295867919921876,
+        1.3137080510457357,
+        1.1284467617670695,
+        1.0163183808326721,
+        0.9388296922047933,
+        0.8720966498057048,
+        0.8123793443044026,
+        0.7698645035425822,
+        0.7364973624547323,
+        0.7010025421778361,
+        0.6726374785105388,
+        0.6436149835586548,
+        0.6284855206807455,
+        0.6055813868840535,
+        0.5874172111352285,
+        0.5620650668938955,
+        0.5587140301863353,
+        0.54164191087087,
+        0.5245612978935241,
+        0.5082710266113282,
+        0.4947265466054281,
+        0.4838212013244629,
+        0.471279909213384,
+        0.4633663952350616,
+        0.4478343149026235,
+        0.4348591943581899,
+        0.42123781045277914,
+        0.4194124360879262,
+        0.40667155385017395,
+        0.4100228488445282,
+        0.3881795863310496,
+        0.3823804219563802,
+        0.36982462406158445,
+        0.36950863699118297,
+        0.3552042623360952,
+        0.34941606521606444,
+        0.33787038922309875
+      ],
+      "independent_trace": [
+        {
+          "id": "retain-two-rooms",
+          "turns": [
+            {
+              "text": "打开客厅的灯",
+              "predicted": {
+                "goals": {
+                  "客厅/灯/power": "on"
+                },
+                "paused": [],
+                "focus": "客厅/灯/power",
+                "ood_pending": false,
+                "operation": "add"
+              },
+              "expected": {
+                "goals": {
+                  "客厅/灯/power": "on"
+                },
+                "paused": [],
+                "focus": "客厅/灯/power",
+                "ood_pending": false,
+                "operation": "add"
+              },
+              "exact": true
+            },
+            {
+              "text": "主卧窗户打开",
+              "predicted": {
+                "goals": {
+                  "主卧/窗户/power": "on"
+                },
+                "paused": [],
+                "focus": "主卧/窗户/power",
+                "ood_pending": false,
+                "operation": "add"
+              },
+              "expected": {
+                "goals": {
+                  "客厅/灯/power": "on",
+                  "主卧/窗户/power": "on"
+                },
+                "paused": [],
+                "focus": "主卧/窗户/power",
+                "ood_pending": false,
+                "operation": "add"
+              },
+              "exact": false
+            },
+            {
+              "text": "嗯，先这样",
+              "predicted": {
+                "goals": {
+                  "客厅/窗户/power": "on",
+                  "主卧/窗户/power": "on"
+                },
+                "paused": [],
+                "focus": "客厅/窗户/power",
+                "ood_pending": false,
+                "operation": "add"
+              },
+              "expected": {
+                "goals": {
+                  "客厅/灯/power": "on",
+                  "主卧/窗户/power": "on"
+                },
+                "paused": [],
+                "focus": "主卧/窗户/power",
+                "ood_pending": false,
+                "operation": "retain"
+              },
+              "exact": false
+            },
+            {
+              "text": "客厅的灯调到30%",
+              "predicted": {
+                "goals": {
+                  "客厅/灯/power": "off",
+                  "客厅/灯/level": "30",
+                  "客厅/窗户/power": "on",
+                  "主卧/窗户/power": "on"
+                },
+                "paused": [],
+                "focus": "客厅/灯/level",
+                "ood_pending": false,
+                "operation": "add"
+              },
+              "expected": {
+                "goals": {
+                  "客厅/灯/power": "on",
+                  "客厅/灯/level": "30",
+                  "主卧/窗户/power": "on"
+                },
+                "paused": [],
+                "focus": "客厅/灯/level",
+                "ood_pending": false,
+                "operation": "add"
+              },
+              "exact": false
+            }
+          ]
+        },
+        {
+          "id": "multi-intent",
+          "turns": [
+            {
+              "text": "客厅灯打开，书房窗户关掉",
+              "predicted": {
+                "goals": {
+                  "书房/窗户/power": "on"
+                },
+                "paused": [],
+                "focus": "书房/窗户/power",
+                "ood_pending": false,
+                "operation": "add"
+              },
+              "expected": {
+                "goals": {
+                  "客厅/灯/power": "on",
+                  "书房/窗户/power": "off"
+                },
+                "paused": [],
+                "focus": "书房/窗户/power",
+                "ood_pending": false,
+                "operation": "add"
+              },
+              "exact": false
+            },
+            {
+              "text": "那个改成打开",
+              "predicted": {
+                "goals": {
+                  "书房/窗户/power": "on"
+                },
+                "paused": [],
+                "focus": "书房/窗户/power",
+                "ood_pending": false,
+                "operation": "revise"
+              },
+              "expected": {
+                "goals": {
+                  "客厅/灯/power": "on",
+                  "书房/窗户/power": "on"
+                },
+                "paused": [],
+                "focus": "书房/窗户/power",
+                "ood_pending": false,
+                "operation": "revise"
+              },
+              "exact": false
+            },
+            {
+              "text": "天气真不错",
+              "predicted": {
+                "goals": {
+                  "客厅/灯/power": "on",
+                  "书房/窗户/power": "on"
+                },
+                "paused": [],
+                "focus": "客厅/灯/power",
+                "ood_pending": false,
+                "operation": "revise"
+              },
+              "expected": {
+                "goals": {
+                  "客厅/灯/power": "on",
+                  "书房/窗户/power": "on"
+                },
+                "paused": [],
+                "focus": "书房/窗户/power",
+                "ood_pending": false,
+                "operation": "retain"
+              },
+              "exact": false
+            },
+            {
+              "text": "全部撤回",
+              "predicted": {
+                "goals": {},
+                "paused": [],
+                "focus": null,
+                "ood_pending": false,
+                "operation": "clear"
+              },
+              "expected": {
+                "goals": {},
+                "paused": [],
+                "focus": null,
+                "ood_pending": false,
+                "operation": "clear"
+              },
+              "exact": true
+            }
+          ]
+        },
+        {
+          "id": "retract-scope",
+          "turns": [
+            {
+              "text": "客厅灯打开",
+              "predicted": {
+                "goals": {
+                  "客厅/灯/power": "on"
+                },
+                "paused": [],
+                "focus": "客厅/灯/power",
+                "ood_pending": false,
+                "operation": "add"
+              },
+              "expected": {
+                "goals": {
+                  "客厅/灯/power": "on"
+                },
+                "paused": [],
+                "focus": "客厅/灯/power",
+                "ood_pending": false,
+                "operation": "add"
+              },
+              "exact": true
+            },
+            {
+              "text": "主卧灯打开",
+              "predicted": {
+                "goals": {
+                  "客厅/灯/power": "on",
+                  "主卧/灯/power": "on"
+                },
+                "paused": [],
+                "focus": "主卧/灯/power",
+                "ood_pending": false,
+                "operation": "add"
+              },
+              "expected": {
+                "goals": {
+                  "客厅/灯/power": "on",
+                  "主卧/灯/power": "on"
+                },
+                "paused": [],
+                "focus": "主卧/灯/power",
+                "ood_pending": false,
+                "operation": "add"
+              },
+              "exact": true
+            },
+            {
+              "text": "刚才主卧那条当我没说",
+              "predicted": {
+                "goals": {
+                  "主卧/灯/power": "on"
+                },
+                "paused": [],
+                "focus": "主卧/灯/power",
+                "ood_pending": false,
+                "operation": "add"
+              },
+              "expected": {
+                "goals": {
+                  "客厅/灯/power": "on"
+                },
+                "paused": [],
+                "focus": null,
+                "ood_pending": false,
+                "operation": "retract"
+              },
+              "exact": false
+            },
+            {
+              "text": "好",
+              "predicted": {
+                "goals": {
+                  "主卧/灯/power": "on"
+                },
+                "paused": [],
+                "focus": "主卧/灯/power",
+                "ood_pending": false,
+                "operation": "add"
+              },
+              "expected": {
+                "goals": {
+                  "客厅/灯/power": "on"
+                },
+                "paused": [],
+                "focus": null,
+                "ood_pending": false,
+                "operation": "retain"
+              },
+              "exact": false
+            }
+          ]
+        },
+        {
+          "id": "pause-resume",
+          "turns": [
+            {
+              "text": "书房窗户调到70%",
+              "predicted": {
+                "goals": {
+                  "书房/窗户/level": "70"
+                },
+                "paused": [],
+                "focus": "书房/窗户/level",
+                "ood_pending": false,
+                "operation": "add"
+              },
+              "expected": {
+                "goals": {
+                  "书房/窗户/level": "70"
+                },
+                "paused": [],
+                "focus": "书房/窗户/level",
+                "ood_pending": false,
+                "operation": "add"
+              },
+              "exact": true
+            },
+            {
+              "text": "先暂停它",
+              "predicted": {
+                "goals": {
+                  "书房/窗户/level": "70"
+                },
+                "paused": [
+                  "书房/窗户/level"
+                ],
+                "focus": "书房/窗户/level",
+                "ood_pending": false,
+                "operation": "pause"
+              },
+              "expected": {
+                "goals": {
+                  "书房/窗户/level": "70"
+                },
+                "paused": [
+                  "书房/窗户/level"
+                ],
+                "focus": "书房/窗户/level",
+                "ood_pending": false,
+                "operation": "pause"
+              },
+              "exact": true
+            },
+            {
+              "text": "我们先聊别的",
+              "predicted": {
+                "goals": {
+                  "书房/窗户/level": "70"
+                },
+                "paused": [],
+                "focus": "书房/窗户/level",
+                "ood_pending": false,
+                "operation": "pause"
+              },
+              "expected": {
+                "goals": {
+                  "书房/窗户/level": "70"
+                },
+                "paused": [
+                  "书房/窗户/level"
+                ],
+                "focus": "书房/窗户/level",
+                "ood_pending": false,
+                "operation": "retain"
+              },
+              "exact": false
+            },
+            {
+              "text": "继续执行刚才的",
+              "predicted": {
+                "goals": {
+                  "书房/窗户/level": "70"
+                },
+                "paused": [],
+                "focus": "书房/窗户/level",
+                "ood_pending": false,
+                "operation": "resume"
+              },
+              "expected": {
+                "goals": {
+                  "书房/窗户/level": "70"
+                },
+                "paused": [],
+                "focus": "书房/窗户/level",
+                "ood_pending": false,
+                "operation": "resume"
+              },
+              "exact": true
+            }
+          ]
+        },
+        {
+          "id": "ood-persists",
+          "turns": [
+            {
+              "text": "客厅灯打开",
+              "predicted": {
+                "goals": {
+                  "客厅/灯/power": "on"
+                },
+                "paused": [],
+                "focus": "客厅/灯/power",
+                "ood_pending": false,
+                "operation": "add"
+              },
+              "expected": {
+                "goals": {
+                  "客厅/灯/power": "on"
+                },
+                "paused": [],
+                "focus": "客厅/灯/power",
+                "ood_pending": false,
+                "operation": "add"
+              },
+              "exact": true
+            },
+            {
+              "text": "帮我设计一个生日派对",
+              "predicted": {
+                "goals": {
+                  "客厅/灯/power": "on"
+                },
+                "paused": [],
+                "focus": "客厅/灯/power",
+                "ood_pending": false,
+                "operation": "add"
+              },
+              "expected": {
+                "goals": {
+                  "客厅/灯/power": "on"
+                },
+                "paused": [],
+                "focus": "客厅/灯/power",
+                "ood_pending": true,
+                "operation": "ood"
+              },
+              "exact": false
+            },
+            {
+              "text": "主卧灯关掉",
+              "predicted": {
+                "goals": {
+                  "客厅/灯/power": "on",
+                  "主卧/灯/power": "on"
+                },
+                "paused": [],
+                "focus": "主卧/灯/power",
+                "ood_pending": false,
+                "operation": "add"
+              },
+              "expected": {
+                "goals": {
+                  "客厅/灯/power": "on",
+                  "主卧/灯/power": "off"
+                },
+                "paused": [],
+                "focus": "主卧/灯/power",
+                "ood_pending": true,
+                "operation": "add"
+              },
+              "exact": false
+            },
+            {
+              "text": "全部撤回",
+              "predicted": {
+                "goals": {
+                  "主卧/灯/power": "off"
+                },
+                "paused": [],
+                "focus": null,
+                "ood_pending": false,
+                "operation": "clear"
+              },
+              "expected": {
+                "goals": {},
+                "paused": [],
+                "focus": null,
+                "ood_pending": false,
+                "operation": "clear"
+              },
+              "exact": false
+            }
+          ]
+        },
+        {
+          "id": "level-reference",
+          "turns": [
+            {
+              "text": "主卧灯调到70%",
+              "predicted": {
+                "goals": {
+                  "主卧/灯/level": "70"
+                },
+                "paused": [],
+                "focus": "主卧/灯/level",
+                "ood_pending": false,
+                "operation": "add"
+              },
+              "expected": {
+                "goals": {
+                  "主卧/灯/level": "70"
+                },
+                "paused": [],
+                "focus": "主卧/灯/level",
+                "ood_pending": false,
+                "operation": "add"
+              },
+              "exact": true
+            },
+            {
+              "text": "改成30%",
+              "predicted": {
+                "goals": {
+                  "主卧/灯/level": "70"
+                },
+                "paused": [],
+                "focus": "主卧/灯/level",
+                "ood_pending": false,
+                "operation": "revise"
+              },
+              "expected": {
+                "goals": {
+                  "主卧/灯/level": "30"
+                },
+                "paused": [],
+                "focus": "主卧/灯/level",
+                "ood_pending": false,
+                "operation": "revise"
+              },
+              "exact": false
+            },
+            {
+              "text": "打开客厅灯",
+              "predicted": {
+                "goals": {
+                  "客厅/灯/power": "on",
+                  "主卧/灯/level": "70"
+                },
+                "paused": [],
+                "focus": "客厅/灯/power",
+                "ood_pending": false,
+                "operation": "add"
+              },
+              "expected": {
+                "goals": {
+                  "客厅/灯/power": "on",
+                  "主卧/灯/level": "30"
+                },
+                "paused": [],
+                "focus": "客厅/灯/power",
+                "ood_pending": false,
+                "operation": "add"
+              },
+              "exact": false
+            },
+            {
+              "text": "知道了",
+              "predicted": {
+                "goals": {
+                  "客厅/灯/power": "on",
+                  "客厅/灯/level": "70",
+                  "主卧/灯/level": "70"
+                },
+                "paused": [],
+                "focus": "客厅/灯/level",
+                "ood_pending": false,
+                "operation": "retain"
+              },
+              "expected": {
+                "goals": {
+                  "客厅/灯/power": "on",
+                  "主卧/灯/level": "30"
+                },
+                "paused": [],
+                "focus": "客厅/灯/power",
+                "ood_pending": false,
+                "operation": "retain"
+              },
+              "exact": false
+            }
+          ]
+        }
+      ],
+      "restore_verified": true,
+      "checkpoint_sha256": "04fa4127b1a95ee866e558c1a6b02e35610ed28e6466f68d63f8f6fad933c638"
+    },
+    "frozen": {
+      "heldout": {
+        "state_exact": 0.1731770783662796,
+        "goal_grid_exact": 0.2330729216337204,
+        "dialogue_exact": 0.0,
+        "operation_accuracy": 0.6393229365348816,
+        "focus_accuracy": 0.5403645634651184,
+        "ood_memory_accuracy": 0.86328125,
+        "per_operation_state_exact": {
+          "add": 0.25217390060424805,
+          "revise": 0.13740457594394684,
+          "retract": 0.0,
+          "clear": 0.4318181872367859,
+          "pause": 0.0,
+          "resume": 0.07999999821186066,
+          "retain": 0.0793650820851326,
+          "ood": 0.0
+        },
+        "active_slot_accuracy": 0.3858974277973175
+      },
+      "independent": {
+        "state_exact": 0.375,
+        "goal_grid_exact": 0.5,
+        "dialogue_exact": 0.0,
+        "operation_accuracy": 0.75,
+        "focus_accuracy": 0.7916666865348816,
+        "ood_memory_accuracy": 0.9166666865348816,
+        "per_operation_state_exact": {
+          "add": 0.5454545617103577,
+          "revise": 0.0,
+          "retract": 0.0,
+          "clear": 0.5,
+          "pause": 1.0,
+          "resume": 1.0,
+          "retain": 0.0,
+          "ood": 0.0
+        },
+        "active_slot_accuracy": 0.6363636255264282
+      },
+      "reset_memory": {
+        "state_exact": 0.2096354216337204,
+        "goal_grid_exact": 0.2369791716337204,
+        "dialogue_exact": 0.0,
+        "operation_accuracy": 0.7942708134651184,
+        "focus_accuracy": 0.5078125,
+        "ood_memory_accuracy": 0.8671875,
+        "per_operation_state_exact": {
+          "add": 0.3072463870048523,
+          "revise": 0.0,
+          "retract": 0.1428571492433548,
+          "clear": 1.0,
+          "pause": 0.0,
+          "resume": 0.0,
+          "retain": 0.0,
+          "ood": 0.0833333358168602
+        },
+        "active_slot_accuracy": 0.1846153885126114
+      },
+      "disconnect_at_inference": {
+        "state_exact": 0.15625,
+        "goal_grid_exact": 0.2018229216337204,
+        "dialogue_exact": 0.0,
+        "operation_accuracy": 0.5638020634651184,
+        "focus_accuracy": 0.5260416865348816,
+        "ood_memory_accuracy": 0.8515625,
+        "per_operation_state_exact": {
+          "add": 0.208695650100708,
+          "revise": 0.015267175622284412,
+          "retract": 0.020408162847161293,
+          "clear": 0.8181818127632141,
+          "pause": 0.0,
+          "resume": 0.019999999552965164,
+          "retain": 0.095238097012043,
+          "ood": 0.0416666679084301
+        },
+        "active_slot_accuracy": 0.08012820780277252
+      },
+      "changed_internal_gains": 0,
+      "loss": [
+        5.7011822382609045,
+        3.5676819483439126,
+        2.303126247723897,
+        1.6432508786519369,
+        1.3312208652496338,
+        1.147400192419688,
+        1.0358981609344482,
+        0.9583503365516662,
+        0.8918955206871033,
+        0.8324814796447754,
+        0.789514402548472,
+        0.7560324192047119,
+        0.7199366728464762,
+        0.6930032809575398,
+        0.663690714041392,
+        0.6495348374048869,
+        0.6271183371543885,
+        0.6102672318617502,
+        0.5856039345264434,
+        0.5826785306135813,
+        0.5643679022789001,
+        0.546809724966685,
+        0.5329486509164174,
+        0.5205458203951517,
+        0.5095264236132304,
+        0.4998576780160268,
+        0.4910385390122732,
+        0.4763851781686147,
+        0.46629563967386883,
+        0.44986932078997294,
+        0.448255185286204,
+        0.43894198338190715,
+        0.4405351221561432,
+        0.4184200882911682,
+        0.4145866056283315,
+        0.4005196253458659,
+        0.402231631676356,
+        0.3866413414478302,
+        0.3819455842177073,
+        0.3703783889611562
+      ],
+      "independent_trace": [
+        {
+          "id": "retain-two-rooms",
+          "turns": [
+            {
+              "text": "打开客厅的灯",
+              "predicted": {
+                "goals": {
+                  "客厅/灯/power": "on"
+                },
+                "paused": [],
+                "focus": "客厅/灯/power",
+                "ood_pending": false,
+                "operation": "add"
+              },
+              "expected": {
+                "goals": {
+                  "客厅/灯/power": "on"
+                },
+                "paused": [],
+                "focus": "客厅/灯/power",
+                "ood_pending": false,
+                "operation": "add"
+              },
+              "exact": true
+            },
+            {
+              "text": "主卧窗户打开",
+              "predicted": {
+                "goals": {
+                  "主卧/窗户/power": "on"
+                },
+                "paused": [],
+                "focus": "主卧/窗户/power",
+                "ood_pending": false,
+                "operation": "add"
+              },
+              "expected": {
+                "goals": {
+                  "客厅/灯/power": "on",
+                  "主卧/窗户/power": "on"
+                },
+                "paused": [],
+                "focus": "主卧/窗户/power",
+                "ood_pending": false,
+                "operation": "add"
+              },
+              "exact": false
+            },
+            {
+              "text": "嗯，先这样",
+              "predicted": {
+                "goals": {
+                  "客厅/窗户/power": "on",
+                  "主卧/窗户/power": "on"
+                },
+                "paused": [],
+                "focus": "客厅/窗户/power",
+                "ood_pending": false,
+                "operation": "add"
+              },
+              "expected": {
+                "goals": {
+                  "客厅/灯/power": "on",
+                  "主卧/窗户/power": "on"
+                },
+                "paused": [],
+                "focus": "主卧/窗户/power",
+                "ood_pending": false,
+                "operation": "retain"
+              },
+              "exact": false
+            },
+            {
+              "text": "客厅的灯调到30%",
+              "predicted": {
+                "goals": {
+                  "客厅/灯/power": "off",
+                  "客厅/灯/level": "30",
+                  "客厅/窗户/power": "on",
+                  "主卧/窗户/power": "on"
+                },
+                "paused": [],
+                "focus": "客厅/灯/level",
+                "ood_pending": false,
+                "operation": "add"
+              },
+              "expected": {
+                "goals": {
+                  "客厅/灯/power": "on",
+                  "客厅/灯/level": "30",
+                  "主卧/窗户/power": "on"
+                },
+                "paused": [],
+                "focus": "客厅/灯/level",
+                "ood_pending": false,
+                "operation": "add"
+              },
+              "exact": false
+            }
+          ]
+        },
+        {
+          "id": "multi-intent",
+          "turns": [
+            {
+              "text": "客厅灯打开，书房窗户关掉",
+              "predicted": {
+                "goals": {
+                  "书房/窗户/power": "on"
+                },
+                "paused": [],
+                "focus": "书房/窗户/power",
+                "ood_pending": false,
+                "operation": "add"
+              },
+              "expected": {
+                "goals": {
+                  "客厅/灯/power": "on",
+                  "书房/窗户/power": "off"
+                },
+                "paused": [],
+                "focus": "书房/窗户/power",
+                "ood_pending": false,
+                "operation": "add"
+              },
+              "exact": false
+            },
+            {
+              "text": "那个改成打开",
+              "predicted": {
+                "goals": {
+                  "书房/窗户/power": "on"
+                },
+                "paused": [],
+                "focus": "书房/窗户/power",
+                "ood_pending": false,
+                "operation": "revise"
+              },
+              "expected": {
+                "goals": {
+                  "客厅/灯/power": "on",
+                  "书房/窗户/power": "on"
+                },
+                "paused": [],
+                "focus": "书房/窗户/power",
+                "ood_pending": false,
+                "operation": "revise"
+              },
+              "exact": false
+            },
+            {
+              "text": "天气真不错",
+              "predicted": {
+                "goals": {
+                  "客厅/灯/power": "on",
+                  "书房/窗户/power": "on"
+                },
+                "paused": [],
+                "focus": "客厅/灯/power",
+                "ood_pending": false,
+                "operation": "revise"
+              },
+              "expected": {
+                "goals": {
+                  "客厅/灯/power": "on",
+                  "书房/窗户/power": "on"
+                },
+                "paused": [],
+                "focus": "书房/窗户/power",
+                "ood_pending": false,
+                "operation": "retain"
+              },
+              "exact": false
+            },
+            {
+              "text": "全部撤回",
+              "predicted": {
+                "goals": {},
+                "paused": [],
+                "focus": null,
+                "ood_pending": false,
+                "operation": "clear"
+              },
+              "expected": {
+                "goals": {},
+                "paused": [],
+                "focus": null,
+                "ood_pending": false,
+                "operation": "clear"
+              },
+              "exact": true
+            }
+          ]
+        },
+        {
+          "id": "retract-scope",
+          "turns": [
+            {
+              "text": "客厅灯打开",
+              "predicted": {
+                "goals": {
+                  "客厅/灯/power": "on"
+                },
+                "paused": [],
+                "focus": "客厅/灯/power",
+                "ood_pending": false,
+                "operation": "add"
+              },
+              "expected": {
+                "goals": {
+                  "客厅/灯/power": "on"
+                },
+                "paused": [],
+                "focus": "客厅/灯/power",
+                "ood_pending": false,
+                "operation": "add"
+              },
+              "exact": true
+            },
+            {
+              "text": "主卧灯打开",
+              "predicted": {
+                "goals": {
+                  "客厅/灯/power": "on",
+                  "主卧/灯/power": "on"
+                },
+                "paused": [],
+                "focus": "主卧/灯/power",
+                "ood_pending": false,
+                "operation": "add"
+              },
+              "expected": {
+                "goals": {
+                  "客厅/灯/power": "on",
+                  "主卧/灯/power": "on"
+                },
+                "paused": [],
+                "focus": "主卧/灯/power",
+                "ood_pending": false,
+                "operation": "add"
+              },
+              "exact": true
+            },
+            {
+              "text": "刚才主卧那条当我没说",
+              "predicted": {
+                "goals": {
+                  "主卧/灯/power": "on"
+                },
+                "paused": [],
+                "focus": "主卧/灯/power",
+                "ood_pending": false,
+                "operation": "add"
+              },
+              "expected": {
+                "goals": {
+                  "客厅/灯/power": "on"
+                },
+                "paused": [],
+                "focus": null,
+                "ood_pending": false,
+                "operation": "retract"
+              },
+              "exact": false
+            },
+            {
+              "text": "好",
+              "predicted": {
+                "goals": {
+                  "主卧/灯/power": "on"
+                },
+                "paused": [],
+                "focus": "主卧/灯/power",
+                "ood_pending": false,
+                "operation": "add"
+              },
+              "expected": {
+                "goals": {
+                  "客厅/灯/power": "on"
+                },
+                "paused": [],
+                "focus": null,
+                "ood_pending": false,
+                "operation": "retain"
+              },
+              "exact": false
+            }
+          ]
+        },
+        {
+          "id": "pause-resume",
+          "turns": [
+            {
+              "text": "书房窗户调到70%",
+              "predicted": {
+                "goals": {
+                  "书房/窗户/level": "70"
+                },
+                "paused": [],
+                "focus": "书房/窗户/level",
+                "ood_pending": false,
+                "operation": "add"
+              },
+              "expected": {
+                "goals": {
+                  "书房/窗户/level": "70"
+                },
+                "paused": [],
+                "focus": "书房/窗户/level",
+                "ood_pending": false,
+                "operation": "add"
+              },
+              "exact": true
+            },
+            {
+              "text": "先暂停它",
+              "predicted": {
+                "goals": {
+                  "书房/窗户/level": "70"
+                },
+                "paused": [
+                  "书房/窗户/level"
+                ],
+                "focus": "书房/窗户/level",
+                "ood_pending": false,
+                "operation": "pause"
+              },
+              "expected": {
+                "goals": {
+                  "书房/窗户/level": "70"
+                },
+                "paused": [
+                  "书房/窗户/level"
+                ],
+                "focus": "书房/窗户/level",
+                "ood_pending": false,
+                "operation": "pause"
+              },
+              "exact": true
+            },
+            {
+              "text": "我们先聊别的",
+              "predicted": {
+                "goals": {
+                  "书房/窗户/level": "70"
+                },
+                "paused": [],
+                "focus": "书房/窗户/level",
+                "ood_pending": false,
+                "operation": "pause"
+              },
+              "expected": {
+                "goals": {
+                  "书房/窗户/level": "70"
+                },
+                "paused": [
+                  "书房/窗户/level"
+                ],
+                "focus": "书房/窗户/level",
+                "ood_pending": false,
+                "operation": "retain"
+              },
+              "exact": false
+            },
+            {
+              "text": "继续执行刚才的",
+              "predicted": {
+                "goals": {
+                  "书房/窗户/level": "70"
+                },
+                "paused": [],
+                "focus": "书房/窗户/level",
+                "ood_pending": false,
+                "operation": "resume"
+              },
+              "expected": {
+                "goals": {
+                  "书房/窗户/level": "70"
+                },
+                "paused": [],
+                "focus": "书房/窗户/level",
+                "ood_pending": false,
+                "operation": "resume"
+              },
+              "exact": true
+            }
+          ]
+        },
+        {
+          "id": "ood-persists",
+          "turns": [
+            {
+              "text": "客厅灯打开",
+              "predicted": {
+                "goals": {
+                  "客厅/灯/power": "on"
+                },
+                "paused": [],
+                "focus": "客厅/灯/power",
+                "ood_pending": false,
+                "operation": "add"
+              },
+              "expected": {
+                "goals": {
+                  "客厅/灯/power": "on"
+                },
+                "paused": [],
+                "focus": "客厅/灯/power",
+                "ood_pending": false,
+                "operation": "add"
+              },
+              "exact": true
+            },
+            {
+              "text": "帮我设计一个生日派对",
+              "predicted": {
+                "goals": {
+                  "客厅/灯/power": "on"
+                },
+                "paused": [],
+                "focus": "客厅/灯/power",
+                "ood_pending": false,
+                "operation": "add"
+              },
+              "expected": {
+                "goals": {
+                  "客厅/灯/power": "on"
+                },
+                "paused": [],
+                "focus": "客厅/灯/power",
+                "ood_pending": true,
+                "operation": "ood"
+              },
+              "exact": false
+            },
+            {
+              "text": "主卧灯关掉",
+              "predicted": {
+                "goals": {
+                  "客厅/灯/power": "on",
+                  "主卧/灯/power": "on"
+                },
+                "paused": [],
+                "focus": "主卧/灯/power",
+                "ood_pending": false,
+                "operation": "add"
+              },
+              "expected": {
+                "goals": {
+                  "客厅/灯/power": "on",
+                  "主卧/灯/power": "off"
+                },
+                "paused": [],
+                "focus": "主卧/灯/power",
+                "ood_pending": true,
+                "operation": "add"
+              },
+              "exact": false
+            },
+            {
+              "text": "全部撤回",
+              "predicted": {
+                "goals": {
+                  "主卧/灯/power": "off"
+                },
+                "paused": [],
+                "focus": null,
+                "ood_pending": false,
+                "operation": "clear"
+              },
+              "expected": {
+                "goals": {},
+                "paused": [],
+                "focus": null,
+                "ood_pending": false,
+                "operation": "clear"
+              },
+              "exact": false
+            }
+          ]
+        },
+        {
+          "id": "level-reference",
+          "turns": [
+            {
+              "text": "主卧灯调到70%",
+              "predicted": {
+                "goals": {
+                  "主卧/灯/level": "70"
+                },
+                "paused": [],
+                "focus": "主卧/灯/level",
+                "ood_pending": false,
+                "operation": "add"
+              },
+              "expected": {
+                "goals": {
+                  "主卧/灯/level": "70"
+                },
+                "paused": [],
+                "focus": "主卧/灯/level",
+                "ood_pending": false,
+                "operation": "add"
+              },
+              "exact": true
+            },
+            {
+              "text": "改成30%",
+              "predicted": {
+                "goals": {
+                  "主卧/灯/level": "70"
+                },
+                "paused": [],
+                "focus": "主卧/灯/level",
+                "ood_pending": false,
+                "operation": "revise"
+              },
+              "expected": {
+                "goals": {
+                  "主卧/灯/level": "30"
+                },
+                "paused": [],
+                "focus": "主卧/灯/level",
+                "ood_pending": false,
+                "operation": "revise"
+              },
+              "exact": false
+            },
+            {
+              "text": "打开客厅灯",
+              "predicted": {
+                "goals": {
+                  "客厅/灯/power": "on",
+                  "主卧/灯/level": "70"
+                },
+                "paused": [],
+                "focus": "客厅/灯/power",
+                "ood_pending": false,
+                "operation": "add"
+              },
+              "expected": {
+                "goals": {
+                  "客厅/灯/power": "on",
+                  "主卧/灯/level": "30"
+                },
+                "paused": [],
+                "focus": "客厅/灯/power",
+                "ood_pending": false,
+                "operation": "add"
+              },
+              "exact": false
+            },
+            {
+              "text": "知道了",
+              "predicted": {
+                "goals": {
+                  "客厅/灯/power": "on",
+                  "客厅/灯/level": "70",
+                  "主卧/灯/level": "70"
+                },
+                "paused": [],
+                "focus": "客厅/灯/level",
+                "ood_pending": false,
+                "operation": "retain"
+              },
+              "expected": {
+                "goals": {
+                  "客厅/灯/power": "on",
+                  "主卧/灯/level": "30"
+                },
+                "paused": [],
+                "focus": "客厅/灯/power",
+                "ood_pending": false,
+                "operation": "retain"
+              },
+              "exact": false
+            }
+          ]
+        }
+      ],
+      "restore_verified": true,
+      "checkpoint_sha256": "a0bb4c7eba104b634b7fe8436797e1540bb5085fa0b38fc64bea4332b9635c42"
+    },
+    "rewired": {
+      "heldout": {
+        "state_exact": 0.1770833283662796,
+        "goal_grid_exact": 0.2213541716337204,
+        "dialogue_exact": 0.0,
+        "operation_accuracy": 0.6575520634651184,
+        "focus_accuracy": 0.5416666865348816,
+        "ood_memory_accuracy": 0.8658854365348816,
+        "per_operation_state_exact": {
+          "add": 0.2492753565311432,
+          "revise": 0.13740457594394684,
+          "retract": 0.020408162847161293,
+          "clear": 0.47727271914482117,
+          "pause": 0.0,
+          "resume": 0.07999999821186066,
+          "retain": 0.0793650820851326,
+          "ood": 0.02083333395421505
+        },
+        "active_slot_accuracy": 0.3807692229747772
+      },
+      "independent": {
+        "state_exact": 0.4166666567325592,
+        "goal_grid_exact": 0.5,
+        "dialogue_exact": 0.0,
+        "operation_accuracy": 0.75,
+        "focus_accuracy": 0.8333333134651184,
+        "ood_memory_accuracy": 0.9166666865348816,
+        "per_operation_state_exact": {
+          "add": 0.6363636255264282,
+          "revise": 0.5,
+          "retract": 0.0,
+          "clear": 0.5,
+          "pause": 1.0,
+          "resume": 0.0,
+          "retain": 0.0,
+          "ood": 0.0
+        },
+        "active_slot_accuracy": 0.6666666865348816
+      },
+      "reset_memory": {
+        "state_exact": 0.2096354216337204,
+        "goal_grid_exact": 0.2356770783662796,
+        "dialogue_exact": 0.0,
+        "operation_accuracy": 0.7890625,
+        "focus_accuracy": 0.5026041865348816,
+        "ood_memory_accuracy": 0.8671875,
+        "per_operation_state_exact": {
+          "add": 0.3072463870048523,
+          "revise": 0.0,
+          "retract": 0.1428571492433548,
+          "clear": 1.0,
+          "pause": 0.0,
+          "resume": 0.0,
+          "retain": 0.0,
+          "ood": 0.0833333358168602
+        },
+        "active_slot_accuracy": 0.1794871836900711
+      },
+      "disconnect_at_inference": {
+        "state_exact": 0.1614583283662796,
+        "goal_grid_exact": 0.1966145783662796,
+        "dialogue_exact": 0.0,
+        "operation_accuracy": 0.5716145634651184,
+        "focus_accuracy": 0.5325520634651184,
+        "ood_memory_accuracy": 0.84765625,
+        "per_operation_state_exact": {
+          "add": 0.208695650100708,
+          "revise": 0.007633587811142206,
+          "retract": 0.06122449040412903,
+          "clear": 0.9090909361839294,
+          "pause": 0.0,
+          "resume": 0.0,
+          "retain": 0.095238097012043,
+          "ood": 0.0416666679084301
+        },
+        "active_slot_accuracy": 0.07051282376050949
+      },
+      "changed_internal_gains": 9692,
+      "loss": [
+        5.702400811513265,
+        3.5334619363149007,
+        2.2629640976587932,
+        1.6019020557403565,
+        1.2942501068115235,
+        1.1140001972516378,
+        1.0054884672164917,
+        0.9308387478192647,
+        0.8661877711613973,
+        0.8076109608014425,
+        0.76596653064092,
+        0.7338899930318197,
+        0.7004731496175131,
+        0.6735118627548218,
+        0.6438544869422913,
+        0.6315417269865672,
+        0.6075818975766499,
+        0.5906491696834564,
+        0.5658803602059682,
+        0.5652715067068735,
+        0.5445975263913473,
+        0.5282975176970164,
+        0.5141767720381419,
+        0.5009239256381989,
+        0.48916293183962506,
+        0.47714869578679403,
+        0.46954261461893715,
+        0.4533100803693136,
+        0.4428064743677775,
+        0.4275569478670756,
+        0.42615602413813275,
+        0.4130763272444407,
+        0.4164116680622101,
+        0.39389289021492,
+        0.3895987490812937,
+        0.3766124804814657,
+        0.3762399097283681,
+        0.361143962542216,
+        0.3544678548971812,
+        0.3446475903193156
+      ],
+      "independent_trace": [
+        {
+          "id": "retain-two-rooms",
+          "turns": [
+            {
+              "text": "打开客厅的灯",
+              "predicted": {
+                "goals": {
+                  "客厅/灯/power": "on"
+                },
+                "paused": [],
+                "focus": "客厅/灯/power",
+                "ood_pending": false,
+                "operation": "add"
+              },
+              "expected": {
+                "goals": {
+                  "客厅/灯/power": "on"
+                },
+                "paused": [],
+                "focus": "客厅/灯/power",
+                "ood_pending": false,
+                "operation": "add"
+              },
+              "exact": true
+            },
+            {
+              "text": "主卧窗户打开",
+              "predicted": {
+                "goals": {
+                  "客厅/灯/power": "on",
+                  "主卧/窗户/power": "on"
+                },
+                "paused": [],
+                "focus": "主卧/窗户/power",
+                "ood_pending": false,
+                "operation": "add"
+              },
+              "expected": {
+                "goals": {
+                  "客厅/灯/power": "on",
+                  "主卧/窗户/power": "on"
+                },
+                "paused": [],
+                "focus": "主卧/窗户/power",
+                "ood_pending": false,
+                "operation": "add"
+              },
+              "exact": true
+            },
+            {
+              "text": "嗯，先这样",
+              "predicted": {
+                "goals": {
+                  "客厅/窗户/power": "on",
+                  "主卧/窗户/power": "on"
+                },
+                "paused": [],
+                "focus": "客厅/窗户/power",
+                "ood_pending": false,
+                "operation": "add"
+              },
+              "expected": {
+                "goals": {
+                  "客厅/灯/power": "on",
+                  "主卧/窗户/power": "on"
+                },
+                "paused": [],
+                "focus": "主卧/窗户/power",
+                "ood_pending": false,
+                "operation": "retain"
+              },
+              "exact": false
+            },
+            {
+              "text": "客厅的灯调到30%",
+              "predicted": {
+                "goals": {
+                  "客厅/灯/level": "30",
+                  "客厅/窗户/power": "on",
+                  "主卧/窗户/power": "on"
+                },
+                "paused": [],
+                "focus": "客厅/灯/level",
+                "ood_pending": false,
+                "operation": "add"
+              },
+              "expected": {
+                "goals": {
+                  "客厅/灯/power": "on",
+                  "客厅/灯/level": "30",
+                  "主卧/窗户/power": "on"
+                },
+                "paused": [],
+                "focus": "客厅/灯/level",
+                "ood_pending": false,
+                "operation": "add"
+              },
+              "exact": false
+            }
+          ]
+        },
+        {
+          "id": "multi-intent",
+          "turns": [
+            {
+              "text": "客厅灯打开，书房窗户关掉",
+              "predicted": {
+                "goals": {
+                  "书房/窗户/power": "on"
+                },
+                "paused": [],
+                "focus": "书房/窗户/power",
+                "ood_pending": false,
+                "operation": "add"
+              },
+              "expected": {
+                "goals": {
+                  "客厅/灯/power": "on",
+                  "书房/窗户/power": "off"
+                },
+                "paused": [],
+                "focus": "书房/窗户/power",
+                "ood_pending": false,
+                "operation": "add"
+              },
+              "exact": false
+            },
+            {
+              "text": "那个改成打开",
+              "predicted": {
+                "goals": {
+                  "书房/窗户/power": "on"
+                },
+                "paused": [],
+                "focus": "书房/窗户/power",
+                "ood_pending": false,
+                "operation": "revise"
+              },
+              "expected": {
+                "goals": {
+                  "客厅/灯/power": "on",
+                  "书房/窗户/power": "on"
+                },
+                "paused": [],
+                "focus": "书房/窗户/power",
+                "ood_pending": false,
+                "operation": "revise"
+              },
+              "exact": false
+            },
+            {
+              "text": "天气真不错",
+              "predicted": {
+                "goals": {
+                  "客厅/灯/power": "on",
+                  "客厅/窗户/power": "on",
+                  "书房/窗户/power": "on"
+                },
+                "paused": [],
+                "focus": "客厅/灯/power",
+                "ood_pending": false,
+                "operation": "revise"
+              },
+              "expected": {
+                "goals": {
+                  "客厅/灯/power": "on",
+                  "书房/窗户/power": "on"
+                },
+                "paused": [],
+                "focus": "书房/窗户/power",
+                "ood_pending": false,
+                "operation": "retain"
+              },
+              "exact": false
+            },
+            {
+              "text": "全部撤回",
+              "predicted": {
+                "goals": {},
+                "paused": [],
+                "focus": null,
+                "ood_pending": false,
+                "operation": "clear"
+              },
+              "expected": {
+                "goals": {},
+                "paused": [],
+                "focus": null,
+                "ood_pending": false,
+                "operation": "clear"
+              },
+              "exact": true
+            }
+          ]
+        },
+        {
+          "id": "retract-scope",
+          "turns": [
+            {
+              "text": "客厅灯打开",
+              "predicted": {
+                "goals": {
+                  "客厅/灯/power": "on"
+                },
+                "paused": [],
+                "focus": "客厅/灯/power",
+                "ood_pending": false,
+                "operation": "add"
+              },
+              "expected": {
+                "goals": {
+                  "客厅/灯/power": "on"
+                },
+                "paused": [],
+                "focus": "客厅/灯/power",
+                "ood_pending": false,
+                "operation": "add"
+              },
+              "exact": true
+            },
+            {
+              "text": "主卧灯打开",
+              "predicted": {
+                "goals": {
+                  "客厅/灯/power": "on",
+                  "主卧/灯/power": "on"
+                },
+                "paused": [],
+                "focus": "主卧/灯/power",
+                "ood_pending": false,
+                "operation": "add"
+              },
+              "expected": {
+                "goals": {
+                  "客厅/灯/power": "on",
+                  "主卧/灯/power": "on"
+                },
+                "paused": [],
+                "focus": "主卧/灯/power",
+                "ood_pending": false,
+                "operation": "add"
+              },
+              "exact": true
+            },
+            {
+              "text": "刚才主卧那条当我没说",
+              "predicted": {
+                "goals": {
+                  "主卧/灯/power": "on"
+                },
+                "paused": [],
+                "focus": "主卧/灯/power",
+                "ood_pending": false,
+                "operation": "add"
+              },
+              "expected": {
+                "goals": {
+                  "客厅/灯/power": "on"
+                },
+                "paused": [],
+                "focus": null,
+                "ood_pending": false,
+                "operation": "retract"
+              },
+              "exact": false
+            },
+            {
+              "text": "好",
+              "predicted": {
+                "goals": {
+                  "主卧/灯/power": "on"
+                },
+                "paused": [],
+                "focus": "主卧/灯/power",
+                "ood_pending": false,
+                "operation": "add"
+              },
+              "expected": {
+                "goals": {
+                  "客厅/灯/power": "on"
+                },
+                "paused": [],
+                "focus": null,
+                "ood_pending": false,
+                "operation": "retain"
+              },
+              "exact": false
+            }
+          ]
+        },
+        {
+          "id": "pause-resume",
+          "turns": [
+            {
+              "text": "书房窗户调到70%",
+              "predicted": {
+                "goals": {
+                  "书房/窗户/level": "70"
+                },
+                "paused": [],
+                "focus": "书房/窗户/level",
+                "ood_pending": false,
+                "operation": "add"
+              },
+              "expected": {
+                "goals": {
+                  "书房/窗户/level": "70"
+                },
+                "paused": [],
+                "focus": "书房/窗户/level",
+                "ood_pending": false,
+                "operation": "add"
+              },
+              "exact": true
+            },
+            {
+              "text": "先暂停它",
+              "predicted": {
+                "goals": {
+                  "书房/窗户/level": "70"
+                },
+                "paused": [
+                  "书房/窗户/level"
+                ],
+                "focus": "书房/窗户/level",
+                "ood_pending": false,
+                "operation": "pause"
+              },
+              "expected": {
+                "goals": {
+                  "书房/窗户/level": "70"
+                },
+                "paused": [
+                  "书房/窗户/level"
+                ],
+                "focus": "书房/窗户/level",
+                "ood_pending": false,
+                "operation": "pause"
+              },
+              "exact": true
+            },
+            {
+              "text": "我们先聊别的",
+              "predicted": {
+                "goals": {
+                  "书房/窗户/level": "70"
+                },
+                "paused": [],
+                "focus": "书房/窗户/level",
+                "ood_pending": false,
+                "operation": "pause"
+              },
+              "expected": {
+                "goals": {
+                  "书房/窗户/level": "70"
+                },
+                "paused": [
+                  "书房/窗户/level"
+                ],
+                "focus": "书房/窗户/level",
+                "ood_pending": false,
+                "operation": "retain"
+              },
+              "exact": false
+            },
+            {
+              "text": "继续执行刚才的",
+              "predicted": {
+                "goals": {},
+                "paused": [],
+                "focus": "书房/窗户/level",
+                "ood_pending": false,
+                "operation": "resume"
+              },
+              "expected": {
+                "goals": {
+                  "书房/窗户/level": "70"
+                },
+                "paused": [],
+                "focus": "书房/窗户/level",
+                "ood_pending": false,
+                "operation": "resume"
+              },
+              "exact": false
+            }
+          ]
+        },
+        {
+          "id": "ood-persists",
+          "turns": [
+            {
+              "text": "客厅灯打开",
+              "predicted": {
+                "goals": {
+                  "客厅/灯/power": "on"
+                },
+                "paused": [],
+                "focus": "客厅/灯/power",
+                "ood_pending": false,
+                "operation": "add"
+              },
+              "expected": {
+                "goals": {
+                  "客厅/灯/power": "on"
+                },
+                "paused": [],
+                "focus": "客厅/灯/power",
+                "ood_pending": false,
+                "operation": "add"
+              },
+              "exact": true
+            },
+            {
+              "text": "帮我设计一个生日派对",
+              "predicted": {
+                "goals": {
+                  "客厅/灯/power": "on"
+                },
+                "paused": [],
+                "focus": "客厅/灯/power",
+                "ood_pending": false,
+                "operation": "add"
+              },
+              "expected": {
+                "goals": {
+                  "客厅/灯/power": "on"
+                },
+                "paused": [],
+                "focus": "客厅/灯/power",
+                "ood_pending": true,
+                "operation": "ood"
+              },
+              "exact": false
+            },
+            {
+              "text": "主卧灯关掉",
+              "predicted": {
+                "goals": {
+                  "客厅/灯/power": "on",
+                  "主卧/灯/power": "on"
+                },
+                "paused": [],
+                "focus": "主卧/灯/power",
+                "ood_pending": false,
+                "operation": "add"
+              },
+              "expected": {
+                "goals": {
+                  "客厅/灯/power": "on",
+                  "主卧/灯/power": "off"
+                },
+                "paused": [],
+                "focus": "主卧/灯/power",
+                "ood_pending": true,
+                "operation": "add"
+              },
+              "exact": false
+            },
+            {
+              "text": "全部撤回",
+              "predicted": {
+                "goals": {
+                  "主卧/灯/power": "off"
+                },
+                "paused": [],
+                "focus": null,
+                "ood_pending": false,
+                "operation": "clear"
+              },
+              "expected": {
+                "goals": {},
+                "paused": [],
+                "focus": null,
+                "ood_pending": false,
+                "operation": "clear"
+              },
+              "exact": false
+            }
+          ]
+        },
+        {
+          "id": "level-reference",
+          "turns": [
+            {
+              "text": "主卧灯调到70%",
+              "predicted": {
+                "goals": {
+                  "主卧/灯/level": "70"
+                },
+                "paused": [],
+                "focus": "主卧/灯/level",
+                "ood_pending": false,
+                "operation": "add"
+              },
+              "expected": {
+                "goals": {
+                  "主卧/灯/level": "70"
+                },
+                "paused": [],
+                "focus": "主卧/灯/level",
+                "ood_pending": false,
+                "operation": "add"
+              },
+              "exact": true
+            },
+            {
+              "text": "改成30%",
+              "predicted": {
+                "goals": {
+                  "主卧/灯/level": "30"
+                },
+                "paused": [],
+                "focus": "主卧/灯/level",
+                "ood_pending": false,
+                "operation": "revise"
+              },
+              "expected": {
+                "goals": {
+                  "主卧/灯/level": "30"
+                },
+                "paused": [],
+                "focus": "主卧/灯/level",
+                "ood_pending": false,
+                "operation": "revise"
+              },
+              "exact": true
+            },
+            {
+              "text": "打开客厅灯",
+              "predicted": {
+                "goals": {
+                  "客厅/灯/power": "on",
+                  "主卧/灯/level": "70"
+                },
+                "paused": [],
+                "focus": "客厅/灯/power",
+                "ood_pending": false,
+                "operation": "add"
+              },
+              "expected": {
+                "goals": {
+                  "客厅/灯/power": "on",
+                  "主卧/灯/level": "30"
+                },
+                "paused": [],
+                "focus": "客厅/灯/power",
+                "ood_pending": false,
+                "operation": "add"
+              },
+              "exact": false
+            },
+            {
+              "text": "知道了",
+              "predicted": {
+                "goals": {
+                  "客厅/灯/power": "on",
+                  "客厅/灯/level": "70",
+                  "主卧/灯/level": "70"
+                },
+                "paused": [],
+                "focus": "客厅/灯/power",
+                "ood_pending": false,
+                "operation": "retain"
+              },
+              "expected": {
+                "goals": {
+                  "客厅/灯/power": "on",
+                  "主卧/灯/level": "30"
+                },
+                "paused": [],
+                "focus": "客厅/灯/power",
+                "ood_pending": false,
+                "operation": "retain"
+              },
+              "exact": false
+            }
+          ]
+        }
+      ],
+      "restore_verified": true,
+      "checkpoint_sha256": "4229bc7a010326726c711fee96e7067062aafcea8affad94eece7c2dd78c1abf"
+    },
+    "disconnected": {
+      "heldout": {
+        "state_exact": 0.1875,
+        "goal_grid_exact": 0.2630208432674408,
+        "dialogue_exact": 0.0,
+        "operation_accuracy": 0.5559895634651184,
+        "focus_accuracy": 0.5143229365348816,
+        "ood_memory_accuracy": 0.8515625,
+        "per_operation_state_exact": {
+          "add": 0.29855072498321533,
+          "revise": 0.1221374049782753,
+          "retract": 0.0,
+          "clear": 0.3181818127632141,
+          "pause": 0.0,
+          "resume": 0.019999999552965164,
+          "retain": 0.1269841343164444,
+          "ood": 0.0416666679084301
+        },
+        "active_slot_accuracy": 0.3583333194255829
+      },
+      "independent": {
+        "state_exact": 0.3333333432674408,
+        "goal_grid_exact": 0.4583333432674408,
+        "dialogue_exact": 0.0,
+        "operation_accuracy": 0.75,
+        "focus_accuracy": 0.75,
+        "ood_memory_accuracy": 0.8333333134651184,
+        "per_operation_state_exact": {
+          "add": 0.5454545617103577,
+          "revise": 0.5,
+          "retract": 0.0,
+          "clear": 0.5,
+          "pause": 0.0,
+          "resume": 0.0,
+          "retain": 0.0,
+          "ood": 0.0
+        },
+        "active_slot_accuracy": 0.6666666865348816
+      },
+      "reset_memory": {
+        "state_exact": 0.15625,
+        "goal_grid_exact": 0.2317708283662796,
+        "dialogue_exact": 0.0,
+        "operation_accuracy": 0.7721354365348816,
+        "focus_accuracy": 0.5,
+        "ood_memory_accuracy": 0.7578125,
+        "per_operation_state_exact": {
+          "add": 0.2869565188884735,
+          "revise": 0.0,
+          "retract": 0.0,
+          "clear": 0.47727271914482117,
+          "pause": 0.0,
+          "resume": 0.0,
+          "retain": 0.0,
+          "ood": 0.0
+        },
+        "active_slot_accuracy": 0.26858973503112793
+      },
+      "disconnect_at_inference": {
+        "state_exact": 0.1875,
+        "goal_grid_exact": 0.2630208432674408,
+        "dialogue_exact": 0.0,
+        "operation_accuracy": 0.5559895634651184,
+        "focus_accuracy": 0.5143229365348816,
+        "ood_memory_accuracy": 0.8515625,
+        "per_operation_state_exact": {
+          "add": 0.29855072498321533,
+          "revise": 0.1221374049782753,
+          "retract": 0.0,
+          "clear": 0.3181818127632141,
+          "pause": 0.0,
+          "resume": 0.019999999552965164,
+          "retain": 0.1269841343164444,
+          "ood": 0.0416666679084301
+        },
+        "active_slot_accuracy": 0.3583333194255829
+      },
+      "changed_internal_gains": 0,
+      "loss": [
+        5.71002607345581,
+        3.5713019688924152,
+        2.3550942818323772,
+        1.7593610763549805,
+        1.494612169265747,
+        1.3393407106399535,
+        1.2476500034332276,
+        1.1844517707824707,
+        1.1272620677947998,
+        1.0770810008049012,
+        1.0383817354838054,
+        1.0116266091664632,
+        0.9783256848653158,
+        0.9537740548451742,
+        0.934725817044576,
+        0.9179549932479858,
+        0.9051671624183655,
+        0.8856855511665345,
+        0.8570461710294087,
+        0.86027645667394,
+        0.8411439855893453,
+        0.8254753430684407,
+        0.814769963423411,
+        0.8084712425867716,
+        0.7949992736180623,
+        0.7888960520426432,
+        0.7772131085395813,
+        0.765608278910319,
+        0.7582375168800354,
+        0.7429295063018799,
+        0.7348121563593547,
+        0.7310793956120809,
+        0.7255496462186177,
+        0.7009134292602539,
+        0.6998043139775594,
+        0.6825849493344625,
+        0.6874927004178365,
+        0.6655537605285644,
+        0.6678169091542562,
+        0.6513111233711243
+      ],
+      "independent_trace": [
+        {
+          "id": "retain-two-rooms",
+          "turns": [
+            {
+              "text": "打开客厅的灯",
+              "predicted": {
+                "goals": {
+                  "客厅/灯/power": "on"
+                },
+                "paused": [],
+                "focus": "客厅/灯/power",
+                "ood_pending": false,
+                "operation": "add"
+              },
+              "expected": {
+                "goals": {
+                  "客厅/灯/power": "on"
+                },
+                "paused": [],
+                "focus": "客厅/灯/power",
+                "ood_pending": false,
+                "operation": "add"
+              },
+              "exact": true
+            },
+            {
+              "text": "主卧窗户打开",
+              "predicted": {
+                "goals": {
+                  "主卧/窗户/power": "on"
+                },
+                "paused": [],
+                "focus": "主卧/窗户/power",
+                "ood_pending": false,
+                "operation": "add"
+              },
+              "expected": {
+                "goals": {
+                  "客厅/灯/power": "on",
+                  "主卧/窗户/power": "on"
+                },
+                "paused": [],
+                "focus": "主卧/窗户/power",
+                "ood_pending": false,
+                "operation": "add"
+              },
+              "exact": false
+            },
+            {
+              "text": "嗯，先这样",
+              "predicted": {
+                "goals": {
+                  "客厅/窗户/power": "on",
+                  "主卧/窗户/power": "on"
+                },
+                "paused": [],
+                "focus": "客厅/窗户/power",
+                "ood_pending": false,
+                "operation": "add"
+              },
+              "expected": {
+                "goals": {
+                  "客厅/灯/power": "on",
+                  "主卧/窗户/power": "on"
+                },
+                "paused": [],
+                "focus": "主卧/窗户/power",
+                "ood_pending": false,
+                "operation": "retain"
+              },
+              "exact": false
+            },
+            {
+              "text": "客厅的灯调到30%",
+              "predicted": {
+                "goals": {
+                  "客厅/灯/level": "30",
+                  "客厅/窗户/power": "on",
+                  "主卧/窗户/power": "on"
+                },
+                "paused": [],
+                "focus": "客厅/灯/level",
+                "ood_pending": false,
+                "operation": "add"
+              },
+              "expected": {
+                "goals": {
+                  "客厅/灯/power": "on",
+                  "客厅/灯/level": "30",
+                  "主卧/窗户/power": "on"
+                },
+                "paused": [],
+                "focus": "客厅/灯/level",
+                "ood_pending": false,
+                "operation": "add"
+              },
+              "exact": false
+            }
+          ]
+        },
+        {
+          "id": "multi-intent",
+          "turns": [
+            {
+              "text": "客厅灯打开，书房窗户关掉",
+              "predicted": {
+                "goals": {
+                  "客厅/灯/power": "on",
+                  "客厅/窗户/power": "off",
+                  "书房/窗户/power": "on"
+                },
+                "paused": [],
+                "focus": "书房/窗户/power",
+                "ood_pending": false,
+                "operation": "add"
+              },
+              "expected": {
+                "goals": {
+                  "客厅/灯/power": "on",
+                  "书房/窗户/power": "off"
+                },
+                "paused": [],
+                "focus": "书房/窗户/power",
+                "ood_pending": false,
+                "operation": "add"
+              },
+              "exact": false
+            },
+            {
+              "text": "那个改成打开",
+              "predicted": {
+                "goals": {
+                  "客厅/灯/power": "on",
+                  "书房/窗户/power": "on"
+                },
+                "paused": [],
+                "focus": "书房/窗户/power",
+                "ood_pending": true,
+                "operation": "revise"
+              },
+              "expected": {
+                "goals": {
+                  "客厅/灯/power": "on",
+                  "书房/窗户/power": "on"
+                },
+                "paused": [],
+                "focus": "书房/窗户/power",
+                "ood_pending": false,
+                "operation": "revise"
+              },
+              "exact": false
+            },
+            {
+              "text": "天气真不错",
+              "predicted": {
+                "goals": {
+                  "书房/窗户/power": "on"
+                },
+                "paused": [],
+                "focus": "客厅/灯/power",
+                "ood_pending": true,
+                "operation": "revise"
+              },
+              "expected": {
+                "goals": {
+                  "客厅/灯/power": "on",
+                  "书房/窗户/power": "on"
+                },
+                "paused": [],
+                "focus": "书房/窗户/power",
+                "ood_pending": false,
+                "operation": "retain"
+              },
+              "exact": false
+            },
+            {
+              "text": "全部撤回",
+              "predicted": {
+                "goals": {},
+                "paused": [],
+                "focus": null,
+                "ood_pending": false,
+                "operation": "clear"
+              },
+              "expected": {
+                "goals": {},
+                "paused": [],
+                "focus": null,
+                "ood_pending": false,
+                "operation": "clear"
+              },
+              "exact": true
+            }
+          ]
+        },
+        {
+          "id": "retract-scope",
+          "turns": [
+            {
+              "text": "客厅灯打开",
+              "predicted": {
+                "goals": {
+                  "客厅/灯/power": "on"
+                },
+                "paused": [],
+                "focus": "客厅/灯/power",
+                "ood_pending": false,
+                "operation": "add"
+              },
+              "expected": {
+                "goals": {
+                  "客厅/灯/power": "on"
+                },
+                "paused": [],
+                "focus": "客厅/灯/power",
+                "ood_pending": false,
+                "operation": "add"
+              },
+              "exact": true
+            },
+            {
+              "text": "主卧灯打开",
+              "predicted": {
+                "goals": {
+                  "客厅/灯/power": "on",
+                  "主卧/灯/power": "on"
+                },
+                "paused": [],
+                "focus": "主卧/灯/power",
+                "ood_pending": false,
+                "operation": "add"
+              },
+              "expected": {
+                "goals": {
+                  "客厅/灯/power": "on",
+                  "主卧/灯/power": "on"
+                },
+                "paused": [],
+                "focus": "主卧/灯/power",
+                "ood_pending": false,
+                "operation": "add"
+              },
+              "exact": true
+            },
+            {
+              "text": "刚才主卧那条当我没说",
+              "predicted": {
+                "goals": {
+                  "主卧/灯/power": "on"
+                },
+                "paused": [],
+                "focus": "主卧/灯/power",
+                "ood_pending": false,
+                "operation": "add"
+              },
+              "expected": {
+                "goals": {
+                  "客厅/灯/power": "on"
+                },
+                "paused": [],
+                "focus": null,
+                "ood_pending": false,
+                "operation": "retract"
+              },
+              "exact": false
+            },
+            {
+              "text": "好",
+              "predicted": {
+                "goals": {
+                  "主卧/灯/power": "on"
+                },
+                "paused": [],
+                "focus": "主卧/灯/power",
+                "ood_pending": false,
+                "operation": "add"
+              },
+              "expected": {
+                "goals": {
+                  "客厅/灯/power": "on"
+                },
+                "paused": [],
+                "focus": null,
+                "ood_pending": false,
+                "operation": "retain"
+              },
+              "exact": false
+            }
+          ]
+        },
+        {
+          "id": "pause-resume",
+          "turns": [
+            {
+              "text": "书房窗户调到70%",
+              "predicted": {
+                "goals": {
+                  "书房/窗户/level": "70"
+                },
+                "paused": [],
+                "focus": "书房/窗户/level",
+                "ood_pending": false,
+                "operation": "add"
+              },
+              "expected": {
+                "goals": {
+                  "书房/窗户/level": "70"
+                },
+                "paused": [],
+                "focus": "书房/窗户/level",
+                "ood_pending": false,
+                "operation": "add"
+              },
+              "exact": true
+            },
+            {
+              "text": "先暂停它",
+              "predicted": {
+                "goals": {
+                  "书房/窗户/level": "70"
+                },
+                "paused": [],
+                "focus": "书房/窗户/level",
+                "ood_pending": false,
+                "operation": "pause"
+              },
+              "expected": {
+                "goals": {
+                  "书房/窗户/level": "70"
+                },
+                "paused": [
+                  "书房/窗户/level"
+                ],
+                "focus": "书房/窗户/level",
+                "ood_pending": false,
+                "operation": "pause"
+              },
+              "exact": false
+            },
+            {
+              "text": "我们先聊别的",
+              "predicted": {
+                "goals": {
+                  "书房/窗户/level": "70"
+                },
+                "paused": [],
+                "focus": "书房/窗户/level",
+                "ood_pending": true,
+                "operation": "pause"
+              },
+              "expected": {
+                "goals": {
+                  "书房/窗户/level": "70"
+                },
+                "paused": [
+                  "书房/窗户/level"
+                ],
+                "focus": "书房/窗户/level",
+                "ood_pending": false,
+                "operation": "retain"
+              },
+              "exact": false
+            },
+            {
+              "text": "继续执行刚才的",
+              "predicted": {
+                "goals": {},
+                "paused": [],
+                "focus": "书房/窗户/level",
+                "ood_pending": true,
+                "operation": "resume"
+              },
+              "expected": {
+                "goals": {
+                  "书房/窗户/level": "70"
+                },
+                "paused": [],
+                "focus": "书房/窗户/level",
+                "ood_pending": false,
+                "operation": "resume"
+              },
+              "exact": false
+            }
+          ]
+        },
+        {
+          "id": "ood-persists",
+          "turns": [
+            {
+              "text": "客厅灯打开",
+              "predicted": {
+                "goals": {
+                  "客厅/灯/power": "on"
+                },
+                "paused": [],
+                "focus": "客厅/灯/power",
+                "ood_pending": false,
+                "operation": "add"
+              },
+              "expected": {
+                "goals": {
+                  "客厅/灯/power": "on"
+                },
+                "paused": [],
+                "focus": "客厅/灯/power",
+                "ood_pending": false,
+                "operation": "add"
+              },
+              "exact": true
+            },
+            {
+              "text": "帮我设计一个生日派对",
+              "predicted": {
+                "goals": {
+                  "客厅/灯/power": "on",
+                  "主卧/灯/power": "on",
+                  "书房/窗户/power": "on"
+                },
+                "paused": [],
+                "focus": "客厅/灯/power",
+                "ood_pending": true,
+                "operation": "add"
+              },
+              "expected": {
+                "goals": {
+                  "客厅/灯/power": "on"
+                },
+                "paused": [],
+                "focus": "客厅/灯/power",
+                "ood_pending": true,
+                "operation": "ood"
+              },
+              "exact": false
+            },
+            {
+              "text": "主卧灯关掉",
+              "predicted": {
+                "goals": {
+                  "客厅/灯/power": "off",
+                  "主卧/灯/power": "off"
+                },
+                "paused": [],
+                "focus": "主卧/灯/power",
+                "ood_pending": true,
+                "operation": "add"
+              },
+              "expected": {
+                "goals": {
+                  "客厅/灯/power": "on",
+                  "主卧/灯/power": "off"
+                },
+                "paused": [],
+                "focus": "主卧/灯/power",
+                "ood_pending": true,
+                "operation": "add"
+              },
+              "exact": false
+            },
+            {
+              "text": "全部撤回",
+              "predicted": {
+                "goals": {
+                  "主卧/灯/power": "off"
+                },
+                "paused": [],
+                "focus": null,
+                "ood_pending": false,
+                "operation": "clear"
+              },
+              "expected": {
+                "goals": {},
+                "paused": [],
+                "focus": null,
+                "ood_pending": false,
+                "operation": "clear"
+              },
+              "exact": false
+            }
+          ]
+        },
+        {
+          "id": "level-reference",
+          "turns": [
+            {
+              "text": "主卧灯调到70%",
+              "predicted": {
+                "goals": {
+                  "主卧/灯/level": "70"
+                },
+                "paused": [],
+                "focus": "主卧/灯/level",
+                "ood_pending": false,
+                "operation": "add"
+              },
+              "expected": {
+                "goals": {
+                  "主卧/灯/level": "70"
+                },
+                "paused": [],
+                "focus": "主卧/灯/level",
+                "ood_pending": false,
+                "operation": "add"
+              },
+              "exact": true
+            },
+            {
+              "text": "改成30%",
+              "predicted": {
+                "goals": {
+                  "主卧/灯/level": "30"
+                },
+                "paused": [],
+                "focus": "主卧/灯/level",
+                "ood_pending": false,
+                "operation": "revise"
+              },
+              "expected": {
+                "goals": {
+                  "主卧/灯/level": "30"
+                },
+                "paused": [],
+                "focus": "主卧/灯/level",
+                "ood_pending": false,
+                "operation": "revise"
+              },
+              "exact": true
+            },
+            {
+              "text": "打开客厅灯",
+              "predicted": {
+                "goals": {
+                  "客厅/灯/power": "on",
+                  "客厅/灯/level": "70",
+                  "主卧/灯/level": "70"
+                },
+                "paused": [],
+                "focus": "客厅/灯/level",
+                "ood_pending": false,
+                "operation": "add"
+              },
+              "expected": {
+                "goals": {
+                  "客厅/灯/power": "on",
+                  "主卧/灯/level": "30"
+                },
+                "paused": [],
+                "focus": "客厅/灯/power",
+                "ood_pending": false,
+                "operation": "add"
+              },
+              "exact": false
+            },
+            {
+              "text": "知道了",
+              "predicted": {
+                "goals": {
+                  "客厅/灯/power": "on"
+                },
+                "paused": [],
+                "focus": "客厅/灯/level",
+                "ood_pending": false,
+                "operation": "retain"
+              },
+              "expected": {
+                "goals": {
+                  "客厅/灯/power": "on",
+                  "主卧/灯/level": "30"
+                },
+                "paused": [],
+                "focus": "客厅/灯/power",
+                "ood_pending": false,
+                "operation": "retain"
+              },
+              "exact": false
+            }
+          ]
+        }
+      ],
+      "restore_verified": true,
+      "checkpoint_sha256": "288aeb9f35ba8c99dc77eb7f1a434488ed50ee6a8efd9fc41271e4325ee4d799"
+    }
+  }
+}

@@ -1,0 +1,125 @@
+{
+  "truth": "neural_proposals_plus_deterministic_persistence_no_device_execution",
+  "mode": "real",
+  "turns": [
+    {
+      "text": "打开客厅灯",
+      "neural_prediction": {
+        "goals": {
+          "客厅/灯/power": "on"
+        },
+        "paused": [],
+        "focus": "客厅/灯/power",
+        "ood_pending": false,
+        "operation": "add"
+      },
+      "persistent_tree": {
+        "goals": {
+          "客厅/灯/power": "on"
+        },
+        "paused": [],
+        "focus": "客厅/灯/power",
+        "ood_pending": false,
+        "pending_ood": [],
+        "revision": 1
+      },
+      "commit": {
+        "status": "accepted_proposal_not_device_execution",
+        "changes": [
+          {
+            "op": "add",
+            "key": "客厅/灯/power",
+            "value": "on"
+          }
+        ]
+      }
+    },
+    {
+      "text": "主卧窗户打开",
+      "neural_prediction": {
+        "goals": {
+          "客厅/灯/power": "on",
+          "主卧/窗户/power": "on"
+        },
+        "paused": [],
+        "focus": "主卧/窗户/power",
+        "ood_pending": false,
+        "operation": "add"
+      },
+      "persistent_tree": {
+        "goals": {
+          "客厅/灯/power": "on",
+          "主卧/窗户/power": "on"
+        },
+        "paused": [],
+        "focus": "主卧/窗户/power",
+        "ood_pending": false,
+        "pending_ood": [],
+        "revision": 2
+      },
+      "commit": {
+        "status": "accepted_proposal_not_device_execution",
+        "changes": [
+          {
+            "op": "add",
+            "key": "主卧/窗户/power",
+            "value": "on"
+          }
+        ]
+      }
+    },
+    {
+      "text": "好的我知道了",
+      "neural_prediction": {
+        "goals": {
+          "主卧/窗户/power": "on"
+        },
+        "paused": [],
+        "focus": "主卧/窗户/power",
+        "ood_pending": false,
+        "operation": "retain"
+      },
+      "persistent_tree": {
+        "goals": {
+          "客厅/灯/power": "on",
+          "主卧/窗户/power": "on"
+        },
+        "paused": [],
+        "focus": "主卧/窗户/power",
+        "ood_pending": false,
+        "pending_ood": [],
+        "revision": 3
+      },
+      "commit": {
+        "status": "accepted_proposal_not_device_execution",
+        "changes": []
+      }
+    },
+    {
+      "text": "全部撤回",
+      "neural_prediction": {
+        "goals": {},
+        "paused": [],
+        "focus": null,
+        "ood_pending": false,
+        "operation": "clear"
+      },
+      "persistent_tree": {
+        "goals": {},
+        "paused": [],
+        "focus": null,
+        "ood_pending": false,
+        "pending_ood": [],
+        "revision": 4
+      },
+      "commit": {
+        "status": "accepted_proposal_not_device_execution",
+        "changes": [
+          {
+            "op": "clear"
+          }
+        ]
+      }
+    }
+  ]
+}

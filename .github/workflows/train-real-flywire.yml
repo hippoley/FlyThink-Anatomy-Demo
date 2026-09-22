@@ -16,7 +16,15 @@ jobs:
       - run: python scripts/train_flywire.py --download --neurons 512 --epochs 30
       - name: Restore and verify inference
         run: python scripts/infer_flywire.py '改成主卧的窗户' --history '打开客厅窗户'
+      - name: Sequential state training and matched controls
+        run: python scripts/train_flywire_state.py --epochs 40
+      - name: State commit and causal gradient tests
+        run: python -m unittest discover -s tests -p 'test_flywire_state.py'
+      - name: Verify sequential checkpoint restore
+        run: python scripts/infer_flywire_state.py '打开客厅灯' '主卧窗户打开' '好的我知道了' '全部撤回'
       - uses: actions/upload-artifact@v4
         with:
           name: real-flywire-subgraph-checkpoint-and-evidence
-          path: artifacts/flywire/
+          path: |
+            artifacts/flywire/
+            artifacts/flywire-state/

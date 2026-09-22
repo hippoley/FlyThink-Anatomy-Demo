@@ -1,4 +1,6 @@
 data/flywire/
 artifacts/flywire/*.pt
+artifacts/flywire-state/*.pt
+artifacts/flywire-state/corpus.json
 __pycache__/
 _site/

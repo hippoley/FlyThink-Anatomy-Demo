@@ -1,5 +1,9 @@
 # Real FlyWire local training
 
+For the next sequential state experiment and matched topology controls, see
+[FLYWIRE_STATE_TRAINING.md](FLYWIRE_STATE_TRAINING.md). It records the failed
+state-learning acceptance gates as well as the separate persistence fix.
+
 The core experimental path is `scripts/train_flywire.py`. The existing browser's
 216-unit random recurrent network is a separate legacy demo and is not evidence
 of real connectome training. This trainer is not yet connected to the browser.
