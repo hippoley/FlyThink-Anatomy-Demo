@@ -43,4 +43,5 @@ test('whole-home leave intent expands to multiple rooms and objects',()=>{
   assert.ok(new Set(s.needs.map(x=>x.area)).size>=5);
   assert.ok(s.needs.some(x=>x.entity==='light'));
   assert.ok(s.needs.some(x=>x.entity==='window'));
+  assert.ok(s.needs.some(x=>x.area==='客厅'&&x.entity==='window'&&x.model_code==='CWDS-CA01'&&x.module_code==='motor_1'));
 });

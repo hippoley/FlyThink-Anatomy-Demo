@@ -368,6 +368,7 @@ const HOME_INVENTORY={
   '厨房':{light:'LIGHT_GROUP',air:'KZKA-M001'},'卫生间':{light:'LIGHT_GROUP'},
   '餐厅':{light:'DQDZ-Y150'},'玄关':{light:'LIGHT_GROUP'},'阳台':{light:'LIGHT_GROUP',window:'NKHD-ZB01'}
 };
+const HOME_INVENTORY_MODULES={'客厅':{window:'motor_1',screen:'motor_2'}};
 function areasInText(text){
   const raw=String(text||''),hits=[];
   for(const [alias,area] of Object.entries(AREA_ALIASES)){const at=raw.indexOf(alias);if(at>=0)hits.push({at,alias,area})}
@@ -426,7 +427,7 @@ function scenarioClauses(text){
 function composeGoalScenario(text){
   const raw=String(text||''),explicitAreas=areasInText(raw),wholeHome=/全屋|整个家|所有房间|家里都|其他房间/.test(raw);
   const clauses=scenarioClauses(raw),needs=[],evidence=[],constraints=[];
-  const push=(clause,need,why)=>{const area=need.area||clause.area||state.lastArea||'客厅';needs.push({...need,area,model_code:need.model_code||HOME_INVENTORY[area]?.[need.entity]||null});evidence.push({area,signal:why,text:clause.text})};
+  const push=(clause,need,why)=>{const area=need.area||clause.area||state.lastArea||'客厅';needs.push({...need,area,model_code:need.model_code||HOME_INVENTORY[area]?.[need.entity]||null,module_code:need.module_code||HOME_INVENTORY_MODULES[area]?.[need.entity]||null});evidence.push({area,signal:why,text:clause.text})};
   for(const clause of clauses){
     const t=clause.text,forbidWindow=/不要|别|不能|不想|禁止/.test(t)&&/开窗|窗.*开/.test(t);
     if(forbidWindow)constraints.push({area:clause.area,entity:'window',operation:'open',type:'forbid',source:t});
@@ -517,6 +518,7 @@ function scoreCapability(c,need,goal,text){
   if(entity.entity===need?.entity){score+=5;reasons.push('entity_match')}
   else if(entity.entity!=='other'){score-=1.5;reasons.push('entity_mismatch')}
   if(need?.model_code){if(c.model===need.model_code){score+=12;reasons.push('room_inventory_model')}else{score-=3;reasons.push('different_inventory_model')}}
+  if(need?.module_code){if(c.module===need.module_code){score+=9;reasons.push('room_inventory_module')}else{score-=4;reasons.push('different_inventory_module')}}
   const productHints=(need?.product_hints||[]).map(x=>String(x).toLowerCase());
   if(productHints.some(h=>hay.includes(h))){score+=5;reasons.push('product_hint')}
   const lex=gramSimilarity((text||'')+' '+(goal||''),hay);
