@@ -1381,7 +1381,7 @@ function parseUtterance(text){
   const isNegation=/不要打开|不要开启|别把.*打开|先别动|不要动/.test(raw);
   const isResume=/继续刚才|继续之前|恢复刚才|接着刚才/.test(raw);
   const isInterrupt=/先别管|先放一放|先暂停/.test(raw);
-  const correction=/还是|改成|改为|换成|开一点|关一点|不对|说反了/.test(raw);
+  const correction=/还是|改成|改为|换成|开一点|关一点|不对|说反了/.test(raw)||/^(?:再)?(?:调到|调成|设为|设置为)/.test(raw);
   const inherit=/那个|它|再|做一样的|照刚才/.test(raw);
   if(isCancel) return {type:'cancel'};
   if(isNegation) return {type:'negation',nodes:[newNode('Reject',state.focus||heads.entity.label,{negated_operation:heads.operation.label,area:canonicalArea(raw)||state.lastArea})]};
@@ -1411,6 +1411,7 @@ function parseUtterance(text){
     let entity=null,intent=null,slots={};
     const explicitArea=canonicalArea(p),focusedBefore=focusedTreeNode();
     const area=explicitArea||previousArea||(inherit&&focusedBefore?.area)||state.lastArea||'客厅';
+    const percent=p.match(/(?:百分之\s*)?(\d{1,3})\s*%?/),kelvin=p.match(/(\d{4})\s*[kK]/);
     if(/外窗|窗户|窗扇|开窗器/.test(p))entity='window';
     else if(/灯|彩灯|RGB/.test(p))entity='light';
     else if(/温度|空调/.test(p))entity='climate';
@@ -1419,7 +1420,6 @@ function parseUtterance(text){
     else if(correction&&focusedBefore?.entity)entity=focusedBefore.entity;
 
     if(!explicitArea&&(inherit||correction)&&focusedBefore?.area&&!previousArea)state.lastArea=focusedBefore.area;
-    const percent=p.match(/(?:百分之\s*)?(\d{1,3})\s*%?/),kelvin=p.match(/(\d{4})\s*[kK]/);
     if(/做一样的|照刚才/.test(p)){intent=previousIntent||intentFromLastAction();}
     else if(/查询|现在|多少|开着吗|关着吗|温度/.test(p) && entity==='climate'){intent='QueryState';slots.property='temperature';}
     else if(/查询|状态|开着吗|关着吗/.test(p)){intent='QueryState';slots.property='state';}
