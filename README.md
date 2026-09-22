@@ -202,3 +202,9 @@ The Thing Model Inspector now searches all 794 indexed capabilities by model, mo
 The shared execution gate rejects missing write values, non-finite numbers, fractional integers, integer overflow, type/enum/range violations and event commands. The compact index does not include service input or nested-value schemas, so these operations are blocked pending full schema validation. Read permission checks do not require a write value.
 
 Run `python scripts/build_capability_index.py` followed by `node --test tests/capability-gate.test.cjs`. Tests cover all 794 capability rows and verify rejected writes cannot mutate session device values.
+
+## Guided conversation entry
+
+The default screen has one scenario selector, one conversation draft and one Send action. Device changes and a suggested next utterance appear beside the conversation. Only schema-validated session changes populate the result cards; blocked or escalated turns are explained without claiming live device execution.
+
+Turn evidence appears after the first result. Corpus mutation, multi-turn composition, batch regression, capability inspection and neural/anatomy views are grouped under a closed Research Tools disclosure. Changing the scenario or choosing Restart clears the session and restores the corresponding first utterance.
