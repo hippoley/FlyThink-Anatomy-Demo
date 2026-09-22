@@ -208,3 +208,7 @@ Run `python scripts/build_capability_index.py` followed by `node --test tests/ca
 The default screen has one scenario selector, one conversation draft and one Send action. Device changes and a suggested next utterance appear beside the conversation. Only schema-validated session changes populate the result cards; blocked or escalated turns are explained without claiming live device execution.
 
 Turn evidence appears after the first result. Corpus mutation, multi-turn composition, batch regression, capability inspection and neural/anatomy views are grouped under a closed Research Tools disclosure. Changing the scenario or choosing Restart clears the session and restores the corresponding first utterance.
+
+Every result now includes a compact, automatically animated neural layer: the left side shows the 216-unit developmental recurrent state and the right side projects the strongest units onto real FlyWire coordinate roots. The coordinate projection is explicitly separated from measured neural activity.
+
+The public registry embeds all 46 original JSON schemas from `全产品物模型定义(8).rar` (archive SHA-256 `3a5e67efd5847d70761076506500d001cbed36b1d19dca60ed286eb72ae5d60c`). Run `python scripts/build_full_thing_registry.py` to verify 46/46 schema completeness; pass `--source-dir` only when rebuilding from the extracted archive.

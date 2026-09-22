@@ -32,7 +32,7 @@ jobs:
           s=Path('index.html').read_text(encoding='utf-8')
           js=s.split('<script>',1)[1].rsplit('</script>',1)[0]
           Path('/tmp/flythink-app.js').write_text(js,encoding='utf-8')
-          required=['Corpus Mutation Lab','Multi-turn Corpus Composer','Multi-turn Regression Lab','Persistent state tree','Grounding Decision Trace','resolutionGrid','goalSemanticReadout','goal_training','train_only_goal_semantic_readout','goal_semantic_readout','capabilityCandidateForNode','capability_candidates','contract_derived_goal_plan_not_hidden_ground_truth','hybrid-state-goal-interrupt','goal_plan_contract','capability_schema_missing','stateTree','rawStateTree','intentTree','treePatchNode','runComposer','runBenchmark','diagnoseBenchmarkTurn','instance_grounding','state_tree_loss','duplicate_state_node','turnComposer','composerResults','benchCases','runAsSequence','semanticMatches','neuralBridge','projection_pool','learnedDecisionHeads','learned_compact_dialogue_decision_model','neural','brain']
+          required=['Corpus Mutation Lab','Multi-turn Corpus Composer','Multi-turn Regression Lab','Persistent state tree','Grounding Decision Trace','resolutionGrid','goalSemanticReadout','goal_training','train_only_goal_semantic_readout','goal_semantic_readout','capabilityCandidateForNode','capability_candidates','contract_derived_goal_plan_not_hidden_ground_truth','hybrid-state-goal-interrupt','goal_plan_contract','capability_schema_missing','stateTree','rawStateTree','intentTree','treePatchNode','runComposer','runBenchmark','diagnoseBenchmarkTurn','instance_grounding','state_tree_loss','duplicate_state_node','turnComposer','composerResults','benchCases','runAsSequence','semanticMatches','neuralBridge','projection_pool','learnedDecisionHeads','learned_compact_dialogue_decision_model','neural','brain','turnFlyCanvas','drawTurnFly']
           missing=[x for x in required if x not in s]
           assert not missing, missing
           PY
@@ -68,6 +68,7 @@ jobs:
               },ensure_ascii=False),encoding='utf-8')
           PY
           python scripts/build_capability_index.py
+          python scripts/build_full_thing_registry.py
           node --test tests/capability-gate.test.cjs
           python - <<'PY'
           import json
@@ -82,6 +83,10 @@ jobs:
           assert Counter(r[4] for r in ci['rows'])==Counter({'p':664,'s':55,'e':75})
           meta=json.loads(Path('_site/capability-index-build-meta.json').read_text(encoding='utf-8'))
           assert meta['capabilities']==794 and meta['models']==46
+          registry=json.loads(Path('_site/real-home-thing-model-registry.json').read_text(encoding='utf-8'))
+          assert registry['full_schema_count']==46
+          assert len(registry['full_models'])==46
+          assert {m['model_code'] for m in registry['model_index']}==set(registry['full_models'])
           print('verified global capability index: 46 models / 794 capabilities')
           PY
 
@@ -184,4 +189,3 @@ jobs:
           git commit -m "Publish FlyThink anatomy demo"
           git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
           git push --force origin gh-pages
-

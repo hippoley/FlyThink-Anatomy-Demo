@@ -1,6 +1,7 @@
 const {test}=require('node:test');
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
+const zlib=require('node:zlib');
 const vm=require('node:vm');
 const html=fs.readFileSync('index.html','utf8');
 const section=(start,end)=>html.slice(html.indexOf(start),html.indexOf(end,html.indexOf(start)));
@@ -35,6 +36,18 @@ test('bool/string/enum remain strictly typed',()=>{
 });
 const index=JSON.parse(fs.readFileSync('_site/capability-index.json','utf8'));
 const caps=index.rows.map(r=>Object.fromEntries(index.columns.map((k,i)=>[k,r[i]])));
+test('public registry contains all 46 original schemas',()=>{
+ const encoded=fs.readFileSync('data/real-home-thing-model-registry.json.gz.b64','utf8').replace(/\s/g,'');
+ const registry=JSON.parse(zlib.gunzipSync(Buffer.from(encoded,'base64')));
+ assert.equal(registry.full_schema_count,46);
+ assert.equal(Object.keys(registry.full_models).length,46);
+ assert.deepEqual(new Set(registry.model_index.map(x=>x.model_code)),new Set(Object.keys(registry.full_models)));
+ for(const [code,schema] of Object.entries(registry.full_models)){
+   assert.ok(schema.id,code);
+   assert.ok(schema.title,code);
+   assert.equal(typeof schema.modules,'object',code);
+ }
+});
 test('all 794 real capabilities deny missing writes and schema-less service execution',()=>{
  assert.equal(caps.length,794);
  for(const c of caps){
