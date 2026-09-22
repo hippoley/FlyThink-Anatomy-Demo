@@ -253,7 +253,7 @@ const GOAL_PLAN_TRUTH='contract_derived_goal_plan_not_hidden_ground_truth';
 const state={turn:0,taskSeq:0,nodeSeq:0,tasks:[],activeTask:null,paused:[],revisions:[],focus:null,focusKey:null,lastArea:'客厅',lastAction:null,thingValues:{},intentTree:{},utteranceHistory:[],lastDelta:null};
 let DATA=null,NEURAL=null,LEARNED=null,THINGREG=null,CAPINDEX=null,neuralState=[],semanticScores=[],projectedRoots=[],unitToRoot=[],decisionHeads=null,currentCorpusCase=null,composerTurns=[],composerResults=[],composerSeq=0,composerDragId=null,composerInspectIndex=null,benchmarkScenarios=[],benchmarkResults=[],benchmarkRunSeq=0,essenceBatch=[],essenceResults=[],rot={x:-.18,y:.31},zoom=1.55,drag=null,hits=[],neuralHits=[],selected=null,pulseT=0,pulseRAF=null,pulseStart=0,pulseUntil=0,pulseSpeed=1,pulsePaused=false,pulseBaseReal=0,pulseBaseVirtual=0;
 
-function clone(x){return JSON.parse(JSON.stringify(x))}
+function clone(x){return x===undefined?undefined:JSON.parse(JSON.stringify(x))}
 function normalizeThingRegistry(raw){
   if(raw?.models)return raw;
   const full=raw?.full_models||{},models={};
@@ -667,7 +667,7 @@ function jevShapedContract(text,h){
   const statePayload={
     utterance:String(text||''),turn:state.turn,focus:state.focus||null,
     active_task:state.activeTask||null,paused_tasks:[...state.paused],
-    world:clone(state.world),bounded_domain:'home_thing_model'
+    world:clone(state.world||{thing_values:state.thingValues||{},intent_tree:state.intentTree||{}}),bounded_domain:'home_thing_model'
   };
   const questions={
     entity:{type:'choice',instructions:'Which bounded home entity is targeted?',criteria:{window:'window/opening',light:'lighting',screen:'insect screen',climate:'climate/query',none:'no grounded entity'}},
