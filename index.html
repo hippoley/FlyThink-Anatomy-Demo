@@ -1779,7 +1779,8 @@ function displayBindingValue(b,value){
   const entry=(b?.enum||[]).find(x=>x.value===value);
   if(entry?.desc||entry?.code)return String(entry.desc||entry.code);
   if(typeof value==='boolean')return value?'开启':'关闭';
-  return String(value)+(b?.unit||'');
+  const unit={percentage:'%',percent:'%',celsius:'°C',kelvin:' K'}[String(b?.unit||'').toLowerCase()]||(b?.unit||'');
+  return String(value)+unit;
 }
 function friendlyTurn(exec,d){
   const changes=(exec.outputs||[]).filter(o=>o.worldDelta);
