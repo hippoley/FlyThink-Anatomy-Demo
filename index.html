@@ -179,12 +179,24 @@ details{margin-top:14px;border:1px solid #202b38;border-radius:14px;background:#
 <div class="registryLine"><span class="registryStat" id="registryModels">46 models</span><span class="registryStat" id="registryProps">— properties</span><span class="registryStat" id="registryServices">— services</span><span class="registryStat" id="registryEvents">— events</span><span class="registryStat" id="capabilityIndexStat">capability index loading…</span></div>
 <div class="archiveMeta" id="registryTruth">source archive SHA256: loading…</div>
 <div class="modelBrowser">
-  <div class="sectiontitle"><h3>Full Thing Model Inspector</h3><span>all definitions come from uploaded archive</span></div>
+  <div class="sectiontitle"><h3>Thing Model Inspector</h3><span>all definitions come from uploaded archive</span></div>
   <div class="modelBrowserTop">
-    <div><select id="modelSelect" class="modelSelect"></select><div class="archiveMeta">选择任意真实产品型号查看完整原始 JSON；执行后会自动跳到实际命中的型号。</div></div>
+    <div><select id="modelSelect" class="modelSelect"></select><div class="archiveMeta">选择型号检查能力与定义；只有具备原始 schema 的型号才展示完整 JSON。</div></div>
     <div id="modelFacts" class="modelFacts"></div>
   </div>
-  <details><summary>Open full original model JSON</summary><pre id="modelRaw" class="modelRaw">{}</pre></details>
+  <div class="registryLine">
+    <input id="capSearch" class="modelSelect" style="flex:1" aria-label="Search all capabilities" placeholder="搜索全部 794 项能力：型号、设备、属性、描述…">
+    <select id="capKind" class="modelSelect" style="width:auto" aria-label="Capability type"><option value="">全部类型</option><option value="p">属性</option><option value="s">服务</option><option value="e">事件</option></select>
+  </div>
+  <div id="capResults" class="modelRaw" style="max-height:220px" role="list"></div>
+  <div id="capDetail" class="bindingMeta"></div>
+  <div class="registryLine">
+    <select id="capMode" class="modelSelect" style="width:auto" aria-label="Validation operation"><option value="write">写入校验</option><option value="read">读取校验</option><option value="execute">服务校验</option></select>
+    <input id="capValue" class="modelSelect" style="flex:1" aria-label="JSON value" placeholder='JSON 值，例如 30、true、"文本"'>
+    <button id="capValidate" class="btn" type="button">检查约束</button>
+  </div>
+  <div id="capVerdict" class="archiveMeta" role="status">仅检查约束，不发送设备指令。服务参数和嵌套类型缺少完整 schema 时拦截。</div>
+  <details><summary>Open available schema / capability projection</summary><pre id="modelRaw" class="modelRaw">{}</pre></details>
 </div></section>
 
 <section class="reasoning">
@@ -405,17 +417,37 @@ function classifyCapabilityEntity(c){
   return {entity:best,score};
 }
 function capabilityValueCheck(c,value,mode='write'){
-  const ops=c?.ops||[];
-  if(mode&&mode!=='execute'&&!ops.includes(mode))return {ok:false,reason:mode+'_permission_missing'};
-  if(mode==='execute'&&c?.kind!=='s')return {ok:false,reason:'not_executable_service'};
-  if(value===undefined)return {ok:true,reason:'no_value_constraint'};
-  const dt=String(c?.dataType||'').toLowerCase();
-  if(dt==='bool'&&typeof value!=='boolean')return {ok:false,reason:'datatype_bool_mismatch'};
-  if(/int|float|double|number/.test(dt)&&typeof value!=='number')return {ok:false,reason:'datatype_number_mismatch'};
-  const enums=(c?.enum||[]).map(x=>x?.value);
-  if(enums.length&&!enums.some(x=>x===value))return {ok:false,reason:'enum_value_not_allowed'};
-  if(c?.min!==null&&c?.min!==undefined&&Number(value)<Number(c.min))return {ok:false,reason:'below_minimum'};
-  if(c?.max!==null&&c?.max!==undefined&&Number(value)>Number(c.max))return {ok:false,reason:'above_maximum'};
+  const reject=reason=>({ok:false,reason});
+  if(!c)return reject('capability_missing');
+  if(!['read','write','execute'].includes(mode))return reject('operation_unknown');
+  if(c.kind==='e')return reject('event_not_command');
+  // The compact index omits service input and nested value schemas: never infer them.
+  if(mode==='execute')return reject(c.kind==='s'?'service_input_schema_unavailable':'not_executable_service');
+  if(c.kind!=='p')return reject('not_property');
+  if(!(c.ops||[]).includes(mode))return reject(mode+'_permission_missing');
+  if(mode==='read')return {ok:true,reason:'read_permission_satisfied'};
+  if(value===undefined||value===null)return reject('write_value_required');
+  const dt=String(c.dataType||'').toLowerCase();
+  if(dt==='bool'){
+    if(typeof value!=='boolean')return reject('datatype_bool_mismatch');
+  }else if(/^(u?int(8|16|32|64)?|float|double|number)$/.test(dt)){
+    if(typeof value!=='number'||!Number.isFinite(value))return reject('datatype_finite_number_required');
+    if(/int/.test(dt)&&!Number.isSafeInteger(value))return reject('datatype_integer_required');
+    const integer=dt.match(/^(u?)int(8|16|32|64)$/);
+    if(integer){
+      const bits=Number(integer[2]),unsigned=!!integer[1];
+      const lo=unsigned?0:-(2**(bits-1)),hi=2**(unsigned?bits:bits-1)-1;
+      if(value<lo||value>hi)return reject('datatype_integer_range');
+    }
+  }else if(dt==='string'){
+    if(typeof value!=='string')return reject('datatype_string_mismatch');
+  }else return reject('complete_value_schema_unavailable');
+  const enums=(c.enum||[]).map(x=>x?.value);
+  if(enums.length&&!enums.some(x=>x===value))return reject('enum_value_not_allowed');
+  if(typeof value==='number'){
+    if(c.min!==null&&c.min!==undefined&&value<Number(c.min))return reject('below_minimum');
+    if(c.max!==null&&c.max!==undefined&&value>Number(c.max))return reject('above_maximum');
+  }
   return {ok:true,reason:'constraints_satisfied'};
 }
 function semanticPropertyAliases(need){
@@ -1620,7 +1652,7 @@ function bindingForQuery(node,route){
 function capabilityById(id){return CAPINDEX?.capabilities?.find(c=>c.capability_id===id)||null}
 function capabilityCandidateForNode(n){
   if(n?.slots?.capability_id){
-    const c=capabilityById(n.slots.capability_id),check=capabilityValueCheck(c,n.slots?.value,n.intent==='QueryState'?'read':'write');
+    const c=capabilityById(n.slots.capability_id),check=capabilityValueCheck(c,n.slots?.value,n.intent==='QueryState'?'read':(c?.kind==='s'?'execute':'write'));
     return {
       entity:n?.target?.entity||null,property:n?.slots?.property||null,operation:n?.intent||null,value:n?.slots?.value,
       action:c?'capability:'+c.capability_id:null,route:check.ok?(n.intent==='QueryState'?'THING_MODEL_QUERY':'THING_MODEL_EXECUTE'):'CLARIFY',
@@ -1768,6 +1800,31 @@ function renderBindingCard(o){
     'dialogue area: '+escapeHtml(b.dialogue_area||'—')+'\ndialogue entity: '+escapeHtml(b.dialogue_entity_name||'—')+'\narchive sha256: '+escapeHtml(b.source_archive_sha256)+
     '</div><span class="sourceBadge">REAL UPLOADED THING MODEL</span><span class="bindingStatus '+(allowed?'':'warn')+'">'+escapeHtml(o.grounding_status||'UNKNOWN')+'</span><div class="headSmall">'+escapeHtml(o.grounding_reason||'')+'</div>'+delta+query+'</div>';
 }
+let inspectedCapabilityId=null;
+function renderCapabilitySearch(){
+  const query=$('#capSearch').value.trim().toLowerCase(),kind=$('#capKind').value;
+  const matches=(CAPINDEX?.capabilities||[]).filter(c=>(!kind||c.kind===kind)&&(!query||capabilityText(c).includes(query)));
+  $('#capResults').innerHTML='<div>'+matches.length+' matching capabilities</div>'+matches.map(c=>'<button type="button" class="btn" style="display:block;width:100%;text-align:left;margin:5px 0" data-cap-id="'+escapeHtml(c.capability_id)+'">'+escapeHtml(c.model+' / '+c.module+' / '+c.code+' · '+c.title+' · '+({p:'属性',s:'服务',e:'事件'}[c.kind]))+'</button>').join('');
+}
+function inspectCapability(id){
+  const c=capabilityById(id);if(!c)return;
+  inspectedCapabilityId=id;
+  $('#capDetail').textContent=JSON.stringify({schema_path:id,title:c.title,description:c.desc,operations:c.ops,dataType:c.dataType,enum:c.enum,minimum:c.min,maximum:c.max,unit:c.unit},null,2);
+  $('#capMode').value=c.kind==='s'?'execute':(c.ops||[]).includes('write')?'write':'read';
+  $('#capValue').value='';
+  $('#capVerdict').textContent='已选择 '+id+'。输入 JSON 值检查约束。';
+  if(THINGREG?.models?.[c.model]){$('#modelSelect').value=c.model;renderModelInspector(c.model);}
+}
+function validateInspectedCapability(){
+  const c=capabilityById(inspectedCapabilityId),mode=$('#capMode').value;
+  if(!c){$('#capVerdict').textContent='请先选择一项能力。';return;}
+  let value;
+  if(mode!=='read'&&$('#capValue').value.trim()){
+    try{value=JSON.parse($('#capValue').value)}catch{ $('#capVerdict').textContent='BLOCKED · invalid_json_value';return; }
+  }
+  const check=capabilityValueCheck(c,value,mode);
+  $('#capVerdict').textContent=(check.ok?'PASS':'BLOCKED')+' · '+check.reason+' · 仅 schema 检查，未执行';
+}
 function registryStats(){
   const ms=Object.values(THINGREG?.models||{});
   return ms.reduce((a,m)=>{a.properties+=m.counts?.properties||0;a.services+=m.counts?.services||0;a.events+=m.counts?.events||0;return a},{properties:0,services:0,events:0});
@@ -1802,6 +1859,7 @@ function populateModelBrowser(){
   $('#registryEvents').textContent=stats.events+' events';
   $('#capabilityIndexStat').textContent=(CAPINDEX?.count||CAPINDEX?.capabilities?.length||0)+' global capabilities';
   $('#registryTruth').innerHTML='truth: <strong>'+escapeHtml(THINGREG.truth)+'</strong> · source archive SHA256: <strong>'+escapeHtml(THINGREG.source_archive_sha256)+'</strong>';
+  renderCapabilitySearch();
   const first=models[0]?.model_code;if(first){$('#modelSelect').value=first;renderModelInspector(first)}
 }
 
@@ -2004,6 +2062,10 @@ $('#turnComposer').addEventListener('dragover',e=>{e.preventDefault();const card
 $('#turnComposer').addEventListener('drop',e=>{e.preventDefault();const card=e.target.closest('.turnCard');if(!card||!composerDragId||card.dataset.turnId===composerDragId)return;const from=composerTurns.findIndex(x=>x.id===composerDragId),to=composerTurns.findIndex(x=>x.id===card.dataset.turnId);if(from<0||to<0)return;const [m]=composerTurns.splice(from,1);composerTurns.splice(to,0,m);composerResults=[];renderTurnComposer();renderComposerResults();});
 $('#buildEssence').addEventListener('click',buildEssenceBatch);$('#runEssence').addEventListener('click',runEssenceBatch);$('#essenceLabel').addEventListener('change',buildEssenceBatch);$('#essenceMutation').addEventListener('change',buildEssenceBatch);$('#essenceCount').addEventListener('change',buildEssenceBatch);$('#essenceRows').addEventListener('click',e=>{const b=e.target.closest('[data-load-essence]');if(b)loadEssenceCase(b.dataset.loadEssence)});$('#phaseReplay').addEventListener('click',startPulse);$('#phasePause').addEventListener('click',togglePulsePause);$('#phaseSpeed').addEventListener('change',e=>setPulseSpeed(e.target.value));document.querySelectorAll('.phaseChip').forEach((el,i)=>{el.style.cursor='pointer';el.addEventListener('click',()=>showPropagationPhase(i))});
 $('#generateBench').addEventListener('click',generateBenchmark);$('#runBench').addEventListener('click',runBenchmark);$('#benchCases').addEventListener('click',e=>{const b=e.target.closest('[data-load-bench]');if(b)loadBenchmarkIntoComposer(b.dataset.loadBench)});
+$('#capSearch').addEventListener('input',renderCapabilitySearch);
+$('#capKind').addEventListener('change',renderCapabilitySearch);
+$('#capResults').addEventListener('click',e=>{const b=e.target.closest('[data-cap-id]');if(b)inspectCapability(b.dataset.capId)});
+$('#capValidate').addEventListener('click',validateInspectedCapability);
 $('#modelSelect').addEventListener('change',e=>renderModelInspector(e.target.value));
 $('#bridgeRows').addEventListener('click',e=>{const row=e.target.closest('[data-bridge-root]');if(row)selectProjectedRoot(row.dataset.bridgeRoot)});
 const nc=$('#neural');nc.addEventListener('click',e=>{const r=nc.getBoundingClientRect(),px=e.clientX-r.left,py=e.clientY-r.top;let best=null,bd=1e9;for(const h of neuralHits){const d=Math.hypot(h.x-px,h.y-py);if(d<h.r&&d<bd){best=h;bd=d}}if(best){const root=unitToRoot[best.unit];if(root)selectProjectedRoot(root)}});

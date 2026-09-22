@@ -68,6 +68,7 @@ jobs:
               },ensure_ascii=False),encoding='utf-8')
           PY
           python scripts/build_capability_index.py
+          node --test tests/capability-gate.test.cjs
           python - <<'PY'
           import json
           from collections import Counter
@@ -183,3 +184,4 @@ jobs:
           git commit -m "Publish FlyThink anatomy demo"
           git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
           git push --force origin gh-pages
+

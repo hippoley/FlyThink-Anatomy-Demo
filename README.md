@@ -193,3 +193,12 @@ The complete training/runtime/benchmark implementation remains separate from thi
 ---
 
 **FlyThink is a research instrument, not a claim that a fly connectome has already become a language model.**
+
+
+## Capability inspection and execution gate
+
+The Thing Model Inspector now searches all 794 indexed capabilities by model, module, title and description. Select a result to inspect its permissions, type, enum and range, then check a JSON value without executing a command. Original JSON is shown only when available; other entries explicitly show the capability projection.
+
+The shared execution gate rejects missing write values, non-finite numbers, fractional integers, integer overflow, type/enum/range violations and event commands. The compact index does not include service input or nested-value schemas, so these operations are blocked pending full schema validation. Read permission checks do not require a write value.
+
+Run `python scripts/build_capability_index.py` followed by `node --test tests/capability-gate.test.cjs`. Tests cover all 794 capability rows and verify rejected writes cannot mutate session device values.
