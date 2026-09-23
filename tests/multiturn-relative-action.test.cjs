@@ -80,3 +80,24 @@ test('interaction events persist locally and clear only on explicit reset',()=>{
   ctx.clearPersistedSession();
   assert.equal(ctx.readPersistedSession(),null);
 });
+
+test('wrong result retains its original trace and a later turn is only a candidate correction',()=>{
+  const values=new Map();
+  const localStorage={setItem:(k,v)=>values.set(k,String(v)),getItem:k=>values.get(k)||null,removeItem:k=>values.delete(k)};
+  const elements={
+    '#sceneSelect':{value:'roomGoals'},'#failureCount':{textContent:''},
+    '#markWrong':{textContent:'',disabled:false}
+  };
+  const original={event_id:'event:1',turn_id:'turn:2',text:'开灯',at:'2026-09-23T00:00:00.000Z',before:{focusKey:'书房::书房外窗'},delta:{op:'CREATE_TASK'},reply:'书房主灯 · 电源：开启',world_deltas:[{key:'书房主灯.power',after:true}]};
+  const state={sessionEvents:[original],lastEventId:'event:1',failureEvents:[]};
+  const c=vm.createContext({window:{localStorage},state,$:s=>elements[s]||null,Date,JSON,clone:x=>JSON.parse(JSON.stringify(x))});
+  vm.runInContext("const SESSION_STORAGE_KEY='flythink.runtime.session.v1',FAILURE_STORAGE_KEY='flythink.runtime.failures.v1';"+source('function browserSessionStorage(', 'function restorePersistedSession('),c);
+  c.markLastResultWrong();
+  assert.equal(c.state.failureEvents[0].reply,'书房主灯 · 电源：开启');
+  assert.equal(c.state.failureEvents[0].before.focusKey,'书房::书房外窗');
+  c.linkPendingCorrection('客厅的灯关掉');
+  assert.equal(c.state.failureEvents[0].correction_candidate.label,'candidate_not_gold');
+  const second=vm.createContext({window:{localStorage},state:{failureEvents:[]},$:s=>elements[s]||null,Date,JSON});
+  vm.runInContext("const SESSION_STORAGE_KEY='flythink.runtime.session.v1',FAILURE_STORAGE_KEY='flythink.runtime.failures.v1';"+source('function browserSessionStorage(', 'function restorePersistedSession('),second);
+  assert.equal(second.loadFailureLibrary()[0].reply,'书房主灯 · 电源：开启');
+});

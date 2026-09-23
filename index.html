@@ -108,7 +108,7 @@ measured_flywire_coordinate_derivative
 
 Blue anatomy mapping:
 developmental projection, not measured FlyWire activity.\n\nThing Model archive:\n46/46 original JSON schemas loaded from the fixed uploaded archive.\nEvery executable binding is validated against the loaded schema at runtime.</div></div>
-</div></details></div></details><details class="disclosure" id="researchTools"><summary>研究工具<span>语料编排、批量测试、模型检查与神经视图</span></summary><div class="disclosureBody"><details class="disclosure" id="dialogueTools"><summary>编辑语料与多轮脚本<span></span></summary><div class="disclosureBody"><div class="corpusStudio">
+</div></details></div></details><details class="disclosure" id="researchTools"><summary>研究工具<span>语料编排、批量测试、模型检查与神经视图</span></summary><div class="disclosureBody"><button id="exportFailures" class="quietLink" type="button">导出错误样本 JSONL</button><span id="exportFailuresStatus" class="feedbackCount" role="status"></span><details class="disclosure" id="dialogueTools"><summary>编辑语料与多轮脚本<span></span></summary><div class="disclosureBody"><div class="corpusStudio">
 <div class="corpusTop"><div><div class="corpusTitle">Dialogue Essence · Corpus Mutation Lab</div><div class="corpusMeta" id="corpusMeta">loading train-only exemplars…</div><div class="corpusMeta" style="margin-top:3px">NEGATION · MULTI-INTENT · NER/AREA · COREFERENCE · CROSS-ROOM · REVISION · INTERRUPTION · SCENARIO · OOD</div></div><div class="presets" style="margin:0"><button class="btn mut" id="sampleCorpus" type="button">抽一条语料</button></div></div>
 <p class="toolHint">这些工具会修改主对话框中的草稿。修改后返回上方发送，继续同一段对话。</p><a class="quietLink" href="#input">返回对话草稿 ↑</a>
 <div class="mutationBar">
@@ -302,8 +302,8 @@ function updateFocusFromNodes(nodes){
   if(n){state.focus=n.target.entity;state.focusKey=instanceKey(n);if(n.slots?.area)state.lastArea=n.slots.area}
 }
 function focusedTreeNode(){
-  if(state.focusKey&&state.intentTree[state.focusKey])return state.intentTree[state.focusKey];
-  const vals=Object.values(state.intentTree);return vals.length?vals[vals.length-1]:null;
+  if(state.focusKey&&state.intentTree[state.focusKey]?.status!=='pending_clarification'&&state.intentTree[state.focusKey]?.status!=='removed')return state.intentTree[state.focusKey];
+  const vals=Object.values(state.intentTree).filter(x=>x.status!=='pending_clarification'&&x.status!=='removed');return vals.length?vals[vals.length-1]:null;
 }
 function mergeSemanticNode(base,patch){
   if(!base)return clone(patch);if(!patch)return clone(base);
@@ -316,7 +316,7 @@ function treePatchNode(node,turnId,mode='upsert'){
   existing.area=node.slots?.area||existing.area;existing.entity=node.target.entity||existing.entity;existing.entity_name=node.slots?.entity_name||existing.entity_name;existing.status=node.intent==='Clarify'?'pending_clarification':'active';existing.updated_turn_id=turnId;
   const oldProp=existing.properties[property]||{};
   existing.properties[property]={...oldProp,intent:node.intent,value:node.slots?.value!==undefined?node.slots.value:oldProp.value,slots:{...(oldProp.slots||{}),...(node.slots||{})},node_id:node.node_id,updated_turn_id:turnId};
-  state.intentTree[key]=existing;state.focusKey=key;state.focus=node.target.entity;
+  state.intentTree[key]=existing;if(node.intent!=='Clarify'){state.focusKey=key;state.focus=node.target.entity;}
   state.revisions.push({turn_id:turnId,op:'STATE_TREE_'+mode.toUpperCase(),instance_key:key,property,before,after:clone(existing)});
 }
 function treeRemoveTask(task,turnId,reason='cancel'){
@@ -406,19 +406,27 @@ function ambiguityCandidateNodes(entity=null,area=null){
 }
 function analyzeAmbiguity(text,{scenario=null}={}){
   const raw=String(text||'').trim(),focus=focusedTreeNode(),areas=areasInText(raw);
-  const entity=/外窗|窗户|窗扇|开窗器/.test(raw)?'window':/灯|彩灯|RGB/.test(raw)?'light':/温度|空调/.test(raw)?'climate':/纱窗|防虫网/.test(raw)?'screen':null;
+  const groundedScenario=scenario&&(scenario.inference_source==='compositional_room_object_goal_compiler'||scenario.inference_source==='contract_goal_rule')&&scenario.match>=.8;
+  const entity=/纱窗|防虫网/.test(raw)?'screen':/外窗|窗户|窗扇|开窗器|窗/.test(raw)?'window':/灯|彩灯|RGB/.test(raw)?'light':/温度|空调/.test(raw)?'climate':null;
   const hasAction=/打开|开启|关掉|关上|关闭|调|设置|设为|改成|换成|开一点|关一点|亮一点|暗一点|暖一点|冷一点/.test(raw);
   const pronoun=/它|那个|这个|刚才那个|前一个|后一项/.test(raw),types=[],missing=[],candidates={};
   if(/(?:^|把|将|让)(?:卧室|房间)(?:里|的|那边)?/.test(raw)&&!/(?:主卧|次卧|儿童房|客卧|大卧室)/.test(raw)){
     types.push('ROOM_AMBIGUITY');missing.push('area');candidates.area=['主卧','次卧','儿童房'];
   }
   if(/一会儿|等会儿?|稍后|明天|今晚|过\s*\d+\s*(?:分钟|小时)/.test(raw))types.push('TEMPORAL_AMBIGUITY');
-  const mentionedEntities=[/外窗|窗户|窗扇|开窗器/.test(raw)&&'window',/灯|彩灯|RGB/.test(raw)&&'light',/温度|空调/.test(raw)&&'climate',/纱窗|防虫网/.test(raw)&&'screen'].filter(Boolean);
-  if(mentionedEntities.length<2&&/(?:打开|开启|弄开).*(?:关掉|关上|关闭)|(?:关掉|关上|关闭).*(?:打开|开启|弄开)/.test(raw))types.push('OPERATION_CONFLICT');
+  const mentionedEntities=[/外窗|窗户|窗扇|开窗器|窗/.test(raw)&&'window',/灯|彩灯|RGB/.test(raw)&&'light',/温度|空调/.test(raw)&&'climate',/纱窗|防虫网/.test(raw)&&'screen'].filter(Boolean);
+  const clauses=raw.split(/[，,；;]/).map(x=>x.trim()).filter(Boolean);
+  const compoundActions=clauses.length>1&&clauses.filter(x=>/打开|开启|关掉|关上|关闭|关了|调到/.test(x)).length>1;
+  if(compoundActions&&clauses.some(x=>/打开|开启|关掉|关上|关闭|关了|调到/.test(x)&&(!/灯|窗|空调|新风|纱/.test(x)||!/客厅|主卧|次卧|儿童房|书房|厨房|阳台|卫生间/.test(x)))){
+    types.push('COMPOUND_TARGET_AMBIGUITY');missing.push('clause_target');
+  }else if(mentionedEntities.length<2&&/(?:打开|开启|弄开).*(?:关掉|关上|关闭|关了)|(?:关掉|关上|关闭|关了).*(?:打开|开启|弄开)/.test(raw)){
+    const targets=clauses.filter(x=>/打开|开启|弄开|关掉|关上|关闭|关了/.test(x)).map(x=>`${areasInText(x).join('|')}::${/窗/.test(x)?'window':/灯/.test(x)?'light':/空调|温度/.test(x)?'climate':''}`);
+    if(targets.length<2||new Set(targets).size===1)types.push('OPERATION_CONFLICT');
+  }
   if(/全都|全部|所有/.test(raw)&&hasAction&&!entity&&!areas.length){types.push('SCOPE_AMBIGUITY');missing.push('scope');}
   const relativeValue=/调(?:亮|暗|高|低|暖|冷)?一点|亮一点|暗一点|暖一点|冷一点|开一点|关一点/.test(raw);
   const exactValue=/(?:百分之\s*)?\d{1,4}\s*(?:%|度|[kK])?|打开|开启|关掉|关上|关闭/.test(raw);
-  if(relativeValue&&!exactValue&&!scenario){types.push('VALUE_AMBIGUITY');missing.push('value');}
+  if(relativeValue&&!exactValue&&!groundedScenario){types.push('VALUE_AMBIGUITY');missing.push('value');}
   const external=/股票|比特币|医疗诊断|法律意见|新闻|写代码|求职信|旅游计划/.test(raw),home=/灯|窗|空调|温度|客厅|卧室|书房|厨房|阳台/.test(raw);
   if(external&&home)types.push('MIXED_DOMAIN_AMBIGUITY');
   if(pronoun&&!entity&&!areas.length){
@@ -427,11 +435,11 @@ function analyzeAmbiguity(text,{scenario=null}={}){
     if(unique.length>1){types.push('REFERENT_AMBIGUITY');missing.push('target');candidates.target=unique.map(n=>n.slots?.entity_name||instanceKey(n));}
     else if(!focus){types.push('REFERENT_AMBIGUITY');missing.push('target');candidates.target=[];}
   }
-  if(hasAction&&!entity&&!pronoun&&!scenario&&!isRelativeActionCommand(raw)){
+  if(hasAction&&!entity&&!pronoun&&!groundedScenario&&!isRelativeActionCommand(raw)){
     types.push(areas.length?'OBJECT_AMBIGUITY':'TARGET_AMBIGUITY');missing.push('entity');
     if(areas.length)candidates.entity=['light','window','climate','screen'];
   }
-  if(entity&&!areas.length&&!pronoun&&!scenario){
+  if(entity&&!areas.length&&!pronoun&&!groundedScenario){
     const canInherit=focus?.entity===entity;
     if(!canInherit){
       const active=ambiguityCandidateNodes(entity);
@@ -439,9 +447,10 @@ function analyzeAmbiguity(text,{scenario=null}={}){
     }
   }
   if(isRelativeActionCommand(raw)&&!focus){types.push('TARGET_AMBIGUITY');missing.push('target');}
-  const order=['OPERATION_CONFLICT','REFERENT_AMBIGUITY','ROOM_AMBIGUITY','OBJECT_AMBIGUITY','TARGET_AMBIGUITY','SCOPE_AMBIGUITY','VALUE_AMBIGUITY','TEMPORAL_AMBIGUITY','MIXED_DOMAIN_AMBIGUITY'];
+  const order=['COMPOUND_TARGET_AMBIGUITY','OPERATION_CONFLICT','REFERENT_AMBIGUITY','ROOM_AMBIGUITY','OBJECT_AMBIGUITY','TARGET_AMBIGUITY','SCOPE_AMBIGUITY','VALUE_AMBIGUITY','TEMPORAL_AMBIGUITY','MIXED_DOMAIN_AMBIGUITY'];
   const unique=[...new Set(types)].sort((a,b)=>order.indexOf(a)-order.indexOf(b)),first=unique[0]||null;
   const questions={
+    COMPOUND_TARGET_AMBIGUITY:'这里有两件事：要关哪个设备？又要打开哪个房间的窗？请分别说清楚。',
     OPERATION_CONFLICT:'同一个目标同时出现打开和关闭；最终要哪一个？',
     REFERENT_AMBIGUITY:'“它/那个”可能指向多个设备；请说房间和设备。',
     ROOM_AMBIGUITY:'房间不唯一；请明确是客厅、主卧、次卧、儿童房、书房或其他房间。',
@@ -1533,7 +1542,7 @@ function parseUtterance(text){
   if(isNegation) return {type:'negation',nodes:[newNode('Reject',state.focus||heads.entity.label,{negated_operation:heads.operation.label,area:canonicalArea(raw)||state.lastArea})]};
   if(isResume) return {type:'resume'};
   const ambiguity=analyzeAmbiguity(raw,{scenario});
-  if(ambiguity.decision==='CLARIFY')return {type:'clarify',nodes:[newNode('Clarify',state.focus||heads.entity.label||'unknown',{reason:'structured_ambiguity',ambiguity_types:ambiguity.types,missing_slots:ambiguity.missing_slots,candidates:ambiguity.candidates,clarification_question:ambiguity.question},'unresolved')],ambiguity};
+  if(ambiguity.decision==='CLARIFY')return {type:'clarify',nodes:[newNode('Clarify',state.focus||heads.entity.label||'unknown',{reason:'structured_ambiguity',original_utterance:raw,unresolved_clauses:parts,ambiguity_types:ambiguity.types,missing_slots:ambiguity.missing_slots,candidates:ambiguity.candidates,clarification_question:ambiguity.question},'unresolved')],ambiguity};
   if(heads.ood>=.55)return {type:'ood',nodes:[newNode('Plan','llm',{reason:'ood_escalation',ood_probability:heads.ood})]};
   if(heads.ambiguity>=.55&&!scenario&&!relativeAction)return {type:'clarify',nodes:[newNode('Clarify',state.focus||heads.entity.label||'unknown',{reason:'ambiguous_reference',ambiguity_probability:heads.ambiguity},'unresolved')]};
   if(scenario&&scenario.match>.22&&(scenario.inference_source==='compositional_room_object_goal_compiler'||heads.ambiguity<.55)){
@@ -1898,7 +1907,7 @@ function nodesForCurrentTurn(d){
 function executeCurrent(neural,d){
   if(d?.op==='CLEAR_STATE_TREE')return {outputs:[],route:'STATE_ONLY'};
   const nodes=nodesForCurrentTurn(d);
-  const fallback=nodes.length?nodes:((d?.op==='REMOVE_NODE'||d?.op==='CANCEL_TASK')?[]:(activeTask()?.nodes.slice(-1)||[]));
+  const fallback=nodes;
   const outputs=[];
   for(const n of fallback){
     const ra=routeNode(n);
@@ -2084,6 +2093,15 @@ function markLastResultWrong(){
   persistSession();persistFailureLibrary();updateFailureCount();
   const button=$('#markWrong');if(button){button.textContent='已记录为错误样本';button.disabled=true;}
 }
+function exportFailureLibrary(){
+  const status=$('#exportFailuresStatus');
+  if(!state.failureEvents.length){status.textContent='还没有标记的错误样本';return false;}
+  const rows=state.failureEvents.map(event=>({version:'flythink.failure.v1',...event,review_status:'needs_human_label',correction_candidate:event.correction_candidate||null}));
+  const blob=new Blob([rows.map(x=>JSON.stringify(x)).join('\n')+'\n'],{type:'application/x-ndjson;charset=utf-8'});
+  const url=URL.createObjectURL(blob),a=document.createElement('a');
+  a.href=url;a.download='flythink-failures-'+new Date().toISOString().slice(0,10)+'.jsonl';document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);status.textContent='已导出 '+rows.length+' 条待标注样本';return true;
+}
 function restorePersistedSession(){
   const saved=readPersistedSession();if(!saved)return false;
   if(STARTER_SCENES[saved.scene])$('#sceneSelect').value=saved.scene;
@@ -2093,10 +2111,14 @@ function restorePersistedSession(){
     addMsg('YOU',event.text,true);
     const result=submit(event.text,{silent:true,restore:true,eventAt:event.at,persist:false});
     if(!result)continue;
-    applyVisibleHomeOutputs(result.exec);addMsg('FlyThink',friendlyTurn(result.exec,result.delta).detail,false);last={...result,text:event.text};
+    // Replay builds the current runtime state; the original event remains immutable evidence.
+    state.sessionEvents[state.sessionEvents.length-1]=clone(event);
+    state.lastEventId=event.event_id||null;
+    applyVisibleHomeOutputs(result.exec);addMsg('FlyThink',event.reply||friendlyTurn(result.exec,result.delta).detail,false);last={...result,text:event.text};
   }
   if(!last)return false;
   render(last.delta,last.exec,last.neural,last.text);$('#input').value='';
+  $('#markWrong').hidden=false;$('#markWrong').disabled=false;
   $('#runtimeStatus').textContent='已恢复并保存在此浏览器 · '+state.sessionEvents.length+' 轮';
   return true;
 }
@@ -2382,7 +2404,7 @@ function drawBrain(){if(!DATA||!$('#brain').getClientRects().length)return;const
  }
  const nodes=DATA.s.graph.nodes||[];const phase=Math.max(0,state.turn-1)%3;const active=nodes.filter((_,i)=>i%3===phase);for(const n of active){const p=by[String(n.flywire_id)];if(!p)continue;const q=P([p[1],-p[2],-p[3]],W,H),r=4+Math.log1p(Number(n.activity||0));x.beginPath();x.arc(q.x,q.y,r+4,0,Math.PI*2);x.strokeStyle='rgba(241,189,105,.35)';x.lineWidth=2;x.stroke();x.beginPath();x.arc(q.x,q.y,r,0,Math.PI*2);x.fillStyle='#f1bd69';x.fill();hits.push({kind:'measured',x:q.x,y:q.y,r:r+6,n,p})}
  if(selected&&selected.p){const q=P([selected.p[1],-selected.p[2],-selected.p[3]],W,H);x.beginPath();x.arc(q.x,q.y,7,0,Math.PI*2);x.strokeStyle='white';x.lineWidth=2;x.stroke()}}
-$('#turnStageRail').addEventListener('click',e=>{const stage=e.target.closest('[data-turn-stage]');if(stage)selectTurnJourneyStage(Number(stage.dataset.turnStage))});document.querySelectorAll('[data-p]').forEach(b=>b.addEventListener('click',()=>{const t=b.dataset.p;$('#input').value=t;updateDecisionHeads(t)}));document.querySelectorAll('[data-mutate]').forEach(b=>b.addEventListener('click',()=>mutateDraft(b.dataset.mutate)));$('#sampleCorpus').addEventListener('click',sampleCorpus);$('#copyDecision').addEventListener('click',async()=>{const s=JSON.stringify(window.__decisionContract||{},null,2);try{await navigator.clipboard.writeText(s);$('#copyDecision').textContent='Copied';setTimeout(()=>$('#copyDecision').textContent='Copy JSON',900)}catch(e){$('#decisionAnswer').textContent=s}});$('#reset').addEventListener('click',reset);$('#markWrong').addEventListener('click',markLastResultWrong);$('#composer').addEventListener('submit',e=>{e.preventDefault();if($('#sendTurn').disabled)return;const t=$('#input').value;if(!t.trim())return;submit(t);$('#input').value='';$('#input').focus()});$('#runAsSequence').addEventListener('click',()=>{currentCorpusCase=null;const seq=splitSequence($('#input').value);for(const t of seq)submit(t)});$('#input').addEventListener('input',e=>{currentCorpusCase=null;$('#corpusCase').textContent='Edited free-form turn · expected label cleared.';updateDecisionHeads(e.target.value)});
+$('#turnStageRail').addEventListener('click',e=>{const stage=e.target.closest('[data-turn-stage]');if(stage)selectTurnJourneyStage(Number(stage.dataset.turnStage))});document.querySelectorAll('[data-p]').forEach(b=>b.addEventListener('click',()=>{const t=b.dataset.p;$('#input').value=t;updateDecisionHeads(t)}));document.querySelectorAll('[data-mutate]').forEach(b=>b.addEventListener('click',()=>mutateDraft(b.dataset.mutate)));$('#sampleCorpus').addEventListener('click',sampleCorpus);$('#copyDecision').addEventListener('click',async()=>{const s=JSON.stringify(window.__decisionContract||{},null,2);try{await navigator.clipboard.writeText(s);$('#copyDecision').textContent='Copied';setTimeout(()=>$('#copyDecision').textContent='Copy JSON',900)}catch(e){$('#decisionAnswer').textContent=s}});$('#reset').addEventListener('click',reset);$('#markWrong').addEventListener('click',markLastResultWrong);$('#exportFailures').addEventListener('click',exportFailureLibrary);$('#composer').addEventListener('submit',e=>{e.preventDefault();if($('#sendTurn').disabled)return;const t=$('#input').value;if(!t.trim())return;submit(t);$('#input').value='';$('#input').focus()});$('#runAsSequence').addEventListener('click',()=>{currentCorpusCase=null;const seq=splitSequence($('#input').value);for(const t of seq)submit(t)});$('#input').addEventListener('input',e=>{currentCorpusCase=null;$('#corpusCase').textContent='Edited free-form turn · expected label cleared.';updateDecisionHeads(e.target.value)});
 document.querySelectorAll('[data-composer-template]').forEach(b=>b.addEventListener('click',()=>loadComposerTemplate(b.dataset.composerTemplate)));
 document.querySelectorAll('[data-add-turn]').forEach(b=>b.addEventListener('click',()=>{composerTurns.push(composerTurn(b.dataset.addTurn,''));composerResults=[];renderTurnComposer();renderComposerResults()}));
 $('#runComposer').addEventListener('click',runComposer);$('#clearComposerResults').addEventListener('click',()=>{composerResults=[];composerInspectIndex=null;renderComposerResults()});$('#composerResults').addEventListener('click',e=>{const row=e.target.closest('[data-inspect-turn]');if(row&&!e.target.closest('summary'))inspectComposerResult(Number(row.dataset.inspectTurn));});

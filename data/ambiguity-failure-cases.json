@@ -17,7 +17,7 @@
       "utterance": "算了关了吧，再把窗打开",
       "observed_wrong": "整轮被压缩为 CANCEL_TASK，后半句丢失",
       "expected_gate": "CLARIFY",
-      "expected_ambiguity": ["OPERATION_CONFLICT"],
+      "expected_ambiguity": ["COMPOUND_TARGET_AMBIGUITY"],
       "must_preserve_all_clauses": true,
       "must_not_mutate_world": true
     }
