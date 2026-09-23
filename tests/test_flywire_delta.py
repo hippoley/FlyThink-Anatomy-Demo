@@ -2,14 +2,21 @@ import json,sys,unittest
 from pathlib import Path
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'scripts'))
 from dialogue_delta_corpus import corpus,empty_state,apply,delta,NONE
-from train_flywire_delta import clause_features,normalize_aliases,TEXT_DIM
+from train_flywire_delta import clause_features,normalize_aliases,TEXT_DIM,resolve,pack
+import torch
 from infer_flywire_delta import authorized
 
 class DeltaContract(unittest.TestCase):
+ def test_reference_resolution_does_not_overwrite_a_new_slot(self):
+  before=apply(empty_state(),delta('add',[2],[2],'explicit'))
+  rows=[{'turns':[{'text':'把它改成70%','before':before,'delta':delta('revise',[3],[4],'focus_coreference')}]}]
+  _,gold,examples=pack(rows)
+  result=resolve(gold,examples)
+  torch.testing.assert_close(result,gold)
  def test_template_sets_and_sealed_cases_exist(self):
   data=corpus();self.assertEqual(len(data['train']),900);self.assertEqual(len(data['test']),180);self.assertEqual(len(data['sealed']),6)
  def test_all_multi_separators_feed_the_second_target_path(self):
-  for text in ('打开客厅灯；关闭主卧窗户','打开客厅灯，同时关闭主卧窗户','一边打开客厅灯，一边关闭主卧窗户'):
+  for text in ('打开客厅灯；关闭主卧窗户','打开客厅灯，同时关闭主卧窗户','一边打开客厅灯，一边关闭主卧窗户','客厅窗户开启，书房窗户关闭'):
    x=clause_features(text);self.assertGreater(float(x[TEXT_DIM*2:TEXT_DIM*3].abs().sum()),0,text)
  def test_alias_channel_normalizes_unseen_surface_forms(self):
   self.assertEqual(normalize_aliases('客厅里的灯关上'),normalize_aliases('客厅的灯关掉'))

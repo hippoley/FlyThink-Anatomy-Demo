@@ -1,0 +1,106 @@
+{
+  "threshold": 0.9,
+  "passed": false,
+  "views": {
+    "resolved_with_gold_history": {
+      "threshold": 0.9,
+      "passed": false,
+      "failures": {
+        "operation_accuracy": {
+          "value": 0.637499988079071,
+          "reason": "below_target",
+          "gap": 0.2625
+        },
+        "reference_accuracy": {
+          "value": 0.699999988079071,
+          "reason": "below_target",
+          "gap": 0.2
+        },
+        "delta_exact": {
+          "value": 0.612500011920929,
+          "reason": "below_target",
+          "gap": 0.2875
+        }
+      },
+      "scope": "reported bounded task metrics only; excludes whole-brain and generative OOD"
+    },
+    "raw_network_with_gold_history": {
+      "threshold": 0.9,
+      "passed": false,
+      "failures": {
+        "operation_accuracy": {
+          "value": 0.637499988079071,
+          "reason": "below_target",
+          "gap": 0.2625
+        },
+        "reference_accuracy": {
+          "value": 0.699999988079071,
+          "reason": "below_target",
+          "gap": 0.2
+        },
+        "target_accuracy": {
+          "value": 0.8983050584793091,
+          "reason": "below_target",
+          "gap": 0.001695
+        },
+        "delta_exact": {
+          "value": 0.5625,
+          "reason": "below_target",
+          "gap": 0.3375
+        },
+        "coreference_target_accuracy": {
+          "value": 0.8399999737739563,
+          "reason": "below_target",
+          "gap": 0.06
+        },
+        "retraction_delta_exact": {
+          "value": 0.6666666865348816,
+          "reason": "below_target",
+          "gap": 0.233333
+        }
+      },
+      "scope": "reported bounded task metrics only; excludes whole-brain and generative OOD"
+    },
+    "sequential_predicted_history": {
+      "threshold": 0.9,
+      "passed": false,
+      "failures": {
+        "operation_accuracy": {
+          "value": 0.637499988079071,
+          "reason": "below_target",
+          "gap": 0.2625
+        },
+        "reference_accuracy": {
+          "value": 0.699999988079071,
+          "reason": "below_target",
+          "gap": 0.2
+        },
+        "target_accuracy": {
+          "value": 0.8813559412956238,
+          "reason": "below_target",
+          "gap": 0.018644
+        },
+        "delta_exact": {
+          "value": 0.574999988079071,
+          "reason": "below_target",
+          "gap": 0.325
+        },
+        "coreference_target_accuracy": {
+          "value": 0.7599999904632568,
+          "reason": "below_target",
+          "gap": 0.14
+        },
+        "retraction_delta_exact": {
+          "value": 0.8888888955116272,
+          "reason": "below_target",
+          "gap": 0.011111
+        }
+      },
+      "scope": "reported bounded task metrics only; excludes whole-brain and generative OOD"
+    }
+  },
+  "rollout_state_exact": 0.5375,
+  "rollout_state_passed": false,
+  "claim_scope": "bounded subgraph benchmark; whole-brain and generative OOD remain unevaluated",
+  "source_report": "artifacts/flywire-delta-v16/regression-v5.json"
+}

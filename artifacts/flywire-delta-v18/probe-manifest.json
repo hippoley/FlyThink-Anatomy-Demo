@@ -1,0 +1,8 @@
+{
+  "name": "v6",
+  "turns": 66,
+  "training_exact_text_overlap": 0,
+  "source_sha256": "47f82c341d0258a92ed47c292c891b13245d772f4bf1f8e02f68bc6843ed7098",
+  "status": "frozen_after_training_corpus_before_checkpoint_evaluation",
+  "independently_authored": false
+}

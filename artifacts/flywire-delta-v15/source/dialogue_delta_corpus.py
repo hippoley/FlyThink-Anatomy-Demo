@@ -71,20 +71,8 @@ def delta(op,targets=(),values=(),reference='none'):
 def action_text(template,room,obj,value,split,rng):
  return template.format(r=ROOMS[room],e=OBJECTS[obj],v=value_word(value,split,rng))
 
-def make_dialogues(split,count,seed,augment=False):
- rng=random.Random(seed);tpl=copy.deepcopy(TEMPLATES[split]);rows=[]
- if augment:
-  assert split=='train'
-  additions={
-   'retract':['这条指令不要保留','把刚说的要求移除','不要执行上一项了','刚提出的那项撤销','撤回那条要求','取消那条要求','那条撤掉','那条不用了','那条要求收回'],
-   'retract_named':['不要执行{r}{e}这条了','移除{r}{e}这条设置','{r}{e}这项要求撤销'],
-   'retain':['现有任务依然有效','现有设置保持原状','所有已有设置保持原样','仍按之前安排做','剩下的照常','不需要调整了'],
-   'pause':['先把它挂起','这条指令中止一下','暂停当前设置','目前这条任务先停一停'],
-   'resume':['让被中止的任务接着执行','恢复刚暂停的设置','继续那条挂起的要求'],
-   'revise':['当前设置换成{v}','将它变更为{v}','这个数值调整为{v}'],
-   'revise_named':['请将{r}{e}更改成{v}','{r}{e}的设置换成{v}'],
-   'multi':['{a}，{b}']}
-  for op,phrases in additions.items():tpl[op].extend(phrases)
+def make_dialogues(split,count,seed):
+ rng=random.Random(seed);tpl=TEMPLATES[split];rows=[]
  for i in range(count):
   state=empty_state(); turns=[]
   for turn in range(10):
@@ -104,11 +92,7 @@ def make_dialogues(split,count,seed,augment=False):
      value=rng.randrange(1,5);room=rng.randrange(3);obj=rng.randrange(2);k=key_for(room,obj,value)
      if k in targets:continue
      targets.append(k);values.append(value);parts.append(action_text(rng.choice(tpl['add']),room,obj,value,split,rng))
-    text=(rng.choice(tpl['multi']).format(a=parts[0],b=parts[1]) if len(parts)==2 else parts[0])
-    if augment and len(parts)==1 and rng.random()<.2:
-     values[0]={1:2,2:1,3:4,4:3}[values[0]]
-     text+='，不，应该'+value_word(values[0],split,rng)
-    d=delta('add',targets,values,'explicit')
+    text=(rng.choice(tpl['multi']).format(a=parts[0],b=parts[1]) if len(parts)==2 else parts[0]);d=delta('add',targets,values,'explicit')
    elif op=='revise':
     k=state['focus'];value=rng.randrange(1,5);k=(k//2)*2+int(value>=3)
     text=rng.choice(tpl['revise']).format(v=value_word(value,split,rng));d=delta(op,[k],[value],'focus_coreference')
@@ -144,7 +128,7 @@ def sealed_dialogues():
   out.append({'id':name,'turns':turns})
  return out
 
-def corpus(augment=False):
+def corpus():
  for op in TEMPLATES['train']:
   assert set(TEMPLATES['train'][op]).isdisjoint(TEMPLATES['test'][op])
- return {'train':make_dialogues('train',900,1783,augment),'test':make_dialogues('test',180,1784),'sealed':sealed_dialogues()}
+ return {'train':make_dialogues('train',900,1783),'test':make_dialogues('test',180,1784),'sealed':sealed_dialogues()}

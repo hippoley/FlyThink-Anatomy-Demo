@@ -43,9 +43,8 @@ def clause_features(text):
  s=text
  if s.startswith('一边'):s=s[2:]
  parts=re.split(r'(?:，(?:同时|然后|另外|并且|一边)|；)',s,maxsplit=1)
- if len(parts)==1:
-  candidate=re.split('[，,]',s,maxsplit=1)
-  if len(candidate)==2 and all(re.search('客厅|主卧|书房',part) and re.search('灯|窗户',part) for part in candidate):parts=candidate
+ if len(parts)==1 and sum(token in s for token in ['客厅','主卧','书房','灯','窗户'])>=4:
+  parts=s.split('，',1)
  parts=(parts+[''])[:2]
  return torch.cat([text_features(text),text_features(parts[0]),text_features(parts[1])])
 
@@ -170,16 +169,16 @@ def decode(row):
 
 def main():
  p=argparse.ArgumentParser();p.add_argument('--graph',default='artifacts/flywire/connectome.json');p.add_argument('--epochs',type=int,default=35)
- p.add_argument('--modes',nargs='+',default=['real','frozen','rewired','disconnected']);p.add_argument('--out',type=Path,default=Path('artifacts/flywire-delta'));p.add_argument('--augment',action='store_true');p.add_argument('--learning-rate',type=float,default=.005);a=p.parse_args()
+ p.add_argument('--modes',nargs='+',default=['real','frozen','rewired','disconnected']);p.add_argument('--out',type=Path,default=Path('artifacts/flywire-delta'));p.add_argument('--augment',action='store_true');a=p.parse_args()
  torch.set_num_threads(2);g=json.loads(Path(a.graph).read_text());assert g['source_sha256']==EXPECTED_SHA256 and digest(a.graph)==GRAPH_SHA
  data=corpus(augment=a.augment);train,test,sealed=[pack(data[k]) for k in ['train','test','sealed']];a.out.mkdir(parents=True,exist_ok=True)
  op_counts=torch.bincount(train[1][:,0],minlength=len(OPS)).float();count_counts=torch.bincount(train[1][:,1],minlength=3).float()
  op_weight=(op_counts.sum()/op_counts.clamp_min(1));op_weight/=op_weight.mean()
  count_weight=(count_counts.sum()/count_counts.clamp_min(1));count_weight/=count_weight.mean()
  report={'truth':'direct_graph_delta_training_on_verified_real_flywire_subgraph','source_sha256':EXPECTED_SHA256,'graph_sha256':GRAPH_SHA,'neurons':512,'edges':9692,'epochs':a.epochs,'runs':{},'limits':['bounded 3 rooms / 2 object types / 2 properties','OOD routing only; no generation','subgraph rate model; not whole-brain LIF','sealed set fixed before this training run but locally visible and small']}
- report.update({'augmentation':a.augment,'learning_rate':a.learning_rate,'development_used_for_checkpoint_selection':True,'corpus_sha256':hashlib.sha256(json.dumps(data,sort_keys=True,ensure_ascii=False).encode()).hexdigest(),'code_sha256':{str(p):digest(p) for p in (Path(__file__),Path(__file__).with_name('dialogue_delta_corpus.py'))}})
+ report.update({'augmentation':a.augment,'development_used_for_checkpoint_selection':True,'corpus_sha256':hashlib.sha256(json.dumps(data,sort_keys=True,ensure_ascii=False).encode()).hexdigest(),'code_sha256':{str(p):digest(p) for p in (Path(__file__),Path(__file__).with_name('dialogue_delta_corpus.py'))}})
  for mode in a.modes:
-  model=DeltaNet(g,mode);opt=torch.optim.Adam(model.parameters(),lr=a.learning_rate);logs=[];best=None
+  model=DeltaNet(g,mode);opt=torch.optim.Adam(model.parameters(),lr=.005);logs=[];best=None
   for epoch in range(a.epochs):
    order=torch.randperm(len(train[1]));total=0
    for idx in order.split(64):

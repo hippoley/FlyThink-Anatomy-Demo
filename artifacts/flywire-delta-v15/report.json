@@ -1,0 +1,622 @@
+{
+  "truth": "direct_graph_delta_training_on_verified_real_flywire_subgraph",
+  "source_sha256": "445f996bf6c4b1803b9ba186189138a3061ff8623aa94c0abcf38af30a5bd48b",
+  "graph_sha256": "73d64a3c9d32fc38b98741fb345b34efd3a678db86f3f195e70e296ec4a7d9d2",
+  "neurons": 512,
+  "edges": 9692,
+  "epochs": 30,
+  "runs": {
+    "real": {
+      "development_templates": {
+        "operation_accuracy": 0.9227777719497681,
+        "reference_accuracy": 0.925000011920929,
+        "target_accuracy": 0.9623210430145264,
+        "room_accuracy": 0.996985673904419,
+        "object_accuracy": 0.9954785108566284,
+        "property_accuracy": 0.969103217124939,
+        "value_accuracy": 0.9970030188560486,
+        "delta_exact": 0.8838889002799988,
+        "coreference_target_accuracy": 0.9492753744125366,
+        "retraction_delta_exact": 0.7840375304222107,
+        "multi_intent_exact": 0.9223529696464539,
+        "ood_route_accuracy": 1.0,
+        "count_accuracy": 0.972777783870697,
+        "examples": 1800
+      },
+      "heldout_templates": {
+        "operation_accuracy": 0.9227777719497681,
+        "reference_accuracy": 0.925000011920929,
+        "target_accuracy": 0.9623210430145264,
+        "room_accuracy": 0.996985673904419,
+        "object_accuracy": 0.9954785108566284,
+        "property_accuracy": 0.969103217124939,
+        "value_accuracy": 0.9970030188560486,
+        "delta_exact": 0.8838889002799988,
+        "coreference_target_accuracy": 0.9492753744125366,
+        "retraction_delta_exact": 0.7840375304222107,
+        "multi_intent_exact": 0.9223529696464539,
+        "ood_route_accuracy": 1.0,
+        "count_accuracy": 0.972777783870697,
+        "examples": 1800
+      },
+      "sealed_v2": {
+        "operation_accuracy": 0.9583333134651184,
+        "reference_accuracy": 0.9583333134651184,
+        "target_accuracy": 1.0,
+        "room_accuracy": 1.0,
+        "object_accuracy": 1.0,
+        "property_accuracy": 1.0,
+        "value_accuracy": 1.0,
+        "delta_exact": 0.9166666865348816,
+        "coreference_target_accuracy": 1.0,
+        "retraction_delta_exact": 1.0,
+        "multi_intent_exact": 1.0,
+        "ood_route_accuracy": 1.0,
+        "count_accuracy": 0.9583333134651184,
+        "examples": 24
+      },
+      "disconnect_at_inference": {
+        "operation_accuracy": 0.9211111068725586,
+        "reference_accuracy": 0.9322222471237183,
+        "target_accuracy": 0.9593067169189453,
+        "room_accuracy": 0.996985673904419,
+        "object_accuracy": 0.996985673904419,
+        "property_accuracy": 0.9653353691101074,
+        "value_accuracy": 0.9970030188560486,
+        "delta_exact": 0.8811110854148865,
+        "coreference_target_accuracy": 0.9396135210990906,
+        "retraction_delta_exact": 0.8122065663337708,
+        "multi_intent_exact": 0.9129411578178406,
+        "ood_route_accuracy": 0.9873417615890503,
+        "count_accuracy": 0.9711111187934875,
+        "examples": 1800
+      },
+      "selected_epoch": 1,
+      "selection_score": [
+        0.7840375304222107,
+        0.8838889002799988,
+        0.9223529696464539,
+        0.9446924466353196
+      ],
+      "changed_internal_gains": 9692,
+      "loss": [
+        1.4758270031677352,
+        0.08745052522089747,
+        0.0627768969759345,
+        0.05589865356187026,
+        0.043447653153704274,
+        0.030735999333672225,
+        0.016487736063491968,
+        0.01056087858767973,
+        0.004287806306344767,
+        0.004389842526987195,
+        0.0018732961013706194,
+        0.000711202597245574,
+        0.00041681933211576606,
+        0.00032206666032369766,
+        0.0002612631351997455,
+        0.000221552563417289,
+        0.00019422821277597299,
+        0.00016840060435545942,
+        0.00014751420741797322,
+        0.00012924042212155958,
+        0.00011664711975673628,
+        0.00010468986639494284,
+        9.248680553476637e-05,
+        8.422127052391362e-05,
+        7.457124491015242e-05,
+        6.74066644706828e-05,
+        6.134606338390666e-05,
+        5.572736242821621e-05,
+        5.0320758662160694e-05,
+        4.574089876324352e-05
+      ],
+      "sealed_trace": [
+        {
+          "text": "打开客厅灯",
+          "predicted": {
+            "operation": "add",
+            "deltas": [
+              {
+                "node": "客厅/灯",
+                "slot": "power",
+                "value": "on"
+              }
+            ]
+          },
+          "expected": {
+            "operation": "add",
+            "deltas": [
+              {
+                "node": "客厅/灯",
+                "slot": "power",
+                "value": "on"
+              }
+            ]
+          },
+          "exact": true
+        },
+        {
+          "text": "主卧窗户调到70%",
+          "predicted": {
+            "operation": "add",
+            "deltas": [
+              {
+                "node": "主卧/窗户",
+                "slot": "level",
+                "value": "70"
+              }
+            ]
+          },
+          "expected": {
+            "operation": "add",
+            "deltas": [
+              {
+                "node": "主卧/窗户",
+                "slot": "level",
+                "value": "70"
+              }
+            ]
+          },
+          "exact": true
+        },
+        {
+          "text": "刚刚那个改成30%",
+          "predicted": {
+            "operation": "revise",
+            "deltas": [
+              {
+                "node": "主卧/窗户",
+                "slot": "level",
+                "value": "30"
+              }
+            ]
+          },
+          "expected": {
+            "operation": "revise",
+            "deltas": [
+              {
+                "node": "主卧/窗户",
+                "slot": "level",
+                "value": "30"
+              }
+            ]
+          },
+          "exact": true
+        },
+        {
+          "text": "收到",
+          "predicted": {
+            "operation": "retain",
+            "deltas": []
+          },
+          "expected": {
+            "operation": "retain",
+            "deltas": []
+          },
+          "exact": true
+        },
+        {
+          "text": "打开客厅灯",
+          "predicted": {
+            "operation": "add",
+            "deltas": [
+              {
+                "node": "客厅/灯",
+                "slot": "power",
+                "value": "on"
+              }
+            ]
+          },
+          "expected": {
+            "operation": "add",
+            "deltas": [
+              {
+                "node": "客厅/灯",
+                "slot": "power",
+                "value": "on"
+              }
+            ]
+          },
+          "exact": true
+        },
+        {
+          "text": "打开主卧灯",
+          "predicted": {
+            "operation": "add",
+            "deltas": [
+              {
+                "node": "主卧/灯",
+                "slot": "power",
+                "value": "on"
+              }
+            ]
+          },
+          "expected": {
+            "operation": "add",
+            "deltas": [
+              {
+                "node": "主卧/灯",
+                "slot": "power",
+                "value": "on"
+              }
+            ]
+          },
+          "exact": true
+        },
+        {
+          "text": "客厅灯那项撤掉",
+          "predicted": {
+            "operation": "retract",
+            "deltas": [
+              {
+                "node": "客厅/灯",
+                "slot": "power",
+                "value": "off"
+              }
+            ]
+          },
+          "expected": {
+            "operation": "retract",
+            "deltas": [
+              {
+                "node": "客厅/灯",
+                "slot": "power",
+                "value": "none"
+              }
+            ]
+          },
+          "exact": true
+        },
+        {
+          "text": "先这样",
+          "predicted": {
+            "operation": "retain",
+            "deltas": []
+          },
+          "expected": {
+            "operation": "retain",
+            "deltas": []
+          },
+          "exact": true
+        },
+        {
+          "text": "书房窗户打开",
+          "predicted": {
+            "operation": "add",
+            "deltas": [
+              {
+                "node": "书房/窗户",
+                "slot": "power",
+                "value": "on"
+              }
+            ]
+          },
+          "expected": {
+            "operation": "add",
+            "deltas": [
+              {
+                "node": "书房/窗户",
+                "slot": "power",
+                "value": "on"
+              }
+            ]
+          },
+          "exact": true
+        },
+        {
+          "text": "这个先暂停",
+          "predicted": {
+            "operation": "pause",
+            "deltas": [
+              {
+                "node": "书房/窗户",
+                "slot": "power",
+                "value": "off"
+              }
+            ]
+          },
+          "expected": {
+            "operation": "pause",
+            "deltas": [
+              {
+                "node": "书房/窗户",
+                "slot": "power",
+                "value": "none"
+              }
+            ]
+          },
+          "exact": true
+        },
+        {
+          "text": "帮我写首诗",
+          "predicted": {
+            "operation": "ood",
+            "deltas": []
+          },
+          "expected": {
+            "operation": "ood",
+            "deltas": []
+          },
+          "exact": true
+        },
+        {
+          "text": "继续原来那个",
+          "predicted": {
+            "operation": "resume",
+            "deltas": [
+              {
+                "node": "书房/窗户",
+                "slot": "power",
+                "value": "off"
+              }
+            ]
+          },
+          "expected": {
+            "operation": "resume",
+            "deltas": [
+              {
+                "node": "书房/窗户",
+                "slot": "power",
+                "value": "none"
+              }
+            ]
+          },
+          "exact": true
+        },
+        {
+          "text": "客厅灯关掉，主卧窗户打开",
+          "predicted": {
+            "operation": "add",
+            "deltas": [
+              {
+                "node": "客厅/灯",
+                "slot": "power",
+                "value": "off"
+              },
+              {
+                "node": "主卧/窗户",
+                "slot": "power",
+                "value": "on"
+              }
+            ]
+          },
+          "expected": {
+            "operation": "add",
+            "deltas": [
+              {
+                "node": "客厅/灯",
+                "slot": "power",
+                "value": "off"
+              },
+              {
+                "node": "主卧/窗户",
+                "slot": "power",
+                "value": "on"
+              }
+            ]
+          },
+          "exact": true
+        },
+        {
+          "text": "主卧窗户改成关掉",
+          "predicted": {
+            "operation": "revise",
+            "deltas": [
+              {
+                "node": "主卧/窗户",
+                "slot": "power",
+                "value": "off"
+              }
+            ]
+          },
+          "expected": {
+            "operation": "revise",
+            "deltas": [
+              {
+                "node": "主卧/窗户",
+                "slot": "power",
+                "value": "off"
+              }
+            ]
+          },
+          "exact": true
+        },
+        {
+          "text": "我知道了",
+          "predicted": {
+            "operation": "retain",
+            "deltas": []
+          },
+          "expected": {
+            "operation": "retain",
+            "deltas": []
+          },
+          "exact": true
+        },
+        {
+          "text": "所有指令全部取消",
+          "predicted": {
+            "operation": "clear",
+            "deltas": []
+          },
+          "expected": {
+            "operation": "clear",
+            "deltas": []
+          },
+          "exact": true
+        },
+        {
+          "text": "主卧灯调到70%",
+          "predicted": {
+            "operation": "add",
+            "deltas": [
+              {
+                "node": "主卧/灯",
+                "slot": "level",
+                "value": "70"
+              }
+            ]
+          },
+          "expected": {
+            "operation": "add",
+            "deltas": [
+              {
+                "node": "主卧/灯",
+                "slot": "level",
+                "value": "70"
+              }
+            ]
+          },
+          "exact": true
+        },
+        {
+          "text": "这个数值降到30%",
+          "predicted": {
+            "operation": "resume",
+            "deltas": [
+              {
+                "node": "主卧/灯",
+                "slot": "level",
+                "value": "30"
+              }
+            ]
+          },
+          "expected": {
+            "operation": "revise",
+            "deltas": [
+              {
+                "node": "主卧/灯",
+                "slot": "level",
+                "value": "30"
+              }
+            ]
+          },
+          "exact": false
+        },
+        {
+          "text": "书房灯打开",
+          "predicted": {
+            "operation": "add",
+            "deltas": [
+              {
+                "node": "书房/灯",
+                "slot": "power",
+                "value": "on"
+              }
+            ]
+          },
+          "expected": {
+            "operation": "add",
+            "deltas": [
+              {
+                "node": "书房/灯",
+                "slot": "power",
+                "value": "on"
+              }
+            ]
+          },
+          "exact": true
+        },
+        {
+          "text": "那就这样",
+          "predicted": {
+            "operation": "retain",
+            "deltas": [
+              {
+                "node": "书房/灯",
+                "slot": "power",
+                "value": "off"
+              }
+            ]
+          },
+          "expected": {
+            "operation": "retain",
+            "deltas": []
+          },
+          "exact": false
+        },
+        {
+          "text": "客厅窗户调到30%",
+          "predicted": {
+            "operation": "add",
+            "deltas": [
+              {
+                "node": "客厅/窗户",
+                "slot": "level",
+                "value": "30"
+              }
+            ]
+          },
+          "expected": {
+            "operation": "add",
+            "deltas": [
+              {
+                "node": "客厅/窗户",
+                "slot": "level",
+                "value": "30"
+              }
+            ]
+          },
+          "exact": true
+        },
+        {
+          "text": "替我写个旅游计划",
+          "predicted": {
+            "operation": "ood",
+            "deltas": []
+          },
+          "expected": {
+            "operation": "ood",
+            "deltas": []
+          },
+          "exact": true
+        },
+        {
+          "text": "嗯，收到",
+          "predicted": {
+            "operation": "retain",
+            "deltas": []
+          },
+          "expected": {
+            "operation": "retain",
+            "deltas": []
+          },
+          "exact": true
+        },
+        {
+          "text": "撤回刚才窗户那条",
+          "predicted": {
+            "operation": "retract",
+            "deltas": [
+              {
+                "node": "客厅/窗户",
+                "slot": "level",
+                "value": "off"
+              }
+            ]
+          },
+          "expected": {
+            "operation": "retract",
+            "deltas": [
+              {
+                "node": "客厅/窗户",
+                "slot": "level",
+                "value": "none"
+              }
+            ]
+          },
+          "exact": true
+        }
+      ],
+      "restore_verified": true,
+      "checkpoint_sha256": "66d574e4b8c9178c1790aacd71313f0ac06685dc1182203f0c7a44f2952a81fd"
+    }
+  },
+  "limits": [
+    "bounded 3 rooms / 2 object types / 2 properties",
+    "OOD routing only; no generation",
+    "subgraph rate model; not whole-brain LIF",
+    "sealed set fixed before this training run but locally visible and small"
+  ]
+}

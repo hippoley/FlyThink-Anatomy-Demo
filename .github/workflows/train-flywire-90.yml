@@ -1,0 +1,34 @@
+name: FlyWire bounded 90 percent gate
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  train-and-evaluate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -r requirements-flywire.txt
+      - name: Validate supervision and reference contracts
+        run: |
+          python -m unittest discover -s tests -p 'test_training_supervision.py'
+          python -m unittest discover -s tests -p 'test_flywire_delta.py'
+      - name: Train the verified real graph
+        run: python scripts/train_flywire_delta.py --modes real --epochs 15 --augment --learning-rate .001 --out artifacts/flywire-90-candidate
+      - name: Evaluate historical regression and predicted-state rollout
+        run: |
+          python scripts/evaluate_flywire_delta_suite.py --suite v5 --checkpoint artifacts/flywire-90-candidate/real.pt --out artifacts/flywire-90-candidate/regression-v5.json --truth historical_regression_not_fresh_blind_evaluation
+          python scripts/evaluate_flywire_delta_suite.py --suite v6 --checkpoint artifacts/flywire-90-candidate/real.pt --out artifacts/flywire-90-candidate/probe-v6.json --truth fixed_user_shorthand_probe_not_independent_blind_benchmark
+      - name: Require every bounded metric to reach 90 percent
+        run: |
+          python scripts/accuracy_gate.py artifacts/flywire-90-candidate/regression-v5.json --out artifacts/flywire-90-candidate/gate.json
+          python scripts/accuracy_gate.py artifacts/flywire-90-candidate/probe-v6.json --out artifacts/flywire-90-candidate/probe-gate.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: flywire-90-candidate-evidence
+          path: artifacts/flywire-90-candidate/

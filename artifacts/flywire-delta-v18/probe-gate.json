@@ -1,0 +1,39 @@
+{
+  "threshold": 0.9,
+  "passed": false,
+  "views": {
+    "resolved_with_gold_history": {
+      "threshold": 0.9,
+      "passed": true,
+      "failures": {},
+      "scope": "reported bounded task metrics only; excludes whole-brain and generative OOD"
+    },
+    "raw_network_with_gold_history": {
+      "threshold": 0.9,
+      "passed": false,
+      "failures": {
+        "delta_exact": {
+          "value": 0.8636363744735718,
+          "reason": "below_target",
+          "gap": 0.036364
+        },
+        "coreference_target_accuracy": {
+          "value": 0.8333333134651184,
+          "reason": "below_target",
+          "gap": 0.066667
+        }
+      },
+      "scope": "reported bounded task metrics only; excludes whole-brain and generative OOD"
+    },
+    "sequential_predicted_history": {
+      "threshold": 0.9,
+      "passed": true,
+      "failures": {},
+      "scope": "reported bounded task metrics only; excludes whole-brain and generative OOD"
+    }
+  },
+  "rollout_state_exact": 0.9393939393939394,
+  "rollout_state_passed": true,
+  "claim_scope": "bounded subgraph benchmark; whole-brain and generative OOD remain unevaluated",
+  "source_report": "artifacts/flywire-delta-v18/probe-v6.json"
+}
