@@ -115,6 +115,20 @@ The generated batch is an evaluation surface, not additional training data.
 
 ## Neural path
 
+### Local training on verified FlyWire connectivity
+
+The repository now also contains a CPU-reproducible direct GraphDelta
+experiment on a verified 512-neuron / 9,692-edge FlyWire FAFB v783 subgraph.
+The network predicts the operation, reference mode, node, property slot and
+value for each requested mutation. On the one-shot 80-turn post-freeze v5
+suite, every listed metric is at least 80%; complete Delta exact match is
+81.25%, coreference target accuracy is 100%, retraction exact match is 88.89%,
+and two-intent exact match is 85.71%.
+
+See [FLYWIRE_DELTA_TRAINING.md](FLYWIRE_DELTA_TRAINING.md) for hashes, metric
+definitions, failure history and reproduction commands. This is bounded
+subgraph training and OOD routing, not whole-brain training or generative OOD.
+
 The public build visualizes this pipeline:
 
 ```

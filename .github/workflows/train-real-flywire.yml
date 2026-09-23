@@ -6,7 +6,7 @@ permissions:
 jobs:
   train:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -22,9 +22,16 @@ jobs:
         run: python -m unittest discover -s tests -p 'test_flywire_state.py'
       - name: Verify sequential checkpoint restore
         run: python scripts/infer_flywire_state.py '打开客厅灯' '主卧窗户打开' '好的我知道了' '全部撤回'
+      - name: Train direct node-slot-value deltas and controls
+        run: python scripts/train_flywire_delta.py --epochs 30 --out artifacts/flywire-delta-v14
+      - name: Verify direct Delta gates and restored inference
+        run: |
+          python -m unittest discover -s tests -p 'test_flywire_delta.py'
+          python scripts/infer_flywire_delta.py '打开客厅灯' '主卧窗户调到70%' '刚才那个改成30%' '帮我写首诗' '全部撤回'
       - uses: actions/upload-artifact@v4
         with:
           name: real-flywire-subgraph-checkpoint-and-evidence
           path: |
             artifacts/flywire/
             artifacts/flywire-state/
+            artifacts/flywire-delta-v14/

@@ -1,0 +1,17 @@
+{
+  "truth": "matched_architecture_controls_same_corpus_seed_optimizer_epochs_and_selection_rule",
+  "epochs": 30,
+  "development_delta_exact": {
+    "real_trainable_edges": 0.8627777695655823,
+    "real_frozen_edges": 0.8588888645172119,
+    "rewired_trainable_edges": 0.8583333492279053,
+    "disconnected": 0.8450000286102295
+  },
+  "blind_v5_delta_exact": {
+    "real_trainable_edges": 0.8125,
+    "real_frozen_edges": 0.7749999761581421,
+    "rewired_trainable_edges": 0.800000011920929,
+    "disconnected": 0.75
+  },
+  "conclusion": "Real trainable connectivity leads complete-Delta accuracy in these matched runs, but margins are small, one seed and one graph sample are insufficient for a topology-superiority claim, and disconnected wins some component metrics."
+}

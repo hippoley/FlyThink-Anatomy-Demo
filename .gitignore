@@ -2,5 +2,7 @@ data/flywire/
 artifacts/flywire/*.pt
 artifacts/flywire-state/*.pt
 artifacts/flywire-state/corpus.json
+artifacts/flywire-delta*/**/*.pt
+artifacts/flywire-delta*/*.pt
 __pycache__/
 _site/

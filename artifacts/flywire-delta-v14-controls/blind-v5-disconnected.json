@@ -1,0 +1,1768 @@
+{
+  "truth": "matched_control_evaluation_on_post_v14_blind_v5",
+  "suite": "v5",
+  "checkpoint": "artifacts/flywire-delta-v14-controls/disconnected.pt",
+  "metrics": {
+    "operation_accuracy": 0.824999988079071,
+    "reference_accuracy": 0.800000011920929,
+    "target_accuracy": 0.9830508232116699,
+    "room_accuracy": 0.9830508232116699,
+    "object_accuracy": 1.0,
+    "property_accuracy": 1.0,
+    "value_accuracy": 0.9473684430122375,
+    "delta_exact": 0.75,
+    "coreference_target_accuracy": 1.0,
+    "retraction_delta_exact": 0.8888888955116272,
+    "multi_intent_exact": 0.8571428656578064,
+    "ood_route_accuracy": 1.0,
+    "count_accuracy": 0.887499988079071,
+    "examples": 80
+  },
+  "trace": [
+    {
+      "text": "麻烦开启书房的窗户",
+      "predicted": {
+        "operation": "add",
+        "deltas": [
+          {
+            "node": "书房/窗户",
+            "slot": "power",
+            "value": "on"
+          }
+        ]
+      },
+      "expected": {
+        "operation": "add",
+        "deltas": [
+          {
+            "node": "书房/窗户",
+            "slot": "power",
+            "value": "on"
+          }
+        ]
+      },
+      "exact": true
+    },
+    {
+      "text": "将这个窗口改到70%",
+      "predicted": {
+        "operation": "add",
+        "deltas": [
+          {
+            "node": "书房/窗户",
+            "slot": "level",
+            "value": "70"
+          }
+        ]
+      },
+      "expected": {
+        "operation": "revise",
+        "deltas": [
+          {
+            "node": "书房/窗户",
+            "slot": "level",
+            "value": "70"
+          }
+        ]
+      },
+      "exact": false
+    },
+    {
+      "text": "当前要求保持原状",
+      "predicted": {
+        "operation": "retain",
+        "deltas": [
+          {
+            "node": "书房/窗户",
+            "slot": "level",
+            "value": "30"
+          }
+        ]
+      },
+      "expected": {
+        "operation": "retain",
+        "deltas": []
+      },
+      "exact": false
+    },
+    {
+      "text": "撤除书房窗户这条设置",
+      "predicted": {
+        "operation": "add",
+        "deltas": [
+          {
+            "node": "书房/窗户",
+            "slot": "level",
+            "value": "30"
+          }
+        ]
+      },
+      "expected": {
+        "operation": "retract",
+        "deltas": [
+          {
+            "node": "书房/窗户",
+            "slot": "level",
+            "value": "none"
+          }
+        ]
+      },
+      "exact": false
+    },
+    {
+      "text": "替我生成一份露营装备清单",
+      "predicted": {
+        "operation": "ood",
+        "deltas": []
+      },
+      "expected": {
+        "operation": "ood",
+        "deltas": []
+      },
+      "exact": true
+    },
+    {
+      "text": "关闭客厅灯，同时打开主卧窗户",
+      "predicted": {
+        "operation": "add",
+        "deltas": [
+          {
+            "node": "客厅/灯",
+            "slot": "power",
+            "value": "off"
+          },
+          {
+            "node": "主卧/窗户",
+            "slot": "power",
+            "value": "on"
+          }
+        ]
+      },
+      "expected": {
+        "operation": "add",
+        "deltas": [
+          {
+            "node": "客厅/灯",
+            "slot": "power",
+            "value": "off"
+          },
+          {
+            "node": "主卧/窗户",
+            "slot": "power",
+            "value": "on"
+          }
+        ]
+      },
+      "exact": true
+    },
+    {
+      "text": "把后一条改为关闭",
+      "predicted": {
+        "operation": "revise",
+        "deltas": [
+          {
+            "node": "主卧/窗户",
+            "slot": "power",
+            "value": "off"
+          }
+        ]
+      },
+      "expected": {
+        "operation": "revise",
+        "deltas": [
+          {
+            "node": "主卧/窗户",
+            "slot": "power",
+            "value": "off"
+          }
+        ]
+      },
+      "exact": true
+    },
+    {
+      "text": "暂停刚才的窗口控制",
+      "predicted": {
+        "operation": "revise",
+        "deltas": [
+          {
+            "node": "主卧/窗户",
+            "slot": "power",
+            "value": "off"
+          }
+        ]
+      },
+      "expected": {
+        "operation": "pause",
+        "deltas": [
+          {
+            "node": "主卧/窗户",
+            "slot": "power",
+            "value": "none"
+          }
+        ]
+      },
+      "exact": false
+    },
+    {
+      "text": "恢复被暂停的控制",
+      "predicted": {
+        "operation": "resume",
+        "deltas": [
+          {
+            "node": "主卧/窗户",
+            "slot": "power",
+            "value": "off"
+          }
+        ]
+      },
+      "expected": {
+        "operation": "resume",
+        "deltas": [
+          {
+            "node": "主卧/窗户",
+            "slot": "power",
+            "value": "none"
+          }
+        ]
+      },
+      "exact": true
+    },
+    {
+      "text": "撤回全部家居控制意图",
+      "predicted": {
+        "operation": "clear",
+        "deltas": []
+      },
+      "expected": {
+        "operation": "clear",
+        "deltas": []
+      },
+      "exact": true
+    },
+    {
+      "text": "客厅窗户设为30%",
+      "predicted": {
+        "operation": "add",
+        "deltas": [
+          {
+            "node": "客厅/窗户",
+            "slot": "level",
+            "value": "30"
+          }
+        ]
+      },
+      "expected": {
+        "operation": "add",
+        "deltas": [
+          {
+            "node": "客厅/窗户",
+            "slot": "level",
+            "value": "30"
+          }
+        ]
+      },
+      "exact": true
+    },
+    {
+      "text": "书房灯设为70%",
+      "predicted": {
+        "operation": "add",
+        "deltas": [
+          {
+            "node": "书房/灯",
+            "slot": "level",
+            "value": "70"
+          }
+        ]
+      },
+      "expected": {
+        "operation": "add",
+        "deltas": [
+          {
+            "node": "书房/灯",
+            "slot": "level",
+            "value": "70"
+          }
+        ]
+      },
+      "exact": true
+    },
+    {
+      "text": "请将客厅窗户变更为70%",
+      "predicted": {
+        "operation": "add",
+        "deltas": [
+          {
+            "node": "客厅/窗户",
+            "slot": "level",
+            "value": "70"
+          }
+        ]
+      },
+      "expected": {
+        "operation": "revise",
+        "deltas": [
+          {
+            "node": "客厅/窗户",
+            "slot": "level",
+            "value": "70"
+          }
+        ]
+      },
+      "exact": false
+    },
+    {
+      "text": "删除书房灯对应设置",
+      "predicted": {
+        "operation": "retract",
+        "deltas": [
+          {
+            "node": "书房/灯",
+            "slot": "level",
+            "value": "70"
+          }
+        ]
+      },
+      "expected": {
+        "operation": "retract",
+        "deltas": [
+          {
+            "node": "书房/灯",
+            "slot": "level",
+            "value": "none"
+          }
+        ]
+      },
+      "exact": true
+    },
+    {
+      "text": "剩余任务继续有效",
+      "predicted": {
+        "operation": "clear",
+        "deltas": []
+      },
+      "expected": {
+        "operation": "retain",
+        "deltas": []
+      },
+      "exact": false
+    },
+    {
+      "text": "主卧灯打开，另外客厅窗户关闭",
+      "predicted": {
+        "operation": "add",
+        "deltas": [
+          {
+            "node": "主卧/灯",
+            "slot": "power",
+            "value": "on"
+          },
+          {
+            "node": "客厅/窗户",
+            "slot": "power",
+            "value": "off"
+          }
+        ]
+      },
+      "expected": {
+        "operation": "add",
+        "deltas": [
+          {
+            "node": "主卧/灯",
+            "slot": "power",
+            "value": "on"
+          },
+          {
+            "node": "客厅/窗户",
+            "slot": "power",
+            "value": "off"
+          }
+        ]
+      },
+      "exact": true
+    },
+    {
+      "text": "上一项窗户控制改为打开",
+      "predicted": {
+        "operation": "revise",
+        "deltas": [
+          {
+            "node": "客厅/窗户",
+            "slot": "power",
+            "value": "on"
+          }
+        ]
+      },
+      "expected": {
+        "operation": "revise",
+        "deltas": [
+          {
+            "node": "客厅/窗户",
+            "slot": "power",
+            "value": "on"
+          }
+        ]
+      },
+      "exact": true
+    },
+    {
+      "text": "先把该任务挂起",
+      "predicted": {
+        "operation": "pause",
+        "deltas": []
+      },
+      "expected": {
+        "operation": "pause",
+        "deltas": [
+          {
+            "node": "客厅/窗户",
+            "slot": "power",
+            "value": "none"
+          }
+        ]
+      },
+      "exact": false
+    },
+    {
+      "text": "重新恢复这个任务",
+      "predicted": {
+        "operation": "resume",
+        "deltas": [
+          {
+            "node": "客厅/窗户",
+            "slot": "power",
+            "value": "off"
+          }
+        ]
+      },
+      "expected": {
+        "operation": "resume",
+        "deltas": [
+          {
+            "node": "客厅/窗户",
+            "slot": "power",
+            "value": "none"
+          }
+        ]
+      },
+      "exact": true
+    },
+    {
+      "text": "帮我生成一份早餐菜单",
+      "predicted": {
+        "operation": "ood",
+        "deltas": []
+      },
+      "expected": {
+        "operation": "ood",
+        "deltas": []
+      },
+      "exact": true
+    },
+    {
+      "text": "书房窗户设置为70%；主卧灯设置为30%",
+      "predicted": {
+        "operation": "add",
+        "deltas": [
+          {
+            "node": "书房/窗户",
+            "slot": "level",
+            "value": "70"
+          },
+          {
+            "node": "主卧/灯",
+            "slot": "level",
+            "value": "30"
+          }
+        ]
+      },
+      "expected": {
+        "operation": "add",
+        "deltas": [
+          {
+            "node": "书房/窗户",
+            "slot": "level",
+            "value": "70"
+          },
+          {
+            "node": "主卧/灯",
+            "slot": "level",
+            "value": "30"
+          }
+        ]
+      },
+      "exact": true
+    },
+    {
+      "text": "将最后的灯光调高到70%",
+      "predicted": {
+        "operation": "add",
+        "deltas": []
+      },
+      "expected": {
+        "operation": "revise",
+        "deltas": [
+          {
+            "node": "主卧/灯",
+            "slot": "level",
+            "value": "70"
+          }
+        ]
+      },
+      "exact": false
+    },
+    {
+      "text": "主卧灯的要求取消",
+      "predicted": {
+        "operation": "retract",
+        "deltas": [
+          {
+            "node": "主卧/灯",
+            "slot": "level",
+            "value": "30"
+          }
+        ]
+      },
+      "expected": {
+        "operation": "retract",
+        "deltas": [
+          {
+            "node": "主卧/灯",
+            "slot": "level",
+            "value": "none"
+          }
+        ]
+      },
+      "exact": true
+    },
+    {
+      "text": "书房窗口任务维持不动",
+      "predicted": {
+        "operation": "add",
+        "deltas": [
+          {
+            "node": "书房/窗户",
+            "slot": "level",
+            "value": "30"
+          }
+        ]
+      },
+      "expected": {
+        "operation": "retain",
+        "deltas": []
+      },
+      "exact": false
+    },
+    {
+      "text": "清空全部任务",
+      "predicted": {
+        "operation": "clear",
+        "deltas": []
+      },
+      "expected": {
+        "operation": "clear",
+        "deltas": []
+      },
+      "exact": true
+    },
+    {
+      "text": "打开客厅灯",
+      "predicted": {
+        "operation": "add",
+        "deltas": [
+          {
+            "node": "客厅/灯",
+            "slot": "power",
+            "value": "on"
+          }
+        ]
+      },
+      "expected": {
+        "operation": "add",
+        "deltas": [
+          {
+            "node": "客厅/灯",
+            "slot": "power",
+            "value": "on"
+          }
+        ]
+      },
+      "exact": true
+    },
+    {
+      "text": "不对，那个灯应当关闭",
+      "predicted": {
+        "operation": "revise",
+        "deltas": [
+          {
+            "node": "客厅/灯",
+            "slot": "power",
+            "value": "off"
+          }
+        ]
+      },
+      "expected": {
+        "operation": "revise",
+        "deltas": [
+          {
+            "node": "客厅/灯",
+            "slot": "power",
+            "value": "off"
+          }
+        ]
+      },
+      "exact": true
+    },
+    {
+      "text": "接着让主卧窗户达到30%",
+      "predicted": {
+        "operation": "add",
+        "deltas": [
+          {
+            "node": "主卧/窗户",
+            "slot": "level",
+            "value": "30"
+          }
+        ]
+      },
+      "expected": {
+        "operation": "add",
+        "deltas": [
+          {
+            "node": "主卧/窗户",
+            "slot": "level",
+            "value": "30"
+          }
+        ]
+      },
+      "exact": true
+    },
+    {
+      "text": "刚提到的任务暂时中止",
+      "predicted": {
+        "operation": "retain",
+        "deltas": []
+      },
+      "expected": {
+        "operation": "pause",
+        "deltas": [
+          {
+            "node": "主卧/窗户",
+            "slot": "level",
+            "value": "none"
+          }
+        ]
+      },
+      "exact": false
+    },
+    {
+      "text": "接续此前中止的任务",
+      "predicted": {
+        "operation": "resume",
+        "deltas": [
+          {
+            "node": "主卧/窗户",
+            "slot": "level",
+            "value": "70"
+          }
+        ]
+      },
+      "expected": {
+        "operation": "resume",
+        "deltas": [
+          {
+            "node": "主卧/窗户",
+            "slot": "level",
+            "value": "none"
+          }
+        ]
+      },
+      "exact": true
+    },
+    {
+      "text": "主卧的窗户关闭，并且书房的灯开启",
+      "predicted": {
+        "operation": "add",
+        "deltas": [
+          {
+            "node": "主卧/窗户",
+            "slot": "power",
+            "value": "off"
+          },
+          {
+            "node": "书房/灯",
+            "slot": "power",
+            "value": "on"
+          }
+        ]
+      },
+      "expected": {
+        "operation": "add",
+        "deltas": [
+          {
+            "node": "主卧/窗户",
+            "slot": "power",
+            "value": "off"
+          },
+          {
+            "node": "书房/灯",
+            "slot": "power",
+            "value": "on"
+          }
+        ]
+      },
+      "exact": true
+    },
+    {
+      "text": "把书房灯更改为关闭",
+      "predicted": {
+        "operation": "revise",
+        "deltas": [
+          {
+            "node": "书房/灯",
+            "slot": "power",
+            "value": "off"
+          }
+        ]
+      },
+      "expected": {
+        "operation": "revise",
+        "deltas": [
+          {
+            "node": "书房/灯",
+            "slot": "power",
+            "value": "off"
+          }
+        ]
+      },
+      "exact": true
+    },
+    {
+      "text": "主卧窗口那项不用执行了",
+      "predicted": {
+        "operation": "retract",
+        "deltas": [
+          {
+            "node": "主卧/窗户",
+            "slot": "power",
+            "value": "off"
+          }
+        ]
+      },
+      "expected": {
+        "operation": "retract",
+        "deltas": [
+          {
+            "node": "主卧/窗户",
+            "slot": "power",
+            "value": "none"
+          }
+        ]
+      },
+      "exact": true
+    },
+    {
+      "text": "其它控制保持现状",
+      "predicted": {
+        "operation": "retain",
+        "deltas": []
+      },
+      "expected": {
+        "operation": "retain",
+        "deltas": []
+      },
+      "exact": true
+    },
+    {
+      "text": "写出一段科普视频提纲",
+      "predicted": {
+        "operation": "ood",
+        "deltas": []
+      },
+      "expected": {
+        "operation": "ood",
+        "deltas": []
+      },
+      "exact": true
+    },
+    {
+      "text": "客厅灯调整到70%",
+      "predicted": {
+        "operation": "add",
+        "deltas": [
+          {
+            "node": "客厅/灯",
+            "slot": "level",
+            "value": "70"
+          }
+        ]
+      },
+      "expected": {
+        "operation": "add",
+        "deltas": [
+          {
+            "node": "客厅/灯",
+            "slot": "level",
+            "value": "70"
+          }
+        ]
+      },
+      "exact": true
+    },
+    {
+      "text": "请暂停当前亮度任务",
+      "predicted": {
+        "operation": "pause",
+        "deltas": [
+          {
+            "node": "客厅/灯",
+            "slot": "level",
+            "value": "on"
+          }
+        ]
+      },
+      "expected": {
+        "operation": "pause",
+        "deltas": [
+          {
+            "node": "客厅/灯",
+            "slot": "level",
+            "value": "none"
+          }
+        ]
+      },
+      "exact": true
+    },
+    {
+      "text": "分析这份商业计划的风险",
+      "predicted": {
+        "operation": "ood",
+        "deltas": []
+      },
+      "expected": {
+        "operation": "ood",
+        "deltas": []
+      },
+      "exact": true
+    },
+    {
+      "text": "继续先前暂停的亮度任务",
+      "predicted": {
+        "operation": "resume",
+        "deltas": [
+          {
+            "node": "客厅/灯",
+            "slot": "level",
+            "value": "off"
+          }
+        ]
+      },
+      "expected": {
+        "operation": "resume",
+        "deltas": [
+          {
+            "node": "客厅/灯",
+            "slot": "level",
+            "value": "none"
+          }
+        ]
+      },
+      "exact": true
+    },
+    {
+      "text": "然后把亮度降至30%",
+      "predicted": {
+        "operation": "revise",
+        "deltas": [
+          {
+            "node": "客厅/灯",
+            "slot": "level",
+            "value": "30"
+          }
+        ]
+      },
+      "expected": {
+        "operation": "revise",
+        "deltas": [
+          {
+            "node": "客厅/灯",
+            "slot": "level",
+            "value": "30"
+          }
+        ]
+      },
+      "exact": true
+    },
+    {
+      "text": "客厅窗户开启，书房窗户关闭",
+      "predicted": {
+        "operation": "add",
+        "deltas": [
+          {
+            "node": "书房/窗户",
+            "slot": "power",
+            "value": "off"
+          }
+        ]
+      },
+      "expected": {
+        "operation": "add",
+        "deltas": [
+          {
+            "node": "客厅/窗户",
+            "slot": "power",
+            "value": "on"
+          },
+          {
+            "node": "书房/窗户",
+            "slot": "power",
+            "value": "off"
+          }
+        ]
+      },
+      "exact": false
+    },
+    {
+      "text": "最后一个窗口改为开启",
+      "predicted": {
+        "operation": "revise",
+        "deltas": [
+          {
+            "node": "书房/窗户",
+            "slot": "power",
+            "value": "on"
+          }
+        ]
+      },
+      "expected": {
+        "operation": "revise",
+        "deltas": [
+          {
+            "node": "书房/窗户",
+            "slot": "power",
+            "value": "on"
+          }
+        ]
+      },
+      "exact": true
+    },
+    {
+      "text": "去掉客厅窗户这条意图",
+      "predicted": {
+        "operation": "retract",
+        "deltas": [
+          {
+            "node": "客厅/窗户",
+            "slot": "power",
+            "value": "off"
+          }
+        ]
+      },
+      "expected": {
+        "operation": "retract",
+        "deltas": [
+          {
+            "node": "客厅/窗户",
+            "slot": "power",
+            "value": "none"
+          }
+        ]
+      },
+      "exact": true
+    },
+    {
+      "text": "当前剩下的照常执行",
+      "predicted": {
+        "operation": "retain",
+        "deltas": [
+          {
+            "node": "书房/窗户",
+            "slot": "power",
+            "value": "on"
+          }
+        ]
+      },
+      "expected": {
+        "operation": "retain",
+        "deltas": []
+      },
+      "exact": false
+    },
+    {
+      "text": "把一切控制任务全部取消",
+      "predicted": {
+        "operation": "clear",
+        "deltas": []
+      },
+      "expected": {
+        "operation": "clear",
+        "deltas": []
+      },
+      "exact": true
+    },
+    {
+      "text": "主卧灯设置为30%",
+      "predicted": {
+        "operation": "add",
+        "deltas": [
+          {
+            "node": "主卧/灯",
+            "slot": "level",
+            "value": "30"
+          }
+        ]
+      },
+      "expected": {
+        "operation": "add",
+        "deltas": [
+          {
+            "node": "主卧/灯",
+            "slot": "level",
+            "value": "30"
+          }
+        ]
+      },
+      "exact": true
+    },
+    {
+      "text": "书房灯打开",
+      "predicted": {
+        "operation": "add",
+        "deltas": [
+          {
+            "node": "书房/灯",
+            "slot": "power",
+            "value": "on"
+          }
+        ]
+      },
+      "expected": {
+        "operation": "add",
+        "deltas": [
+          {
+            "node": "书房/灯",
+            "slot": "power",
+            "value": "on"
+          }
+        ]
+      },
+      "exact": true
+    },
+    {
+      "text": "客厅窗户设置为70%",
+      "predicted": {
+        "operation": "add",
+        "deltas": [
+          {
+            "node": "客厅/窗户",
+            "slot": "level",
+            "value": "70"
+          }
+        ]
+      },
+      "expected": {
+        "operation": "add",
+        "deltas": [
+          {
+            "node": "客厅/窗户",
+            "slot": "level",
+            "value": "70"
+          }
+        ]
+      },
+      "exact": true
+    },
+    {
+      "text": "撤销书房灯这一要求",
+      "predicted": {
+        "operation": "retract",
+        "deltas": [
+          {
+            "node": "书房/灯",
+            "slot": "power",
+            "value": "30"
+          }
+        ]
+      },
+      "expected": {
+        "operation": "retract",
+        "deltas": [
+          {
+            "node": "书房/灯",
+            "slot": "power",
+            "value": "none"
+          }
+        ]
+      },
+      "exact": true
+    },
+    {
+      "text": "没有其它改动",
+      "predicted": {
+        "operation": "retain",
+        "deltas": []
+      },
+      "expected": {
+        "operation": "retain",
+        "deltas": []
+      },
+      "exact": true
+    },
+    {
+      "text": "关闭书房灯，并且把客厅灯设到30%",
+      "predicted": {
+        "operation": "add",
+        "deltas": [
+          {
+            "node": "书房/灯",
+            "slot": "power",
+            "value": "off"
+          },
+          {
+            "node": "客厅/灯",
+            "slot": "level",
+            "value": "30"
+          }
+        ]
+      },
+      "expected": {
+        "operation": "add",
+        "deltas": [
+          {
+            "node": "书房/灯",
+            "slot": "power",
+            "value": "off"
+          },
+          {
+            "node": "客厅/灯",
+            "slot": "level",
+            "value": "30"
+          }
+        ]
+      },
+      "exact": true
+    },
+    {
+      "text": "后面的亮度换为70%",
+      "predicted": {
+        "operation": "revise",
+        "deltas": [
+          {
+            "node": "客厅/灯",
+            "slot": "level",
+            "value": "70"
+          }
+        ]
+      },
+      "expected": {
+        "operation": "revise",
+        "deltas": [
+          {
+            "node": "客厅/灯",
+            "slot": "level",
+            "value": "70"
+          }
+        ]
+      },
+      "exact": true
+    },
+    {
+      "text": "暂停该亮度设置",
+      "predicted": {
+        "operation": "revise",
+        "deltas": [
+          {
+            "node": "客厅/灯",
+            "slot": "level",
+            "value": "30"
+          }
+        ]
+      },
+      "expected": {
+        "operation": "pause",
+        "deltas": [
+          {
+            "node": "客厅/灯",
+            "slot": "level",
+            "value": "none"
+          }
+        ]
+      },
+      "exact": false
+    },
+    {
+      "text": "恢复刚才的亮度设置",
+      "predicted": {
+        "operation": "resume",
+        "deltas": [
+          {
+            "node": "客厅/灯",
+            "slot": "level",
+            "value": "30"
+          }
+        ]
+      },
+      "expected": {
+        "operation": "resume",
+        "deltas": [
+          {
+            "node": "客厅/灯",
+            "slot": "level",
+            "value": "none"
+          }
+        ]
+      },
+      "exact": true
+    },
+    {
+      "text": "全部控制意图作废",
+      "predicted": {
+        "operation": "clear",
+        "deltas": []
+      },
+      "expected": {
+        "operation": "clear",
+        "deltas": []
+      },
+      "exact": true
+    },
+    {
+      "text": "书房窗户打开",
+      "predicted": {
+        "operation": "add",
+        "deltas": [
+          {
+            "node": "书房/窗户",
+            "slot": "power",
+            "value": "on"
+          }
+        ]
+      },
+      "expected": {
+        "operation": "add",
+        "deltas": [
+          {
+            "node": "书房/窗户",
+            "slot": "power",
+            "value": "on"
+          }
+        ]
+      },
+      "exact": true
+    },
+    {
+      "text": "替我列出本周健身安排",
+      "predicted": {
+        "operation": "ood",
+        "deltas": []
+      },
+      "expected": {
+        "operation": "ood",
+        "deltas": []
+      },
+      "exact": true
+    },
+    {
+      "text": "窗口控制仍按原计划",
+      "predicted": {
+        "operation": "add",
+        "deltas": []
+      },
+      "expected": {
+        "operation": "retain",
+        "deltas": []
+      },
+      "exact": false
+    },
+    {
+      "text": "把它切换为关闭",
+      "predicted": {
+        "operation": "revise",
+        "deltas": [
+          {
+            "node": "书房/窗户",
+            "slot": "power",
+            "value": "off"
+          }
+        ]
+      },
+      "expected": {
+        "operation": "revise",
+        "deltas": [
+          {
+            "node": "书房/窗户",
+            "slot": "power",
+            "value": "off"
+          }
+        ]
+      },
+      "exact": true
+    },
+    {
+      "text": "取消刚才那项窗口控制",
+      "predicted": {
+        "operation": "retract",
+        "deltas": [
+          {
+            "node": "书房/窗户",
+            "slot": "power",
+            "value": "off"
+          }
+        ]
+      },
+      "expected": {
+        "operation": "retract",
+        "deltas": [
+          {
+            "node": "书房/窗户",
+            "slot": "power",
+            "value": "none"
+          }
+        ]
+      },
+      "exact": true
+    },
+    {
+      "text": "主卧窗户设到70%，同时客厅灯设到30%",
+      "predicted": {
+        "operation": "add",
+        "deltas": [
+          {
+            "node": "主卧/窗户",
+            "slot": "level",
+            "value": "70"
+          },
+          {
+            "node": "客厅/灯",
+            "slot": "level",
+            "value": "30"
+          }
+        ]
+      },
+      "expected": {
+        "operation": "add",
+        "deltas": [
+          {
+            "node": "主卧/窗户",
+            "slot": "level",
+            "value": "70"
+          },
+          {
+            "node": "客厅/灯",
+            "slot": "level",
+            "value": "30"
+          }
+        ]
+      },
+      "exact": true
+    },
+    {
+      "text": "前述灯光改为70%",
+      "predicted": {
+        "operation": "revise",
+        "deltas": [
+          {
+            "node": "客厅/灯",
+            "slot": "level",
+            "value": "70"
+          }
+        ]
+      },
+      "expected": {
+        "operation": "revise",
+        "deltas": [
+          {
+            "node": "客厅/灯",
+            "slot": "level",
+            "value": "70"
+          }
+        ]
+      },
+      "exact": true
+    },
+    {
+      "text": "删除主卧窗户的设置",
+      "predicted": {
+        "operation": "retract",
+        "deltas": [
+          {
+            "node": "主卧/窗户",
+            "slot": "level",
+            "value": "30"
+          }
+        ]
+      },
+      "expected": {
+        "operation": "retract",
+        "deltas": [
+          {
+            "node": "主卧/窗户",
+            "slot": "level",
+            "value": "none"
+          }
+        ]
+      },
+      "exact": true
+    },
+    {
+      "text": "已保留的灯光不要调整",
+      "predicted": {
+        "operation": "retain",
+        "deltas": [
+          {
+            "node": "客厅/灯",
+            "slot": "level",
+            "value": "on"
+          }
+        ]
+      },
+      "expected": {
+        "operation": "retain",
+        "deltas": []
+      },
+      "exact": false
+    },
+    {
+      "text": "构思一个儿童故事大纲",
+      "predicted": {
+        "operation": "ood",
+        "deltas": []
+      },
+      "expected": {
+        "operation": "ood",
+        "deltas": []
+      },
+      "exact": true
+    },
+    {
+      "text": "客厅灯打开",
+      "predicted": {
+        "operation": "add",
+        "deltas": [
+          {
+            "node": "客厅/灯",
+            "slot": "power",
+            "value": "on"
+          }
+        ]
+      },
+      "expected": {
+        "operation": "add",
+        "deltas": [
+          {
+            "node": "客厅/灯",
+            "slot": "power",
+            "value": "on"
+          }
+        ]
+      },
+      "exact": true
+    },
+    {
+      "text": "主卧灯打开",
+      "predicted": {
+        "operation": "add",
+        "deltas": [
+          {
+            "node": "主卧/灯",
+            "slot": "power",
+            "value": "on"
+          }
+        ]
+      },
+      "expected": {
+        "operation": "add",
+        "deltas": [
+          {
+            "node": "主卧/灯",
+            "slot": "power",
+            "value": "on"
+          }
+        ]
+      },
+      "exact": true
+    },
+    {
+      "text": "书房灯关闭",
+      "predicted": {
+        "operation": "add",
+        "deltas": [
+          {
+            "node": "书房/灯",
+            "slot": "power",
+            "value": "off"
+          }
+        ]
+      },
+      "expected": {
+        "operation": "add",
+        "deltas": [
+          {
+            "node": "书房/灯",
+            "slot": "power",
+            "value": "off"
+          }
+        ]
+      },
+      "exact": true
+    },
+    {
+      "text": "主卧灯改作关闭",
+      "predicted": {
+        "operation": "revise",
+        "deltas": [
+          {
+            "node": "主卧/灯",
+            "slot": "power",
+            "value": "off"
+          }
+        ]
+      },
+      "expected": {
+        "operation": "revise",
+        "deltas": [
+          {
+            "node": "主卧/灯",
+            "slot": "power",
+            "value": "off"
+          }
+        ]
+      },
+      "exact": true
+    },
+    {
+      "text": "撤掉客厅灯要求",
+      "predicted": {
+        "operation": "retract",
+        "deltas": [
+          {
+            "node": "客厅/灯",
+            "slot": "power",
+            "value": "on"
+          }
+        ]
+      },
+      "expected": {
+        "operation": "retract",
+        "deltas": [
+          {
+            "node": "客厅/灯",
+            "slot": "power",
+            "value": "none"
+          }
+        ]
+      },
+      "exact": true
+    },
+    {
+      "text": "把客厅窗户关上",
+      "predicted": {
+        "operation": "add",
+        "deltas": [
+          {
+            "node": "客厅/窗户",
+            "slot": "power",
+            "value": "off"
+          }
+        ]
+      },
+      "expected": {
+        "operation": "add",
+        "deltas": [
+          {
+            "node": "客厅/窗户",
+            "slot": "power",
+            "value": "off"
+          }
+        ]
+      },
+      "exact": true
+    },
+    {
+      "text": "等一下，上一项还是打开",
+      "predicted": {
+        "operation": "add",
+        "deltas": [
+          {
+            "node": "客厅/窗户",
+            "slot": "power",
+            "value": "on"
+          }
+        ]
+      },
+      "expected": {
+        "operation": "revise",
+        "deltas": [
+          {
+            "node": "客厅/窗户",
+            "slot": "power",
+            "value": "on"
+          }
+        ]
+      },
+      "exact": false
+    },
+    {
+      "text": "冻结当前指令",
+      "predicted": {
+        "operation": "pause",
+        "deltas": [
+          {
+            "node": "客厅/窗户",
+            "slot": "power",
+            "value": "on"
+          }
+        ]
+      },
+      "expected": {
+        "operation": "pause",
+        "deltas": [
+          {
+            "node": "客厅/窗户",
+            "slot": "power",
+            "value": "none"
+          }
+        ]
+      },
+      "exact": true
+    },
+    {
+      "text": "恢复冻结指令",
+      "predicted": {
+        "operation": "add",
+        "deltas": [
+          {
+            "node": "客厅/窗户",
+            "slot": "power",
+            "value": "off"
+          }
+        ]
+      },
+      "expected": {
+        "operation": "resume",
+        "deltas": [
+          {
+            "node": "客厅/窗户",
+            "slot": "power",
+            "value": "none"
+          }
+        ]
+      },
+      "exact": false
+    },
+    {
+      "text": "删除目前所有意图",
+      "predicted": {
+        "operation": "clear",
+        "deltas": []
+      },
+      "expected": {
+        "operation": "clear",
+        "deltas": []
+      },
+      "exact": true
+    },
+    {
+      "text": "主卧灯打开，不，改为关闭",
+      "predicted": {
+        "operation": "revise",
+        "deltas": [
+          {
+            "node": "主卧/灯",
+            "slot": "power",
+            "value": "on"
+          }
+        ]
+      },
+      "expected": {
+        "operation": "add",
+        "deltas": [
+          {
+            "node": "主卧/灯",
+            "slot": "power",
+            "value": "off"
+          }
+        ]
+      },
+      "exact": false
+    },
+    {
+      "text": "书房窗户调整到30%",
+      "predicted": {
+        "operation": "add",
+        "deltas": [
+          {
+            "node": "书房/窗户",
+            "slot": "level",
+            "value": "30"
+          }
+        ]
+      },
+      "expected": {
+        "operation": "add",
+        "deltas": [
+          {
+            "node": "书房/窗户",
+            "slot": "level",
+            "value": "30"
+          }
+        ]
+      },
+      "exact": true
+    },
+    {
+      "text": "现在把这个数值换成70%",
+      "predicted": {
+        "operation": "add",
+        "deltas": [
+          {
+            "node": "书房/窗户",
+            "slot": "level",
+            "value": "70"
+          }
+        ]
+      },
+      "expected": {
+        "operation": "revise",
+        "deltas": [
+          {
+            "node": "书房/窗户",
+            "slot": "level",
+            "value": "70"
+          }
+        ]
+      },
+      "exact": false
+    },
+    {
+      "text": "两项控制暂时都保留",
+      "predicted": {
+        "operation": "retain",
+        "deltas": [
+          {
+            "node": "书房/窗户",
+            "slot": "level",
+            "value": "off"
+          }
+        ]
+      },
+      "expected": {
+        "operation": "retain",
+        "deltas": []
+      },
+      "exact": false
+    },
+    {
+      "text": "全部撤销",
+      "predicted": {
+        "operation": "clear",
+        "deltas": []
+      },
+      "expected": {
+        "operation": "clear",
+        "deltas": []
+      },
+      "exact": true
+    }
+  ]
+}
