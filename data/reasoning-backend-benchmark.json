@@ -1,0 +1,81 @@
+{
+  "version": 1,
+  "purpose": "Provider-neutral semantic proposal benchmark. No case authorizes device execution.",
+  "cases": [
+    {
+      "id": "focused-relative-off",
+      "utterance": "关掉",
+      "state": {
+        "focus": "客厅::主灯",
+        "goals": {"客厅::主灯::power": true}
+      },
+      "capability_candidates": [
+        {"area": "客厅", "entity": "主灯", "property": "power", "type": "bool", "writable": true}
+      ],
+      "expect": {
+        "operation": "revise",
+        "commit_recommendation": "PROPOSE",
+        "safe_for_commit": true
+      }
+    },
+    {
+      "id": "bare-action-no-focus",
+      "utterance": "关掉",
+      "state": {"focus": null, "goals": {}},
+      "capability_candidates": [
+        {"area": "客厅", "entity": "主灯", "property": "power", "type": "bool", "writable": true},
+        {"area": "主卧", "entity": "主灯", "property": "power", "type": "bool", "writable": true}
+      ],
+      "expect": {
+        "operation": "retain",
+        "commit_recommendation": "CLARIFY",
+        "safe_for_commit": false,
+        "ambiguity_contains": ["TARGET_AMBIGUITY"]
+      }
+    },
+    {
+      "id": "cross-room-correction",
+      "utterance": "不是客厅，卧室那个，开一半",
+      "state": {
+        "focus": "客厅::外窗",
+        "goals": {"客厅::外窗::position": 100}
+      },
+      "capability_candidates": [
+        {"area": "客厅", "entity": "外窗", "property": "position", "min": 0, "max": 100, "writable": true},
+        {"area": "主卧", "entity": "外窗", "property": "position", "min": 0, "max": 100, "writable": true},
+        {"area": "次卧", "entity": "外窗", "property": "position", "min": 0, "max": 100, "writable": true}
+      ],
+      "expect": {
+        "operation": "retain",
+        "commit_recommendation": "CLARIFY",
+        "safe_for_commit": false,
+        "ambiguity_contains": ["ROOM_AMBIGUITY"]
+      }
+    },
+    {
+      "id": "explicit-retract",
+      "utterance": "撤回刚才那一项",
+      "state": {
+        "focus": "客厅::主灯::brightness",
+        "goals": {"客厅::主灯::brightness": 30}
+      },
+      "capability_candidates": [],
+      "expect": {
+        "operation": "retract",
+        "commit_recommendation": "PROPOSE",
+        "safe_for_commit": true
+      }
+    },
+    {
+      "id": "ood-non-home",
+      "utterance": "帮我给供应商发一封报价邮件",
+      "state": {"focus": null, "goals": {}},
+      "capability_candidates": [],
+      "expect": {
+        "operation": "ood",
+        "commit_recommendation": "BLOCK",
+        "safe_for_commit": false
+      }
+    }
+  ]
+}
