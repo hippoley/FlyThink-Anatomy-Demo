@@ -250,3 +250,49 @@ The public registry embeds all 46 original JSON schemas from `全产品物模型
 The bounded planner can now compile one utterance into independent room-scoped frames. It supports different goals in different rooms, whole-home expansion, multiple objects per room, and constraint substitution. For example, “主卧很闷，外面下雨了，我又不想开窗” preserves the no-open-window constraint and retrieves the main-bedroom fresh-air capabilities instead of forcing a window action.
 
 Conflicting values for the same room, entity and property do not execute. They produce one targeted clarification. Every inferred node remains subject to the room inventory, global 46-model capability retrieval, permission/type/enum/range validation and the existing score-and-margin commit gate.
+
+
+## Pluggable reasoning backends: local Glimmer / remote Spark
+
+FlyThink now has a provider-neutral reasoning adapter in `scripts/reasoning_backend.py`.
+A model backend is allowed to **propose semantic state only**. It cannot write a
+Thing Model value, authorize a destructive operation, or bypass ambiguity,
+capability, policy, or commit gates.
+
+The adapter speaks an OpenAI-compatible `/chat/completions` contract, so the
+same benchmark can be pointed at a local vLLM/SGLang/llama.cpp endpoint or a
+remote provider endpoint.
+
+Example local endpoint:
+
+```bash
+export FLYTHINK_REASONER_BASE_URL=http://127.0.0.1:8000/v1
+export FLYTHINK_REASONER_MODEL=<your-local-agent-model>
+python scripts/evaluate_reasoning_backends.py
+```
+
+Example remote endpoint:
+
+```bash
+export FLYTHINK_REASONER_BASE_URL=<provider-openai-compatible-v1-url>
+export FLYTHINK_REASONER_MODEL=<remote-model-name>
+export FLYTHINK_REASONER_API_KEY=<api-key>
+python scripts/evaluate_reasoning_backends.py --output artifacts/reasoning-report.json
+```
+
+The initial benchmark in `data/reasoning-backend-benchmark.json` targets the
+failure modes that matter for physical-world dialogue: inherited focus,
+unresolved bare actions, cross-room correction, explicit retraction, and
+out-of-domain requests.
+
+The evaluation surface deliberately separates two questions:
+
+1. **Did the model form the right semantic proposal?**
+2. **Would FlyThink deterministically allow that proposal to commit?**
+
+Even a high-confidence backend recommendation is non-authoritative. Any
+remaining ambiguity makes `safe_for_commit(...)` false, and the existing
+Thing Model gate remains the final schema boundary.
+
+This makes local small-agent models and frontier cloud agents directly
+comparable on the same home-control cases without changing the safety model.
