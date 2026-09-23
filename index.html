@@ -252,7 +252,8 @@ developmental projection, not measured FlyWire activity.\n\nThing Model archive:
 </section></div></details></div></details><p class="researchFooter">本地浏览器推理演示 · FlyWire 解剖证据与开发中的神经状态投影分开展示。</p></div><script>
 const $=s=>document.querySelector(s);
 const GOAL_PLAN_TRUTH='contract_derived_goal_plan_not_hidden_ground_truth';
-const state={turn:0,taskSeq:0,nodeSeq:0,tasks:[],activeTask:null,paused:[],revisions:[],focus:null,focusKey:null,lastArea:'客厅',lastAction:null,thingValues:{},intentTree:{},utteranceHistory:[],lastDelta:null};
+const SESSION_STORAGE_KEY='flythink.runtime.session.v1';
+const state={turn:0,taskSeq:0,nodeSeq:0,tasks:[],activeTask:null,paused:[],revisions:[],focus:null,focusKey:null,lastArea:'客厅',lastAction:null,thingValues:{},intentTree:{},utteranceHistory:[],sessionEvents:[],lastDelta:null};
 let DATA=null,NEURAL=null,LEARNED=null,THINGREG=null,CAPINDEX=null,neuralState=[],semanticScores=[],projectedRoots=[],unitToRoot=[],decisionHeads=null,currentCorpusCase=null,composerTurns=[],composerResults=[],composerSeq=0,composerDragId=null,composerInspectIndex=null,benchmarkScenarios=[],benchmarkResults=[],benchmarkRunSeq=0,essenceBatch=[],essenceResults=[],rot={x:-.18,y:.31},zoom=1.55,drag=null,hits=[],neuralHits=[],selected=null,pulseT=0,pulseRAF=null,pulseStart=0,pulseUntil=0,pulseSpeed=1,pulsePaused=false,pulseBaseReal=0,pulseBaseVirtual=0,turnJourneyStages=[],turnJourneyTimers=[];
 
 function clone(x){return x===undefined?undefined:JSON.parse(JSON.stringify(x))}
@@ -393,6 +394,11 @@ function intentFromLastAction(){
   if(a.includes('light_on'))return 'TurnOn';
   if(a.includes('dim'))return 'SetValue';
   return null;
+}
+function isRelativeActionCommand(text){
+  const raw=String(text||'').trim().replace(/[。！!]+$/,'');
+  if(!raw||canonicalArea(raw)||/外窗|窗户|窗扇|开窗器|灯|彩灯|RGB|温度|空调|纱窗|防虫网/.test(raw))return false;
+  return /^(?:(?:请|帮我|麻烦)?(?:把)?(?:它|那个|这个)?(?:再|也)?\s*)?(?:关(?:掉|上|闭)?|打开|开启|调到\s*(?:百分之\s*)?\d{1,3}\s*%?|调成\s*(?:百分之\s*)?\d{1,3}\s*%?|设为\s*(?:百分之\s*)?\d{1,3}\s*%?|设置为\s*(?:百分之\s*)?\d{1,3}\s*%?)$/.test(raw);
 }
 const SCENARIOS=[
   {text:'外面开始下雨了，屋里没人，我不想雨飘进来',pattern:/下雨|雨飘|飘雨|进雨/,entity:'window',operation:'close',action:'exterior_window_close',confidence:.84,goal:'rain_protection',plan:[{entity:'window',intent:'TurnOff',property:'motorControl',value:1}]},
@@ -1467,12 +1473,13 @@ function parseUtterance(text){
   const isResume=/继续刚才|继续之前|恢复刚才|接着刚才/.test(raw);
   const isInterrupt=/先别管|先放一放|先暂停/.test(raw);
   const correction=/还是|改成|改为|换成|开一点|关一点|不对|说反了/.test(raw)||/^(?:再)?(?:调到|调成|设为|设置为)/.test(raw);
-  const inherit=/那个|它|再|做一样的|照刚才/.test(raw);
+  const focusedAtTurn=focusedTreeNode(),relativeAction=isRelativeActionCommand(raw)&&!!focusedAtTurn;
+  const inherit=/那个|它|再|做一样的|照刚才/.test(raw)||relativeAction;
   if(isCancel) return {type:'cancel'};
   if(isNegation) return {type:'negation',nodes:[newNode('Reject',state.focus||heads.entity.label,{negated_operation:heads.operation.label,area:canonicalArea(raw)||state.lastArea})]};
   if(isResume) return {type:'resume'};
   if(heads.ood>=.55)return {type:'ood',nodes:[newNode('Plan','llm',{reason:'ood_escalation',ood_probability:heads.ood})]};
-  if(heads.ambiguity>=.55&&!scenario)return {type:'clarify',nodes:[newNode('Clarify',state.focus||heads.entity.label||'unknown',{reason:'ambiguous_reference',ambiguity_probability:heads.ambiguity},'unresolved')]};
+  if(heads.ambiguity>=.55&&!scenario&&!relativeAction)return {type:'clarify',nodes:[newNode('Clarify',state.focus||heads.entity.label||'unknown',{reason:'ambiguous_reference',ambiguity_probability:heads.ambiguity},'unresolved')]};
   if(scenario&&scenario.match>.22&&(scenario.inference_source==='compositional_room_object_goal_compiler'||heads.ambiguity<.55)){
     const area=canonicalArea(raw)||state.lastArea||'客厅';
     if(scenario.conflicts?.length){
@@ -1525,6 +1532,7 @@ function parseUtterance(text){
       slots.area=area;
       const en=canonicalEntityName(entity,area);if(en)slots.entity_name=en;
       if(!explicitArea&&area)slots.area_source='inherited';
+      if(relativeAction)slots.reference_source='persistent_focus';
       if(explicitArea)slots.area_source='explicit';
       nodes.push(newNode(intent,entity,slots));
       previousIntent=intent;previousEntity=entity;previousArea=area;
@@ -1940,7 +1948,7 @@ function renderHomeResult(exec,d){
   const result=friendlyTurn(exec,d);
   $('#resultStatus').textContent=result.status;$('#resultStatus').classList.toggle('blocked',result.blocked);
   $('#resultTitle').textContent=result.title;$('#resultLead').textContent=result.detail;
-  for(const o of exec.outputs||[])if(o.worldDelta)visibleHomeState.set(o.worldDelta.key,{binding:o.binding,delta:o.worldDelta});
+  applyVisibleHomeOutputs(exec);
   $('#homeCards').innerHTML=[...visibleHomeState.values()].map(({binding:b,delta})=>'<div class="homeCard"><div class="homeDevice">'+escapeHtml(b?.dialogue_entity_name||'设备')+' · '+escapeHtml(b?.property_title||b?.property_code||'状态')+'</div><div class="homeValue">'+escapeHtml(displayBindingValue(b,delta.after))+'</div><div class="homeBefore">此前：'+escapeHtml(displayBindingValue(b,delta.before))+'</div></div>').join('');
   $('#resultEmpty').hidden=true;$('#turnEvidence').hidden=false;$('#turnFly').hidden=false;drawTurnFly();
   const scene=STARTER_SCENES[$('#sceneSelect').value];
@@ -1960,14 +1968,62 @@ function resetHomeResult(){
 }
 function setConversationReady(ready,error){
   $('#sendTurn').disabled=!ready;
-  $('#runtimeStatus').textContent=ready?'直接发送，或改成你自己的话。':(error?'加载失败，请刷新页面重试。':'正在准备对话…');
+  $('#runtimeStatus').textContent=ready?'每轮保存在此浏览器 · 非云端数据库':(error?'加载失败，请刷新页面重试。':'正在准备对话…');
 }
 
+function applyVisibleHomeOutputs(exec){
+  for(const o of exec?.outputs||[])if(o.worldDelta)visibleHomeState.set(o.worldDelta.key,{binding:o.binding,delta:o.worldDelta});
+}
+function browserSessionStorage(){
+  try{return window.localStorage||null}catch(_){return null}
+}
+function persistSession(){
+  const storage=browserSessionStorage();if(!storage)return false;
+  try{
+    storage.setItem(SESSION_STORAGE_KEY,JSON.stringify({version:1,scene:$('#sceneSelect')?.value||'revise',saved_at:new Date().toISOString(),events:state.sessionEvents.slice(-200)}));
+    return true;
+  }catch(_){return false}
+}
+function clearPersistedSession(){
+  const storage=browserSessionStorage();if(!storage)return;
+  try{storage.removeItem(SESSION_STORAGE_KEY)}catch(_){}
+}
+function readPersistedSession(){
+  const storage=browserSessionStorage();if(!storage)return null;
+  try{
+    const saved=JSON.parse(storage.getItem(SESSION_STORAGE_KEY)||'null');
+    if(saved?.version!==1||!Array.isArray(saved.events))return null;
+    const events=saved.events.filter(x=>x&&typeof x.text==='string'&&x.text.trim()).slice(-200);
+    return events.length?{...saved,events}:null;
+  }catch(_){return null}
+}
+function restorePersistedSession(){
+  const saved=readPersistedSession();if(!saved)return false;
+  if(STARTER_SCENES[saved.scene])$('#sceneSelect').value=saved.scene;
+  resetRuntimeState();resetHomeResult();$('#chat').innerHTML='';visibleHomeState.clear();
+  let last=null;
+  for(const event of saved.events){
+    addMsg('YOU',event.text,true);
+    const result=submit(event.text,{silent:true,restore:true,eventAt:event.at,persist:false});
+    if(!result)continue;
+    applyVisibleHomeOutputs(result.exec);addMsg('FlyThink',friendlyTurn(result.exec,result.delta).detail,false);last={...result,text:event.text};
+  }
+  if(!last)return false;
+  render(last.delta,last.exec,last.neural,last.text);$('#input').value='';
+  $('#runtimeStatus').textContent='已恢复并保存在此浏览器 · '+state.sessionEvents.length+' 轮';
+  return true;
+}
 function submit(text,opts={}){
   if(!text.trim())return null;
   if(!opts.silent)addMsg('YOU',text,true);
   const d=deltaFor(text);applyDelta(d);const neural=settleNeural(text,d,{silent:!!opts.silent});const exec=executeCurrent(neural,d);state.utteranceHistory.push(String(text));if(state.utteranceHistory.length>8)state.utteranceHistory=state.utteranceHistory.slice(-8);
-  if(!opts.silent){render(d,exec,neural,text);renderCorpusEval(text,neural);startPulse();addMsg('FlyThink',friendlyTurn(exec,d).detail,false);}
+  const response=friendlyTurn(exec,d);
+  if(!opts.transient&&(!opts.silent||opts.restore)){
+    state.sessionEvents.push({turn_id:d.turn_id,text:String(text),at:opts.eventAt||new Date().toISOString(),delta:clone(d),reply:response.detail,world_deltas:clone(exec.worldDeltas||[])});
+    if(state.sessionEvents.length>200)state.sessionEvents=state.sessionEvents.slice(-200);
+    if(opts.persist!==false){const saved=persistSession();$('#runtimeStatus').textContent=saved?('已保存在此浏览器 · '+state.sessionEvents.length+' 轮'):'本轮仅保存在内存 · 浏览器禁止本地存储';}
+  }
+  if(!opts.silent){render(d,exec,neural,text);renderCorpusEval(text,neural);startPulse();addMsg('FlyThink',response.detail,false);}
   return {delta:clone(d),neural:clone(neural),exec:clone(exec)};
 }
 
@@ -2122,10 +2178,11 @@ function render(d,exec,neural,text=''){
 }
 
 function resetRuntimeState(){
-  Object.assign(state,{turn:0,taskSeq:0,nodeSeq:0,tasks:[],activeTask:null,paused:[],revisions:[],focus:null,focusKey:null,lastArea:'客厅',lastAction:null,thingValues:{},intentTree:{},utteranceHistory:[],lastDelta:null});
+  Object.assign(state,{turn:0,taskSeq:0,nodeSeq:0,tasks:[],activeTask:null,paused:[],revisions:[],focus:null,focusKey:null,lastArea:'客厅',lastAction:null,thingValues:{},intentTree:{},utteranceHistory:[],sessionEvents:[],lastDelta:null});
   neuralState=NEURAL?Array(NEURAL.config.dim).fill(0):[];semanticScores=[];projectedRoots=[];currentCorpusCase=null;
 }
 function reset(){
+  clearPersistedSession();
   resetRuntimeState();
   $('#chat').innerHTML='<div class="msg"><div class="who">SYSTEM</div>Session reset.</div>';$('#input').value='把客厅外窗关上，客厅灯也关了';updateDecisionHeads($('#input').value);$('#turnPill').textContent='turn 0';$('#deltaPill').textContent='IDLE';$('#delta').textContent='{}';$('#tasks').textContent='No active task.';$('#slots').innerHTML='';renderStateTree();$('#flow').innerHTML='';$('#revisions').textContent='[]';$('#rawStateTree').textContent='{}';$('#resolutionMode').textContent='waiting';$('#resolutionGrid').innerHTML='<div class="resolutionCard"><div class="resolutionPath">Run a turn to inspect grounding provenance.</div></div>';$('#route').textContent='WAITING';$('#action').textContent='—';$('#focus').textContent='—';$('#worldDelta').textContent='—';$('#bindingCount').textContent=(THINGREG?.model_count||0)+' real models loaded';$('#bindingGrid').innerHTML='<div class="bindingCard"><div class="bindingRoute">No output yet</div></div>';$('#semanticMatches').innerHTML='';$('#corpusCase').textContent='Corpus case · 抽取一条语料后，这里会显示 train seed、mutation provenance、expected model 与本轮 readout 对比。';$('#bridgeRows').innerHTML='';$('#bridgeMeta').textContent=DATA?.g?.projection_pool?.length?(DATA.g.projection_pool.length+' projection roots · no active turn'):'projection pool unavailable';if(NEURAL){drawNeural();$('#neuralHud').innerHTML='state reset · 216 developmental units';}drawBrain();resetHomeResult();
 }
@@ -2149,7 +2206,7 @@ async function loadAnatomy(){
   $('#corpusMeta').textContent='LEARNED '+lm.version+' · '+lm.training.train_rows+' train / '+lm.training.dev_rows+' dev · family '+Math.round((lm.metrics?.family?.accuracy||0)*100)+'% · context '+Math.round((lm.metrics?.context_operation?.accuracy||0)*100)+'% · '+CAPINDEX.count+' global capabilities';
   initEssenceFilters();buildEssenceBatch();updateDecisionHeads($('#input').value);
   $('#hud').innerHTML='geometry: '+g.truth+'<br>source: Codex FAFB v783<br>source points: '+Number(g.source_count).toLocaleString()+'<br>display sample: '+Number(g.points.length).toLocaleString()+'<br>projection pool: '+Number((g.projection_pool||[]).length).toLocaleString()+' roots<br>measured replay: '+Number((snap.graph.nodes||[]).length).toLocaleString()+' roots<br><br>Thing Models: '+CAPINDEX.models+' · capabilities: '+CAPINDEX.count+'<br>activity: '+snap.truth;
-  drawBrain();setConversationReady(true);
+  drawBrain();setConversationReady(true);restorePersistedSession();
 }
 function fit(){const c=$('#brain'),r=c.getBoundingClientRect(),d=devicePixelRatio||1;c.width=Math.max(1,r.width*d);c.height=Math.max(1,r.height*d);const x=c.getContext('2d');x.setTransform(d,0,0,d,0,0);return[x,r.width,r.height]}
 function R(p){let[x,y,z]=p,cy=Math.cos(rot.y),sy=Math.sin(rot.y),cx=Math.cos(rot.x),sx=Math.sin(rot.x);let x1=x*cy-z*sy,z1=x*sy+z*cy;let y1=y*cx-z1*sx,z2=y*sx+z1*cx;return[x1,y1,z2]}
