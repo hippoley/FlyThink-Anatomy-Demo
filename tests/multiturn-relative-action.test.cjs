@@ -20,6 +20,7 @@ function parserRuntime(){
   vm.runInContext(source('function newNode(', 'function taskById('),ctx);
   vm.runInContext(source('function focusedTreeNode(', 'function mergeSemanticNode('),ctx);
   vm.runInContext(source('const SLOT_SYNONYMS=', 'const HOME_AREAS='),ctx);
+  vm.runInContext(source('const HOME_AREAS=', 'function canonicalEntityName('),ctx);
   vm.runInContext(source('function canonicalEntityName(', 'const SCENARIOS='),ctx);
   vm.runInContext(source('function parseUtterance(', 'function deltaFor('),ctx);
   return ctx;
@@ -59,7 +60,8 @@ test('调到30% inherits the focused light and selects brightness',()=>{
 test('bare action without focus remains unresolved',()=>{
   const c=parserRuntime();
   const turn=c.parseUtterance('关掉');
-  assert.equal(turn.nodes.length,0);
+  assert.equal(turn.type,'clarify');
+  assert.equal(turn.nodes[0].slots.ambiguity_types.includes('TARGET_AMBIGUITY'),true);
 });
 
 test('interaction events persist locally and clear only on explicit reset',()=>{

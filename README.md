@@ -113,6 +113,24 @@ Failures are grouped by cause (for example `coreference`, `semantic_readout`, `r
 
 The generated batch is an evaluation surface, not additional training data.
 
+## Structured ambiguity gate and failure library
+
+Ambiguity is no longer represented only by one probability. Before a delta can
+commit, the browser runtime checks independent ambiguity axes for room, object,
+referent, property/value, scope, time, operation conflicts and mixed-domain
+requests. A shorthand such as `关掉` may inherit one persistent focus; `开灯`
+without a unique room, generic `卧室`, a pronoun after multiple targets, or a
+relative value without telemetry must clarify and cannot mutate world state.
+
+Every turn is stored as a local event containing its input, before-state,
+GraphDelta, route, reply, world deltas and after-state. The single “这个结果不对”
+action copies that event into a separate failure library. The following user
+turn is linked only as a `candidate_not_gold` correction, so feedback can seed a
+reviewed regression/training case without silently changing runtime rules or
+FlyWire weights. Curated observed failures live in
+`data/ambiguity-failure-cases.json`; browser storage remains local and is not a
+server database.
+
 ## Neural path
 
 ### Local training on verified FlyWire connectivity

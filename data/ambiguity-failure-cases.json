@@ -1,0 +1,25 @@
+{
+  "version": "flythink.ambiguity.failures.v1",
+  "truth": "curated_user_observed_failures_not_model_generated_ground_truth",
+  "cases": [
+    {
+      "id": "user-20260923-multiroom-bare-light",
+      "history": ["客厅太亮，主卧太暗，书房又有点闷"],
+      "utterance": "开灯",
+      "observed_wrong": "书房主灯 · 电源：开启",
+      "expected_gate": "CLARIFY",
+      "expected_ambiguity": ["ROOM_AMBIGUITY"],
+      "must_not_mutate_world": true
+    },
+    {
+      "id": "user-20260923-cancel-compound-tail",
+      "history": ["客厅太亮，主卧太暗，书房又有点闷", "开灯"],
+      "utterance": "算了关了吧，再把窗打开",
+      "observed_wrong": "整轮被压缩为 CANCEL_TASK，后半句丢失",
+      "expected_gate": "CLARIFY",
+      "expected_ambiguity": ["OPERATION_CONFLICT"],
+      "must_preserve_all_clauses": true,
+      "must_not_mutate_world": true
+    }
+  ]
+}
