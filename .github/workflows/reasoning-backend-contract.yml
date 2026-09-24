@@ -18,10 +18,14 @@ jobs:
       - name: Build immutable capability index
         run: python scripts/build_capability_index.py
       - name: Validate reasoning and physical-world contracts
-        run: python -m pytest -q tests/test_reasoning_backend_contract.py tests/test_physical_world_benchmark.py
+        run: python -m pytest -q tests/test_reasoning_backend_contract.py tests/test_physical_world_benchmark.py tests/test_multiturn_episode_generation.py
       - name: Build 46-model benchmark manifest
         run: python scripts/build_physical_world_benchmark.py --per-model 10 --output artifacts/physical-world-benchmark.json
+      - name: Build stateful multi-turn episodes
+        run: python scripts/build_multiturn_episodes.py --manifest artifacts/physical-world-benchmark.json --output artifacts/multiturn-episodes.json
       - uses: actions/upload-artifact@v4
         with:
           name: physical-world-benchmark
-          path: artifacts/physical-world-benchmark.json
+          path: |
+            artifacts/physical-world-benchmark.json
+            artifacts/multiturn-episodes.json
