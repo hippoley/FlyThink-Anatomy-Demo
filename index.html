@@ -2476,4 +2476,22 @@ $('#sceneSelect').addEventListener('change',reset);
 document.querySelectorAll('details').forEach(el=>el.addEventListener('toggle',()=>{if(el.open){drawBrain();drawNeural()}}));
 loadComposerTemplate('interrupt');generateBenchmark();
 loadAnatomy().catch(e=>{setConversationReady(false,e);$('#hud').textContent='Failed to load anatomy: '+e.message;$('#mappedPill').textContent='load failed'});
+</script><section id="coverageMatrix" style="max-width:1180px;margin:36px auto;padding:0 20px 42px">
+<h2>46-model reality coverage</h2><p style="opacity:.7">Generated from the immutable Thing Model archive — not a hand-written demo list.</p>
+<div id="coverageStats" style="margin:14px 0;font-family:monospace">loading benchmark evidence…</div>
+<div id="coverageGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px"></div>
+<pre id="coverageDetail" style="white-space:pre-wrap;margin-top:14px;max-height:340px;overflow:auto;padding:14px;border:1px solid rgba(255,255,255,.12);border-radius:12px">Select a model to inspect its real capability probes.</pre>
+</section>
+<script>
+(async()=>{try{
+ const [b,e]=await Promise.all([fetch('physical-world-benchmark.json').then(r=>r.json()),fetch('multiturn-episodes.json').then(r=>r.json())]);
+ const by={}; for(const x of b.rows)(by[x.model]??=[]).push(x);
+ coverageStats.textContent=b.covered_models+'/'+b.models+' models · '+b.cases+' probes · '+e.turns+' stateful turns · '+b.capabilities+' source capabilities';
+ for(const [m,rows] of Object.entries(by)){
+  const btn=document.createElement('button');btn.textContent=m+' · '+rows.length;btn.style.cssText='padding:9px;text-align:left;border-radius:9px;border:1px solid rgba(255,255,255,.13);background:rgba(255,255,255,.04);color:inherit;cursor:pointer';
+  btn.onclick=()=>{const modes=[...new Set(rows.map(x=>x.capability_candidates[0].mode))];const eps=e.rows.filter(x=>x.model===m).slice(0,3);
+   coverageDetail.textContent=JSON.stringify({model:m,probe_count:rows.length,modes,capabilities:rows.slice(0,10).map(x=>x.source_capability),sample_trajectories:eps.map(x=>x.turns)},null,2)};
+  coverageGrid.appendChild(btn);
+ }
+}catch(err){coverageStats.textContent='coverage evidence unavailable: '+err.message}})();
 </script></body></html>
