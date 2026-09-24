@@ -68,6 +68,8 @@ jobs:
               },ensure_ascii=False),encoding='utf-8')
           PY
           python scripts/build_capability_index.py
+          python scripts/build_physical_world_benchmark.py --per-model 10 --output _site/physical-world-benchmark.json
+          python scripts/build_multiturn_episodes.py --manifest _site/physical-world-benchmark.json --output _site/multiturn-episodes.json
           python scripts/build_full_thing_registry.py
           node --test tests/*.test.cjs
           python - <<'PY'
