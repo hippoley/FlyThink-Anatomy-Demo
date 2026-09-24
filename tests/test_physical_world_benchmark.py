@@ -9,7 +9,7 @@ def test_generator_covers_all_46_models(tmp_path):
     data=json.loads(out.read_text(encoding="utf-8"))
     assert data["models"]==46
     assert data["cases"]==460
-    assert len({x["model"] for x in data["rows"]})==46
+    assert data["covered_models"]==46\n    assert len({x["model"] for x in data["rows"]})==46\n    assert all(x["capability_candidates"][0]["mode"] in {"property_write","property_read","service","event"} for x in data["rows"])
     assert all(len(x["families"])==4 for x in data["rows"])
 
 def test_physical_metrics_detect_unsafe_proposal():
