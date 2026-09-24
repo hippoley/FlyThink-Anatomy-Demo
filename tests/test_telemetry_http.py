@@ -27,18 +27,33 @@ class HTTPTests(unittest.TestCase):
                 req=urllib.request.Request(base+path,data=json.dumps(body).encode(),headers={'Content-Type':'application/json','Origin':origin})
                 with urllib.request.urlopen(req) as response:return json.load(response)
             try:
+                with urllib.request.urlopen(base+'/review.html') as response:
+                    self.assertIn('Trajectory Review', response.read().decode())
                 self.assertEqual(post('/telemetry/turns',{'events':[e]})['inserted'],1)
                 self.assertEqual(post('/telemetry/turns',{'events':[e]})['inserted'],0)
                 e['feedback']='incorrect';e['correction_candidate']={'text':'是客厅那个','label':'candidate_not_gold'}
                 post('/telemetry/turns',{'events':[e]})
                 post('/telemetry/finish',{'episode_id':'fixture-episode'})
+                with urllib.request.urlopen(base+'/telemetry/review?status=unreviewed') as response:queue=json.load(response)
+                self.assertEqual(queue['counts']['unreviewed'],1)
+                self.assertEqual(queue['items'][0]['event_id'],'fixture-event')
+                rating={'event_id':'fixture-event','feedback_id':'fixture-review','score':-1,
+                        'correction':'关闭客厅主灯'}
+                self.assertTrue(post('/telemetry/feedback',rating)['recorded'])
+                self.assertTrue(post('/telemetry/feedback',rating)['recorded'])
+                with urllib.request.urlopen(base+'/telemetry/review?status=reviewed&runtime=browser_rule_runtime') as response:reviewed=json.load(response)
+                self.assertEqual(reviewed['items'][0]['reward'],-1)
+                self.assertEqual(reviewed['counts']['reviewed'],1)
+                with self.assertRaises(urllib.error.HTTPError) as error:
+                    urllib.request.urlopen(base+'/telemetry/review?limit=201')
+                self.assertEqual(error.exception.code,400)
                 with self.assertRaises(urllib.error.HTTPError) as error:post('/telemetry/turns',{'events':[e]},'https://unrelated.example')
                 self.assertEqual(error.exception.code,403)
                 with self.assertRaises(urllib.error.HTTPError) as error:urllib.request.urlopen(base+'/%74elemetry%2fprivate.json')
                 self.assertEqual(error.exception.code,404)
                 store=TrajectoryStore(database)
                 rows=list(store.export());store.close()
-                self.assertEqual(len(rows),1);self.assertEqual(len(rows[0]['feedback']),2)
+                self.assertEqual(len(rows),1);self.assertEqual(len(rows[0]['feedback']),3)
                 self.assertTrue(rows[0]['truncated']);self.assertFalse(rows[0]['training_eligible'])
                 self.assertEqual(rows[0]['provenance']['runtime'],'browser_rule_runtime')
             finally:server.shutdown();server.server_close();thread.join()

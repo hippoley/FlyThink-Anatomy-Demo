@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="zh-Hans">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>FlyThink · Trajectory Review</title>
+  <style>
+    :root{color-scheme:dark;--bg:#090b0f;--panel:#11151b;--line:#252c35;--muted:#8d98a6;--text:#edf2f7;--fly:#b7ff4a;--bad:#ff766f;--ok:#70e1a1;--blue:#78a9ff}*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 15% -10%,#1d2630 0,transparent 34%),var(--bg);font:14px/1.5 Inter,ui-sans-serif,system-ui,sans-serif;color:var(--text)}header{position:sticky;top:0;z-index:3;display:flex;gap:18px;justify-content:space-between;align-items:center;padding:18px 28px;background:#090b0fe8;border-bottom:1px solid var(--line);backdrop-filter:blur(16px)}h1{font-size:17px;margin:0;letter-spacing:.02em}.eyebrow{font:11px ui-monospace,monospace;color:var(--fly);text-transform:uppercase;letter-spacing:.14em}.stats{display:flex;gap:18px;color:var(--muted)}.stats b{color:var(--text);font-weight:600}main{max-width:1180px;margin:auto;padding:24px}.toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px}select,button,textarea{font:inherit;color:var(--text);background:#151a21;border:1px solid var(--line);border-radius:9px}select,button{height:38px;padding:0 12px}button{cursor:pointer}button:hover{border-color:#576270}.refresh{margin-left:auto}.empty{padding:80px 24px;text-align:center;color:var(--muted);border:1px dashed var(--line);border-radius:14px}.card{background:linear-gradient(145deg,#131820,#0e1217);border:1px solid var(--line);border-radius:14px;margin:0 0 16px;overflow:hidden}.head{display:grid;grid-template-columns:1fr auto;gap:16px;padding:17px 19px;border-bottom:1px solid var(--line)}.utterance{font-size:18px;font-weight:650}.meta{font:11px ui-monospace,monospace;color:var(--muted);margin-top:5px}.badge{align-self:start;border:1px solid #34404b;border-radius:99px;padding:4px 8px;font-size:11px;color:var(--blue)}.body{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line)}.pane{padding:16px 19px;background:var(--panel);min-width:0}.label{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.11em;margin-bottom:7px}.json{white-space:pre-wrap;word-break:break-word;margin:0;font:12px/1.55 ui-monospace,SFMono-Regular,Consolas,monospace;color:#ccd5df;max-height:210px;overflow:auto}.review{padding:16px 19px}.score{display:flex;gap:8px;margin-bottom:12px}.score button{min-width:92px}.score button[data-score="1"].selected{color:#07140c;background:var(--ok);border-color:var(--ok)}.score button[data-score="0"].selected{color:#09111b;background:var(--blue);border-color:var(--blue)}.score button[data-score="-1"].selected{color:#190706;background:var(--bad);border-color:var(--bad)}textarea{display:block;width:100%;min-height:72px;padding:10px 12px;resize:vertical}.actions{display:flex;align-items:center;gap:12px;margin-top:10px}.save{background:var(--fly);color:#0d1405;border-color:var(--fly);font-weight:700}.status{color:var(--muted);font-size:12px}.eligible{color:var(--ok)}@media(max-width:720px){header{align-items:flex-start;padding:16px}.stats{display:none}main{padding:14px}.body{grid-template-columns:1fr}.refresh{margin-left:0}.head{grid-template-columns:1fr}.score button{flex:1;min-width:0}}
+  </style>
+</head>
+<body>
+  <header>
+    <div><div class="eyebrow">Human evidence gate</div><h1>Trajectory Review</h1></div>
+    <div class="stats"><span>待审 <b id="unreviewed">—</b></span><span>已审 <b id="reviewed">—</b></span><span>可训练 <b id="eligible">—</b></span></div>
+  </header>
+  <main>
+    <div class="toolbar">
+      <select id="status"><option value="unreviewed">只看待审</option><option value="reviewed">只看已审</option><option value="all">全部轨迹</option></select>
+      <select id="runtime"><option value="all">全部 runtime</option><option value="real_flywire_delta">真实 FlyWire 模型</option><option value="browser_rule_runtime">浏览器规则</option></select>
+      <button class="refresh" id="refresh">刷新队列</button>
+    </div>
+    <div id="queue"><div class="empty">正在读取本地轨迹…</div></div>
+  </main>
+  <script>
+    const $=id=>document.getElementById(id), queue=$('queue');
+    const pretty=value=>JSON.stringify(value,null,2);
+    const escapeHTML=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    const uuid=()=>crypto.randomUUID?crypto.randomUUID():Date.now().toString(36)+Math.random().toString(36).slice(2);
+    async function load(){
+      queue.innerHTML='<div class="empty">正在读取本地轨迹…</div>';
+      try{
+        const q=new URLSearchParams({status:$('status').value,runtime:$('runtime').value,limit:'100'});
+        const res=await fetch('/telemetry/review?'+q); const data=await res.json();
+        if(!res.ok)throw new Error(data.error||'读取失败');
+        $('unreviewed').textContent=data.counts.unreviewed;$('reviewed').textContent=data.counts.reviewed;$('eligible').textContent=data.counts.training_eligible;
+        queue.innerHTML=data.items.length?data.items.map(card).join(''):'<div class="empty">这个筛选条件下没有轨迹。</div>';
+      }catch(error){queue.innerHTML='<div class="empty">'+escapeHTML(error.message)+'<br>请从 telemetry_cli.py serve 打开本页。</div>'}
+    }
+    function card(row){
+      const text=row.observation?.text??pretty(row.observation);
+      const runtime=row.provenance?.runtime||'unknown';
+      const last=[...row.feedback].reverse().find(x=>x.source==='human'&&x.score!==null);
+      return '<article class="card" data-event="'+escapeHTML(row.event_id)+'"><div class="head"><div><div class="utterance">'+escapeHTML(text)+'</div><div class="meta">'+escapeHTML(row.episode_id)+' · step '+row.step+' · '+escapeHTML(row.event_id)+'</div></div><span class="badge">'+escapeHTML(runtime)+'</span></div><div class="body"><section class="pane"><div class="label">模型原始动作</div><pre class="json">'+escapeHTML(pretty(row.raw_action))+'</pre></section><section class="pane"><div class="label">解析 / 执行动作</div><pre class="json">'+escapeHTML(pretty({action:row.action,execution:row.execution}))+'</pre></section><section class="pane"><div class="label">执行前状态</div><pre class="json">'+escapeHTML(pretty(row.state_before))+'</pre></section><section class="pane"><div class="label">执行后状态</div><pre class="json">'+escapeHTML(pretty(row.state_after))+'</pre></section></div><div class="review"><div class="label">人工评分</div><div class="score"><button data-score="1" class="'+(last?.score===1?'selected':'')+'">正确 +1</button><button data-score="0" class="'+(last?.score===0?'selected':'')+'">不确定 0</button><button data-score="-1" class="'+(last?.score===-1?'selected':'')+'">错误 −1</button></div><textarea placeholder="正确动作或审核说明；错误样本建议填写。">'+escapeHTML(last?.correction||'')+'</textarea><div class="actions"><button class="save">写入审核证据</button><span class="status '+(row.training_eligible?'eligible':'')+'">'+(row.training_eligible?'已进入可训练导出':'等待评分或不属于真实模型轨迹')+'</span></div></div></article>';
+    }
+    queue.addEventListener('click',async event=>{
+      const card=event.target.closest('.card');if(!card)return;
+      if(event.target.matches('[data-score]')){card.querySelectorAll('[data-score]').forEach(x=>x.classList.remove('selected'));event.target.classList.add('selected');return}
+      if(!event.target.matches('.save'))return;
+      const selected=card.querySelector('[data-score].selected'),status=card.querySelector('.status');
+      if(!selected){status.textContent='请先选择评分';return}
+      event.target.disabled=true;status.textContent='写入中…';
+      try{const body={event_id:card.dataset.event,feedback_id:'review:'+uuid(),score:Number(selected.dataset.score),correction:card.querySelector('textarea').value.trim()||null};const res=await fetch('/telemetry/feedback',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const data=await res.json();if(!res.ok)throw new Error(data.error||'写入失败');status.textContent='已保存：'+data.feedback_id;setTimeout(load,450)}catch(error){status.textContent=error.message;event.target.disabled=false}
+    });
+    $('refresh').onclick=load;$('status').onchange=load;$('runtime').onchange=load;load();
+  </script>
+</body>
+</html>

@@ -9,7 +9,7 @@ import sys
 from functools import partial
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 from pathlib import Path
-from urllib.parse import urlparse, unquote
+from urllib.parse import urlparse, unquote, parse_qs
 from trajectory_store import TrajectoryStore, browser_event, encode
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -35,9 +35,24 @@ class Handler(SimpleHTTPRequestHandler):
         super().__init__(*args, directory=str(ROOT), **kwargs)
 
     def do_GET(self):
-        path = unquote(urlparse(self.path).path)
+        parsed = urlparse(self.path)
+        path = unquote(parsed.path)
         if path == '/telemetry/health':
             return self.reply(200, {'status': 'ok', 'storage': 'sqlite'})
+        if path == '/telemetry/review':
+            store = None
+            try:
+                query = parse_qs(parsed.query)
+                status = query.get('status', ['unreviewed'])[0]
+                runtime = query.get('runtime', ['all'])[0]
+                limit = int(query.get('limit', ['50'])[0])
+                store = TrajectoryStore(self.database)
+                return self.reply(200, store.review_queue(
+                    status=status, runtime=runtime, limit=limit))
+            except (ValueError, TypeError, sqlite3.Error) as error:
+                return self.reply(400, {'error': str(error)})
+            finally:
+                if store: store.close()
         # Do not expose trajectory databases, source directories or checkpoints.
         name = path.lstrip('/') or 'index.html'
         if '/' in name or name.startswith('.') or Path(name).suffix not in ('.html', '.js', '.css', '.json', '.svg', '.png', '.ico'):
@@ -83,6 +98,12 @@ class Handler(SimpleHTTPRequestHandler):
             elif self.path == '/telemetry/finish':
                 store.finish(body['episode_id'], terminated=False, reason='browser_reset')
                 result = {'closed': True}
+            elif self.path == '/telemetry/feedback':
+                feedback_id = store.feedback(
+                    body['event_id'], feedback_id=body['feedback_id'],
+                    kind='rating', source='human', score=body['score'],
+                    correction=body.get('correction'))
+                result = {'feedback_id': feedback_id, 'recorded': True}
             else:
                 return self.reply(404, {'error': 'not found'})
             self.reply(200, result)
@@ -117,6 +138,7 @@ def main():
             threading.Thread(target=drain, daemon=True).start()
         server = HTTPServer(('127.0.0.1', args.port), partial(Handler, database=args.db))
         print(f'FlyThink: http://127.0.0.1:{args.port}/?telemetry=local', flush=True)
+        print(f'Review:   http://127.0.0.1:{args.port}/review.html', flush=True)
         try: server.serve_forever()
         except KeyboardInterrupt: pass
         finally: stop.set(); server.server_close()

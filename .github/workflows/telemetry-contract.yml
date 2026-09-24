@@ -10,6 +10,7 @@ on:
       - 'tests/trajectory-browser.test.cjs'
       - 'requirements-telemetry.txt'
       - 'index.html'
+      - 'review.html'
       - '.github/workflows/telemetry-contract.yml'
   workflow_dispatch:
 permissions:
@@ -31,3 +32,12 @@ jobs:
           python -m unittest discover -s tests -p 'test_telemetry_http.py'
           python -m unittest discover -s tests -p 'test_phoenix_export.py'
           node --test tests/*.test.cjs
+          python - <<'PY'
+          import re
+          from pathlib import Path
+          source = Path('review.html').read_text(encoding='utf-8')
+          scripts = re.findall(r'<script[^>]*>([\s\S]*?)</script>', source)
+          assert len(scripts) == 1
+          Path('/tmp/flythink-review.js').write_text(scripts[0], encoding='utf-8')
+          PY
+          node --check /tmp/flythink-review.js

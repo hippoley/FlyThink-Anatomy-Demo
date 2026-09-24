@@ -27,6 +27,7 @@ python scripts/telemetry_cli.py serve --phoenix-endpoint http://127.0.0.1:6006/v
 ```
 
 - Conversation page: <http://127.0.0.1:8765/?telemetry=local>
+- Human review queue: <http://127.0.0.1:8765/review.html>
 - Phoenix: <http://127.0.0.1:6006>, project `flythink`
 - Durable database: `telemetry/trajectories.sqlite3`
 
@@ -57,6 +58,13 @@ python scripts/telemetry_cli.py feedback EVENT_ID --score -1 --correction '应�
 python scripts/telemetry_cli.py export --out telemetry/all-trajectories.jsonl
 python scripts/telemetry_cli.py export --training-only --out telemetry/reviewed-transitions.jsonl
 ```
+
+The local conversation page also reveals **审核本地轨迹** under Research Tools.
+The review queue shows the observation, raw model action, resolved execution and
+before/after state side by side. It can filter real FlyWire versus browser-rule
+evidence and append a human score plus correction without overwriting earlier
+feedback. A saved review immediately changes the reviewed/training-eligible
+counts; browser-rule rows never become neural training rows.
 
 `--score` accepts -1 through 1. A subsequent rating is appended with its own identity; prior evidence is not overwritten. For browser episodes, reset closes the episode as truncated, or explicitly close an imported episode:
 

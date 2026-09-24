@@ -111,6 +111,51 @@ class TrajectoryStore:
                    'training_eligible': eligible, 'ppo_ready': False,
                    'trace_id': row['trace_id'], 'span_id': row['span_id']}
 
+    def review_queue(self, *, status='unreviewed', runtime='all', limit=50):
+        """Return bounded, newest-first evidence for the local human review UI."""
+        if status not in ('unreviewed', 'reviewed', 'all'):
+            raise ValueError('status must be unreviewed, reviewed or all')
+        if runtime not in ('all', 'real_flywire_delta', 'browser_rule_runtime'):
+            raise ValueError('unsupported runtime filter')
+        if type(limit) is not int or not 1 <= limit <= 200:
+            raise ValueError('limit must be between 1 and 200')
+        rows = list(self.export())
+        result = []
+        for row in reversed(rows):
+            human_ratings = [item for item in row['feedback']
+                             if item['source'] == 'human' and item['score'] is not None]
+            reviewed = bool(human_ratings)
+            if status == 'reviewed' and not reviewed:
+                continue
+            if status == 'unreviewed' and reviewed:
+                continue
+            if runtime != 'all' and row['provenance'].get('runtime') != runtime:
+                continue
+            result.append({
+                'event_id': row['event_id'], 'episode_id': row['episode_id'],
+                'step': row['step'], 'observation': row['observation'],
+                'raw_action': row['raw_action'], 'action': row['action'],
+                'state_before': row['state_before'], 'state_after': row['state_after'],
+                'execution': row['execution'], 'provenance': row['provenance'],
+                'feedback': row['feedback'], 'reward': row['reward'],
+                'reviewed': reviewed, 'episode_closed': row['episode_closed'],
+                'training_eligible': row['training_eligible'],
+                'trace_id': row['trace_id'], 'span_id': row['span_id'],
+            })
+            if len(result) == limit:
+                break
+        counts = {'returned': len(result), 'reviewed': 0, 'unreviewed': 0,
+                  'training_eligible': 0}
+        for row in rows:
+            if runtime != 'all' and row['provenance'].get('runtime') != runtime:
+                continue
+            reviewed = any(item['source'] == 'human' and item['score'] is not None
+                           for item in row['feedback'])
+            counts['reviewed' if reviewed else 'unreviewed'] += 1
+            counts['training_eligible'] += int(row['training_eligible'])
+        return {'items': result, 'counts': counts, 'filters': {
+            'status': status, 'runtime': runtime, 'limit': limit}}
+
 
 def browser_event(event):
     """Browser rule predictions are never labeled as real FlyWire inference."""

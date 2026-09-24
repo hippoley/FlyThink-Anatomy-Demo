@@ -303,4 +303,6 @@ comparable on the same home-control cases without changing the safety model.
 links predictions, state changes and delayed feedback, and exports reviewed
 transition records for future offline RL. Native FlyWire inference and browser
 rule traces retain separate provenance. The real Phoenix smoke test reads back
-26 spans; no RL optimization or automatic reward assignment is enabled.
+26 spans; no RL optimization or automatic reward assignment is enabled. A local
+Trajectory Review queue now turns collected evidence into explicit human scores
+and corrections before a transition can enter the training export.
