@@ -1,0 +1,2 @@
+-r requirements-telemetry.txt
+arize-phoenix==20.16.0

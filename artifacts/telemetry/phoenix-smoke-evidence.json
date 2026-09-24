@@ -1,0 +1,15 @@
+{
+  "real_phoenix_readback": true,
+  "phoenix_version": "20.16.0",
+  "model_checkpoint": "artifacts/flywire-delta-v18/real.pt",
+  "native_turns": 5,
+  "phase_spans": 20,
+  "feedback_spans": 1,
+  "phoenix_total_spans": 26,
+  "retry_new_turns": 0,
+  "unreviewed_training_rows": 0,
+  "trace_ids_match_sqlite": true,
+  "execution_environment": "simulation",
+  "fixture": "controlled_smoke_not_user_reward",
+  "model_sha256": "6b05cf9ee969dc111ab29e1f4840ee5fabcf6f5a9ef9290be8d7ae7fa29d97c0"
+}

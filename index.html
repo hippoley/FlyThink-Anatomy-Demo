@@ -108,7 +108,7 @@ measured_flywire_coordinate_derivative
 
 Blue anatomy mapping:
 developmental projection, not measured FlyWire activity.\n\nThing Model archive:\n46/46 original JSON schemas loaded from the fixed uploaded archive.\nEvery executable binding is validated against the loaded schema at runtime.</div></div>
-</div></details></div></details><details class="disclosure" id="researchTools"><summary>研究工具<span>语料编排、批量测试、模型检查与神经视图</span></summary><div class="disclosureBody"><button id="exportFailures" class="quietLink" type="button">导出错误样本 JSONL</button><span id="exportFailuresStatus" class="feedbackCount" role="status"></span><details class="disclosure" id="dialogueTools"><summary>编辑语料与多轮脚本<span></span></summary><div class="disclosureBody"><div class="corpusStudio">
+</div></details></div></details><details class="disclosure" id="researchTools"><summary>研究工具<span>语料编排、批量测试、模型检查与神经视图</span></summary><div class="disclosureBody"><button id="exportFailures" class="quietLink" type="button">导出错误样本 JSONL</button><button class="btn" id="exportTrajectory" type="button">导出交互轨迹</button><span id="telemetryStatus" aria-live="polite"></span><span id="exportFailuresStatus" class="feedbackCount" role="status"></span><details class="disclosure" id="dialogueTools"><summary>编辑语料与多轮脚本<span></span></summary><div class="disclosureBody"><div class="corpusStudio">
 <div class="corpusTop"><div><div class="corpusTitle">Dialogue Essence · Corpus Mutation Lab</div><div class="corpusMeta" id="corpusMeta">loading train-only exemplars…</div><div class="corpusMeta" style="margin-top:3px">NEGATION · MULTI-INTENT · NER/AREA · COREFERENCE · CROSS-ROOM · REVISION · INTERRUPTION · SCENARIO · OOD</div></div><div class="presets" style="margin:0"><button class="btn mut" id="sampleCorpus" type="button">抽一条语料</button></div></div>
 <p class="toolHint">这些工具会修改主对话框中的草稿。修改后返回上方发送，继续同一段对话。</p><a class="quietLink" href="#input">返回对话草稿 ↑</a>
 <div class="mutationBar">
@@ -2041,13 +2041,46 @@ function setConversationReady(ready,error){
 function applyVisibleHomeOutputs(exec){
   for(const o of exec?.outputs||[])if(o.worldDelta)visibleHomeState.set(o.worldDelta.key,{binding:o.binding,delta:o.worldDelta});
 }
+let telemetryQueue=Promise.resolve();
+function telemetryEpisode(){
+  if(!state.episodeId)state.episodeId='browser:'+Date.now().toString(36)+':'+Math.random().toString(36).slice(2);
+  return state.episodeId;
+}
+function telemetryLocalEnabled(){
+  return typeof window!=='undefined'&&window.location&&['localhost','127.0.0.1','[::1]'].includes(window.location.hostname)&&new URLSearchParams(window.location.search).get('telemetry')==='local';
+}
+function syncTrajectory(){
+  if(!telemetryLocalEnabled())return;
+  const body=JSON.stringify({events:state.sessionEvents.filter(e=>e.episode_id&&e.trajectory_step)});
+  telemetryQueue=telemetryQueue.catch(()=>{}).then(async()=>{
+    const response=await fetch('/telemetry/turns',{method:'POST',headers:{'Content-Type':'application/json'},body});
+    if(!response.ok)throw new Error('trajectory storage rejected');
+    const status=$('#telemetryStatus');if(status)status.textContent='轨迹已写入本地数据库';return true;
+  }).catch(()=>{const status=$('#telemetryStatus');if(status)status.textContent='轨迹尚未同步；下轮重试，也可导出';return false;});
+}
+function closeTelemetryEpisode(){
+  if(!telemetryLocalEnabled()||!state.sessionEvents.length||!state.episodeId)return;
+  const episode=state.episodeId;
+  syncTrajectory();
+  telemetryQueue=telemetryQueue.then(async synced=>{
+    if(!synced)throw new Error('unsynced turns');
+    const response=await fetch('/telemetry/finish',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({episode_id:episode})});
+    if(!response.ok)throw new Error('episode close rejected');
+  }).catch(()=>{const status=$('#telemetryStatus');if(status)status.textContent='会话结束状态未同步；请保留导出文件';});
+}
+function exportTrajectory(){
+  const events=state.sessionEvents.map(e=>({...e}));
+  const payload={schema_version:'flythink.browser-trajectory.v1',episode_id:state.episodeId||null,complete_prefix:events[0]?.trajectory_step===1,events};
+  const url=URL.createObjectURL(new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}));
+  const a=document.createElement('a');a.href=url;a.download='flythink-trajectory-'+new Date().toISOString().slice(0,10)+'.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
 function browserSessionStorage(){
   try{return window.localStorage||null}catch(_){return null}
 }
 function persistSession(){
   const storage=browserSessionStorage();if(!storage)return false;
   try{
-    storage.setItem(SESSION_STORAGE_KEY,JSON.stringify({version:1,scene:$('#sceneSelect')?.value||'revise',saved_at:new Date().toISOString(),events:state.sessionEvents.slice(-200)}));
+    storage.setItem(SESSION_STORAGE_KEY,JSON.stringify({version:1,episode_id:state.episodeId,trajectory_step:state.trajectoryStep,scene:$('#sceneSelect')?.value||'revise',saved_at:new Date().toISOString(),events:state.sessionEvents.slice(-200)}));
     return true;
   }catch(_){return false}
 }
@@ -2083,6 +2116,7 @@ function linkPendingCorrection(text){
   const pending=[...state.failureEvents].reverse().find(x=>x.feedback==='incorrect'&&!x.correction_candidate);
   if(!pending)return;
   pending.correction_candidate={text:String(text),captured_at:new Date().toISOString(),label:'candidate_not_gold'};persistFailureLibrary();updateFailureCount();
+  const event=state.sessionEvents.find(x=>x.event_id===pending.event_id);if(event){event.correction_candidate=clone(pending.correction_candidate);persistSession();syncTrajectory();}
 }
 function markLastResultWrong(){
   const event=[...state.sessionEvents].reverse().find(x=>x.event_id===state.lastEventId)||state.sessionEvents[state.sessionEvents.length-1];
@@ -2090,7 +2124,7 @@ function markLastResultWrong(){
   event.feedback='incorrect';event.feedback_at=new Date().toISOString();
   const existing=state.failureEvents.find(x=>x.event_id===event.event_id);
   if(!existing)state.failureEvents.push({...clone(event),failure_source:'explicit_user_feedback'});
-  persistSession();persistFailureLibrary();updateFailureCount();
+  persistSession();persistFailureLibrary();updateFailureCount();syncTrajectory();
   const button=$('#markWrong');if(button){button.textContent='已记录为错误样本';button.disabled=true;}
 }
 function exportFailureLibrary(){
@@ -2105,7 +2139,7 @@ function exportFailureLibrary(){
 function restorePersistedSession(){
   const saved=readPersistedSession();if(!saved)return false;
   if(STARTER_SCENES[saved.scene])$('#sceneSelect').value=saved.scene;
-  resetRuntimeState();resetHomeResult();$('#chat').innerHTML='';visibleHomeState.clear();
+  resetRuntimeState();state.episodeId=saved.episode_id||null;state.trajectoryStep=0;resetHomeResult();$('#chat').innerHTML='';visibleHomeState.clear();
   let last=null;
   for(const event of saved.events){
     addMsg('YOU',event.text,true);
@@ -2113,7 +2147,7 @@ function restorePersistedSession(){
     if(!result)continue;
     // Replay builds the current runtime state; the original event remains immutable evidence.
     state.sessionEvents[state.sessionEvents.length-1]=clone(event);
-    state.lastEventId=event.event_id||null;
+    state.lastEventId=event.event_id||null;state.trajectoryStep=event.trajectory_step||state.trajectoryStep;
     applyVisibleHomeOutputs(result.exec);addMsg('FlyThink',event.reply||friendlyTurn(result.exec,result.delta).detail,false);last={...result,text:event.text};
   }
   if(!last)return false;
@@ -2125,14 +2159,14 @@ function restorePersistedSession(){
 function submit(text,opts={}){
   if(!text.trim())return null;
   if(!opts.silent&&!opts.restore)linkPendingCorrection(text);
-  const before=runtimeTraceSnapshot();
+  const startedMs=Date.now(),before=runtimeTraceSnapshot();
   if(!opts.silent)addMsg('YOU',text,true);
   const d=deltaFor(text);applyDelta(d);const neural=settleNeural(text,d,{silent:!!opts.silent});const exec=executeCurrent(neural,d);state.utteranceHistory.push(String(text));if(state.utteranceHistory.length>8)state.utteranceHistory=state.utteranceHistory.slice(-8);
   const response=friendlyTurn(exec,d);
   if(!opts.transient&&(!opts.silent||opts.restore)){
-    const at=opts.eventAt||new Date().toISOString(),eventId='event:'+at+':'+d.turn_id;
-    const event={event_id:eventId,turn_id:d.turn_id,text:String(text),at,before,delta:clone(d),reply:response.detail,route:exec.route,outcome:response.blocked?'blocked':exec.worldDeltas?.length?'committed':'no_change',world_deltas:clone(exec.worldDeltas||[]),after:runtimeTraceSnapshot()};
-    state.sessionEvents.push(event);state.lastEventId=eventId;
+    const at=opts.eventAt||new Date().toISOString(),eventId='event:'+telemetryEpisode()+':'+at+':'+d.turn_id;
+    const event={episode_id:telemetryEpisode(),trajectory_step:state.trajectoryStep=(state.trajectoryStep||0)+1,started_ms:startedMs,ended_ms:Date.now(),event_id:eventId,turn_id:d.turn_id,text:String(text),at,before,delta:clone(d),reply:response.detail,route:exec.route,outcome:response.blocked?'blocked':exec.worldDeltas?.length?'committed':'no_change',world_deltas:clone(exec.worldDeltas||[]),after:runtimeTraceSnapshot()};
+    state.sessionEvents.push(event);state.lastEventId=eventId;if(!opts.restore)syncTrajectory();
     if(state.sessionEvents.length>200)state.sessionEvents=state.sessionEvents.slice(-200);
     if(opts.persist!==false){const saved=persistSession();$('#runtimeStatus').textContent=saved?('已保存在此浏览器 · '+state.sessionEvents.length+' 轮'):'本轮仅保存在内存 · 浏览器禁止本地存储';}
   }
@@ -2292,7 +2326,7 @@ function render(d,exec,neural,text=''){
 
 function resetRuntimeState(){
   const failureEvents=state.failureEvents||[];
-  Object.assign(state,{turn:0,taskSeq:0,nodeSeq:0,tasks:[],activeTask:null,paused:[],revisions:[],focus:null,focusKey:null,lastArea:'客厅',lastAction:null,thingValues:{},intentTree:{},utteranceHistory:[],sessionEvents:[],failureEvents,lastEventId:null,lastDelta:null});
+  Object.assign(state,{episodeId:null,trajectoryStep:0,turn:0,taskSeq:0,nodeSeq:0,tasks:[],activeTask:null,paused:[],revisions:[],focus:null,focusKey:null,lastArea:'客厅',lastAction:null,thingValues:{},intentTree:{},utteranceHistory:[],sessionEvents:[],failureEvents,lastEventId:null,lastDelta:null});
   neuralState=NEURAL?Array(NEURAL.config.dim).fill(0):[];semanticScores=[];projectedRoots=[];currentCorpusCase=null;
 }
 function reset(){
@@ -2404,7 +2438,7 @@ function drawBrain(){if(!DATA||!$('#brain').getClientRects().length)return;const
  }
  const nodes=DATA.s.graph.nodes||[];const phase=Math.max(0,state.turn-1)%3;const active=nodes.filter((_,i)=>i%3===phase);for(const n of active){const p=by[String(n.flywire_id)];if(!p)continue;const q=P([p[1],-p[2],-p[3]],W,H),r=4+Math.log1p(Number(n.activity||0));x.beginPath();x.arc(q.x,q.y,r+4,0,Math.PI*2);x.strokeStyle='rgba(241,189,105,.35)';x.lineWidth=2;x.stroke();x.beginPath();x.arc(q.x,q.y,r,0,Math.PI*2);x.fillStyle='#f1bd69';x.fill();hits.push({kind:'measured',x:q.x,y:q.y,r:r+6,n,p})}
  if(selected&&selected.p){const q=P([selected.p[1],-selected.p[2],-selected.p[3]],W,H);x.beginPath();x.arc(q.x,q.y,7,0,Math.PI*2);x.strokeStyle='white';x.lineWidth=2;x.stroke()}}
-$('#turnStageRail').addEventListener('click',e=>{const stage=e.target.closest('[data-turn-stage]');if(stage)selectTurnJourneyStage(Number(stage.dataset.turnStage))});document.querySelectorAll('[data-p]').forEach(b=>b.addEventListener('click',()=>{const t=b.dataset.p;$('#input').value=t;updateDecisionHeads(t)}));document.querySelectorAll('[data-mutate]').forEach(b=>b.addEventListener('click',()=>mutateDraft(b.dataset.mutate)));$('#sampleCorpus').addEventListener('click',sampleCorpus);$('#copyDecision').addEventListener('click',async()=>{const s=JSON.stringify(window.__decisionContract||{},null,2);try{await navigator.clipboard.writeText(s);$('#copyDecision').textContent='Copied';setTimeout(()=>$('#copyDecision').textContent='Copy JSON',900)}catch(e){$('#decisionAnswer').textContent=s}});$('#reset').addEventListener('click',reset);$('#markWrong').addEventListener('click',markLastResultWrong);$('#exportFailures').addEventListener('click',exportFailureLibrary);$('#composer').addEventListener('submit',e=>{e.preventDefault();if($('#sendTurn').disabled)return;const t=$('#input').value;if(!t.trim())return;submit(t);$('#input').value='';$('#input').focus()});$('#runAsSequence').addEventListener('click',()=>{currentCorpusCase=null;const seq=splitSequence($('#input').value);for(const t of seq)submit(t)});$('#input').addEventListener('input',e=>{currentCorpusCase=null;$('#corpusCase').textContent='Edited free-form turn · expected label cleared.';updateDecisionHeads(e.target.value)});
+$('#turnStageRail').addEventListener('click',e=>{const stage=e.target.closest('[data-turn-stage]');if(stage)selectTurnJourneyStage(Number(stage.dataset.turnStage))});document.querySelectorAll('[data-p]').forEach(b=>b.addEventListener('click',()=>{const t=b.dataset.p;$('#input').value=t;updateDecisionHeads(t)}));document.querySelectorAll('[data-mutate]').forEach(b=>b.addEventListener('click',()=>mutateDraft(b.dataset.mutate)));$('#sampleCorpus').addEventListener('click',sampleCorpus);$('#copyDecision').addEventListener('click',async()=>{const s=JSON.stringify(window.__decisionContract||{},null,2);try{await navigator.clipboard.writeText(s);$('#copyDecision').textContent='Copied';setTimeout(()=>$('#copyDecision').textContent='Copy JSON',900)}catch(e){$('#decisionAnswer').textContent=s}});$('#reset').addEventListener('click',()=>{closeTelemetryEpisode();reset()});$('#markWrong').addEventListener('click',markLastResultWrong);$('#exportFailures').addEventListener('click',exportFailureLibrary);$('#exportTrajectory').addEventListener('click',exportTrajectory);$('#composer').addEventListener('submit',e=>{e.preventDefault();if($('#sendTurn').disabled)return;const t=$('#input').value;if(!t.trim())return;submit(t);$('#input').value='';$('#input').focus()});$('#runAsSequence').addEventListener('click',()=>{currentCorpusCase=null;const seq=splitSequence($('#input').value);for(const t of seq)submit(t)});$('#input').addEventListener('input',e=>{currentCorpusCase=null;$('#corpusCase').textContent='Edited free-form turn · expected label cleared.';updateDecisionHeads(e.target.value)});
 document.querySelectorAll('[data-composer-template]').forEach(b=>b.addEventListener('click',()=>loadComposerTemplate(b.dataset.composerTemplate)));
 document.querySelectorAll('[data-add-turn]').forEach(b=>b.addEventListener('click',()=>{composerTurns.push(composerTurn(b.dataset.addTurn,''));composerResults=[];renderTurnComposer();renderComposerResults()}));
 $('#runComposer').addEventListener('click',runComposer);$('#clearComposerResults').addEventListener('click',()=>{composerResults=[];composerInspectIndex=null;renderComposerResults()});$('#composerResults').addEventListener('click',e=>{const row=e.target.closest('[data-inspect-turn]');if(row&&!e.target.closest('summary'))inspectComposerResult(Number(row.dataset.inspectTurn));});

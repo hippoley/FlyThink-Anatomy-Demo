@@ -1,0 +1,4 @@
+# SDK and exporter used for the verified local integration.
+arize-phoenix-otel==0.17.1
+opentelemetry-sdk==1.44.0
+opentelemetry-exporter-otlp-proto-http==1.44.0

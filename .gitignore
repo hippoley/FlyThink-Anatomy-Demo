@@ -6,3 +6,7 @@ artifacts/flywire-delta*/**/*.pt
 artifacts/flywire-delta*/*.pt
 __pycache__/
 _site/
+.venv-flywire/
+
+.venv-telemetry/
+telemetry/

@@ -296,3 +296,11 @@ Thing Model gate remains the final schema boundary.
 
 This makes local small-agent models and frontier cloud agents directly
 comparable on the same home-control cases without changing the safety model.
+
+## Telemetry and trajectory replay
+
+[Local telemetry and Phoenix](TELEMETRY.md) records immutable turns in SQLite,
+links predictions, state changes and delayed feedback, and exports reviewed
+transition records for future offline RL. Native FlyWire inference and browser
+rule traces retain separate provenance. The real Phoenix smoke test reads back
+26 spans; no RL optimization or automatic reward assignment is enabled.
