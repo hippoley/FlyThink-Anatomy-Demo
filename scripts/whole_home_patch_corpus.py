@@ -52,7 +52,7 @@ FAMILIES={
   ("撤销刚才已经执行的温度修改", [patch("UNDO_EXECUTED",execution_id="exec:living-ac-temp",compensation=patch("PATCH_SLOT",target=LIVING_AC,slot="temperature",value=24))]),
  ],
  "protect_invariant":[
-  ("客厅空调保持不变", [patch("PROTECT",target=LIVING_AC,slot="*",reason":"explicit_keep_unchanged")]),
+  ("客厅空调保持不变", [patch("PROTECT",target=LIVING_AC,slot="*",reason="explicit_keep_unchanged")]),
   ("卧室空调调低一点", [patch("PATCH_SLOT",target=BEDROOM_AC,slot="temperature",value={"relative":"lower"})]),
  ],
  "set_operation":[
