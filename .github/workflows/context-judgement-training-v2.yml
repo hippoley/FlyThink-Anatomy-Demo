@@ -1,0 +1,22 @@
+name: context-judgement-training-v2
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "scripts/context_judgement_corpus_v2.py"
+      - "scripts/train_context_judgement_v2.py"
+      - ".github/workflows/context-judgement-training-v2.yml"
+jobs:
+ train:
+  runs-on: ubuntu-latest
+  timeout-minutes: 25
+  steps:
+   - uses: actions/checkout@v4
+   - uses: actions/setup-python@v5
+     with: {python-version: "3.12"}
+   - run: python -m py_compile scripts/context_judgement_corpus_v2.py scripts/train_context_judgement_v2.py
+   - run: pip install --index-url https://download.pytorch.org/whl/cpu torch
+   - run: python scripts/train_context_judgement_v2.py --epochs 360
+   - run: cat artifacts/context-judgement-v2/report.json
+   - uses: actions/upload-artifact@v4
+     with: {name: context-judgement-v2, path: artifacts/context-judgement-v2/}
