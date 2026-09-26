@@ -18,7 +18,7 @@ jobs:
       - name: Build immutable capability index
         run: python scripts/build_capability_index.py
       - name: Validate reasoning and physical-world contracts
-        run: python -m pytest -q tests/test_reasoning_backend_contract.py tests/test_physical_world_benchmark.py tests/test_multiturn_episode_generation.py tests/test_whole_home_patch_corpus.py tests/test_flywire_whole_home_patch.py
+        run: python -m pytest -q tests/test_reasoning_backend_contract.py tests/test_physical_world_benchmark.py tests/test_multiturn_episode_generation.py tests/test_whole_home_patch_corpus.py tests/test_flywire_whole_home_patch.py tests/test_whole_home_grounding.py
       - name: Build frozen whole-home patch acceptance
         run: python scripts/whole_home_patch_corpus.py --output artifacts/whole-home-patch-acceptance.json
       - name: Build 46-model benchmark manifest
