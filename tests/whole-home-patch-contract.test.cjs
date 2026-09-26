@@ -98,3 +98,27 @@ test("invariant gate detects accidental unrelated mutation",()=>{
   after.devices["客厅::window::w-1"].slots.opening=0;
   assert.throws(()=>assertUntouchedStatePreserved(before,after,{op:"PATCH_SLOT",target:living,slot:"temperature",value:22}),/untouched_state_mutation/);
 });
+
+
+test("相对槽位修改只基于当前值产生最小增量",()=>{
+  const before=base();
+  const {runtime}=applyPatch(before,{op:"PATCH_RELATIVE",target:living,slot:"temperature",delta:-2});
+  assert.equal(runtime.devices["客厅::climate::ac-1"].slots.temperature,22);
+  assert.equal(runtime.devices["客厅::climate::ac-1"].slots.power,"ON");
+  assert.equal(runtime.devices["客厅::climate::ac-1"].slots.mode,"COOL");
+  assert.deepEqual(runtime.devices["客厅::window::w-1"],before.devices["客厅::window::w-1"]);
+});
+
+test("集合指代展开为多个独立 patch，不覆盖集合外设备",()=>{
+  const before=base();
+  const withBedroom=applyPatch(before,{op:"ADD_DEVICE",target:bedroom,slots:{power:"OFF",temperature:25}}).runtime;
+  const {runtime,receipts}=applyTurn(withBedroom,[{op:"PATCH_SLOT",targets:[living,bedroom],slot:"temperature",value:23}]);
+  assert.equal(receipts.length,2);
+  assert.equal(runtime.devices["客厅::climate::ac-1"].slots.temperature,23);
+  assert.equal(runtime.devices["主卧::climate::ac-1"].slots.temperature,23);
+  assert.deepEqual(runtime.devices["客厅::window::w-1"],withBedroom.devices["客厅::window::w-1"]);
+});
+
+test("集合 patch 禁止同时声明 target 和 targets，避免歧义写入",()=>{
+  assert.throws(()=>applyTurn(base(),[{op:"PATCH_SLOT",target:living,targets:[bedroom],slot:"temperature",value:21}]),/set_patch_cannot_mix/);
+});
