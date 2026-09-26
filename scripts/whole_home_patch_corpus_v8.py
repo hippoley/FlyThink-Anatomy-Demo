@@ -30,7 +30,17 @@ def build():
  # 12 set cases
  for text in ["两个都开","两个一起开","这俩都开","这两个一起开","客厅卧室都开","两台空调都开","它们都打开","这两台启动","两个全部打开","两边都开","两台一起启动","客卧两个都开"]:
   final.append(r(text,"PATCH_SLOT",slot="power",value="ON",targets=[AC_L,AC_B],lifecycle={"referent_set":[AC_L,AC_B]},family="set"))
- # Preserve frozen inherited cases; total final >=80.
+ # Full contract operations previously underrepresented in v6.
+ for text in ["移除卧室空调","把卧室空调从任务里去掉","不要再管卧室空调","任务里删掉卧室空调","卧室空调移出当前任务","去掉主卧空调"]:
+  final.append(r(text,"REMOVE_DEVICE",AC_B,lifecycle={"focused_target":AC_B},family="remove"))
+ for text in ["客厅温度保持不变","别动客厅温度","客厅这个温度不要改","保持客厅空调温度","客厅温度锁住","客厅温度维持原样"]:
+  final.append(r(text,"PROTECT",AC_L,"temperature",lifecycle={"focused_target":AC_L},family="protect"))
+ # Replacement remains a distinct destructive intent, never additive.
+ for text in ["不是客厅改卧室","目标换成卧室","别用客厅换主卧","改成卧室空调","客厅那个换成主卧","说错了是卧室"]:
+  item=r(text,"REPLACE_TARGET",AC_B,lifecycle={"focused_target":AC_L},family="replace")
+  item["gold_patches"][0]["from"]=AC_L;item["gold_patches"][0]["to"]=AC_B
+  final.append(item)
+ # Preserve frozen inherited cases; total final >=100.
  return {"truth":"v8_large_compositional_final","train":tr,"dev":dev,"sealed":final,
          "requirements":["family_exact>=0.90","overall_exact>=0.90","relative>=0.90","no_final_checkpoint_selection"]}
 if __name__=="__main__":
