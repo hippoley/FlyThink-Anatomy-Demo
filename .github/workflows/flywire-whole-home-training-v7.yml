@@ -1,0 +1,27 @@
+name: flywire-whole-home-training-v7
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "scripts/train_flywire_whole_home_patch_v7.py"
+      - "scripts/bind_relative_patch.py"
+      - "tests/test_relative_binding.py"
+      - ".github/workflows/flywire-whole-home-training-v7.yml"
+jobs:
+  train:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - name: Binding tests
+        run: python -m unittest tests.test_relative_binding
+      - run: pip install --index-url https://download.pytorch.org/whl/cpu torch
+      - name: Train and evaluate deployed path
+        run: python scripts/train_flywire_whole_home_patch_v7.py --epochs 360 --out artifacts/flywire-whole-home-v7
+      - run: cat artifacts/flywire-whole-home-v7/report.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: flywire-whole-home-training-v7
+          path: artifacts/flywire-whole-home-v7/
