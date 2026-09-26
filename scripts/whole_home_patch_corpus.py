@@ -77,10 +77,21 @@ def build():
         history=[]
         rows=[]
         for index,(text,patches) in enumerate(turns,1):
+            lifecycle = {
+              "pending_ids": ["pending:bedroom-ac-on"] if family=="cancel_pending" and index==2 else [],
+              "executed_ids": ["exec:living-ac-temp"] if family=="undo_executed" and index==2 else [],
+              "referent_set": [LIVING_AC, BEDROOM_AC] if family=="set_operation" and index==2 else [],
+              "focused_target": (
+                LIVING_AC if family in {"slot_minimality","explicit_replace","close_not_remove","undo_executed"} and index==2
+                else LIVING_WINDOW if family=="cross_device_preservation" and index==2
+                else None
+              ),
+            }
             rows.append({
               "turn":index,
               "text":text,
               "context":copy.deepcopy(history),
+              "lifecycle":copy.deepcopy(lifecycle),
               "gold_patches":copy.deepcopy(patches),
               "must_preserve_untouched_state":True,
               "family":family,
