@@ -14,11 +14,15 @@ def bind_relative(text, proposal, context):
     out=dict(proposal)
     focus=context.get("focused_target")
     if focus: out["target"]=focus
-    hits=[slot for slot,cues in SLOT_CUES.items() if any(c in text for c in cues)]
-    if len(hits)==1:
-        out["slot"]=hits[0]
-    elif len(hits)>1:
-        raise ValueError("ambiguous_relative_slot")
+    matched=[]
+    for slot,cues in SLOT_CUES.items():
+        for cue in cues:
+            if cue in text: matched.append((len(cue),slot,cue))
+    if matched:
+        longest=max(x[0] for x in matched)
+        hits={slot for n,slot,_ in matched if n==longest}
+        if len(hits)==1: out["slot"]=next(iter(hits))
+        else: raise ValueError("ambiguous_relative_slot")
     elif focus:
         candidates=CONTINUOUS_BY_ENTITY.get(focus.get("entity"),())
         if len(candidates)==1: out["slot"]=candidates[0]
