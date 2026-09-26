@@ -1,0 +1,30 @@
+name: flywire-whole-home-training-v8
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "scripts/whole_home_patch_corpus_v8.py"
+      - "scripts/train_flywire_whole_home_patch_v8.py"
+      - "scripts/bind_relative_patch.py"
+      - ".github/workflows/flywire-whole-home-training-v8.yml"
+jobs:
+  train:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - name: Preflight and binding tests
+        run: |
+          python -m py_compile scripts/whole_home_patch_corpus_v8.py scripts/train_flywire_whole_home_patch_v8.py
+          python scripts/whole_home_patch_corpus_v8.py
+          python -m unittest tests.test_relative_binding
+      - run: pip install --index-url https://download.pytorch.org/whl/cpu torch
+      - name: Train and score large final benchmark
+        run: python scripts/train_flywire_whole_home_patch_v8.py --epochs 420 --out artifacts/flywire-whole-home-v8
+      - run: cat artifacts/flywire-whole-home-v8/report.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: flywire-whole-home-training-v8
+          path: artifacts/flywire-whole-home-v8/
