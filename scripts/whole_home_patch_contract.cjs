@@ -108,6 +108,15 @@ function undoExecuted(runtime, patch) {
   if (!prior) throw new Error("undo_execution_not_found");
   if (!patch.compensation) throw new Error("undo_requires_explicit_compensation");
   const nested = applyPatch(runtime, patch.compensation, {skipInvariantCheck: true});
+  // applyPatch is intentionally pure/clone-based; an undo must adopt the
+  // compensated runtime or it would only create a receipt without reverting
+  // the physical device state.
+  runtime.devices = nested.runtime.devices;
+  runtime.tasks = nested.runtime.tasks;
+  runtime.pending = nested.runtime.pending;
+  runtime.protectedInvariants = nested.runtime.protectedInvariants;
+  runtime.revisions = nested.runtime.revisions;
+  runtime.executionLedger = nested.runtime.executionLedger;
   runtime.executionLedger.push({
     id: "undo:" + id + ":" + runtime.executionLedger.length,
     kind: "compensation",
