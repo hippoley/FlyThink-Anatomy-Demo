@@ -26,7 +26,7 @@ def build():
     for t in ["卧室的也打开","主卧那个也开着","卧室空调也给我开一下","主卧的同样打开"]:
         train.append(row(t,"ADD_DEVICE",AC_B,"power","ON",{"focused_target":AC_L},"additive"))
     for t in ["不是客厅，是卧室","别弄客厅了，换卧室","客厅那个改成主卧的","目标换成卧室空调"]:
-        train.append(row(t,"REPLACE_TARGET",AC_B,lifecycle={"focused_target":AC_L},"replace"))
+        train.append(row(t,"REPLACE_TARGET",AC_B,lifecycle={"focused_target":AC_L},family="replace"))
     # Same text, lifecycle decides CANCEL vs UNDO.
     for t in ["刚才那个不要了","把刚才那条取消","上一条作废"]:
         train.append(row(t,"CANCEL_PENDING",lifecycle={"pending_ids":["p1"]},"lifecycle_cancel"))
