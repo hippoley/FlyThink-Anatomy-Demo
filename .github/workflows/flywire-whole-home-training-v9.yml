@@ -1,0 +1,23 @@
+name: flywire-whole-home-training-v9
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "scripts/whole_home_patch_corpus_v9.py"
+      - "scripts/train_flywire_whole_home_patch_v9.py"
+      - ".github/workflows/flywire-whole-home-training-v9.yml"
+jobs:
+  train:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - run: python -m py_compile scripts/whole_home_patch_corpus_v9.py scripts/train_flywire_whole_home_patch_v9.py
+      - run: python scripts/whole_home_patch_corpus_v9.py
+      - run: pip install --index-url https://download.pytorch.org/whl/cpu torch
+      - run: python scripts/train_flywire_whole_home_patch_v9.py --epochs 450 --out artifacts/flywire-whole-home-v9
+      - run: cat artifacts/flywire-whole-home-v9/report.json
+      - uses: actions/upload-artifact@v4
+        with: {name: flywire-whole-home-v9, path: artifacts/flywire-whole-home-v9/}
