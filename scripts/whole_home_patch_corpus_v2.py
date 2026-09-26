@@ -24,30 +24,30 @@ def build():
     train=[];sealed=[]
     # Surface-diverse additive vs replacement.
     for t in ["卧室的也打开","主卧那个也开着","卧室空调也给我开一下","主卧的同样打开"]:
-        train.append(row(t,"ADD_DEVICE",AC_B,"power","ON",{"focused_target":AC_L},"additive"))
+        train.append(row(t,"ADD_DEVICE",AC_B,"power","ON",{"focused_target":AC_L},family="additive"))
     for t in ["不是客厅，是卧室","别弄客厅了，换卧室","客厅那个改成主卧的","目标换成卧室空调"]:
         train.append(row(t,"REPLACE_TARGET",AC_B,lifecycle={"focused_target":AC_L},family="replace"))
     # Same text, lifecycle decides CANCEL vs UNDO.
     for t in ["刚才那个不要了","把刚才那条取消","上一条作废"]:
-        train.append(row(t,"CANCEL_PENDING",lifecycle={"pending_ids":["p1"]},"lifecycle_cancel"))
-        train.append(row(t,"UNDO_EXECUTED",lifecycle={"executed_ids":["e1"]},"lifecycle_undo"))
+        train.append(row(t,"CANCEL_PENDING",lifecycle={"pending_ids":["p1"]},family="lifecycle_cancel"))
+        train.append(row(t,"UNDO_EXECUTED",lifecycle={"executed_ids":["e1"]},family="lifecycle_undo"))
     # Same pronoun, focus decides target.
     for focus in [AC_L,AC_B,WIN_L]:
-        train.append(row("把它关掉","CLOSE_DEVICE",focus,"power","OFF",{"focused_target":focus},"focus_close"))
+        train.append(row("把它关掉","CLOSE_DEVICE",focus,"power","OFF",{"focused_target":focus},family="focus_close"))
     for temp in [20,22,24,26]:
-        train.append(row(f"温度调到{temp}度","PATCH_SLOT",AC_L,"temperature",temp,{"focused_target":AC_L},"slot_patch"))
+        train.append(row(f"温度调到{temp}度","PATCH_SLOT",AC_L,"temperature",temp,{"focused_target":AC_L},family="slot_patch"))
     # Sealed: unseen phrasings, plus exact-text counterfactual lifecycle pairs.
     sealed += [
-      row("卧室那个也来一个","ADD_DEVICE",AC_B,"power","ON",{"focused_target":AC_L},"additive"),
-      row("不是这个，改卧室那个","REPLACE_TARGET",AC_B,lifecycle={"focused_target":AC_L},"replace"),
-      row("刚才那个别要了","CANCEL_PENDING",lifecycle={"pending_ids":["p9"]},"lifecycle_cancel"),
-      row("刚才那个别要了","UNDO_EXECUTED",lifecycle={"executed_ids":["e9"]},"lifecycle_undo"),
-      row("这条撤掉","CANCEL_PENDING",lifecycle={"pending_ids":["p10"]},"lifecycle_cancel"),
-      row("这条撤掉","UNDO_EXECUTED",lifecycle={"executed_ids":["e10"]},"lifecycle_undo"),
+      row("卧室那个也来一个","ADD_DEVICE",AC_B,"power","ON",{"focused_target":AC_L},family="additive"),
+      row("不是这个，改卧室那个","REPLACE_TARGET",AC_B,lifecycle={"focused_target":AC_L},family="replace"),
+      row("刚才那个别要了","CANCEL_PENDING",lifecycle={"pending_ids":["p9"]},family="lifecycle_cancel"),
+      row("刚才那个别要了","UNDO_EXECUTED",lifecycle={"executed_ids":["e9"]},family="lifecycle_undo"),
+      row("这条撤掉","CANCEL_PENDING",lifecycle={"pending_ids":["p10"]},family="lifecycle_cancel"),
+      row("这条撤掉","UNDO_EXECUTED",lifecycle={"executed_ids":["e10"]},family="lifecycle_undo"),
       row("关了它","CLOSE_DEVICE",AC_L,"power","OFF",{"focused_target":AC_L},"focus_close"),
-      row("关了它","CLOSE_DEVICE",AC_B,"power","OFF",{"focused_target":AC_B},"focus_close"),
-      row("关了它","CLOSE_DEVICE",WIN_L,"power","OFF",{"focused_target":WIN_L},"focus_close"),
-      row("调成23度","PATCH_SLOT",AC_L,"temperature",23,{"focused_target":AC_L},"slot_patch"),
+      row("关了它","CLOSE_DEVICE",AC_B,"power","OFF",{"focused_target":AC_B},family="focus_close"),
+      row("关了它","CLOSE_DEVICE",WIN_L,"power","OFF",{"focused_target":WIN_L},family="focus_close"),
+      row("调成23度","PATCH_SLOT",AC_L,"temperature",23,{"focused_target":AC_L},family="slot_patch"),
     ]
     return {"truth":"whole_home_patch_v2_context_counterfactual","train":train,"sealed":sealed,
             "hard_invariant":"untouched_state_preservation_100_percent",
