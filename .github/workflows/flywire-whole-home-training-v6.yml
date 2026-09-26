@@ -1,0 +1,28 @@
+name: flywire-whole-home-training-v6
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "scripts/whole_home_patch_corpus_v6.py"
+      - "scripts/train_flywire_whole_home_patch_v6.py"
+      - ".github/workflows/flywire-whole-home-training-v6.yml"
+jobs:
+  train:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - name: Preflight
+        run: |
+          python -m py_compile scripts/whole_home_patch_corpus_v6.py scripts/train_flywire_whole_home_patch_v6.py
+          python scripts/whole_home_patch_corpus_v6.py
+      - run: pip install --index-url https://download.pytorch.org/whl/cpu torch
+      - name: Train contrastive relative v6
+        run: python scripts/train_flywire_whole_home_patch_v6.py --epochs 360
+      - run: cat artifacts/flywire-whole-home-v6/report.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: flywire-whole-home-training-v6
+          path: artifacts/flywire-whole-home-v6/
