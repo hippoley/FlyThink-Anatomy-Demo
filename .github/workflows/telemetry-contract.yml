@@ -5,6 +5,8 @@ on:
       - 'scripts/*trajectory*.py'
       - 'scripts/telemetry_cli.py'
       - 'scripts/infer_flywire_delta.py'
+      - 'scripts/whole_home_patch_contract.cjs'
+      - 'tests/whole-home-patch-contract.test.cjs'
       - 'tests/*telemetry*'
       - 'tests/test_phoenix_export.py'
       - 'tests/trajectory-browser.test.cjs'
