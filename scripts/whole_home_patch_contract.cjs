@@ -33,7 +33,7 @@ function deviceKey(target) {
 }
 
 function slotKey(target, slot) {
-  return deviceKey(target) + "::" + slot;
+  return deviceKey(target) + "::slots::" + slot;
 }
 
 function normalizeRuntime(runtime = {}) {
@@ -68,7 +68,7 @@ function ensureDevice(runtime, target) {
 
 function assertNotProtected(runtime, target, slot) {
   const exact = runtime.protectedInvariants[slotKey(target, slot)];
-  const whole = runtime.protectedInvariants[deviceKey(target) + "::*"];
+  const whole = runtime.protectedInvariants[deviceKey(target) + "::slots::*"];
   if (exact || whole) throw new Error("protected_invariant_write:" + (slot || "*"));
 }
 
