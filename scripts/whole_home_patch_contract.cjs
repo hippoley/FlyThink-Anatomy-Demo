@@ -14,6 +14,7 @@
 const PATCH_OPS = Object.freeze([
   "ADD_DEVICE",
   "PATCH_SLOT",
+  "PATCH_RELATIVE",
   "CLOSE_DEVICE",
   "REMOVE_DEVICE",
   "REPLACE_TARGET",
@@ -78,6 +79,15 @@ function writeSlot(runtime, target, slot, value) {
   const before = Object.prototype.hasOwnProperty.call(device.slots, slot) ? clone(device.slots[slot]) : undefined;
   device.slots[slot] = clone(value);
   return {path: slotKey(target, slot), before, after: clone(value)};
+}
+
+function patchRelative(runtime, patch) {
+  if (!patch.slot) throw new Error("relative_patch_requires_slot");
+  const device = activeDevice(runtime, patch.target);
+  if (!device || !Object.prototype.hasOwnProperty.call(device.slots, patch.slot)) throw new Error("relative_patch_requires_existing_value");
+  const before = device.slots[patch.slot];
+  if (typeof before !== "number" || typeof patch.delta !== "number") throw new Error("relative_patch_requires_numeric_values");
+  return writeSlot(runtime, patch.target, patch.slot, before + patch.delta);
 }
 
 function removeDevice(runtime, target) {
@@ -173,6 +183,7 @@ function allowedDevicePaths(patch) {
   switch (patch.op) {
     case "ADD_DEVICE": addSlots(patch.target, patch.slots || {}); break;
     case "PATCH_SLOT": allowed.add(slotKey(patch.target, patch.slot)); break;
+    case "PATCH_RELATIVE": allowed.add(slotKey(patch.target, patch.slot)); break;
     case "CLOSE_DEVICE": allowed.add(slotKey(patch.target, patch.slot || "power")); break;
     case "REMOVE_DEVICE": allowed.add(deviceKey(patch.target)); break;
     case "REPLACE_TARGET":
@@ -219,6 +230,7 @@ function applyPatch(inputRuntime, patch, options = {}) {
       break;
     }
     case "PATCH_SLOT": receipt = writeSlot(runtime, patch.target, patch.slot, patch.value); break;
+    case "PATCH_RELATIVE": receipt = patchRelative(runtime, patch); break;
     case "CLOSE_DEVICE": receipt = closeDevice(runtime, patch); break;
     case "REMOVE_DEVICE": receipt = removeDevice(runtime, patch.target); break;
     case "REPLACE_TARGET": receipt = replaceTarget(runtime, patch); break;
@@ -232,13 +244,22 @@ function applyPatch(inputRuntime, patch, options = {}) {
   return {runtime, receipt, invariant: assertUntouchedStatePreserved(before, runtime, patch)};
 }
 
+function expandSetPatch(patch) {
+  if (!patch || !Array.isArray(patch.targets)) return [patch];
+  if (!patch.targets.length) throw new Error("set_patch_requires_targets");
+  if (patch.target) throw new Error("set_patch_cannot_mix_target_and_targets");
+  return patch.targets.map(target => ({...clone(patch), targets: undefined, target: clone(target)}));
+}
+
 function applyTurn(inputRuntime, patches) {
   let runtime = normalizeRuntime(inputRuntime);
   const receipts = [];
-  for (const patch of patches || []) {
-    const result = applyPatch(runtime, patch);
-    runtime = result.runtime;
-    receipts.push({patch: clone(patch), receipt: result.receipt, invariant: result.invariant});
+  for (const proposed of patches || []) {
+    for (const patch of expandSetPatch(proposed)) {
+      const result = applyPatch(runtime, patch);
+      runtime = result.runtime;
+      receipts.push({patch: clone(patch), receipt: result.receipt, invariant: result.invariant});
+    }
   }
   return {runtime, receipts};
 }
@@ -250,5 +271,6 @@ module.exports = {
   diffLeaves,
   assertUntouchedStatePreserved,
   applyPatch,
+  expandSetPatch,
   applyTurn
 };
