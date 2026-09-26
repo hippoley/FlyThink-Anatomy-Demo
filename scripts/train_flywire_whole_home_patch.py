@@ -40,6 +40,16 @@ def context_features(turn):
             slot=p.get("slot")
             for s in (p.get("slots") or {}): x[48+stable_bucket("slot:"+s,16)]+=1
             if slot:x[48+stable_bucket("slot:"+str(slot),16)]+=1
+    lifecycle=turn.get("lifecycle") or {}
+    for pid in lifecycle.get("pending_ids",[]): x[stable_bucket("pending:"+pid,16)]+=2
+    for eid in lifecycle.get("executed_ids",[]): x[16+stable_bucket("executed:"+eid,16)]+=2
+    focus=lifecycle.get("focused_target") or {}
+    if focus:
+        x[32+stable_bucket("focus-room:"+str(focus.get("area")),16)]+=2
+        x[48+stable_bucket("focus-entity:"+str(focus.get("entity")),16)]+=2
+    for target in lifecycle.get("referent_set",[]):
+        x[32+stable_bucket("set-room:"+str(target.get("area")),16)]+=1
+        x[48+stable_bucket("set-entity:"+str(target.get("entity")),16)]+=1
     return x/x.norm().clamp_min(1)
 
 def primary_slot(p):
