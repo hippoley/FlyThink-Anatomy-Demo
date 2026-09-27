@@ -1,0 +1,13 @@
+name: context-judgement-training-v3
+on: [workflow_dispatch]
+jobs:
+ train:
+  runs-on: ubuntu-latest
+  timeout-minutes: 25
+  steps:
+   - uses: actions/checkout@v4
+   - uses: actions/setup-python@v5
+     with: {python-version: "3.12"}
+   - run: pip install --index-url https://download.pytorch.org/whl/cpu torch
+   - run: python scripts/train_context_judgement_v3.py --epochs 400
+   - run: cat artifacts/context-judgement-v3/report.json
