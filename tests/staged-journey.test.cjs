@@ -25,3 +25,20 @@ test('stage interaction is inspectable and reset-safe', () => {
   assert.match(html, /turnJourneyTimers\.forEach\(clearTimeout\)/);
   assert.match(html, /\$\('#turnJourney'\)\.hidden=true/);
 });
+
+
+test('keeps a visible whole-home state surface on the primary result path', () => {
+  assert.equal((html.match(/id="homeRoomGrid"/g) || []).length, 1);
+  assert.match(html, /function renderHomeStage\(exec=null\)/);
+  assert.match(html, /HOME_AREAS\.map\(area=>/);
+  assert.match(html, /HOME_INVENTORY\[area\]/);
+  assert.match(html, /homeDeviceChip\.changed/);
+  assert.match(html, /applyVisibleHomeOutputs\(exec\);renderHomeStage\(exec\)/);
+});
+
+test('turn suggestions are directly playable instead of passive copy', () => {
+  assert.match(html, /data-next-prompt/);
+  assert.match(html, /\$\('#nextHint'\)\.addEventListener\('click'/);
+  assert.match(html, /b\.dataset\.nextPrompt/);
+  assert.match(html, /if\(!restorePersistedSession\(\)\)resetHomeResult\(\)/);
+});
