@@ -42,3 +42,12 @@ test('turn suggestions are directly playable instead of passive copy', () => {
   assert.match(html, /b\.dataset\.nextPrompt/);
   assert.match(html, /if\(!restorePersistedSession\(\)\)resetHomeResult\(\)/);
 });
+
+
+test('whole-home device chips load context-aware probes into the primary composer', () => {
+  assert.match(html, /function homeProbeText\(area,entity\)/);
+  assert.match(html, /function loadHomeProbe\(area,entity\)/);
+  assert.match(html, /data-home-probe/);
+  assert.match(html, /\$\('#homeRoomGrid'\)\.addEventListener\('click'/);
+  assert.match(html, /外面下雨了，不想开窗/);
+});
