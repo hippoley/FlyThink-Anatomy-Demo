@@ -3,7 +3,7 @@ const cp=require("child_process");
 const readline=require("readline");
 const {applyTurn,normalizeRuntime}=require("./whole_home_patch_contract.cjs");
 const {deriveContext}=require("./runtime_context_adapter.cjs");
-const {MockThingDriver,executePhysicalTurn}=require("./physical_runtime.cjs");
+const {MockThingDriver,executePhysicalTurn}=require("./physical_runtime.cjs");\nconst {WindowPilotHttpDriver}=require("./windowpilot_http_driver.cjs");
 
 function key(t){return t&&[t.area,t.entity,t.instance||"default"].join("::")}
 function eq(a,b){return JSON.stringify(a)===JSON.stringify(b)}
@@ -24,7 +24,16 @@ function sameTargets(p,gold){
 }
 async function run(trajectory,args={}){
  let runtime=normalizeRuntime(trajectory.initial_runtime||{}),history=[],unsafe=0,wrong=0,untouched=0,decisionCorrect=0,patchCorrect=0,stateCorrect=0;
- const physical=args.physical==="mock"?new MockThingDriver(runtime,args.physical_options||{}):null;
+ let physical=null;
+ if(args.physical==="mock")physical=new MockThingDriver(runtime,args.physical_options||{});
+ else if(args.physical==="windowpilot")physical=new WindowPilotHttpDriver({
+  baseUrl:args.windowpilot_url,
+  target:args.physical_target,
+  expectedHardwareIdentity:args.expected_hardware_identity||null,
+  tolerancePct:args.position_tolerance_pct,
+  timeoutMs:args.physical_timeout_ms
+ });
+ else if(args.physical)throw new Error("unsupported_physical_driver:"+args.physical);
  const py=cp.spawn("python",["scripts/checkpoint_jsonl_server.py","--graph",args.graph,"--judgement",args.judgement,"--semantic",args.semantic],{stdio:["pipe","pipe","inherit"]});
  const rl=readline.createInterface({input:py.stdout});const queue=[];let serverError=null;
  py.on("exit",(code,signal)=>{if(code!==0){serverError=new Error("checkpoint_server_exit:"+code+":"+(signal||""));while(queue.length){const q=queue.shift();q.reject(serverError);}}});
@@ -65,7 +74,7 @@ async function run(trajectory,args={}){
   state_after_turn_exact:stateCorrect/trajectory.turns.length,
   strict_trajectory_exact:patchCorrect===trajectory.turns.length&&stateCorrect===trajectory.turns.length,
   unsafe_execute:unsafe,wrong_device:wrong,untouched_state_violation:untouched,
-  physical_mode:physical?"mock":"disabled",
+  physical_mode:physical?(args.physical||"custom"):"disabled",
   physical_commands:physical?physical.commands.length:0,
   runtime,turns:history
  };
