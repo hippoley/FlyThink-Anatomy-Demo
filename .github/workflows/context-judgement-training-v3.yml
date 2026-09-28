@@ -1,5 +1,11 @@
 name: context-judgement-training-v3
-on: [workflow_dispatch]
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "scripts/context_judgement_corpus_v3.py"
+      - "scripts/train_context_judgement_v3.py"
+      - ".github/workflows/context-judgement-training-v3.yml"
 jobs:
  train:
   runs-on: ubuntu-latest
