@@ -1,0 +1,12 @@
+name: e2e-trajectory-contract
+on:
+  push:
+    paths: ["scripts/e2e_trajectory_protocol.cjs","tests/test_e2e_trajectory_protocol.cjs","scripts/frozen_patch_final_v11.py",".github/workflows/e2e-trajectory-contract.yml"]
+jobs:
+ contract:
+  runs-on: ubuntu-latest
+  steps:
+   - uses: actions/checkout@v4
+   - run: node tests/test_e2e_trajectory_protocol.cjs
+   - run: python scripts/frozen_patch_final_v11.py > /tmp/final.json
+   - run: python -c "import json; d=json.load(open('/tmp/final.json')); assert len(d['rows'])==180; print(d['sha256'])"
