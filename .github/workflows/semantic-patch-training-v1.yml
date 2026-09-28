@@ -2,11 +2,12 @@ name: semantic-patch-training-v1
 on:
   push:
     paths:
-      - "scripts/semantic_patch_contract.py"
-      - "scripts/train_semantic_patch_v1.py"\n      - "scripts/semantic_context_features.py"
-      - "scripts/whole_home_patch_corpus_v10.py"
-      - "scripts/whole_home_patch_corpus_v11.py"
-      - ".github/workflows/semantic-patch-training-v1.yml"
+      - scripts/semantic_patch_contract.py
+      - scripts/train_semantic_patch_v1.py
+      - scripts/semantic_context_features.py
+      - scripts/whole_home_patch_corpus_v10.py
+      - scripts/whole_home_patch_corpus_v11.py
+      - .github/workflows/semantic-patch-training-v1.yml
   workflow_dispatch:
 jobs:
   train:
