@@ -14,6 +14,9 @@ def resolve_targets(text,proposal,context):
  focus=context.get("focused_target")
  if explicit_set:return {"mode":"SET","targets":uniq(explicit_set),"source":"explicit"}
  if explicit:return {"mode":"ONE","targets":[dict(explicit)],"source":"explicit"}
+ # ADD_DEVICE is additive: a named/new target candidate must not be replaced by current focus.
+ if proposal.get("op")=="ADD_DEVICE" and context.get("add_target"):
+  return {"mode":"ONE","targets":[dict(context["add_target"])],"source":"add_target"}
  if proposal.get("cardinality") not in (None,"ONE") and referents:
   return {"mode":"SET","targets":referents,"source":"referent_set"}
  if focus:return {"mode":"ONE","targets":[dict(focus)],"source":"focus"}
