@@ -16,7 +16,8 @@ def writable_candidates(index,model_id=None):
  return sorted(out)
 def resolve_slot(proposal,target,context,index):
  if proposal.get("slot"):return {"slot":proposal["slot"],"source":"explicit"}
- registry=context.get("device_registry",{});mid=registry.get(f'{target.get("area")}::{target.get("entity")}',{}).get("model_id")
+ registry=context.get("device_registry",{});k=f'{target.get("area")}::{target.get("entity")}::{target.get("instance","default")}';mid=registry.get(k,{}).get("model_id")
+ if not mid:return {"slot":None,"source":"clarify_unbound_device","candidates":[]}
  c=writable_candidates(index,mid)
  if len(c)==1:return {"slot":c[0],"source":"capability_unique"}
  return {"slot":None,"source":"clarify","candidates":c}
