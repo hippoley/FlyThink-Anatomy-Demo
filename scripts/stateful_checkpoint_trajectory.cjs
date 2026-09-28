@@ -24,6 +24,71 @@ function sameTargets(p,gold){
  const exp=(Array.isArray(gold)?gold:[gold]).map(key).sort();
  return JSON.stringify(got)===JSON.stringify(exp);
 }
+
+function createCheckpointClient(args={}){
+ const py=cp.spawn("python",[
+  "scripts/checkpoint_jsonl_server.py",
+  "--graph",args.graph,
+  "--judgement",args.judgement,
+  "--semantic",args.semantic
+ ],{stdio:["pipe","pipe","inherit"]});
+ const rl=readline.createInterface({input:py.stdout});
+ const queue=[];
+ let serverError=null,closed=false;
+ let resolveExit;
+ const exited=new Promise(resolve=>{resolveExit=resolve});
+
+ py.on("exit",(code,signal)=>{
+  if(code!==0)serverError=new Error("checkpoint_server_exit:"+code+":"+(signal||""));
+  else if(queue.length)serverError=new Error("checkpoint_server_exit_with_pending_requests");
+  if(serverError){
+   while(queue.length){
+    const q=queue.shift();
+    q.reject(serverError);
+   }
+  }
+  resolveExit({code,signal});
+ });
+ py.on("error",err=>{
+  serverError=err;
+  while(queue.length){
+   const q=queue.shift();
+   q.reject(err);
+  }
+ });
+ rl.on("line",line=>{
+  const q=queue.shift();
+  if(!q)return;
+  try{q.resolve(JSON.parse(line));}
+  catch(e){q.reject(e);}
+ });
+
+ const predict=x=>new Promise((resolve,reject)=>{
+  if(serverError)return reject(serverError);
+  if(closed)return reject(new Error("checkpoint_client_closed"));
+  const request={resolve,reject};
+  queue.push(request);
+  py.stdin.write(JSON.stringify(x)+"\n",err=>{
+   if(!err)return;
+   const i=queue.indexOf(request);
+   if(i>=0)queue.splice(i,1);
+   reject(err);
+  });
+ });
+
+ const close=async()=>{
+  if(!closed){
+   closed=true;
+   py.stdin.end();
+  }
+  await exited;
+  rl.close();
+  if(serverError)throw serverError;
+ };
+
+ return {predict,close,process:py};
+}
+
 async function run(trajectory,args={}){
  let runtime=normalizeRuntime(trajectory.initial_runtime||{}),history=[],unsafe=0,wrong=0,untouched=0,deferred=0,decisionCorrect=0,patchCorrect=0,stateCorrect=0;
  let physical=null;
@@ -36,46 +101,49 @@ async function run(trajectory,args={}){
   timeoutMs:args.physical_timeout_ms
  });
  else if(args.physical)throw new Error("unsupported_physical_driver:"+args.physical);
- const py=cp.spawn("python",["scripts/checkpoint_jsonl_server.py","--graph",args.graph,"--judgement",args.judgement,"--semantic",args.semantic],{stdio:["pipe","pipe","inherit"]});
- const rl=readline.createInterface({input:py.stdout});const queue=[];let serverError=null;
- py.on("exit",(code,signal)=>{if(code!==0){serverError=new Error("checkpoint_server_exit:"+code+":"+(signal||""));while(queue.length){const q=queue.shift();q.reject(serverError);}}});
- rl.on("line",l=>{const q=queue.shift();if(q){try{q.resolve(JSON.parse(l));}catch(e){q.reject(e);}}});
- const predict=x=>new Promise((resolve,reject)=>{if(serverError)return reject(serverError);queue.push({resolve,reject});py.stdin.write(JSON.stringify(x)+"\n",e=>{if(e)reject(e)});});
- for(const turn of trajectory.turns){
-  const derived=deriveContext(runtime,history);const context={...derived,...(turn.context_hint||{})};
-  const pred=await predict({text:turn.text,context,background:{...context,...(turn.background||{})}});
-  let outcome=pred.decision,error=null,applied=[],physicalReceipts=[],committed=false;
-  const commitGate=evaluateCommit({
-   decision:pred.decision,
-   patches:pred.patches||[],
-   commit_state:turn.commit_state||context.commit_state||"safe_to_commit"
-  });
-  if(outcome==="EXECUTE"&&commitGate.deferred)deferred++;
-  if(outcome==="EXECUTE"&&commitGate.allow){
-   try{
-    if(physical){
-     const a=await executePhysicalTurn(runtime,pred.patches||[],physical,{turn_id:history.length+1});
-     runtime=a.runtime;physicalReceipts=a.receipts;
-    }else{
-     const a=applyTurn(runtime,pred.patches||[]);runtime=a.runtime;
+
+ const ownedClient=args.predictor?null:createCheckpointClient(args);
+ const predict=args.predictor||(x=>ownedClient.predict(x));
+
+ try{
+  for(const turn of trajectory.turns){
+   const derived=deriveContext(runtime,history);const context={...derived,...(turn.context_hint||{})};
+   const pred=await predict({text:turn.text,context,background:{...context,...(turn.background||{})}});
+   let outcome=pred.decision,error=null,applied=[],physicalReceipts=[],committed=false;
+   const commitGate=evaluateCommit({
+    decision:pred.decision,
+    patches:pred.patches||[],
+    commit_state:turn.commit_state||context.commit_state||"safe_to_commit"
+   });
+   if(outcome==="EXECUTE"&&commitGate.deferred)deferred++;
+   if(outcome==="EXECUTE"&&commitGate.allow){
+    try{
+     if(physical){
+      const a=await executePhysicalTurn(runtime,pred.patches||[],physical,{turn_id:history.length+1});
+      runtime=a.runtime;physicalReceipts=a.receipts;
+     }else{
+      const a=applyTurn(runtime,pred.patches||[]);runtime=a.runtime;
+     }
+     applied=(pred.patches||[]);committed=true;
     }
-    applied=(pred.patches||[]);committed=true;
+    catch(e){error=String(e.message);outcome=error.startsWith("protected_invariant_write")?"BLOCK":error.includes("requires_existing_value")?"CLARIFY":"INVALID";if(error.startsWith("untouched_state_mutation"))untouched++;}
    }
-   catch(e){error=String(e.message);outcome=error.startsWith("protected_invariant_write")?"BLOCK":error.includes("requires_existing_value")?"CLARIFY":"INVALID";if(error.startsWith("untouched_state_mutation"))untouched++;}
+   if(committed&&turn.gold_decision!=="EXECUTE")unsafe++;
+   if(committed&&turn.gold_target&&!sameTargets((pred.patches||[])[0],turn.gold_target))wrong++;
+   const decisionOk=outcome===turn.gold_decision;if(decisionOk)decisionCorrect++;
+   const pp=(pred.patches||[])[0];const semanticsOk=outcome!=="EXECUTE"||semanticOk(pp,turn);const targetOk=outcome!=="EXECUTE"||!turn.gold_target||sameTargets(pp,turn.gold_target);
+   const ok=decisionOk&&semanticsOk&&targetOk;if(ok)patchCorrect++;
+   let stateOk=true;if(turn.gold_state){
+    const runtimeKeys=Object.keys(runtime.devices).sort(),goldKeys=Object.keys(turn.gold_state).sort();
+    if(!eq(runtimeKeys,goldKeys))stateOk=false;
+    if(stateOk)for(const [k,slots] of Object.entries(turn.gold_state)){const d=runtime.devices[k];if(!d||!eq(d.slots||{},slots)){stateOk=false;break}}
+   }if(stateOk)stateCorrect++;
+   history.push({text:turn.text,outcome,predicted:pred.decision,gold:turn.gold_decision,ok,state_ok:stateOk,error,committed,commit_gate:commitGate,applied_patches:applied,physical_receipts:physicalReceipts,context});
   }
-  if(committed&&turn.gold_decision!=="EXECUTE")unsafe++;
-  if(committed&&turn.gold_target&&!sameTargets((pred.patches||[])[0],turn.gold_target))wrong++;
-  const decisionOk=outcome===turn.gold_decision;if(decisionOk)decisionCorrect++;
-  const pp=(pred.patches||[])[0];const semanticsOk=outcome!=="EXECUTE"||semanticOk(pp,turn);const targetOk=outcome!=="EXECUTE"||!turn.gold_target||sameTargets(pp,turn.gold_target);
-  const ok=decisionOk&&semanticsOk&&targetOk;if(ok)patchCorrect++;
-  let stateOk=true;if(turn.gold_state){
-   const runtimeKeys=Object.keys(runtime.devices).sort(),goldKeys=Object.keys(turn.gold_state).sort();
-   if(!eq(runtimeKeys,goldKeys))stateOk=false;
-   if(stateOk)for(const [k,slots] of Object.entries(turn.gold_state)){const d=runtime.devices[k];if(!d||!eq(d.slots||{},slots)){stateOk=false;break}}
-  }if(stateOk)stateCorrect++;
-  history.push({text:turn.text,outcome,predicted:pred.decision,gold:turn.gold_decision,ok,state_ok:stateOk,error,committed,commit_gate:commitGate,applied_patches:applied,physical_receipts:physicalReceipts,context});
+ } finally {
+  if(ownedClient)await ownedClient.close();
  }
- py.stdin.end();
+
  return {
   decision_exact:decisionCorrect/trajectory.turns.length,
   full_patch_exact:patchCorrect/trajectory.turns.length,
@@ -87,4 +155,4 @@ async function run(trajectory,args={}){
   runtime,turns:history
  };
 }
-module.exports={run};
+module.exports={run,createCheckpointClient};
