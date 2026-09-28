@@ -16,6 +16,8 @@ on:
       - "scripts/judgement_patch_pipeline.py"
       - "scripts/generate_long_trajectory_benchmark_v2.py"
       - "scripts/inspect_core_device_capabilities.py"
+      - "tests/test_target_aware_slot_cues.py"
+      - "tests/test_lexical_operation_evidence.py"
       - "tests/physical_runtime.cjs"
       - "tests/windowpilot_http_driver.cjs"
       - ".github/workflows/long-checkpoint-e2e-v2.yml"
