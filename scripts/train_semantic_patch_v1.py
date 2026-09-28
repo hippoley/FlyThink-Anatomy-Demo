@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Regularized FlyWire-gated semantic predictor with train-only model selection."""
-import argparse,json
+import argparse,json,re
 from collections import Counter,defaultdict
 from pathlib import Path
 import torch
@@ -35,13 +35,21 @@ def score(m,rows):
  for i,r in enumerate(rows):fam.setdefault(r["family"],[]).append(bool(exact[i]))
  return {"exact":float(exact.float().mean()),"op":float((p[:,0]==y[:,0]).float().mean()),"cardinality":float((p[:,1]==y[:,1]).float().mean()),"direction":float((p[:,2]==y[:,2]).float().mean()),"value_semantics":float((p[:,3]==y[:,3]).float().mean()),"family":{k:sum(v)/len(v) for k,v in sorted(fam.items())}}
 
+def surface_group(text):
+ s=re.sub(r"\\d+","<N>","".join(text.split()))
+ s=re.sub(r"客厅|主卧|书房|次卧","<ROOM>",s)
+ s=re.sub(r"空调|灯光?|窗户","<ENTITY>",s)
+ return s
 def stratified_split(rows):
- groups=defaultdict(list)
- for r in rows:groups[r["family"]].append(r)
+ # Hold out entire normalized surface groups; never split paraphrase siblings.
+ by_family=defaultdict(lambda:defaultdict(list))
+ for r in rows:by_family[r["family"]][surface_group(r["text"])].append(r)
  fit=[];sel=[]
- for _,xs in sorted(groups.items()):
-  n=max(1,len(xs)//5) if len(xs)>=5 else 0
-  sel.extend(xs[-n:] if n else []);fit.extend(xs[:-n] if n else xs)
+ for fam,groups in sorted(by_family.items()):
+  keys=sorted(groups)
+  hold=max(1,len(keys)//5) if len(keys)>=3 else 0
+  held=set(keys[-hold:] if hold else [])
+  for k,xs in groups.items():(sel if k in held else fit).extend(xs)
  return fit,sel
 
 def balanced_weights(rows):
