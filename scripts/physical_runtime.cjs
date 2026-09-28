@@ -114,7 +114,7 @@ function reconcileObservation(runtime, observation, turnId = null) {
   return next;
 }
 
-function executePhysicalTurn(inputRuntime, patches, driver, options = {}) {
+async function executePhysicalTurn(inputRuntime, patches, driver, options = {}) {
   let runtime = normalizeRuntime(inputRuntime);
   const receipts = [];
   for (const proposed of patches || []) {
@@ -127,13 +127,20 @@ function executePhysicalTurn(inputRuntime, patches, driver, options = {}) {
       }
 
       const physicalPatch = materializePatch(runtime, expanded);
-      const command = driver.execute(physicalPatch);
+      const command = await Promise.resolve(driver.execute(physicalPatch));
+      if (!command || typeof command !== "object") {
+        throw new Error("physical_driver_invalid_receipt");
+      }
+      if (!command.observation) {
+        throw new Error("physical_driver_missing_observation");
+      }
       runtime = reconcileObservation(runtime, command.observation, expanded.turn_id || options.turn_id || null);
       receipts.push({
         patch: clone(expanded),
         physical_patch: physicalPatch,
-        command_id: command.id,
-        status: command.status,
+        command_id: command.id || null,
+        status: command.status || "unknown",
+        reason: command.reason || null,
         observation: clone(command.observation)
       });
     }
