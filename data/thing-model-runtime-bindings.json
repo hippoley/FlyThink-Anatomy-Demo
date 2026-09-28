@@ -121,17 +121,70 @@
         "maximum": 6500
       },
       "semantic_role": "light"
+    },
+    "exterior_window_target_position_template": {
+      "entity_id": "physical_dev_home_001.window.combo01",
+      "product_model": "CWDS-CA01",
+      "module": "motor_1",
+      "interaction": "property",
+      "code": "motorTargetPosition",
+      "value": 50,
+      "value_contract": {
+        "kind": "range",
+        "minimum": 0,
+        "maximum": 100
+      },
+      "semantic_role": "exterior_window"
     }
   },
   "initial_world": {
     "physical_dev_home_001.window.combo01": {
       "CWDS-CA01|motor_1|property|motorControl": 0,
-      "CWDS-CA01|motor_2|property|motorControl": 0
+      "CWDS-CA01|motor_2|property|motorControl": 0,
+      "CWDS-CA01|motor_1|property|motorTargetPosition": 100,
+      "CWDS-CA01|motor_1|property|motorCurrentPosition": 100,
+      "CWDS-CA01|motor_1|property|motorStatus": 2
     },
     "physical_dev_home_001.light.rgb01": {
       "DQDZ-Y15R|light|property|power": true,
       "DQDZ-Y15R|light|property|brightness": 80,
       "DQDZ-Y15R|light|property|colorTemperature": 5000
+    }
+  },
+  "feedback": {
+    "exterior_window_position": {
+      "entity_id": "physical_dev_home_001.window.combo01",
+      "product_model": "CWDS-CA01",
+      "module": "motor_1",
+      "interaction": "property",
+      "code": "motorCurrentPosition",
+      "value_contract": {
+        "kind": "range",
+        "minimum": 0,
+        "maximum": 100
+      },
+      "semantic_role": "exterior_window",
+      "semantic_slot": "opening"
+    },
+    "exterior_window_status": {
+      "entity_id": "physical_dev_home_001.window.combo01",
+      "product_model": "CWDS-CA01",
+      "module": "motor_1",
+      "interaction": "property",
+      "code": "motorStatus",
+      "value_contract": {
+        "kind": "enum",
+        "allowed": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
+      },
+      "semantic_role": "exterior_window",
+      "semantic_slot": "motor_status"
     }
   }
 }
