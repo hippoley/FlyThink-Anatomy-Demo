@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
-"""Frozen natural-language checkpoint probe with production-shaped Thing Model context."""
+"""Frozen natural-language checkpoint probe with real Thing Model bindings."""
 
 L={"area":"客厅","entity":"空调","instance":"default"}
 B={"area":"主卧","entity":"空调","instance":"default"}
-W={"area":"客厅","entity":"窗户","instance":"default"}
+W={"area":"客厅","entity":"窗","instance":"default"}
 
 DEVICE_REGISTRY={
  "客厅::空调::default":{"model_id":"AWGD-ZA01"},
  "主卧::空调::default":{"model_id":"AWGD-ZA01"},
- "客厅::窗户::default":{"model_id":"CWDS-CA01"},
+ "客厅::窗::default":{"model_id":"CWDS-CA01"},
 }
 
 def ctx(**kwargs):
