@@ -73,7 +73,10 @@ function requestFromPatch(patch) {
     if (role === "light" && patch.slot === "brightness" && Number.isFinite(patch.value)) {
       return {ok: true, role, kind: "property", code: "brightness", value: patch.value};
     }
-    if ((role === "exterior_window" || role === "insect_screen") && patch.slot === "opening") {
+    if (role === "exterior_window" && patch.slot === "opening" && Number.isFinite(patch.value)) {
+      return {ok: true, role, kind: "property", code: "motorTargetPosition", value: patch.value};
+    }
+    if (role === "insect_screen" && patch.slot === "opening") {
       if (patch.value === 0) return {ok: true, role, kind: "verb", verb: "close"};
       if (patch.value === 100) return {ok: true, role, kind: "verb", verb: "open"};
       return {ok: false, reason: "runtime_binding_has_no_position_setpoint"};
@@ -81,6 +84,53 @@ function requestFromPatch(patch) {
   }
 
   return {ok: false, reason: "unsupported_semantic_patch_for_physical_binding"};
+}
+
+function absolutizeRelative(runtime, patch) {
+  if (!patch || patch.op !== "PATCH_RELATIVE") return {ok: true, patch: clone(patch)};
+  if (!patch.target || !patch.slot || !Number.isFinite(patch.delta)) {
+    return {ok: false, reason: "relative_patch_missing_target_slot_or_delta"};
+  }
+  const d = (runtime.devices || {})[deviceKey(patch.target)];
+  const current = d && d.slots && d.slots[patch.slot];
+  if (!Number.isFinite(current)) {
+    return {ok: false, reason: "relative_patch_requires_observed_state"};
+  }
+  return {
+    ok: true,
+    patch: {...clone(patch), op:"PATCH_SLOT", value: current + patch.delta},
+    source_op:"PATCH_RELATIVE",
+    observed_base: current
+  };
+}
+
+function semanticExpectation(req) {
+  if (!req || !req.ok) return null;
+  if (req.kind === "verb" && req.role === "exterior_window") {
+    if (req.verb === "close") return {slot:"opening", value:0};
+    if (req.verb === "open") return {slot:"opening", value:100};
+  }
+  if (req.kind === "property") {
+    if (req.code === "power" && typeof req.value === "boolean") return {slot:"power", value:req.value ? "ON" : "OFF"};
+    if (req.code === "brightness" && Number.isFinite(req.value)) return {slot:"brightness", value:req.value};
+    if (req.code === "colorTemperature" && Number.isFinite(req.value)) return {slot:"color_temperature", value:req.value};
+    if (req.code === "motorTargetPosition" && Number.isFinite(req.value)) return {slot:"opening", value:req.value};
+  }
+  return null;
+}
+
+function feedbackFor(bindings, action, expectation) {
+  if (!expectation || !bindings.feedback) return null;
+  const candidates = Object.entries(bindings.feedback)
+    .map(([name, feedback]) => ({name, ...feedback}))
+    .filter(x =>
+      x.entity_id === action.entity_id
+      && x.semantic_role === action.semantic_role
+      && x.semantic_slot === expectation.slot
+    );
+  if (candidates.length !== 1) return null;
+  const f = candidates[0];
+  return {...clone(f), capability_key: capabilityKey(f)};
 }
 
 function boundDevice(runtime, target) {
@@ -92,8 +142,13 @@ function boundDevice(runtime, target) {
 }
 
 function compilePatch(bindings, runtime, patch) {
+  const sourcePatch = clone(patch);
+  const relative = absolutizeRelative(runtime, patch);
+  if (!relative.ok) return {status:"BLOCKED", reason:relative.reason, patch:sourcePatch};
+  patch = relative.patch;
+
   const req = requestFromPatch(patch);
-  if (!req.ok) return {status: "BLOCKED", reason: req.reason, patch: clone(patch)};
+  if (!req.ok) return {status: "BLOCKED", reason: req.reason, patch: sourcePatch};
 
   const bd = boundDevice(runtime, patch.target);
   if (!bd.ok) return {status: "BLOCKED", reason: bd.reason, patch: clone(patch)};
@@ -144,9 +199,19 @@ function compilePatch(bindings, runtime, patch) {
   }
 
   const a = candidates[0];
+  const expectation = semanticExpectation(req);
+  const feedback = feedbackFor(bindings, a, expectation);
   return {
     status: "GROUNDED",
-    patch: clone(patch),
+    patch: sourcePatch,
+    effective_patch: clone(patch),
+    relative_resolution: relative.source_op ? {
+      source_op:relative.source_op,
+      observed_base:relative.observed_base,
+      absolute_value:patch.value
+    } : null,
+    expectation,
+    feedback,
     action_name: dynamicValue ? a.name + ":dynamic" : a.name,
     command: {
       entity_id: a.entity_id,
@@ -181,7 +246,23 @@ class InMemoryThingTransport {
   write(command) {
     this.write_count++;
     if (!this.world[command.entity_id]) this.world[command.entity_id] = {};
-    if (!this.drop_writes) this.world[command.entity_id][command.capability_key] = clone(command.value);
+    if (!this.drop_writes) {
+      this.world[command.entity_id][command.capability_key] = clone(command.value);
+
+      if (command.product_model === "CWDS-CA01" && command.module === "motor_1") {
+        const currentKey = ["CWDS-CA01","motor_1","property","motorCurrentPosition"].join("|");
+        const statusKey = ["CWDS-CA01","motor_1","property","motorStatus"].join("|");
+        if (command.code === "motorTargetPosition" && Number.isFinite(command.value)) {
+          this.world[command.entity_id][currentKey] = command.value;
+          this.world[command.entity_id][statusKey] = 2;
+        }
+        if (command.code === "motorControl") {
+          if (command.value === 0) this.world[command.entity_id][currentKey] = 100;
+          if (command.value === 1) this.world[command.entity_id][currentKey] = 0;
+          this.world[command.entity_id][statusKey] = 2;
+        }
+      }
+    }
     return {accepted: true, command: clone(command)};
   }
 
@@ -203,6 +284,18 @@ function isStateBearing(command) {
   return command.code === "power" || command.code === "brightness" || command.code === "colorTemperature";
 }
 
+function semanticObserved(expectation, observed) {
+  if (!expectation) return undefined;
+  if (expectation.slot === "power") {
+    if (typeof observed !== "boolean") return undefined;
+    return observed ? "ON" : "OFF";
+  }
+  if (["brightness","color_temperature","opening"].includes(expectation.slot)) {
+    return Number.isFinite(observed) ? observed : undefined;
+  }
+  return observed;
+}
+
 function reconcileObservation(runtime, compiled, observed) {
   const next = normalizeRuntime(runtime);
   const before = normalizeRuntime(runtime);
@@ -211,27 +304,32 @@ function reconcileObservation(runtime, compiled, observed) {
   const d = next.devices[key];
   if (!d) throw new Error("reconcile_target_missing:" + key);
 
+  const observationDescriptor = compiled.feedback || compiled.command;
+  const observationIsState = !!compiled.feedback || isStateBearing(compiled.command);
+  const observedSemantic = observationIsState
+    ? semanticObserved(compiled.expectation, observed)
+    : undefined;
+
   d.physical = d.physical || {};
   d.physical.desired = {
+    semantic: clone(compiled.expectation),
     entity_id: compiled.command.entity_id,
     capability_key: compiled.command.capability_key,
     value: clone(compiled.command.value)
   };
   d.physical.observed = {
-    entity_id: compiled.command.entity_id,
-    capability_key: compiled.command.capability_key,
-    value: clone(observed)
+    entity_id: observationDescriptor.entity_id,
+    capability_key: observationDescriptor.capability_key,
+    value: clone(observed),
+    semantic_value: clone(observedSemantic)
   };
 
-  const equal = JSON.stringify(observed) === JSON.stringify(compiled.command.value);
-  d.physical.status = equal
-    ? (isStateBearing(compiled.command) ? "STATE_CONFIRMED" : "COMMAND_CONFIRMED_OBSERVATION_PENDING")
-    : "MISMATCH";
-
-  if (isStateBearing(compiled.command)) {
-    if (compiled.command.code === "power" && typeof observed === "boolean") d.slots.power = observed ? "ON" : "OFF";
-    if (compiled.command.code === "brightness" && Number.isFinite(observed)) d.slots.brightness = observed;
-    if (compiled.command.code === "colorTemperature" && Number.isFinite(observed)) d.slots.color_temperature = observed;
+  if (!observationIsState || observedSemantic === undefined || !compiled.expectation) {
+    d.physical.status = "COMMAND_CONFIRMED_OBSERVATION_PENDING";
+  } else {
+    const equal = JSON.stringify(observedSemantic) === JSON.stringify(compiled.expectation.value);
+    d.physical.status = equal ? "STATE_CONFIRMED" : "MISMATCH";
+    d.slots[compiled.expectation.slot] = clone(observedSemantic);
   }
 
   const changed = diffLeaves(before.devices || {}, next.devices || {});
@@ -244,7 +342,10 @@ function reconcileObservation(runtime, compiled, observed) {
     action_name: compiled.action_name,
     target: clone(patch.target),
     command: clone(compiled.command),
+    feedback: clone(compiled.feedback),
+    expected: clone(compiled.expectation),
     observed: clone(observed),
+    observed_semantic: clone(observedSemantic),
     status: d.physical.status
   });
   return next;
@@ -271,12 +372,15 @@ function executeSemanticTurn({runtime, proposal, commit_state, transport, bindin
   const receipts = [];
   for (const item of compiled) {
     const ack = transport.write(item.command);
-    const observed = transport.read(item.command);
+    const observed = transport.read(item.feedback || item.command);
     next = reconcileObservation(next, item, observed);
     const d = next.devices[deviceKey(item.patch.target)];
     receipts.push({
       action_name: item.action_name,
       command: clone(item.command),
+      feedback: clone(item.feedback),
+      expectation: clone(item.expectation),
+      relative_resolution: clone(item.relative_resolution),
       ack: clone(ack),
       observed: clone(observed),
       status: d.physical.status
@@ -300,5 +404,6 @@ module.exports = {
   InMemoryThingTransport,
   executeSemanticTurn,
   reconcileObservation,
-  valueAllowed
+  valueAllowed,
+  absolutizeRelative
 };
