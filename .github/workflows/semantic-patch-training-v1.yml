@@ -6,6 +6,7 @@ on:
       - scripts/train_semantic_patch_v1.py
       - scripts/semantic_context_features.py
       - scripts/flywire_topology_ablation.py
+      - scripts/test_topology_ablation.py
       - scripts/whole_home_patch_corpus_v10.py
       - scripts/whole_home_patch_corpus_v11.py
       - .github/workflows/semantic-patch-training-v1.yml
@@ -20,7 +21,9 @@ jobs:
         with:
           python-version: "3.12"
       - name: Compile training sources
-        run: python -m py_compile scripts/semantic_patch_contract.py scripts/whole_home_patch_corpus_v10.py scripts/whole_home_patch_corpus_v11.py scripts/semantic_context_features.py scripts/flywire_topology_ablation.py scripts/train_semantic_patch_v1.py
+        run: python -m py_compile scripts/semantic_patch_contract.py scripts/whole_home_patch_corpus_v10.py scripts/whole_home_patch_corpus_v11.py scripts/semantic_context_features.py scripts/flywire_topology_ablation.py scripts/test_topology_ablation.py scripts/train_semantic_patch_v1.py
+      - name: Validate topology controls
+        run: python scripts/test_topology_ablation.py
       - name: Install PyTorch CPU
         run: pip install --index-url https://download.pytorch.org/whl/cpu torch
       - name: Train semantic FlyWire checkpoint
