@@ -1,0 +1,16 @@
+name: long-trajectory-benchmark-v2
+on:
+  push:
+    paths: ["scripts/generate_long_trajectory_benchmark_v2.py","scripts/validate_long_trajectory_benchmark_v2.py",".github/workflows/long-trajectory-benchmark-v2.yml"]
+  workflow_dispatch:
+jobs:
+  freeze:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - run: python scripts/generate_long_trajectory_benchmark_v2.py --count 120 --out benchmarks/long_trajectories_v2.json
+      - run: python scripts/validate_long_trajectory_benchmark_v2.py benchmarks/long_trajectories_v2.json
+      - uses: actions/upload-artifact@v4
+        with: {name: long-trajectories-v2, path: benchmarks/long_trajectories_v2.json}
