@@ -7,7 +7,7 @@ from train_flywire import digest,EXPECTED_SHA256
 from train_flywire_delta import text_features,GRAPH_SHA
 from train_flywire_whole_home_patch import context_features
 from flywire_gated_patch_net import FlyWireGatedPatchNet
-from whole_home_patch_corpus_v10 import build
+from whole_home_patch_corpus_v11 import build
 from semantic_patch_contract import OPS,CARD,DIR,encode
 class Net(torch.nn.Module):
  def __init__(self,g,disconnect=False):
@@ -40,7 +40,7 @@ def train(g,tr,dev,epochs,disconnect=False):
  m.load_state_dict(best[2]);return m,best[1]
 def main():
  ap=argparse.ArgumentParser();ap.add_argument("--graph",default="artifacts/flywire/connectome.json");ap.add_argument("--epochs",type=int,default=400);ap.add_argument("--out",type=Path,default=Path("artifacts/semantic-patch-v1"));a=ap.parse_args()
- g=json.loads(Path(a.graph).read_text());assert g["source_sha256"]==EXPECTED_SHA256 and digest(a.graph)==GRAPH_SHA;d=build();rep={"truth":"semantic_only_patch_v1_context_grounded","train":len(d["train"]),"dev":len(d["dev"]),"diagnostic":len(d["sealed"]),"runs":{}}
+ g=json.loads(Path(a.graph).read_text());assert g["source_sha256"]==EXPECTED_SHA256 and digest(a.graph)==GRAPH_SHA;d=build();rep={"truth":"semantic_only_patch_v11_contextual_matched_pairs","train":len(d["train"]),"dev":len(d["dev"]),"diagnostic":len(d["sealed"]),"runs":{}}
  for name,off in [("real",False),("disconnected",True)]:
   m,ep=train(g,d["train"],d["dev"],a.epochs,off);rep["runs"][name]={"epoch":ep,"train":score(m,d["train"]),"dev":score(m,d["dev"]),"diagnostic":score(m,d["sealed"])}
   if name=="real":a.out.mkdir(parents=True,exist_ok=True);torch.save({"state_dict":m.state_dict(),"graph_sha":GRAPH_SHA},a.out/"model.pt")
