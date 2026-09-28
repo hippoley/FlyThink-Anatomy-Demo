@@ -38,7 +38,7 @@ jobs:
           name: semantic-patch-v1
           path: artifacts/semantic-patch-v1
           github-token: ${{ github.token }}
-          run-id: "36372786282"
+          run-id: "36394038359"
       - run: python scripts/train_flywire.py --download --epochs 1 --out artifacts/flywire
       - run: python scripts/build_capability_index.py
       - name: Inspect real window feedback capabilities
