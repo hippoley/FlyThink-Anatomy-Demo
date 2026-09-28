@@ -38,7 +38,11 @@ async function run(trajectory,args){
   const decisionOk=outcome===turn.gold_decision;if(decisionOk)decisionCorrect++;
   const pp=(pred.patches||[])[0];const semanticsOk=outcome!=="EXECUTE"||semanticOk(pp,turn);const targetOk=outcome!=="EXECUTE"||!turn.gold_target||sameTargets(pp,turn.gold_target);
   const ok=decisionOk&&semanticsOk&&targetOk;if(ok)patchCorrect++;
-  let stateOk=true;if(turn.gold_state){for(const [k,slots] of Object.entries(turn.gold_state)){const d=runtime.devices[k];if(!d){stateOk=false;break}for(const [s,v] of Object.entries(slots)){if(!eq(d.slots&&d.slots[s],v)){stateOk=false;break}}}}if(stateOk)stateCorrect++;
+  let stateOk=true;if(turn.gold_state){
+   const runtimeKeys=Object.keys(runtime.devices).sort(),goldKeys=Object.keys(turn.gold_state).sort();
+   if(!eq(runtimeKeys,goldKeys))stateOk=false;
+   if(stateOk)for(const [k,slots] of Object.entries(turn.gold_state)){const d=runtime.devices[k];if(!d||!eq(d.slots||{},slots)){stateOk=false;break}}
+  }if(stateOk)stateCorrect++;
   history.push({text:turn.text,outcome,predicted:pred.decision,gold:turn.gold_decision,ok,state_ok:stateOk,error,applied_patches:applied,context});
  }
  py.stdin.end();
