@@ -53,13 +53,49 @@ async function main() {
 
   const rl = readline.createInterface({input:py.stdout});
   const queue = [];
+  let childFailure = null;
+
+  function failPending(error) {
+    childFailure = error instanceof Error ? error : new Error(String(error));
+    while (queue.length) {
+      const q = queue.shift();
+      q.reject(childFailure);
+    }
+  }
+
   rl.on("line", line => {
     const q = queue.shift();
-    if (q) q(JSON.parse(line));
+    if (!q) return;
+    try {
+      q.resolve(JSON.parse(line));
+    } catch (error) {
+      q.reject(error);
+    }
   });
-  const predict = x => new Promise(resolve => {
-    queue.push(resolve);
-    py.stdin.write(JSON.stringify(x) + "\n");
+  py.on("error", failPending);
+  py.on("exit", (code, signal) => {
+    if (code !== 0) failPending(new Error("checkpoint_server_exit:" + code + ":" + (signal || "")));
+  });
+
+  const predict = x => new Promise((resolve, reject) => {
+    if (childFailure) return reject(childFailure);
+    const timer = setTimeout(() => {
+      const i = queue.findIndex(q => q.resolve === wrappedResolve);
+      if (i >= 0) queue.splice(i, 1);
+      reject(new Error("checkpoint_server_timeout"));
+    }, 15000);
+    const wrappedResolve = value => {
+      clearTimeout(timer);
+      resolve(value);
+    };
+    const wrappedReject = error => {
+      clearTimeout(timer);
+      reject(error);
+    };
+    queue.push({resolve:wrappedResolve, reject:wrappedReject});
+    py.stdin.write(JSON.stringify(x) + "\n", error => {
+      if (error) wrappedReject(error);
+    });
   });
 
   const turns = [
