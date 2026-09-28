@@ -15,7 +15,8 @@ class WindowPilotHttpDriver {
     this.tolerancePct=Number(options.tolerancePct??1);
     this.pollIntervalMs=Number(options.pollIntervalMs??200);
     this.timeoutMs=Number(options.timeoutMs??5000);
-    this.defaultOpenPct=options.defaultOpenPct==null?null:Number(options.defaultOpenPct);
+    this.defaultOpenPct=options.defaultOpenPct==null?50:Number(options.defaultOpenPct);
+    this.canonicalPositionSlot=options.canonicalPositionSlot||"opening";
     this.maxPolls=options.maxPolls==null?null:Number(options.maxPolls);
     this.expectedHardwareIdentity=options.expectedHardwareIdentity||null;
     this.requestJson=options.requestJson||null;
@@ -54,8 +55,26 @@ class WindowPilotHttpDriver {
   }
 
   _targetPct(patch){
-    if(!patch||patch.op!=="PATCH_SLOT")throw new Error("windowpilot_requires_patch_slot");
+    if(!patch)throw new Error("windowpilot_patch_required");
     if(!sameTarget(patch.target,this.target))throw new Error("windowpilot_wrong_physical_target");
+
+    if(patch.op==="ADD_DEVICE"){
+      const slots=patch.slots||{};
+      for(const slot of this.positionSlots){
+        if(slots[slot]!==undefined){
+          const pct=Number(slots[slot]);
+          if(!Number.isFinite(pct))throw new Error("windowpilot_position_requires_number");
+          return Math.max(0,Math.min(100,pct));
+        }
+      }
+      if(slots.power==="OFF"||slots.power===false||slots.power===0)return 0;
+      if(slots.power==="ON"||slots.power===true||slots.power===1){
+        return Math.max(0,Math.min(100,this.defaultOpenPct));
+      }
+      throw new Error("windowpilot_add_device_requires_power_or_position");
+    }
+
+    if(patch.op!=="PATCH_SLOT")throw new Error("windowpilot_requires_patch_slot");
     if(this.positionSlots.has(patch.slot)){
       const pct=Number(patch.value);
       if(!Number.isFinite(pct))throw new Error("windowpilot_position_requires_number");
@@ -64,7 +83,6 @@ class WindowPilotHttpDriver {
     if(patch.slot==="power"){
       if(patch.value==="OFF"||patch.value===false||patch.value===0)return 0;
       if(patch.value==="ON"||patch.value===true||patch.value===1){
-        if(this.defaultOpenPct==null)throw new Error("windowpilot_power_on_requires_explicit_position");
         return Math.max(0,Math.min(100,this.defaultOpenPct));
       }
     }
@@ -72,9 +90,10 @@ class WindowPilotHttpDriver {
   }
 
   _observation(patch,state,pct){
-    const slots={};
-    if(patch.slot==="power")slots.power=pct<=this.tolerancePct?"OFF":"ON";
-    else slots[patch.slot]=pct;
+    const slots={[this.canonicalPositionSlot]:pct};
+    if(patch.op==="ADD_DEVICE"||patch.slot==="power"){
+      slots.power=pct<=this.tolerancePct?"OFF":"ON";
+    }
     return {
       target:clone(this.target),
       exists:true,
