@@ -1,8 +1,51 @@
 name: full-long-checkpoint-acceptance
 
 on:
-  push:
+  pull_request:
     paths:
+      - "scripts/run_long_checkpoint_e2e_v2.cjs"
+      - "scripts/stateful_checkpoint_trajectory.cjs"
+      - "scripts/whole_home_patch_contract.cjs"
+      - "scripts/physical_runtime.cjs"
+      - "scripts/runtime_context_adapter.cjs"
+      - "scripts/commit_gate.cjs"
+      - "scripts/checkpoint_jsonl_server.py"
+      - "scripts/checkpoint_runtime.py"
+      - "scripts/lexical_operation_evidence.py"
+      - "scripts/judgement_patch_pipeline.py"
+      - "scripts/context_patch_composer.py"
+      - "scripts/context_target_resolver.py"
+      - "scripts/context_slot_resolver.py"
+      - "scripts/semantic_capability_map.py"
+      - "scripts/semantic_patch_materializer.py"
+      - "scripts/generate_long_trajectory_benchmark_v2.py"
+      - "scripts/validate_long_trajectory_benchmark_v2.py"
+      - "scripts/build_capability_index.py"
+      - "data/capability-index.rarbuilt.part*.b64"
+      - ".github/workflows/full-long-checkpoint-acceptance.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "scripts/run_long_checkpoint_e2e_v2.cjs"
+      - "scripts/stateful_checkpoint_trajectory.cjs"
+      - "scripts/whole_home_patch_contract.cjs"
+      - "scripts/physical_runtime.cjs"
+      - "scripts/runtime_context_adapter.cjs"
+      - "scripts/commit_gate.cjs"
+      - "scripts/checkpoint_jsonl_server.py"
+      - "scripts/checkpoint_runtime.py"
+      - "scripts/lexical_operation_evidence.py"
+      - "scripts/judgement_patch_pipeline.py"
+      - "scripts/context_patch_composer.py"
+      - "scripts/context_target_resolver.py"
+      - "scripts/context_slot_resolver.py"
+      - "scripts/semantic_capability_map.py"
+      - "scripts/semantic_patch_materializer.py"
+      - "scripts/generate_long_trajectory_benchmark_v2.py"
+      - "scripts/validate_long_trajectory_benchmark_v2.py"
+      - "scripts/build_capability_index.py"
+      - "data/capability-index.rarbuilt.part*.b64"
       - ".github/workflows/full-long-checkpoint-acceptance.yml"
   workflow_dispatch:
 
