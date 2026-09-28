@@ -40,12 +40,12 @@ def train(g,tr,dev,epochs,disconnect=False):
  m.load_state_dict(best[2]);return m,best[1]
 def main():
  ap=argparse.ArgumentParser();ap.add_argument("--graph",default="artifacts/flywire/connectome.json");ap.add_argument("--epochs",type=int,default=400);ap.add_argument("--out",type=Path,default=Path("artifacts/semantic-patch-v1"));a=ap.parse_args()
- g=json.loads(Path(a.graph).read_text());assert g["source_sha256"]==EXPECTED_SHA256 and digest(a.graph)==GRAPH_SHA;d=build();rep={"truth":"semantic_only_patch_v11_contextual_matched_pairs","train":len(d["train"]),"dev":len(d["dev"]),"diagnostic":len(d["sealed"]),"runs":{}}
+g=json.loads(Path(a.graph).read_text());assert g["source_sha256"]==EXPECTED_SHA256 and digest(a.graph)==GRAPH_SHA;d=build();fit,selection=stratified_split(d["train"]);rep={"truth":"semantic_only_patch_v11_contextual_matched_pairs_regularized","train":len(d["train"]),"fit":len(fit),"selection":len(selection),"dev":len(d["dev"]),"diagnostic":len(d["sealed"]),"runs":{}}
  for name,off in [("real",False),("disconnected",True)]:
   candidates=[]
   for seed in ([2783,3783,4783] if name=="real" else [3783]):
-   m,ep=train(g,d["train"],d["dev"],a.epochs,off,seed);candidates.append((score(m,d["dev"])["exact"],seed,m,ep))
-  _,seed,m,ep=max(candidates,key=lambda z:z[0]);rep["runs"][name]={"epoch":ep,"seed":seed,"train":score(m,d["train"]),"dev":score(m,d["dev"]),"diagnostic":score(m,d["sealed"])}
+   m,ep=train(g,fit,selection,a.epochs,off,seed);candidates.append((score(m,selection)["exact"],seed,m,ep))
+  _,seed,m,ep=max(candidates,key=lambda z:z[0]);rep["runs"][name]={"epoch":ep,"seed":seed,"fit":score(m,fit),"selection":score(m,selection),"train_all":score(m,d["train"]),"dev":score(m,d["dev"]),"diagnostic":score(m,d["sealed"])}
   if name=="real":a.out.mkdir(parents=True,exist_ok=True);torch.save({"state_dict":m.state_dict(),"graph_sha":GRAPH_SHA},a.out/"model.pt")
  a.out.mkdir(parents=True,exist_ok=True);(a.out/"report.json").write_text(json.dumps(rep,ensure_ascii=False,indent=2));print(json.dumps(rep,ensure_ascii=False))
 if __name__=="__main__":main()
