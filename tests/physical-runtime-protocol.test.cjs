@@ -77,7 +77,7 @@ test("unsafe streaming hypothesis cannot touch physical transport", () => {
   assert.deepEqual(out.runtime.devices, before.devices);
 });
 
-test("unsupported physical value blocks before execution", () => {
+test("range-backed property accepts a dynamic value not predeclared as an action", () => {
   const transport = new InMemoryThingTransport(bindings);
   const out = executeSemanticTurn({
     runtime:baseRuntime(),
@@ -86,8 +86,24 @@ test("unsupported physical value blocks before execution", () => {
     transport,
     bindings
   });
+  assert.equal(out.outcome, "EXECUTE");
+  assert.equal(out.physical_status, "CONFIRMED");
+  assert.equal(out.runtime.devices["客厅::灯::default"].slots.brightness, 50);
+  assert.equal(out.receipts[0].command.value, 50);
+  assert.match(out.receipts[0].action_name, /:dynamic$/);
+});
+
+test("out-of-range physical value blocks before transport write", () => {
+  const transport = new InMemoryThingTransport(bindings);
+  const out = executeSemanticTurn({
+    runtime:baseRuntime(),
+    proposal:{decision:"EXECUTE", patches:[{op:"PATCH_SLOT", target:LIGHT, slot:"brightness", value:0}]},
+    commit_state:"SAFE_TO_COMMIT",
+    transport,
+    bindings
+  });
   assert.equal(out.outcome, "BLOCK");
-  assert.equal(out.reason, "physical_binding_not_found");
+  assert.equal(out.reason, "physical_value_contract_violation");
   assert.equal(transport.write_count, 0);
 });
 
