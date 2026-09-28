@@ -1,0 +1,155 @@
+{
+  "family": {
+    "accuracy": 0.9968253968253968,
+    "mean_confidence": 0.3700855858139579,
+    "errors": [
+      {
+        "model_text": "[U]把大厅顶灯打开，另外把大厅窗扇也关掉",
+        "gold": "multi_intent",
+        "pred": "named_entity_area",
+        "confidence": 0.2238
+      }
+    ]
+  },
+  "context_operation": {
+    "accuracy": 0.9968253968253968,
+    "mean_confidence": 0.4169651158012296,
+    "errors": [
+      {
+        "model_text": "[H]把工作间灯关上 [U]不是工作间，是餐厅那个灯",
+        "gold": "replace_target",
+        "pred": "update_task",
+        "confidence": 0.3102
+      }
+    ]
+  },
+  "primary_intent": {
+    "accuracy": 0.9841269841269841,
+    "mean_confidence": 0.5388344617229684,
+    "errors": [
+      {
+        "model_text": "[U]把厨房窗户关掉，另外把厨房顶灯也关掉",
+        "gold": "Close",
+        "pred": "TurnOff",
+        "confidence": 0.3457
+      },
+      {
+        "model_text": "[U]把书房窗扇关掉，另外把书房顶灯也关掉",
+        "gold": "Close",
+        "pred": "TurnOff",
+        "confidence": 0.3462
+      },
+      {
+        "model_text": "[H]先把厅里灯关上 [U]再把它打开",
+        "gold": "TurnOn",
+        "pred": "Open",
+        "confidence": 0.2427
+      },
+      {
+        "model_text": "[H]先把大卧室主灯关上 [U]再把它打开",
+        "gold": "TurnOn",
+        "pred": "Open",
+        "confidence": 0.2439
+      },
+      {
+        "model_text": "[H]先把次卧彩灯关上 [U]再把它打开",
+        "gold": "TurnOn",
+        "pred": "Open",
+        "confidence": 0.2787
+      }
+    ]
+  },
+  "device": {
+    "accuracy": 0.9492063492063492,
+    "mean_confidence": 0.9211705671948165,
+    "errors": [
+      {
+        "model_text": "[U]分析一下新闻，然后决定我今天要不要开窗",
+        "gold": "light",
+        "pred": "window",
+        "confidence": 0.5917
+      },
+      {
+        "model_text": "[U]写一段程序，再把家里设备都优化一下",
+        "gold": "light",
+        "pred": "window",
+        "confidence": 0.5471
+      },
+      {
+        "model_text": "[U]分析一下新闻，然后决定我今天要不要开窗",
+        "gold": "light",
+        "pred": "window",
+        "confidence": 0.5917
+      },
+      {
+        "model_text": "[U]写一段程序，再把家里设备都优化一下",
+        "gold": "light",
+        "pred": "window",
+        "confidence": 0.5471
+      },
+      {
+        "model_text": "[U]帮我诊断这个症状，顺便把卧室调舒服",
+        "gold": "light",
+        "pred": "window",
+        "confidence": 0.5591
+      },
+      {
+        "model_text": "[U]写一段程序，再把家里设备都优化一下",
+        "gold": "light",
+        "pred": "window",
+        "confidence": 0.5471
+      },
+      {
+        "model_text": "[U]结合今天股票走势帮我决定客厅该怎么布置",
+        "gold": "light",
+        "pred": "window",
+        "confidence": 0.5993
+      },
+      {
+        "model_text": "[U]帮我诊断这个症状，顺便把卧室调舒服",
+        "gold": "light",
+        "pred": "window",
+        "confidence": 0.5591
+      },
+      {
+        "model_text": "[U]分析一下新闻，然后决定我今天要不要开窗",
+        "gold": "light",
+        "pred": "window",
+        "confidence": 0.5917
+      },
+      {
+        "model_text": "[U]帮我诊断这个症状，顺便把卧室调舒服",
+        "gold": "light",
+        "pred": "window",
+        "confidence": 0.5591
+      },
+      {
+        "model_text": "[U]结合今天股票走势帮我决定客厅该怎么布置",
+        "gold": "light",
+        "pred": "window",
+        "confidence": 0.5993
+      },
+      {
+        "model_text": "[U]写一段程序，再把家里设备都优化一下",
+        "gold": "light",
+        "pred": "window",
+        "confidence": 0.5471
+      }
+    ]
+  },
+  "needs_context": {
+    "accuracy": 1.0,
+    "mean_confidence": 0.8710049808539937,
+    "errors": []
+  },
+  "ood": {
+    "accuracy": 1.0,
+    "mean_confidence": 0.7182454707298287,
+    "errors": []
+  },
+  "multi_intent": {
+    "accuracy": 1.0,
+    "mean_confidence": 0.8973793050094355,
+    "errors": []
+  }
+}
