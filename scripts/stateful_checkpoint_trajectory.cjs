@@ -4,6 +4,16 @@ const readline=require("readline");
 const {applyTurn,normalizeRuntime}=require("./whole_home_patch_contract.cjs");
 const {deriveContext}=require("./runtime_context_adapter.cjs");
 function key(t){return t&&[t.area,t.entity,t.instance||"default"].join("::")}
+function eq(a,b){return JSON.stringify(a)===JSON.stringify(b)}
+function semanticOk(p,t){
+ if(!p)return false;
+ if(t.gold_op&&p.op!==t.gold_op)return false;
+ if(t.gold_slot!==undefined&&p.slot!==t.gold_slot)return false;
+ if(t.gold_value!==undefined&&!eq(p.value,t.gold_value))return false;
+ if(t.gold_delta!==undefined&&!eq(p.delta,t.gold_delta))return false;
+ if(t.gold_slots!==undefined&&!eq(p.slots,t.gold_slots))return false;
+ return true;
+}
 function sameTargets(p,gold){
  if(!gold)return true;
  const got=p&&p.target?[key(p.target)]:((p&&p.targets)||[]).map(key).sort();
@@ -26,8 +36,8 @@ async function run(trajectory,args){
   if(outcome==="EXECUTE"&&turn.gold_decision!=="EXECUTE")unsafe++;
   if(outcome==="EXECUTE"&&turn.gold_target&&!sameTargets((pred.patches||[])[0],turn.gold_target))wrong++;
   const decisionOk=outcome===turn.gold_decision;if(decisionOk)decisionCorrect++;
-  const pp=(pred.patches||[])[0];const opOk=!turn.gold_op||(pp&&pp.op===turn.gold_op);const targetOk=outcome!=="EXECUTE"||!turn.gold_target||sameTargets(pp,turn.gold_target);
-  const ok=decisionOk&&opOk&&targetOk;if(ok)patchCorrect++;
+  const pp=(pred.patches||[])[0];const semanticsOk=outcome!=="EXECUTE"||semanticOk(pp,turn);const targetOk=outcome!=="EXECUTE"||!turn.gold_target||sameTargets(pp,turn.gold_target);
+  const ok=decisionOk&&semanticsOk&&targetOk;if(ok)patchCorrect++;
   history.push({text:turn.text,outcome,predicted:pred.decision,gold:turn.gold_decision,ok,error,applied_patches:applied,context});
  }
  py.stdin.end();
