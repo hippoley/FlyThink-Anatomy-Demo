@@ -17,6 +17,7 @@ on:
       - "scripts/lexical_operation_evidence.py"
       - "scripts/context_patch_composer.py"
       - "scripts/context_slot_resolver.py"
+      - "scripts/context_target_resolver.py"
       - "scripts/semantic_capability_map.py"
       - "scripts/semantic_patch_materializer.py"
       - "tests/commit_gate.cjs"
@@ -25,6 +26,7 @@ on:
       - "tests/windowpilot_http_driver.cjs"
       - "tests/test_lexical_operation_evidence.py"
       - "tests/test_target_aware_slot_cues.py"
+      - "tests/test_context_patch_composer.py"
       - "tests/test_semantic_capability_map.py"
       - ".github/workflows/real-checkpoint-e2e-v1.yml"
   workflow_dispatch:
@@ -67,9 +69,10 @@ jobs:
         run: |
           python tests/test_lexical_operation_evidence.py
           python tests/test_target_aware_slot_cues.py
+          python tests/test_context_patch_composer.py
           python tests/test_semantic_capability_map.py
       - name: Python syntax
-        run: python -m py_compile scripts/checkpoint_inference.py scripts/checkpoint_runtime.py scripts/lexical_operation_evidence.py scripts/context_patch_composer.py scripts/context_slot_resolver.py scripts/semantic_capability_map.py scripts/semantic_patch_materializer.py scripts/checkpoint_jsonl_server.py scripts/real_checkpoint_e2e_predictor.py scripts/run_real_checkpoint_e2e_v1.py
+        run: python -m py_compile scripts/checkpoint_inference.py scripts/checkpoint_runtime.py scripts/lexical_operation_evidence.py scripts/context_patch_composer.py scripts/context_slot_resolver.py scripts/context_target_resolver.py scripts/semantic_capability_map.py scripts/semantic_patch_materializer.py scripts/checkpoint_jsonl_server.py scripts/real_checkpoint_e2e_predictor.py scripts/run_real_checkpoint_e2e_v1.py
       - name: Physical runtime contracts
         run: |
           node tests/commit_gate.cjs
