@@ -1,0 +1,11 @@
+name: trajectory-safety-gate
+on:
+  push:
+    paths: ["scripts/whole_home_patch_contract.cjs","scripts/trajectory_gate.cjs",".github/workflows/trajectory-safety-gate.yml"]
+  workflow_dispatch:
+jobs:
+ gate:
+  runs-on: ubuntu-latest
+  steps:
+   - uses: actions/checkout@v4
+   - run: node scripts/trajectory_gate.cjs
