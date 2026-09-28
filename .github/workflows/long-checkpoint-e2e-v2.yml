@@ -23,6 +23,7 @@ jobs:
       - run: python scripts/inspect_core_device_capabilities.py
       - run: python tests/test_target_aware_slot_cues.py
       - run: python tests/test_semantic_capability_map.py
+      - run: python -m py_compile scripts/context_patch_composer.py scripts/context_slot_resolver.py scripts/semantic_patch_materializer.py scripts/checkpoint_jsonl_server.py
       - run: python scripts/generate_long_trajectory_benchmark_v2.py --count 120 --out benchmarks/long_trajectories_v2.json
       - run: python scripts/validate_long_trajectory_benchmark_v2.py benchmarks/long_trajectories_v2.json
       - name: Evaluate first 10 trajectories
