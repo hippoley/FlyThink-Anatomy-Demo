@@ -66,6 +66,10 @@ def build():
    hard.append(r(text,"PATCH_RELATIVE",target,slot,lifecycle={"focused_target":target},family="relative",delta=delta))
  for text in ["卧室也开一个","主卧也打开","再把卧室开了","卧室同样开启","卧室那个也启动"]:
   hard.append(r(text,"ADD_DEVICE",AC_B,lifecycle={"focused_target":AC_L},family="additive"))
+ # E2E-derived lexical contrast: absolute temperature assignment is PATCH_SLOT, never PROTECT.
+ for target in [AC_L,AC_B]:
+  for text,value in [("温度设成22度",22),("调温到25度",25),("空调设到21度",21),("温控改成26度",26)]:
+   hard.append(r(text,"PATCH_SLOT",target,"temperature",value,lifecycle={"focused_target":target},family="slot_absolute"))
  tr.extend(hard)
  # Preserve frozen inherited cases; total final >=100.
  return {"truth":"v10_hard_family_training_frozen_101_final","train":tr,"dev":dev,"sealed":final,
