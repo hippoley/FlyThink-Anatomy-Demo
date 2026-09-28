@@ -352,9 +352,134 @@ function reconcileObservation(runtime, compiled, observed) {
 }
 
 function aggregateStatus(receipts) {
+  if (receipts.some(r => r.status === "OBSERVATION_FAILED")) return "OBSERVATION_FAILED";
   if (receipts.some(r => r.status === "MISMATCH")) return "MISMATCH";
   if (receipts.some(r => r.status === "COMMAND_CONFIRMED_OBSERVATION_PENDING")) return "OBSERVATION_PENDING";
   return "CONFIRMED";
+}
+
+function reconcileObservationFailure(runtime, compiled, error) {
+  const next = normalizeRuntime(runtime);
+  const before = normalizeRuntime(runtime);
+  const patch = compiled.patch;
+  const key = deviceKey(patch.target);
+  const d = next.devices[key];
+  if (!d) throw new Error("reconcile_target_missing:" + key);
+
+  d.physical = d.physical || {};
+  d.physical.desired = {
+    semantic: clone(compiled.expectation),
+    entity_id: compiled.command.entity_id,
+    capability_key: compiled.command.capability_key,
+    value: clone(compiled.command.value)
+  };
+  d.physical.observed = null;
+  d.physical.status = "OBSERVATION_FAILED";
+  d.physical.observation_error = String(error && error.message || error);
+
+  const changed = diffLeaves(before.devices || {}, next.devices || {});
+  const illegal = changed.filter(p => !(p === key || p.startsWith(key + "::")));
+  if (illegal.length) throw new Error("reconcile_untouched_state_mutation:" + illegal.join(","));
+
+  next.executionLedger.push({
+    id: "physical:" + (next.executionLedger.length + 1),
+    kind: "physical_observation_failure",
+    action_name: compiled.action_name,
+    target: clone(patch.target),
+    command: clone(compiled.command),
+    feedback: clone(compiled.feedback),
+    expected: clone(compiled.expectation),
+    status: "OBSERVATION_FAILED",
+    error: d.physical.observation_error
+  });
+  return next;
+}
+
+
+async function executeSemanticTurnAsync({runtime, proposal, commit_state, transport, bindings}) {
+  const gate = commitGate(proposal, commit_state);
+  const original = normalizeRuntime(runtime);
+  if (!gate.allow) {
+    return {
+      outcome:"BLOCK",
+      reason:gate.reason,
+      runtime:original,
+      receipts:[],
+      physical_status:"NOT_EXECUTED"
+    };
+  }
+
+  const compiled = proposal.patches.map(p => compilePatch(bindings, original, p));
+  const blocked = compiled.find(x => x.status !== "GROUNDED");
+  if (blocked) {
+    return {
+      outcome:"BLOCK",
+      reason:blocked.reason,
+      runtime:original,
+      receipts:[],
+      compiled,
+      physical_status:"NOT_EXECUTED"
+    };
+  }
+
+  let next=original;
+  const receipts=[];
+  for (const item of compiled) {
+    let ack;
+    try {
+      ack=await transport.write(item.command);
+    } catch (error) {
+      return {
+        outcome:"BLOCK",
+        reason:"transport_write_blocked:" + String(error && error.message || error),
+        runtime:next,
+        receipts,
+        compiled,
+        physical_status:"NOT_EXECUTED"
+      };
+    }
+
+    try {
+      const observed=await transport.read(
+        item.feedback || item.command,
+        {expectation:item.expectation,command:item.command}
+      );
+      next=reconcileObservation(next,item,observed);
+      const d=next.devices[deviceKey(item.patch.target)];
+      receipts.push({
+        action_name:item.action_name,
+        command:clone(item.command),
+        feedback:clone(item.feedback),
+        expectation:clone(item.expectation),
+        relative_resolution:clone(item.relative_resolution),
+        ack:clone(ack),
+        observed:clone(observed),
+        status:d.physical.status
+      });
+    } catch (error) {
+      next=reconcileObservationFailure(next,item,error);
+      receipts.push({
+        action_name:item.action_name,
+        command:clone(item.command),
+        feedback:clone(item.feedback),
+        expectation:clone(item.expectation),
+        relative_resolution:clone(item.relative_resolution),
+        ack:clone(ack),
+        observed:null,
+        status:"OBSERVATION_FAILED",
+        error:String(error && error.message || error)
+      });
+    }
+  }
+
+  return {
+    outcome:"EXECUTE",
+    reason:"committed_and_observation_attempted",
+    runtime:next,
+    receipts,
+    compiled,
+    physical_status:aggregateStatus(receipts)
+  };
 }
 
 function executeSemanticTurn({runtime, proposal, commit_state, transport, bindings}) {
@@ -403,7 +528,9 @@ module.exports = {
   commitGate,
   InMemoryThingTransport,
   executeSemanticTurn,
+  executeSemanticTurnAsync,
   reconcileObservation,
+  reconcileObservationFailure,
   valueAllowed,
   absolutizeRelative
 };
