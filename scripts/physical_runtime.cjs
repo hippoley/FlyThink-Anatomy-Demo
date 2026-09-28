@@ -134,13 +134,25 @@ async function executePhysicalTurn(inputRuntime, patches, driver, options = {}) 
       if (!command.observation) {
         throw new Error("physical_driver_missing_observation");
       }
-      runtime = reconcileObservation(runtime, command.observation, expanded.turn_id || options.turn_id || null);
+      const turnId=expanded.turn_id || options.turn_id || null;
+      runtime = reconcileObservation(runtime, command.observation, turnId);
+      const executionRecord={
+        id:command.id || "physical:"+String(runtime.executionLedger.length+1),
+        turn_id:turnId,
+        kind:"physical",
+        status:command.status || "unknown",
+        reason:command.reason || null,
+        semantic_patch:clone(expanded),
+        physical_patch:clone(physicalPatch),
+        observation:clone(command.observation)
+      };
+      runtime.executionLedger.push(executionRecord);
       receipts.push({
         patch: clone(expanded),
         physical_patch: physicalPatch,
-        command_id: command.id || null,
-        status: command.status || "unknown",
-        reason: command.reason || null,
+        command_id: executionRecord.id,
+        status: executionRecord.status,
+        reason: executionRecord.reason,
         observation: clone(command.observation)
       });
     }
