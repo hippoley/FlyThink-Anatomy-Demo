@@ -86,16 +86,18 @@ function state(pct,extra={}){
     assert.equal(calls.filter(x=>x.method==="POST").length,0);
   }
 
-  // 4. Timeout: final observed position wins over requested target.
+  // 4. Timeout: polling is bounded, motion is STOPped, and final observed position wins.
   {
-    let stateReads=0;
+    let stateReads=0; const calls=[];
     const driver=new WindowPilotHttpDriver({
       baseUrl:"http://windowpilot.test",target,pollIntervalMs:0,maxPolls:2,timeoutMs:1000,
       requestJson:async(method,path,payload)=>{
+        calls.push({method,path,payload});
         if(path==="/api/physical-readiness")return readiness();
         if(path==="/api/window/open")return {ok:true};
+        if(path==="/api/window/stop")return {ok:true,action:"stop"};
         if(path==="/api/state"){
-          const seq=[state(0),state(8),state(12)];
+          const seq=[state(0),state(8),state(12),state(12)];
           return seq[Math.min(stateReads++,seq.length-1)];
         }
         throw new Error("unexpected:"+path);
@@ -105,6 +107,11 @@ function state(pct,extra={}){
     assert.equal(out.receipts[0].status,"timeout");
     assert.equal(out.runtime.devices[key].slots.opening,12);
     assert.notEqual(out.runtime.devices[key].slots.opening,40);
+    assert.equal(out.receipts[0].observation.evidence.position_pct,12);
+    assert.equal(driver.commands[0].polls,2);
+    assert.equal(driver.commands[0].safety_stop.attempted,true);
+    assert.equal(driver.commands[0].safety_stop.ack.ok,true);
+    assert.equal(calls.filter(x=>x.path==="/api/window/stop").length,1);
   }
 
   // 5. Identity mismatch blocks the write before any motion.
@@ -150,5 +157,5 @@ function state(pct,extra={}){
     assert.equal(out.runtime.devices[key].slots.power,"ON");
   }
 
-  console.log(JSON.stringify({ok:true,cases:6,contract:"WindowPilot ACK != Reality; readback is authoritative"}));
+  console.log(JSON.stringify({ok:true,cases:6,contract:"WindowPilot ACK != Reality; bounded readback + STOP on uncertainty"}));
 })().catch(e=>{console.error(e);process.exit(1)});
