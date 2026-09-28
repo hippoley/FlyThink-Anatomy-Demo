@@ -19,6 +19,7 @@ class WindowPilotHttpDriver {
     this.canonicalPositionSlot=options.canonicalPositionSlot||"opening";
     this.maxPolls=options.maxPolls==null?null:Number(options.maxPolls);
     this.expectedHardwareIdentity=options.expectedHardwareIdentity||null;
+    this.stopOnTimeout=options.stopOnTimeout!==false;
     this.requestJson=options.requestJson||null;
     this.commands=[];
   }
@@ -120,6 +121,16 @@ class WindowPilotHttpDriver {
     return receipt;
   }
 
+  async _safetyStopAfterTimeout(){
+    const result={attempted:true,ack:null,error:null};
+    try{
+      result.ack=clone(await this._request("POST","/api/window/stop",{}));
+    }catch(e){
+      result.error=String(e&&e.message||e);
+    }
+    return result;
+  }
+
   async execute(patch){
     const targetPct=this._targetPct(patch);
     const readiness=await this.readiness();
@@ -169,10 +180,11 @@ class WindowPilotHttpDriver {
     }
 
     const started=Date.now();
-    let last=before,lastPct=beforePct;
-    while(Date.now()-started<=this.timeoutMs){
+    let last=before,lastPct=beforePct,polls=0;
+    while(Date.now()-started<=this.timeoutMs && (this.maxPolls==null||polls<this.maxPolls)){
       last=await this.state();
       lastPct=this._pct(last);
+      polls++;
       if(Math.abs(lastPct-targetPct)<=this.tolerancePct){
         const receipt={
           id:"windowpilot:"+(this.commands.length+1),
@@ -180,12 +192,26 @@ class WindowPilotHttpDriver {
           patch:clone(patch),
           ack:clone(ack),
           requested_position_pct:targetPct,
+          polls,
           observation:this._observation(patch,last,lastPct)
         };
         this.commands.push(receipt);
         return receipt;
       }
+      if(this.maxPolls!=null&&polls>=this.maxPolls)break;
       await sleep(this.pollIntervalMs);
+    }
+
+    let safetyStop={attempted:false,ack:null,error:null};
+    if(this.stopOnTimeout){
+      safetyStop=await this._safetyStopAfterTimeout();
+      try{
+        const stopped=await this.state();
+        last=stopped;
+        lastPct=this._pct(stopped);
+      }catch(e){
+        safetyStop.readback_error=String(e&&e.message||e);
+      }
     }
 
     const receipt={
@@ -195,6 +221,8 @@ class WindowPilotHttpDriver {
       patch:clone(patch),
       ack:clone(ack),
       requested_position_pct:targetPct,
+      polls,
+      safety_stop:safetyStop,
       observation:this._observation(patch,last,lastPct)
     };
     this.commands.push(receipt);
