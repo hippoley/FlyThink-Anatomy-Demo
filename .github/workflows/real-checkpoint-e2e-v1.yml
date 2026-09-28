@@ -24,6 +24,6 @@ jobs:
       path: artifacts/semantic-patch-v1
       github-token: ${{ github.token }}
       run-id: 36368943127
-   - run: python scripts/train_flywire.py --epochs 1 --out artifacts/flywire
+   - run: python scripts/train_flywire.py --download --epochs 1 --out artifacts/flywire
    - run: python -m py_compile scripts/checkpoint_inference.py scripts/real_checkpoint_e2e_predictor.py scripts/run_real_checkpoint_e2e_v1.py
    - run: python scripts/run_real_checkpoint_e2e_v1.py --graph artifacts/flywire/connectome.json --judgement artifacts/context-judgement-v3/model.pt --semantic artifacts/semantic-patch-v1/model.pt | tee /tmp/e2e.json
