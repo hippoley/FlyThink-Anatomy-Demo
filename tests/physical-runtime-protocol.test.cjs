@@ -1,0 +1,124 @@
+"use strict";
+
+const test = require("node:test");
+const assert = require("node:assert/strict");
+const {normalizeRuntime} = require("../scripts/whole_home_patch_contract.cjs");
+const {
+  loadBindings,
+  InMemoryThingTransport,
+  executeSemanticTurn
+} = require("../scripts/physical_runtime_protocol.cjs");
+
+const bindings = loadBindings();
+const LIGHT = {area:"客厅", entity:"灯", instance:"default"};
+const WINDOW = {area:"客厅", entity:"窗户", instance:"default"};
+
+function baseRuntime() {
+  return normalizeRuntime({
+    devices: {
+      "客厅::灯::default": {
+        key:"客厅::灯::default",
+        area:"客厅",
+        entity:"灯",
+        instance:"default",
+        model_id:"DQDZ-Y15R",
+        slots:{power:"ON", brightness:80},
+        physical_binding:{
+          entity_id:"physical_dev_home_001.light.rgb01",
+          semantic_role:"light"
+        }
+      },
+      "客厅::窗户::default": {
+        key:"客厅::窗户::default",
+        area:"客厅",
+        entity:"窗户",
+        instance:"default",
+        model_id:"CWDS-CA01",
+        slots:{opening:100},
+        physical_binding:{
+          entity_id:"physical_dev_home_001.window.combo01",
+          semantic_role:"exterior_window"
+        }
+      }
+    }
+  });
+}
+
+test("safe committed light command executes through Thing binding then reconciles observation", () => {
+  const transport = new InMemoryThingTransport(bindings);
+  const out = executeSemanticTurn({
+    runtime:baseRuntime(),
+    proposal:{decision:"EXECUTE", patches:[{op:"CLOSE_DEVICE", target:LIGHT}]},
+    commit_state:"SAFE_TO_COMMIT",
+    transport,
+    bindings
+  });
+  assert.equal(out.outcome, "EXECUTE");
+  assert.equal(out.physical_status, "CONFIRMED");
+  assert.equal(out.runtime.devices["客厅::灯::default"].slots.power, "OFF");
+  assert.equal(out.runtime.devices["客厅::窗户::default"].slots.opening, 100);
+  assert.equal(transport.write_count, 1);
+  assert.equal(out.receipts[0].action_name, "living_color_light_off");
+});
+
+test("unsafe streaming hypothesis cannot touch physical transport", () => {
+  const transport = new InMemoryThingTransport(bindings);
+  const before = baseRuntime();
+  const out = executeSemanticTurn({
+    runtime:before,
+    proposal:{decision:"EXECUTE", patches:[{op:"CLOSE_DEVICE", target:LIGHT}]},
+    commit_state:"UNSTABLE",
+    transport,
+    bindings
+  });
+  assert.equal(out.outcome, "BLOCK");
+  assert.equal(out.reason, "commit_not_safe");
+  assert.equal(transport.write_count, 0);
+  assert.deepEqual(out.runtime.devices, before.devices);
+});
+
+test("unsupported physical value blocks before execution", () => {
+  const transport = new InMemoryThingTransport(bindings);
+  const out = executeSemanticTurn({
+    runtime:baseRuntime(),
+    proposal:{decision:"EXECUTE", patches:[{op:"PATCH_SLOT", target:LIGHT, slot:"brightness", value:50}]},
+    commit_state:"SAFE_TO_COMMIT",
+    transport,
+    bindings
+  });
+  assert.equal(out.outcome, "BLOCK");
+  assert.equal(out.reason, "physical_binding_not_found");
+  assert.equal(transport.write_count, 0);
+});
+
+test("device feedback wins over desired state on state-bearing property mismatch", () => {
+  const transport = new InMemoryThingTransport(bindings, {drop_writes:true});
+  const out = executeSemanticTurn({
+    runtime:baseRuntime(),
+    proposal:{decision:"EXECUTE", patches:[{op:"PATCH_SLOT", target:LIGHT, slot:"brightness", value:30}]},
+    commit_state:"SAFE_TO_COMMIT",
+    transport,
+    bindings
+  });
+  assert.equal(out.outcome, "EXECUTE");
+  assert.equal(out.physical_status, "MISMATCH");
+  assert.equal(out.runtime.devices["客厅::灯::default"].slots.brightness, 80);
+  assert.equal(out.runtime.devices["客厅::灯::default"].physical.desired.value, 30);
+  assert.equal(out.runtime.devices["客厅::灯::default"].physical.observed.value, 80);
+});
+
+test("motor command echo is not misrepresented as measured window position", () => {
+  const transport = new InMemoryThingTransport(bindings);
+  const out = executeSemanticTurn({
+    runtime:baseRuntime(),
+    proposal:{decision:"EXECUTE", patches:[{op:"CLOSE_DEVICE", target:WINDOW}]},
+    commit_state:"SAFE_TO_COMMIT",
+    transport,
+    bindings
+  });
+  assert.equal(out.outcome, "EXECUTE");
+  assert.equal(out.physical_status, "OBSERVATION_PENDING");
+  assert.equal(out.runtime.devices["客厅::窗户::default"].slots.opening, 100);
+  assert.equal(out.runtime.devices["客厅::窗户::default"].physical.status, "COMMAND_CONFIRMED_OBSERVATION_PENDING");
+  assert.equal(out.runtime.devices["客厅::灯::default"].slots.power, "ON");
+});
