@@ -7,6 +7,9 @@ on:
       - "tests/physical-runtime-protocol.test.cjs"
       - "data/thing-model-runtime-bindings.json"
       - "scripts/checkpoint_jsonl_server.py"
+      - "scripts/checkpoint_inference.py"
+      - "scripts/train_semantic_patch_v1.py"
+      - "scripts/train_context_judgement_v3.py"
       - "scripts/context_patch_composer.py"
       - "scripts/semantic_patch_materializer.py"
       - "scripts/inspect_physical_feedback_capabilities.py"
@@ -38,7 +41,7 @@ jobs:
       - name: Inspect real window feedback capabilities
         run: python scripts/inspect_physical_feedback_capabilities.py
       - name: Compile semantic checkpoint path
-        run: python -m py_compile scripts/context_patch_composer.py scripts/checkpoint_jsonl_server.py scripts/semantic_patch_materializer.py
+        run: python -m py_compile scripts/context_patch_composer.py scripts/checkpoint_jsonl_server.py scripts/checkpoint_inference.py scripts/train_semantic_patch_v1.py scripts/semantic_patch_materializer.py
       - name: Test physical runtime protocol
         run: node --test tests/physical-runtime-protocol.test.cjs
       - name: Run checkpoint through physical E2E protocol
