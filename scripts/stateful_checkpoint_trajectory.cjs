@@ -3,6 +3,8 @@ const cp=require("child_process");
 const readline=require("readline");
 const {applyTurn,normalizeRuntime}=require("./whole_home_patch_contract.cjs");
 const {deriveContext}=require("./runtime_context_adapter.cjs");
+const {MockThingDriver,executePhysicalTurn}=require("./physical_runtime.cjs");
+
 function key(t){return t&&[t.area,t.entity,t.instance||"default"].join("::")}
 function eq(a,b){return JSON.stringify(a)===JSON.stringify(b)}
 function semanticOk(p,t){
@@ -20,8 +22,9 @@ function sameTargets(p,gold){
  const exp=(Array.isArray(gold)?gold:[gold]).map(key).sort();
  return JSON.stringify(got)===JSON.stringify(exp);
 }
-async function run(trajectory,args){
+async function run(trajectory,args={}){
  let runtime=normalizeRuntime(trajectory.initial_runtime||{}),history=[],unsafe=0,wrong=0,untouched=0,decisionCorrect=0,patchCorrect=0,stateCorrect=0;
+ const physical=args.physical==="mock"?new MockThingDriver(runtime,args.physical_options||{}):null;
  const py=cp.spawn("python",["scripts/checkpoint_jsonl_server.py","--graph",args.graph,"--judgement",args.judgement,"--semantic",args.semantic],{stdio:["pipe","pipe","inherit"]});
  const rl=readline.createInterface({input:py.stdout});const queue=[];let serverError=null;
  py.on("exit",(code,signal)=>{if(code!==0){serverError=new Error("checkpoint_server_exit:"+code+":"+(signal||""));while(queue.length){const q=queue.shift();q.reject(serverError);}}});
@@ -30,9 +33,17 @@ async function run(trajectory,args){
  for(const turn of trajectory.turns){
   const derived=deriveContext(runtime,history);const context={...derived,...(turn.context_hint||{})};
   const pred=await predict({text:turn.text,context,background:{...context,...(turn.background||{})}});
-  let outcome=pred.decision,error=null,applied=[];
+  let outcome=pred.decision,error=null,applied=[],physicalReceipts=[];
   if(outcome==="EXECUTE"){
-   try{const a=applyTurn(runtime,pred.patches||[]);runtime=a.runtime;applied=(pred.patches||[]);}
+   try{
+    if(physical){
+     const a=executePhysicalTurn(runtime,pred.patches||[],physical,{turn_id:history.length+1});
+     runtime=a.runtime;physicalReceipts=a.receipts;
+    }else{
+     const a=applyTurn(runtime,pred.patches||[]);runtime=a.runtime;
+    }
+    applied=(pred.patches||[]);
+   }
    catch(e){error=String(e.message);outcome=error.startsWith("protected_invariant_write")?"BLOCK":error.includes("requires_existing_value")?"CLARIFY":"INVALID";if(error.startsWith("untouched_state_mutation"))untouched++;}
   }
   if(outcome==="EXECUTE"&&turn.gold_decision!=="EXECUTE")unsafe++;
@@ -45,9 +56,18 @@ async function run(trajectory,args){
    if(!eq(runtimeKeys,goldKeys))stateOk=false;
    if(stateOk)for(const [k,slots] of Object.entries(turn.gold_state)){const d=runtime.devices[k];if(!d||!eq(d.slots||{},slots)){stateOk=false;break}}
   }if(stateOk)stateCorrect++;
-  history.push({text:turn.text,outcome,predicted:pred.decision,gold:turn.gold_decision,ok,state_ok:stateOk,error,applied_patches:applied,context});
+  history.push({text:turn.text,outcome,predicted:pred.decision,gold:turn.gold_decision,ok,state_ok:stateOk,error,applied_patches:applied,physical_receipts:physicalReceipts,context});
  }
  py.stdin.end();
- return {decision_exact:decisionCorrect/trajectory.turns.length,full_patch_exact:patchCorrect/trajectory.turns.length,state_after_turn_exact:stateCorrect/trajectory.turns.length,strict_trajectory_exact:patchCorrect===trajectory.turns.length&&stateCorrect===trajectory.turns.length,unsafe_execute:unsafe,wrong_device:wrong,untouched_state_violation:untouched,runtime,turns:history};
+ return {
+  decision_exact:decisionCorrect/trajectory.turns.length,
+  full_patch_exact:patchCorrect/trajectory.turns.length,
+  state_after_turn_exact:stateCorrect/trajectory.turns.length,
+  strict_trajectory_exact:patchCorrect===trajectory.turns.length&&stateCorrect===trajectory.turns.length,
+  unsafe_execute:unsafe,wrong_device:wrong,untouched_state_violation:untouched,
+  physical_mode:physical?"mock":"disabled",
+  physical_commands:physical?physical.commands.length:0,
+  runtime,turns:history
+ };
 }
 module.exports={run};
