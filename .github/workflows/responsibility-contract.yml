@@ -1,0 +1,31 @@
+name: responsibility-contract
+on:
+  push:
+    paths:
+      - "scripts/responsibility_heads.py"
+      - "scripts/responsibility_labels.py"
+      - "scripts/test_responsibility_heads.py"
+      - "scripts/contextual_state_transition_corpus_v1.py"
+      - ".github/workflows/responsibility-contract.yml"
+  workflow_dispatch:
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install --index-url https://download.pytorch.org/whl/cpu torch
+      - run: python -m py_compile scripts/responsibility_heads.py scripts/responsibility_labels.py scripts/test_responsibility_heads.py
+      - run: python scripts/test_responsibility_heads.py
+      - run: |
+          python - <<'PY'
+          import sys
+          sys.path.insert(0,"scripts")
+          from contextual_state_transition_corpus_v1 import build
+          from responsibility_labels import validate
+          rows=build()["examples"]
+          for r in rows: validate(r)
+          print({"label_contract":"PASS","rows":len(rows)})
+          PY
