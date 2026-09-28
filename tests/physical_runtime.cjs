@@ -18,6 +18,8 @@ const initial = normalizeRuntime({devices:{
     assert.equal(out.runtime.devices["主卧::空调::default"].slots.temperature,24);
     assert.equal(out.runtime.devices["客厅::空调::default"].slots.temperature,24);
     assert.equal(out.receipts[0].status,"applied");
+    assert.equal(out.runtime.executionLedger.length,1);
+    assert.equal(out.runtime.executionLedger[0].status,"applied");
   }
 
   // Device rejection: requested state must not leak into observed runtime.
@@ -26,6 +28,8 @@ const initial = normalizeRuntime({devices:{
     const out = await executePhysicalTurn(initial,[{op:"PATCH_SLOT",target:B,slot:"temperature",value:19}],driver);
     assert.equal(out.runtime.devices["主卧::空调::default"].slots.temperature,25);
     assert.equal(out.receipts[0].status,"rejected");
+    assert.equal(out.runtime.executionLedger.length,1);
+    assert.equal(out.runtime.executionLedger[0].status,"rejected");
   }
 
   // Physical device may clamp a request; reconciled state follows observation, not desire.
