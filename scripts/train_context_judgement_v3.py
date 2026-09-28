@@ -52,6 +52,9 @@ def main():
  g=json.loads(Path(a.graph).read_text());assert g["source_sha256"]==EXPECTED_SHA256 and digest(a.graph)==GRAPH_SHA
  d=build();rep={"truth":d["truth"],"train":len(d["train"]),"dev":len(d["dev"]),"final":len(d["final"]),"runs":{}}
  for name,off in [("real",False),("disconnected",True)]:
-  m,ep=train(g,d["train"],d["dev"],a.epochs,off);rep["runs"][name]={"selected_epoch":ep,"train":score(m,d["train"]),"dev":score(m,d["dev"]),"final":score(m,d["final"])}\n  if name=="real":\n   a.out.mkdir(parents=True,exist_ok=True);torch.save({"state_dict":m.state_dict(),"graph_sha":GRAPH_SHA,"decisions":DECISIONS},a.out/"model.pt")
+  m,ep=train(g,d["train"],d["dev"],a.epochs,off);rep["runs"][name]={"selected_epoch":ep,"train":score(m,d["train"]),"dev":score(m,d["dev"]),"final":score(m,d["final"])}
+  if name=="real":
+   a.out.mkdir(parents=True,exist_ok=True)
+   torch.save({"state_dict":m.state_dict(),"graph_sha":GRAPH_SHA,"decisions":DECISIONS},a.out/"model.pt")
  a.out.mkdir(parents=True,exist_ok=True);(a.out/"report.json").write_text(json.dumps(rep,ensure_ascii=False,indent=2));print(json.dumps(rep,ensure_ascii=False))
 if __name__=="__main__":main()
