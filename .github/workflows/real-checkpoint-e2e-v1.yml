@@ -1,7 +1,7 @@
 name: real-checkpoint-e2e-v1
 on:
   push:
-    paths: ["scripts/real_checkpoint_e2e_predictor.py","scripts/real_checkpoint_trajectory_v1.py","scripts/run_real_checkpoint_e2e_v1.py",".github/workflows/real-checkpoint-e2e-v1.yml"]
+    paths: ["scripts/real_checkpoint_e2e_predictor.py","scripts/real_checkpoint_trajectory_v1.py","scripts/run_real_checkpoint_e2e_v1.py","scripts/run_stateful_checkpoint_v1.cjs","scripts/stateful_checkpoint_trajectory.cjs",".github/workflows/real-checkpoint-e2e-v1.yml"]
   workflow_dispatch:
     inputs:
       judgement_run_id:
