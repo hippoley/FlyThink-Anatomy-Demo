@@ -1,0 +1,17 @@
+name: flywire-patch-experts-v2
+on:
+  push:
+    paths: ["scripts/whole_home_patch_corpus_v10.py","scripts/train_flywire_patch_experts_v2.py",".github/workflows/flywire-patch-experts-v2.yml"]
+  workflow_dispatch:
+jobs:
+ train:
+  runs-on: ubuntu-latest
+  timeout-minutes: 30
+  steps:
+   - uses: actions/checkout@v4
+   - uses: actions/setup-python@v5
+     with: {python-version: "3.12"}
+   - run: python -m py_compile scripts/whole_home_patch_corpus_v10.py scripts/train_flywire_patch_experts_v2.py
+   - run: pip install --index-url https://download.pytorch.org/whl/cpu torch
+   - run: python scripts/train_flywire_patch_experts_v2.py --epochs 550 --out artifacts/flywire-patch-experts-v2
+   - run: cat artifacts/flywire-patch-experts-v2/report.json
