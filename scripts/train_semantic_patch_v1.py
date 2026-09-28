@@ -6,7 +6,7 @@ from pathlib import Path
 import torch
 from train_flywire import digest,EXPECTED_SHA256
 from train_flywire_delta import text_features,GRAPH_SHA
-from train_flywire_whole_home_patch import context_features
+from semantic_context_features import features as context_features
 from flywire_gated_patch_net import FlyWireGatedPatchNet
 from whole_home_patch_corpus_v11 import build
 from semantic_patch_contract import OPS,CARD,DIR,encode
@@ -64,7 +64,7 @@ def train(g,tr,selection,epochs,disconnect=False,seed=3783):
 def main():
  ap=argparse.ArgumentParser();ap.add_argument("--graph",default="artifacts/flywire/connectome.json");ap.add_argument("--epochs",type=int,default=450);ap.add_argument("--out",type=Path,default=Path("artifacts/semantic-patch-v1"));a=ap.parse_args()
  torch.set_num_threads(2);g=json.loads(Path(a.graph).read_text());assert g["source_sha256"]==EXPECTED_SHA256 and digest(a.graph)==GRAPH_SHA
- d=build();fit,selection=stratified_split(d["train"]);rep={"truth":"semantic_only_patch_v11_regularized_selection","train":len(d["train"]),"fit":len(fit),"selection":len(selection),"dev":len(d["dev"]),"diagnostic":len(d["sealed"]),"family_counts":dict(Counter(r["family"] for r in d["train"])),"runs":{}}
+ d=build();fit,selection=stratified_split(d["train"]);rep={"truth":"semantic_only_patch_v12_structured_context","train":len(d["train"]),"fit":len(fit),"selection":len(selection),"dev":len(d["dev"]),"diagnostic":len(d["sealed"]),"family_counts":dict(Counter(r["family"] for r in d["train"])),"runs":{}}
  for name,off in [("real",False),("disconnected",True)]:
   candidates=[]
   for seed in ([2783,3783,4783] if name=="real" else [3783]):
