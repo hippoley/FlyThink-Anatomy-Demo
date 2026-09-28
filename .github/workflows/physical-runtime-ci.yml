@@ -9,7 +9,6 @@ on:
       - "scripts/runtime_context_adapter.cjs"
       - "scripts/stateful_checkpoint_trajectory.cjs"
       - "scripts/probe_windowpilot_checkpoint_e2e.cjs"
-      - "scripts/capture_physical_tau0.cjs"
       - "scripts/run_stateful_checkpoint_v1.cjs"
       - "scripts/run_long_checkpoint_e2e_v2.cjs"
       - "tests/commit_gate.cjs"
@@ -17,8 +16,6 @@ on:
       - "tests/runtime_context_adapter.cjs"
       - "tests/windowpilot_http_driver.cjs"
       - "tests/probe_windowpilot_checkpoint_e2e.cjs"
-      - "tests/capture_physical_tau0.cjs"
-      - "tests/capture_physical_tau0_windowpilot.cjs"
       - ".github/workflows/physical-runtime-ci.yml"
   workflow_dispatch:
 
@@ -38,7 +35,6 @@ jobs:
           node --check scripts/runtime_context_adapter.cjs
           node --check scripts/stateful_checkpoint_trajectory.cjs
           node --check scripts/probe_windowpilot_checkpoint_e2e.cjs
-          node --check scripts/capture_physical_tau0.cjs
           node --check scripts/run_stateful_checkpoint_v1.cjs
           node --check scripts/run_long_checkpoint_e2e_v2.cjs
       - name: Verify semantic commit gate
@@ -51,7 +47,3 @@ jobs:
         run: node tests/windowpilot_http_driver.cjs
       - name: Verify live apply identity gate
         run: node tests/probe_windowpilot_checkpoint_e2e.cjs
-      - name: Verify physical tau0 capture contract
-        run: node tests/capture_physical_tau0.cjs
-      - name: Verify tau0 capture against WindowPilot HTTP driver
-        run: node tests/capture_physical_tau0_windowpilot.cjs
