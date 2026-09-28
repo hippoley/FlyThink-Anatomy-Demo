@@ -22,6 +22,18 @@ function capabilityKey(action) {
   return [action.product_model, action.module, action.interaction, action.code].join("|");
 }
 
+function valueAllowed(contract, value) {
+  if (!contract || !contract.kind) return false;
+  if (contract.kind === "bool") return typeof value === "boolean";
+  if (contract.kind === "range") {
+    return Number.isFinite(value)
+      && (contract.minimum == null || value >= contract.minimum)
+      && (contract.maximum == null || value <= contract.maximum);
+  }
+  if (contract.kind === "enum") return Array.isArray(contract.allowed) && contract.allowed.some(v => JSON.stringify(v) === JSON.stringify(value));
+  return false;
+}
+
 function normalizePower(value) {
   if (value === true || value === "ON" || value === "on" || value === 1) return true;
   if (value === false || value === "OFF" || value === "off" || value === 0) return false;
@@ -95,10 +107,30 @@ function compilePatch(bindings, runtime, patch) {
     .filter(a => a.entity_id === bd.binding.entity_id && a.semantic_role === req.role);
 
   let candidates;
+  let dynamicValue = false;
   if (req.kind === "verb") {
     candidates = actions.filter(a => a.name.endsWith("_" + req.verb));
   } else {
-    candidates = actions.filter(a => a.code === req.code && JSON.stringify(a.value) === JSON.stringify(req.value));
+    const sameProperty = actions.filter(a => a.code === req.code);
+    const exact = sameProperty.filter(a => JSON.stringify(a.value) === JSON.stringify(req.value));
+    if (exact.length) {
+      candidates = exact;
+    } else {
+      const compatible = sameProperty.filter(a => valueAllowed(a.value_contract, req.value));
+      const unique = new Map();
+      for (const a of compatible) unique.set(capabilityKey(a), a);
+      candidates = [...unique.values()];
+      dynamicValue = candidates.length === 1;
+      if (!candidates.length && sameProperty.length) {
+        return {
+          status: "BLOCKED",
+          reason: "physical_value_contract_violation",
+          patch: clone(patch),
+          request: req,
+          contracts: sameProperty.map(a => clone(a.value_contract))
+        };
+      }
+    }
   }
 
   if (candidates.length !== 1) {
@@ -115,14 +147,14 @@ function compilePatch(bindings, runtime, patch) {
   return {
     status: "GROUNDED",
     patch: clone(patch),
-    action_name: a.name,
+    action_name: dynamicValue ? a.name + ":dynamic" : a.name,
     command: {
       entity_id: a.entity_id,
       product_model: a.product_model,
       module: a.module,
       interaction: a.interaction,
       code: a.code,
-      value: clone(a.value),
+      value: clone(dynamicValue ? req.value : a.value),
       semantic_role: a.semantic_role,
       capability_key: capabilityKey(a)
     }
@@ -267,5 +299,6 @@ module.exports = {
   commitGate,
   InMemoryThingTransport,
   executeSemanticTurn,
-  reconcileObservation
+  reconcileObservation,
+  valueAllowed
 };
