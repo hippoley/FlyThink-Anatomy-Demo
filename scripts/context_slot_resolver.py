@@ -20,6 +20,8 @@ def writable_candidates(index,model_id=None):
  return sorted(out)
 def cue_slot(text):
  t=(text or "").lower()
+ # Explicit window percentage language is a position/opening mutation, not power.
+ if "%" in t and any(w in t for w in ("开到","开度","窗户","开窗")):return "opening"
  for slot,words in ALIASES.items():
   if any(w in t for w in words):return slot
  if any(w in t for w in ("亮一点","暗一点","再亮","再暗")):return "brightness"
