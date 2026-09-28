@@ -23,8 +23,10 @@ function sameTargets(p,gold){
 async function run(trajectory,args){
  let runtime=normalizeRuntime(trajectory.initial_runtime||{}),history=[],unsafe=0,wrong=0,untouched=0,decisionCorrect=0,patchCorrect=0,stateCorrect=0;
  const py=cp.spawn("python",["scripts/checkpoint_jsonl_server.py","--graph",args.graph,"--judgement",args.judgement,"--semantic",args.semantic],{stdio:["pipe","pipe","inherit"]});
- const rl=readline.createInterface({input:py.stdout});const queue=[];rl.on("line",l=>{const q=queue.shift();if(q)q(JSON.parse(l));});
- const predict=x=>new Promise(res=>{queue.push(res);py.stdin.write(JSON.stringify(x)+"\n")});
+ const rl=readline.createInterface({input:py.stdout});const queue=[];let serverError=null;
+ py.on("exit",(code,signal)=>{if(code!==0){serverError=new Error("checkpoint_server_exit:"+code+":"+(signal||""));while(queue.length){const q=queue.shift();q.reject(serverError);}}});
+ rl.on("line",l=>{const q=queue.shift();if(q){try{q.resolve(JSON.parse(l));}catch(e){q.reject(e);}}});
+ const predict=x=>new Promise((resolve,reject)=>{if(serverError)return reject(serverError);queue.push({resolve,reject});py.stdin.write(JSON.stringify(x)+"\n",e=>{if(e)reject(e)});});
  for(const turn of trajectory.turns){
   const derived=deriveContext(runtime,history);const context={...derived,...(turn.context_hint||{})};
   const pred=await predict({text:turn.text,context,background:{...context,...(turn.background||{})}});
