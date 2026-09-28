@@ -3,7 +3,8 @@ const cp=require("child_process");
 const readline=require("readline");
 const {applyTurn,normalizeRuntime}=require("./whole_home_patch_contract.cjs");
 const {deriveContext}=require("./runtime_context_adapter.cjs");
-const {MockThingDriver,executePhysicalTurn}=require("./physical_runtime.cjs");\nconst {WindowPilotHttpDriver}=require("./windowpilot_http_driver.cjs");
+const {MockThingDriver,executePhysicalTurn}=require("./physical_runtime.cjs");
+const {WindowPilotHttpDriver}=require("./windowpilot_http_driver.cjs");
 
 function key(t){return t&&[t.area,t.entity,t.instance||"default"].join("::")}
 function eq(a,b){return JSON.stringify(a)===JSON.stringify(b)}
