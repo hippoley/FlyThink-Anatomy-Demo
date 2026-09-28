@@ -1,7 +1,7 @@
 name: long-checkpoint-e2e-v2
 on:
   push:
-    paths: ["scripts/run_long_checkpoint_e2e_v2.cjs","scripts/stateful_checkpoint_trajectory.cjs","scripts/generate_long_trajectory_benchmark_v2.py",".github/workflows/long-checkpoint-e2e-v2.yml"]
+    paths: ["scripts/run_long_checkpoint_e2e_v2.cjs","scripts/stateful_checkpoint_trajectory.cjs","scripts/generate_long_trajectory_benchmark_v2.py","scripts/inspect_core_device_capabilities.py",".github/workflows/long-checkpoint-e2e-v2.yml"]
   workflow_dispatch:
 jobs:
   evaluate:
@@ -20,6 +20,7 @@ jobs:
         with: {name: semantic-patch-v1, path: artifacts/semantic-patch-v1, github-token: "${{ github.token }}", run-id: "36372786282"}
       - run: python scripts/train_flywire.py --download --epochs 1 --out artifacts/flywire
       - run: python scripts/build_capability_index.py
+      - run: python scripts/inspect_core_device_capabilities.py
       - run: python scripts/generate_long_trajectory_benchmark_v2.py --count 120 --out benchmarks/long_trajectories_v2.json
       - run: python scripts/validate_long_trajectory_benchmark_v2.py benchmarks/long_trajectories_v2.json
       - name: Evaluate first 10 trajectories
