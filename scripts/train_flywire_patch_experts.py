@@ -6,7 +6,7 @@ import torch
 from train_flywire import digest,EXPECTED_SHA256
 from train_flywire_delta import text_features,GRAPH_SHA
 from train_flywire_whole_home_patch import context_features
-from train_flywire_whole_home_patch_v4 import OPS,ROOMS,ENTITIES,SLOTS,CARDINALITY,DELTA
+from train_flywire_whole_home_patch_v6 import OPS,ROOMS,ENTITIES,SLOTS,CARD,DELTA
 from whole_home_patch_corpus_v9 import build
 from flywire_patch_experts import FlyWirePatchExperts,EXPERT_NAMES
 from patch_expert_router import route_expert
@@ -14,13 +14,13 @@ def rows(split):
  out=[]
  for t in split:
   p=t["gold_patches"][0];target=p.get("target") or p.get("to") or {};card="SET2" if p.get("targets") else "ONE";delta=p.get("delta",0)
-  lab=[OPS.index(p["op"]),ROOMS.index(target.get("area","NONE")),ENTITIES.index(target.get("entity","NONE")),SLOTS.index(p.get("slot","NONE") if p.get("slot","NONE") in SLOTS else "NONE"),CARDINALITY.index(card),DELTA.index("NEG" if delta<0 else "POS" if delta>0 else "ZERO")]
+  lab=[OPS.index(p["op"]),ROOMS.index(target.get("area","NONE")),ENTITIES.index(target.get("entity","NONE")),SLOTS.index(p.get("slot","NONE") if p.get("slot","NONE") in SLOTS else "NONE"),CARD.index(card),DELTA.index("NEG" if delta<0 else "POS" if delta>0 else "ZERO")]
   expert=EXPERT_NAMES.index(route_expert(p["op"],card))
   x=torch.cat([text_features(t["text"]),context_features(t)])
   out.append((x,torch.tensor(lab),expert,t))
  return out
 def split(z):
- sizes=[len(OPS),len(ROOMS),len(ENTITIES),len(SLOTS),len(CARDINALITY),len(DELTA)];o=[];i=0
+ sizes=[len(OPS),len(ROOMS),len(ENTITIES),len(SLOTS),len(CARD),len(DELTA)];o=[];i=0
  for n in sizes:o.append(z[:,i:i+n]);i+=n
  return o
 def objective(m,rs):
