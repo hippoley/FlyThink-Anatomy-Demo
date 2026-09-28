@@ -11,7 +11,7 @@ function classifyRuntimeError(e){
 function runTrajectory(trajectory,predict){
  let runtime=normalizeRuntime(trajectory.initial_runtime||{}),correct=0,wrongDevice=0,untouched=0,turns=[];
  for(const turn of trajectory.turns){
-  const pred=predict({text:turn.text,runtime,history:turns});
+  const pred=predict({text:turn.text,runtime,history:turns,context:turn.context||{}});
   let outcome=pred.decision||"EXECUTE",error=null;
   if(outcome==="EXECUTE"){
    try{runtime=applyTurn(runtime,pred.patches||[]).runtime;}
