@@ -3,6 +3,13 @@ on:
   push:
     paths: ["scripts/real_checkpoint_e2e_predictor.py","scripts/real_checkpoint_trajectory_v1.py","scripts/run_real_checkpoint_e2e_v1.py",".github/workflows/real-checkpoint-e2e-v1.yml"]
   workflow_dispatch:
+    inputs:
+      judgement_run_id:
+        required: false
+        default: '36372167785'
+      semantic_run_id:
+        required: false
+        default: '36372786282'
 jobs:
  e2e:
   runs-on: ubuntu-latest
@@ -17,13 +24,13 @@ jobs:
       name: context-judgement-v3
       path: artifacts/context-judgement-v3
       github-token: ${{ github.token }}
-      run-id: 36369147522
+      run-id: ${{ inputs.judgement_run_id || '36372167785' }}
    - uses: actions/download-artifact@v4
      with:
       name: semantic-patch-v1
       path: artifacts/semantic-patch-v1
       github-token: ${{ github.token }}
-      run-id: 36368943127
+      run-id: ${{ inputs.semantic_run_id || '36372786282' }}
    - run: python scripts/train_flywire.py --download --epochs 1 --out artifacts/flywire
    - run: python scripts/build_capability_index.py
    - run: python -m py_compile scripts/checkpoint_inference.py scripts/context_slot_resolver.py scripts/checkpoint_jsonl_server.py scripts/real_checkpoint_e2e_predictor.py scripts/run_real_checkpoint_e2e_v1.py
