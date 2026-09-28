@@ -15,7 +15,8 @@ class WindowPilotHttpDriver {
     this.tolerancePct=Number(options.tolerancePct??1);
     this.pollIntervalMs=Number(options.pollIntervalMs??200);
     this.timeoutMs=Number(options.timeoutMs??5000);
-    this.defaultOpenPct=options.defaultOpenPct==null?null:Number(options.defaultOpenPct);\n    this.maxPolls=options.maxPolls==null?null:Number(options.maxPolls);
+    this.defaultOpenPct=options.defaultOpenPct==null?null:Number(options.defaultOpenPct);
+    this.maxPolls=options.maxPolls==null?null:Number(options.maxPolls);
     this.expectedHardwareIdentity=options.expectedHardwareIdentity||null;
     this.requestJson=options.requestJson||null;
     this.commands=[];
