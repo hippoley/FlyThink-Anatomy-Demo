@@ -1,0 +1,19 @@
+name: context-conditioned-e2e-contract
+on:
+  push:
+    paths:
+      - "scripts/context_*resolver.py"
+      - "scripts/context_patch_composer.py"
+      - "scripts/judgement_patch_pipeline.py"
+      - "scripts/e2e_predictor_boundary.py"
+      - "tests/test_context_patch_composer.py"
+      - "tests/test_judgement_patch_pipeline.py"
+      - ".github/workflows/context-conditioned-e2e-contract.yml"
+jobs:
+ contract:
+  runs-on: ubuntu-latest
+  steps:
+   - uses: actions/checkout@v4
+   - run: python -m py_compile scripts/context_target_resolver.py scripts/context_slot_resolver.py scripts/context_patch_composer.py scripts/judgement_patch_pipeline.py scripts/e2e_predictor_boundary.py
+   - run: PYTHONPATH=scripts python tests/test_context_patch_composer.py
+   - run: PYTHONPATH=scripts python tests/test_judgement_patch_pipeline.py
