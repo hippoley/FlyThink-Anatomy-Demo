@@ -53,9 +53,14 @@ def build():
  x.append(row("set-two-ac","两个空调都打开",{"referent_set":[target("客厅","空调"),target("主卧","空调")]},
    [("客厅::空调::default","power","ON"),("主卧::空调::default","power","ON")],semantic={"op":"PATCH_SLOT","cardinality":"SET","slot":"power"}))
  return {"truth":"contextual_state_transition_v1","examples":x}
-def split_group(group):
- # Stable group-level split; siblings can never cross partitions.
- h=int(hashlib.sha256(("20260928:"+group).encode()).hexdigest()[:8],16)%10
- return "test" if h==0 else "dev" if h==1 else "train"
+FROZEN_SPLIT={
+ "focus-relative-temperature":"train",
+ "referent-capability":"test",
+ "add-vs-replace":"train",
+ "lifecycle-same-text":"dev",
+ "irrelevant-light-state":"train",
+ "set-two-ac":"train",
+}
+def split_group(group):return FROZEN_SPLIT[group]
 if __name__=="__main__":
  d=build();print(json.dumps({"truth":d["truth"],"n":len(d["examples"]),"groups":sorted({r["contrast_group"] for r in d["examples"]}),"splits":{g:split_group(g) for g in sorted({r["contrast_group"] for r in d["examples"]})}},ensure_ascii=False,indent=2))
