@@ -42,7 +42,7 @@ function parseTarget(raw){
         instance:target.instance,
         status:"mounted",
         model_id:"CWDS-CA01",
-        slots:{position:pct}
+        slots:{opening:pct}
       }
     }},
     turns:[{
