@@ -51,7 +51,7 @@ def build():
    [("客厅::空调::default","temperature",22)],before=b,semantic={"op":"PATCH_SLOT","slot":"temperature","has_value":True}))
  # Set semantics and untouched other devices.
  x.append(row("set-two-ac","两个空调都打开",{"referent_set":[target("客厅","空调"),target("主卧","空调")]},
-   [("客厅::空调::default","power","ON"),("主卧::空调::default","power","ON")],semantic={"op":"PATCH_SLOT","cardinality":"SET","slot":"power"}))
+   [("主卧::空调::default","power","ON")],semantic={"op":"PATCH_SLOT","cardinality":"SET","slot":"power"}))
  return {"truth":"contextual_state_transition_v1","examples":x}
 FROZEN_SPLIT={
  "focus-relative-temperature":"train",
