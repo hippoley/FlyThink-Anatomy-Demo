@@ -47,6 +47,12 @@ def build():
   for k,(bg,dec,fam) in enumerate([(a,da,fa),(b,db,fb)]):
    bg=dict(bg);bg["history"]=noise*(2+(n+k)%3)
    train.append(ex(bg,text,dec,fam,evidence=[fam],missing=["referent"] if dec=="CLARIFY" else [],protected=bg.get("protected",[])))
+ # E2E-derived generalization families; wording is disjoint from the frozen trajectory probe.
+ for text in ["关闭客厅空调","把主卧空调停掉","客厅这个空调先关闭","请关客厅的空调"]:
+  train.append(ex({"focus":None,"history":noise*2},text,"EXECUTE","explicit_target",evidence=["explicit_target"]))
+ for text in ["当前这个重新开启","这个再启动","把现在这个开起来","继续打开这个"]:
+  train.append(ex({"focus":"主卧空调","history":noise*2},text,"EXECUTE","resolved_referent",evidence=["focus"]))
+  train.append(ex({"focus":None,"history":noise*2},text,"CLARIFY","missing_referent",missing=["referent"]))
  # True final counterfactuals with unseen wording/background lengths.
  finals=[
   ({"focus":None,"history":noise*4},"这个关掉","CLARIFY","missing_referent"),
