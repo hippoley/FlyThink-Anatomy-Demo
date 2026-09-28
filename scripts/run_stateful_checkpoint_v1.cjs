@@ -6,16 +6,16 @@ const trajectory={initial_runtime:{devices:{
  "主卧::空调::default":{key:"主卧::空调::default",area:"主卧",entity:"空调",instance:"default",status:"mounted",model_id:"AWGD-ZA01",slots:{power:"OFF",temperature:25}}
 }},turns:[
  {text:"客厅空调关掉",context_hint:{focused_target:L},gold_decision:"EXECUTE",gold_op:"CLOSE_DEVICE",gold_target:L},
- {text:"卧室的也打开",context_hint:{add_target:B},gold_decision:"EXECUTE",gold_op:"ADD_DEVICE",gold_target:B},
- {text:"温度调到23度",gold_decision:"EXECUTE",gold_op:"PATCH_SLOT",gold_target:B},
- {text:"再低一点",gold_decision:"EXECUTE",gold_op:"PATCH_RELATIVE",gold_target:B},
+ {text:"卧室的也打开",context_hint:{add_target:B},gold_decision:"EXECUTE",gold_op:"ADD_DEVICE",gold_target:B,gold_slots:{power:"ON"}},
+ {text:"温度调到23度",gold_decision:"EXECUTE",gold_op:"PATCH_SLOT",gold_target:B,gold_slot:"temperature",gold_value:23},
+ {text:"再低一点",gold_decision:"EXECUTE",gold_op:"PATCH_RELATIVE",gold_target:B,gold_slot:"temperature",gold_delta:-1},
  {text:"把它关掉",gold_decision:"EXECUTE",gold_op:"CLOSE_DEVICE",gold_target:B},
- {text:"现在这个再打开",gold_decision:"EXECUTE",gold_op:"ADD_DEVICE",gold_target:B},
- {text:"再低一点",gold_decision:"EXECUTE",gold_op:"PATCH_RELATIVE",gold_target:B},
+ {text:"现在这个再打开",gold_decision:"EXECUTE",gold_op:"ADD_DEVICE",gold_target:B,gold_slots:{power:"ON"}},
+ {text:"再低一点",gold_decision:"EXECUTE",gold_op:"PATCH_RELATIVE",gold_target:B,gold_slot:"temperature",gold_delta:-1},
  {text:"关掉它",gold_decision:"EXECUTE",gold_op:"CLOSE_DEVICE",gold_target:B},
- {text:"再打开",gold_decision:"EXECUTE",gold_op:"ADD_DEVICE",gold_target:B},
- {text:"温度调到24度",gold_decision:"EXECUTE",gold_op:"PATCH_SLOT",gold_target:B},
- {text:"再低一点",gold_decision:"EXECUTE",gold_op:"PATCH_RELATIVE",gold_target:B},
+ {text:"再打开",gold_decision:"EXECUTE",gold_op:"ADD_DEVICE",gold_target:B,gold_slots:{power:"ON"}},
+ {text:"温度调到24度",gold_decision:"EXECUTE",gold_op:"PATCH_SLOT",gold_target:B,gold_slot:"temperature",gold_value:24},
+ {text:"再低一点",gold_decision:"EXECUTE",gold_op:"PATCH_RELATIVE",gold_target:B,gold_slot:"temperature",gold_delta:-1},
  {text:"把它关掉",gold_decision:"EXECUTE",gold_op:"CLOSE_DEVICE",gold_target:B}
 ]};
 const a=process.argv.slice(2),arg=n=>a[a.indexOf(n)+1];
