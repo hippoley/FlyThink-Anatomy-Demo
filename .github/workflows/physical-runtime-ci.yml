@@ -1,0 +1,49 @@
+name: physical-runtime-ci
+
+on:
+  pull_request:
+    paths:
+      - "scripts/commit_gate.cjs"
+      - "scripts/physical_runtime.cjs"
+      - "scripts/windowpilot_http_driver.cjs"
+      - "scripts/runtime_context_adapter.cjs"
+      - "scripts/stateful_checkpoint_trajectory.cjs"
+      - "scripts/probe_windowpilot_checkpoint_e2e.cjs"
+      - "scripts/run_stateful_checkpoint_v1.cjs"
+      - "scripts/run_long_checkpoint_e2e_v2.cjs"
+      - "tests/commit_gate.cjs"
+      - "tests/physical_runtime.cjs"
+      - "tests/runtime_context_adapter.cjs"
+      - "tests/windowpilot_http_driver.cjs"
+      - "tests/probe_windowpilot_checkpoint_e2e.cjs"
+      - ".github/workflows/physical-runtime-ci.yml"
+  workflow_dispatch:
+
+jobs:
+  reconcile-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Check physical runtime JavaScript syntax
+        run: |
+          node --check scripts/commit_gate.cjs
+          node --check scripts/physical_runtime.cjs
+          node --check scripts/windowpilot_http_driver.cjs
+          node --check scripts/runtime_context_adapter.cjs
+          node --check scripts/stateful_checkpoint_trajectory.cjs
+          node --check scripts/probe_windowpilot_checkpoint_e2e.cjs
+          node --check scripts/run_stateful_checkpoint_v1.cjs
+          node --check scripts/run_long_checkpoint_e2e_v2.cjs
+      - name: Verify semantic commit gate
+        run: node tests/commit_gate.cjs
+      - name: Verify patch -> execute -> observe -> reconcile
+        run: node tests/physical_runtime.cjs
+      - name: Verify device feedback enters next-turn context
+        run: node tests/runtime_context_adapter.cjs
+      - name: Verify WindowPilot HTTP write/readback contract
+        run: node tests/windowpilot_http_driver.cjs
+      - name: Verify live apply identity gate
+        run: node tests/probe_windowpilot_checkpoint_e2e.cjs

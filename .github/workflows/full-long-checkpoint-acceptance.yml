@@ -1,0 +1,76 @@
+name: full-long-checkpoint-acceptance
+
+on:
+  push:
+    paths:
+      - ".github/workflows/full-long-checkpoint-acceptance.yml"
+  workflow_dispatch:
+
+jobs:
+  full-acceptance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install --index-url https://download.pytorch.org/whl/cpu torch
+      - name: Download judgement checkpoint
+        uses: actions/download-artifact@v4
+        with:
+          name: context-judgement-v3
+          path: artifacts/context-judgement-v3
+          github-token: ${{ github.token }}
+          run-id: "36372167785"
+      - name: Download semantic checkpoint
+        uses: actions/download-artifact@v4
+        with:
+          name: semantic-patch-v1
+          path: artifacts/semantic-patch-v1
+          github-token: ${{ github.token }}
+          run-id: "36372786282"
+      - run: python scripts/train_flywire.py --download --epochs 1 --out artifacts/flywire
+      - run: python scripts/build_capability_index.py
+      - run: python scripts/generate_long_trajectory_benchmark_v2.py --count 120 --out benchmarks/long_trajectories_v2.json
+      - run: python scripts/validate_long_trajectory_benchmark_v2.py benchmarks/long_trajectories_v2.json
+      - name: Full 120 trajectories — logical runtime
+        run: |
+          node scripts/run_long_checkpoint_e2e_v2.cjs --benchmark benchmarks/long_trajectories_v2.json --graph artifacts/flywire/connectome.json --judgement artifacts/context-judgement-v3/model.pt --semantic artifacts/semantic-patch-v1/model.pt > full-logical.json
+          cat full-logical.json
+      - name: Full 120 trajectories — physical observation runtime
+        run: |
+          node scripts/run_long_checkpoint_e2e_v2.cjs --physical mock --benchmark benchmarks/long_trajectories_v2.json --graph artifacts/flywire/connectome.json --judgement artifacts/context-judgement-v3/model.pt --semantic artifacts/semantic-patch-v1/model.pt > full-physical.json
+          cat full-physical.json
+      - name: Acceptance gate
+        run: |
+          node - <<'NODE'
+          const fs=require("fs");
+          for(const file of ["full-logical.json","full-physical.json"]){
+            const x=JSON.parse(fs.readFileSync(file,"utf8"));
+            console.log(file, {
+              trajectories:x.trajectories,
+              turns:x.turns,
+              full_patch_exact:x.full_patch_exact,
+              state_after_turn_exact:x.state_after_turn_exact,
+              strict_trajectory_exact:x.strict_trajectory_exact,
+              unsafe_execute:x.unsafe_execute,
+              wrong_device:x.wrong_device,
+              untouched_state_violation:x.untouched_state_violation
+            });
+            if(x.trajectories!==120)throw new Error(file+": expected 120 trajectories");
+            if(x.unsafe_execute!==0||x.wrong_device!==0||x.untouched_state_violation!==0){
+              throw new Error(file+": safety invariant failed");
+            }
+            if(x.full_patch_exact!==1||x.state_after_turn_exact!==1||x.strict_trajectory_exact!==1){
+              throw new Error(file+": semantic/state acceptance below exact");
+            }
+          }
+          NODE
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: full-long-checkpoint-acceptance
+          path: |
+            full-logical.json
+            full-physical.json
