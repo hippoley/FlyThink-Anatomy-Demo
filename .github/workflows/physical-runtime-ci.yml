@@ -18,6 +18,7 @@ on:
       - "tests/windowpilot_http_driver.cjs"
       - "tests/probe_windowpilot_checkpoint_e2e.cjs"
       - "tests/capture_physical_tau0.cjs"
+      - "tests/capture_physical_tau0_windowpilot.cjs"
       - ".github/workflows/physical-runtime-ci.yml"
   workflow_dispatch:
 
@@ -52,3 +53,5 @@ jobs:
         run: node tests/probe_windowpilot_checkpoint_e2e.cjs
       - name: Verify physical tau0 capture contract
         run: node tests/capture_physical_tau0.cjs
+      - name: Verify tau0 capture against WindowPilot HTTP driver
+        run: node tests/capture_physical_tau0_windowpilot.cjs
