@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Compose model semantic intent with context-resolved targets and slots."""
-from context_target_resolver import resolve_targets
+from context_target_resolver import resolve_targets\nfrom semantic_patch_materializer import deterministic_value
 def compose(proposal,context,slot_resolver=None,text=''):
  r=resolve_targets("",proposal,context)
  if r["mode"]=="CLARIFY":return {"decision":"CLARIFY","reason":"missing_target","patches":[]}
@@ -10,5 +10,5 @@ def compose(proposal,context,slot_resolver=None,text=''):
  if slot_resolver and p.get("op") in ("PATCH_SLOT","PATCH_RELATIVE","CLOSE_DEVICE"):
   s=slot_resolver(p,r["targets"][0],context,text)
   if not s.get("slot"):return {"decision":"CLARIFY","reason":"ambiguous_slot","patches":[],"candidates":s.get("candidates",[])}
-  p["slot"]=s["slot"]
+  p["slot"]=s["slot"]\n  v=deterministic_value(text,p["slot"])\n  if v is not None:p["value"]=v
  return {"decision":"EXECUTE","patches":[p],"target_source":r["source"]}
