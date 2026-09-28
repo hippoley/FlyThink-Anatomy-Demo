@@ -5,7 +5,7 @@ function arg(n){const i=process.argv.indexOf(n);return i>=0?process.argv[i+1]:nu
 (async()=>{
  const file=arg("--benchmark")||"benchmarks/long_trajectories_v2.json",limit=Number(arg("--limit")||0);
  const d=JSON.parse(fs.readFileSync(file,"utf8")),rows=limit?d.trajectories.slice(0,limit):d.trajectories;
- const args={graph:arg("--graph"),judgement:arg("--judgement"),semantic:arg("--semantic")};
+ const args={graph:arg("--graph"),judgement:arg("--judgement"),semantic:arg("--semantic"),physical:arg("--physical")};
  let turns=0,patch=0,state=0,strict=0,unsafe=0,wrong=0,untouched=0,failures=[];
  for(const tr of rows){
   const r=await run(tr,args),n=tr.turns.length;turns+=n;patch+=Math.round(r.full_patch_exact*n);state+=Math.round(r.state_after_turn_exact*n);
