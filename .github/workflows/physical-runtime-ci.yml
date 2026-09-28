@@ -15,6 +15,7 @@ on:
       - "tests/physical_runtime.cjs"
       - "tests/runtime_context_adapter.cjs"
       - "tests/windowpilot_http_driver.cjs"
+      - "tests/probe_windowpilot_checkpoint_e2e.cjs"
       - ".github/workflows/physical-runtime-ci.yml"
   workflow_dispatch:
 
@@ -44,3 +45,5 @@ jobs:
         run: node tests/runtime_context_adapter.cjs
       - name: Verify WindowPilot HTTP write/readback contract
         run: node tests/windowpilot_http_driver.cjs
+      - name: Verify live apply identity gate
+        run: node tests/probe_windowpilot_checkpoint_e2e.cjs
