@@ -17,3 +17,8 @@ jobs:
    - run: pip install --index-url https://download.pytorch.org/whl/cpu torch
    - run: python scripts/train_context_judgement_v3.py --epochs 400
    - run: cat artifacts/context-judgement-v3/report.json
+
+   - uses: actions/upload-artifact@v4
+     with:
+      name: context-judgement-v3
+      path: artifacts/context-judgement-v3/
