@@ -11,6 +11,9 @@ on:
       - "scripts/semantic_patch_materializer.py"
       - "scripts/context_patch_composer.py"
       - "scripts/context_slot_resolver.py"
+      - "scripts/checkpoint_jsonl_server.py"
+      - "scripts/lexical_operation_evidence.py"
+      - "scripts/judgement_patch_pipeline.py"
       - "scripts/generate_long_trajectory_benchmark_v2.py"
       - "scripts/inspect_core_device_capabilities.py"
       - "tests/physical_runtime.cjs"
@@ -51,6 +54,7 @@ jobs:
       - run: python scripts/build_capability_index.py
       - run: python scripts/inspect_core_device_capabilities.py
       - run: python tests/test_target_aware_slot_cues.py
+      - run: python tests/test_lexical_operation_evidence.py
       - run: python tests/test_semantic_capability_map.py
       - run: node tests/physical_runtime.cjs
       - run: node tests/windowpilot_http_driver.cjs
