@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+import sys
+from pathlib import Path
+
+sys.path.insert(0,str(Path(__file__).resolve().parents[1]/"scripts"))
+
 from context_target_resolver import resolve_targets
 from context_patch_composer import compose
 
@@ -28,7 +33,7 @@ assert compose(p,{})["decision"]=="CLARIFY"
 explicit={"op":"CLOSE_DEVICE","slot":"power","target":B}
 assert compose(explicit,{"focused_target":L})["patches"][0]["target"]==B
 
-# Current utterance must beat stale referents even when the semantic cardinality is wrong.
+# Current utterance must beat stale referents even when semantic cardinality is wrong.
 ctx={"focused_target":LAMP,"referent_set":[LAMP],"device_registry":REG}
 r=resolve_targets("客厅空调温度调到23度",s,ctx)
 assert r["mode"]=="ONE"
