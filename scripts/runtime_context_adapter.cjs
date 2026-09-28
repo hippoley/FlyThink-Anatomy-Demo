@@ -14,7 +14,8 @@ function deriveContext(runtime,history=[]){
   pending_ids:Object.keys((runtime&&runtime.pending)||{}).filter(k=>runtime.pending[k]&&runtime.pending[k].status!=="cancelled"),
   executed_ids:((runtime&&runtime.executionLedger)||[]).map(x=>x.id).filter(Boolean),
   protected_paths:Object.keys((runtime&&runtime.protectedInvariants)||{}),
-  device_keys:Object.keys((runtime&&runtime.devices)||{})
+  device_keys:Object.keys((runtime&&runtime.devices)||{}),
+  device_registry:Object.fromEntries(Object.entries((runtime&&runtime.devices)||{}).filter(([,v])=>v&&v.model_id).map(([k,v])=>[k,{model_id:v.model_id}]))
  };
 }
 module.exports={deriveContext};
