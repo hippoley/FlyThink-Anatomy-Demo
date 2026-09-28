@@ -1,26 +1,61 @@
 #!/usr/bin/env python3
-"""Contextual State Transition Corpus V1: controlled interventions, not paraphrase bags."""
-import copy,json
-AC_L=("客厅","空调","default");AC_B=("主卧","空调","default");LIGHT=("客厅","灯","default")
-def k(x):return "::".join(x)
-BASE={k(AC_L):{"power":"ON","temperature":24},k(AC_B):{"power":"OFF","temperature":25},k(LIGHT):{"power":"ON","brightness":70}}
-def ex(group,text,before,context,delta):
+"""Controlled Contextual State Transition Corpus V1.
+Every contrast group is an indivisible split unit. Examples encode interventions,
+minimal deltas and untouched-state invariants.
+"""
+import copy,json,hashlib
+DEVICES={
+ "客厅::空调::default":{"power":"ON","temperature":24},
+ "主卧::空调::default":{"power":"OFF","temperature":25},
+ "客厅::灯::default":{"power":"ON","brightness":70},
+ "主卧::灯::default":{"power":"OFF","brightness":40},
+ "客厅::窗户::default":{"power":"ON","opening":50},
+}
+def target(area,entity):return {"area":area,"entity":entity,"instance":"default"}
+def apply(before,delta):
  after=copy.deepcopy(before);write=[]
- for dev,slot,val in delta:
-  after[dev][slot]=val;write.append(f"{dev}.{slot}")
- all_slots={f"{d}.{s}" for d,v in before.items() for s in v}
- return {"contrast_group":group,"text":text,"before_state":before,"context":context,"gold_delta":delta,"after_state":after,"write_set":write,"invariant_set":sorted(all_slots-set(write))}
+ for d,s,v in delta:after[d][s]=v;write.append(f"{d}.{s}")
+ all_slots={f"{d}.{s}" for d,x in before.items() for s in x}
+ return after,write,sorted(all_slots-set(write))
+def row(group,text,context,delta,decision="EXECUTE",before=None,semantic=None):
+ b=copy.deepcopy(before or DEVICES);a,w,inv=apply(b,delta)
+ return {"contrast_group":group,"text":text,"before_state":b,"context":context,"gold_decision":decision,
+         "gold_semantic":semantic or {},"gold_delta":delta,"after_state":a,"write_set":w,"invariant_set":inv}
 def build():
- out=[]
- # Same text, target intervention: resolver must follow focus; semantic relation stays invariant.
- for target in [AC_L,AC_B]:
-  b=copy.deepcopy(BASE);old=b[k(target)]["temperature"]
-  out.append(ex("relative_focus","再低一点",b,{"focused_target":{"area":target[0],"entity":target[1],"instance":target[2]}},[(k(target),"temperature",old-1)]))
- # Additive must preserve prior device.
- b=copy.deepcopy(BASE);out.append(ex("additive_vs_replace","卧室的也打开",b,{"focused_target":{"area":"客厅","entity":"空调","instance":"default"},"add_target":{"area":"主卧","entity":"空调","instance":"default"}},[(k(AC_B),"power","ON")]))
- # Irrelevant-state intervention: changing light must not change AC transition.
- for bright in [20,90]:
-  b=copy.deepcopy(BASE);b[k(LIGHT)]["brightness"]=bright
-  out.append(ex("irrelevant_invariance","客厅空调调到22度",b,{"focused_target":{"area":"客厅","entity":"空调","instance":"default"}},[(k(AC_L),"temperature",22)]))
- return {"truth":"contextual_state_transition_v1","examples":out}
-if __name__=="__main__":print(json.dumps(build(),ensure_ascii=False,indent=2))
+ x=[]
+ # Focus intervention: identical text, only focus changes.
+ for area in ("客厅","主卧"):
+  d=f"{area}::空调::default";old=DEVICES[d]["temperature"]
+  x.append(row("focus-relative-temperature","再低一点",{"focused_target":target(area,"空调")},
+    [(d,"temperature",old-1)],semantic={"op":"PATCH_RELATIVE","direction":"NEG","slot":"temperature"}))
+ # Capability competition: recency points at light but temperature makes AC identifiable.
+ x.append(row("referent-capability","把它调到22度",{"referent_set":[target("客厅","灯"),target("客厅","空调")]},
+   [("客厅::空调::default","temperature",22)],semantic={"op":"PATCH_SLOT","slot":"temperature","has_value":True}))
+ # Ambiguous two ACs must clarify and mutate nothing.
+ x.append(row("referent-capability","把它调到22度",{"referent_set":[target("客厅","空调"),target("主卧","空调")]},
+   [],decision="CLARIFY",semantic={"op":"PATCH_SLOT","slot":"temperature","has_value":True}))
+ # Additive vs replacement: one cue changes relation and preservation contract.
+ x.append(row("add-vs-replace","卧室的也打开",{"focused_target":target("客厅","空调"),"add_target":target("主卧","空调")},
+   [("主卧::空调::default","power","ON")],semantic={"op":"ADD_DEVICE"}))
+ b=copy.deepcopy(DEVICES);b["客厅::空调::default"]["power"]="ON"
+ x.append(row("add-vs-replace","不是客厅，是卧室",{"focused_target":target("客厅","空调"),"explicit_target":target("主卧","空调")},
+   [],semantic={"op":"REPLACE_TARGET"},before=b))
+ # Lifecycle: identical surface, history decides action.
+ x.append(row("lifecycle-same-text","刚才那个算了",{"pending_ids":["p1"],"executed_ids":[]},[],semantic={"op":"CANCEL_PENDING"}))
+ x.append(row("lifecycle-same-text","刚才那个算了",{"pending_ids":[],"executed_ids":["e1"]},[],semantic={"op":"UNDO_EXECUTED"}))
+ x.append(row("lifecycle-same-text","刚才那个算了",{"pending_ids":[],"executed_ids":[]},[],decision="CLARIFY"))
+ # Irrelevant-state intervention must not alter output.
+ for brightness in (10,90):
+  b=copy.deepcopy(DEVICES);b["客厅::灯::default"]["brightness"]=brightness
+  x.append(row("irrelevant-light-state","客厅空调调到22度",{"explicit_target":target("客厅","空调")},
+   [("客厅::空调::default","temperature",22)],before=b,semantic={"op":"PATCH_SLOT","slot":"temperature","has_value":True}))
+ # Set semantics and untouched other devices.
+ x.append(row("set-two-ac","两个空调都打开",{"referent_set":[target("客厅","空调"),target("主卧","空调")]},
+   [("客厅::空调::default","power","ON"),("主卧::空调::default","power","ON")],semantic={"op":"PATCH_SLOT","cardinality":"SET","slot":"power"}))
+ return {"truth":"contextual_state_transition_v1","examples":x}
+def split_group(group):
+ # Stable group-level split; siblings can never cross partitions.
+ h=int(hashlib.sha256(("20260928:"+group).encode()).hexdigest()[:8],16)%10
+ return "test" if h==0 else "dev" if h==1 else "train"
+if __name__=="__main__":
+ d=build();print(json.dumps({"truth":d["truth"],"n":len(d["examples"]),"groups":sorted({r["contrast_group"] for r in d["examples"]}),"splits":{g:split_group(g) for g in sorted({r["contrast_group"] for r in d["examples"]})}},ensure_ascii=False,indent=2))
