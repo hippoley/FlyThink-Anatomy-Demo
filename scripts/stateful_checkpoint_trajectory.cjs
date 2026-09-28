@@ -37,7 +37,7 @@ async function run(trajectory,args={}){
   if(outcome==="EXECUTE"){
    try{
     if(physical){
-     const a=executePhysicalTurn(runtime,pred.patches||[],physical,{turn_id:history.length+1});
+     const a=await executePhysicalTurn(runtime,pred.patches||[],physical,{turn_id:history.length+1});
      runtime=a.runtime;physicalReceipts=a.receipts;
     }else{
      const a=applyTurn(runtime,pred.patches||[]);runtime=a.runtime;
