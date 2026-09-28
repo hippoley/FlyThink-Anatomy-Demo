@@ -9,6 +9,7 @@ on:
       - "scripts/checkpoint_jsonl_server.py"
       - "scripts/context_patch_composer.py"
       - "scripts/semantic_patch_materializer.py"
+      - "scripts/inspect_physical_feedback_capabilities.py"
       - ".github/workflows/physical-checkpoint-e2e-v1.yml"
   workflow_dispatch:
 jobs:
@@ -34,6 +35,8 @@ jobs:
           run-id: "36372786282"
       - run: python scripts/train_flywire.py --download --epochs 1 --out artifacts/flywire
       - run: python scripts/build_capability_index.py
+      - name: Inspect real window feedback capabilities
+        run: python scripts/inspect_physical_feedback_capabilities.py
       - name: Compile semantic checkpoint path
         run: python -m py_compile scripts/context_patch_composer.py scripts/checkpoint_jsonl_server.py scripts/semantic_patch_materializer.py
       - name: Test physical runtime protocol
