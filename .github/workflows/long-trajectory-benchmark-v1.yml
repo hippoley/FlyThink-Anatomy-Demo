@@ -1,7 +1,7 @@
 name: long-trajectory-benchmark-v1
 on:
   push:
-    paths: ["scripts/generate_long_trajectory_benchmark.py","scripts/validate_long_trajectory_benchmark.py",".github/workflows/long-trajectory-benchmark-v1.yml"]
+    paths: ["scripts/generate_long_trajectory_benchmark.py","scripts/validate_long_trajectory_benchmark.py","scripts/minimal_state_delta.py","tests/test_minimal_state_delta.py",".github/workflows/long-trajectory-benchmark-v1.yml"]
   workflow_dispatch:
 jobs:
   freeze:
@@ -10,6 +10,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: {python-version: "3.12"}
+      - run: python tests/test_minimal_state_delta.py
       - run: python scripts/generate_long_trajectory_benchmark.py --count 120 --out benchmarks/long_trajectories_v1.json
       - run: python scripts/validate_long_trajectory_benchmark.py benchmarks/long_trajectories_v1.json
       - uses: actions/upload-artifact@v4
