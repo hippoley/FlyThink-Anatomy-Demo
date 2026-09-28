@@ -18,5 +18,5 @@ const trajectory={initial_runtime:{devices:{
  {text:"再低一点",gold_decision:"EXECUTE",gold_op:"PATCH_RELATIVE",gold_target:B,gold_slot:"temperature",gold_delta:-1,gold_state:{"主卧::空调::default":{power:"ON",temperature:23}}},
  {text:"把它关掉",gold_decision:"EXECUTE",gold_op:"CLOSE_DEVICE",gold_target:B,gold_state:{"主卧::空调::default":{power:"OFF",temperature:23}}}
 ]};
-const a=process.argv.slice(2),arg=n=>a[a.indexOf(n)+1];
-run(trajectory,{graph:arg("--graph"),judgement:arg("--judgement"),semantic:arg("--semantic")}).then(r=>{console.log(JSON.stringify(r));process.exit(r.untouched_state_violation?2:0)});
+const a=process.argv.slice(2),arg=n=>{const i=a.indexOf(n);return i>=0?a[i+1]:null};
+run(trajectory,{graph:arg("--graph"),judgement:arg("--judgement"),semantic:arg("--semantic"),physical:arg("--physical")}).then(r=>{console.log(JSON.stringify(r));process.exit(r.untouched_state_violation?2:0)});
