@@ -1,0 +1,40 @@
+name: physical-checkpoint-e2e-v1
+on:
+  push:
+    paths:
+      - "scripts/physical_runtime_protocol.cjs"
+      - "scripts/run_physical_checkpoint_e2e_v1.cjs"
+      - "tests/physical-runtime-protocol.test.cjs"
+      - "data/thing-model-runtime-bindings.json"
+      - "scripts/checkpoint_jsonl_server.py"
+      - ".github/workflows/physical-checkpoint-e2e-v1.yml"
+  workflow_dispatch:
+jobs:
+  physical-e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - run: pip install --index-url https://download.pytorch.org/whl/cpu torch
+      - uses: actions/download-artifact@v4
+        with:
+          name: context-judgement-v3
+          path: artifacts/context-judgement-v3
+          github-token: ${{ github.token }}
+          run-id: "36372167785"
+      - uses: actions/download-artifact@v4
+        with:
+          name: semantic-patch-v1
+          path: artifacts/semantic-patch-v1
+          github-token: ${{ github.token }}
+          run-id: "36372786282"
+      - run: python scripts/train_flywire.py --download --epochs 1 --out artifacts/flywire
+      - run: python scripts/build_capability_index.py
+      - run: node --test tests/physical-runtime-protocol.test.cjs
+      - run: node scripts/run_physical_checkpoint_e2e_v1.cjs --graph artifacts/flywire/connectome.json --judgement artifacts/context-judgement-v3/model.pt --semantic artifacts/semantic-patch-v1/model.pt | tee physical-checkpoint-e2e-v1.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: physical-checkpoint-e2e-v1
+          path: physical-checkpoint-e2e-v1.json
