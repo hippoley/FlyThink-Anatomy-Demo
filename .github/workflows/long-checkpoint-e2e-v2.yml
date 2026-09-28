@@ -1,8 +1,23 @@
 name: long-checkpoint-e2e-v2
 on:
   push:
-    paths: ["scripts/run_long_checkpoint_e2e_v2.cjs","scripts/semantic_capability_map.py","scripts/semantic_patch_materializer.py","scripts/context_patch_composer.py","scripts/context_slot_resolver.py","scripts/stateful_checkpoint_trajectory.cjs","scripts/generate_long_trajectory_benchmark_v2.py","scripts/inspect_core_device_capabilities.py",".github/workflows/long-checkpoint-e2e-v2.yml"]
-  workflow_dispatch:\n  inputs:\n    semantic_run_id:\n      description: "Semantic checkpoint workflow run"\n      required: true\n      default: "36372786282"\njobs:
+    paths:
+      - "scripts/run_long_checkpoint_e2e_v2.cjs"
+      - "scripts/semantic_capability_map.py"
+      - "scripts/semantic_patch_materializer.py"
+      - "scripts/context_patch_composer.py"
+      - "scripts/context_slot_resolver.py"
+      - "scripts/stateful_checkpoint_trajectory.cjs"
+      - "scripts/generate_long_trajectory_benchmark_v2.py"
+      - "scripts/inspect_core_device_capabilities.py"
+      - ".github/workflows/long-checkpoint-e2e-v2.yml"
+  workflow_dispatch:
+    inputs:
+      semantic_run_id:
+        description: "Semantic checkpoint workflow run"
+        required: true
+        default: "36372786282"
+jobs:
   evaluate:
     runs-on: ubuntu-latest
     timeout-minutes: 45
@@ -13,22 +28,34 @@ on:
       - run: pip install --index-url https://download.pytorch.org/whl/cpu torch
       - name: Download judgement checkpoint
         uses: actions/download-artifact@v4
-        with: {name: context-judgement-v3, path: artifacts/context-judgement-v3, github-token: "${{ github.token }}", run-id: "36372167785"}
+        with:
+          name: context-judgement-v3
+          path: artifacts/context-judgement-v3
+          github-token: ${{ github.token }}
+          run-id: "36372167785"
       - name: Download semantic checkpoint
         uses: actions/download-artifact@v4
-        with: {name: semantic-patch-v1, path: artifacts/semantic-patch-v1, github-token: "${{ github.token }}", run-id: "\${{ inputs.semantic_run_id || '36372786282' }}"}
+        with:
+          name: semantic-patch-v1
+          path: artifacts/semantic-patch-v1
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.semantic_run_id || '36372786282' }}
       - run: python scripts/train_flywire.py --download --epochs 1 --out artifacts/flywire
       - run: python scripts/build_capability_index.py
       - run: python scripts/inspect_core_device_capabilities.py
       - run: python tests/test_target_aware_slot_cues.py
       - run: python tests/test_semantic_capability_map.py
-      - run: python -m py_compile scripts/context_patch_composer.py scripts/context_slot_resolver.py scripts/semantic_patch_materializer.py scripts/checkpoint_jsonl_server.py
+      - run: python -m py_compile scripts/context_patch_composer.py scripts/context_slot_resolver.py scripts/semantic_patch_materializer.py scripts/checkpoint_jsonl_server.py scripts/checkpoint_inference.py scripts/train_semantic_patch_v1.py
       - run: python scripts/generate_long_trajectory_benchmark_v2.py --count 120 --out benchmarks/long_trajectories_v2.json
       - run: python scripts/validate_long_trajectory_benchmark_v2.py benchmarks/long_trajectories_v2.json
       - name: Evaluate first 10 trajectories
         shell: bash
         run: |
           set -o pipefail
-           node scripts/run_long_checkpoint_e2e_v2.cjs --benchmark benchmarks/long_trajectories_v2.json --limit 10 --graph artifacts/flywire/connectome.json --judgement artifacts/context-judgement-v3/model.pt --semantic artifacts/semantic-patch-v1/model.pt | tee long-e2e-v2.json
+          node scripts/run_long_checkpoint_e2e_v2.cjs --benchmark benchmarks/long_trajectories_v2.json --limit 10 --graph artifacts/flywire/connectome.json --judgement artifacts/context-judgement-v3/model.pt --semantic artifacts/semantic-patch-v1/model.pt | tee long-e2e-v2.json
       - uses: actions/upload-artifact@v4
-        with: {name: long-checkpoint-e2e-v2, path: long-e2e-v2.json}
+        if: always()
+        with:
+          name: long-checkpoint-e2e-v2
+          path: long-e2e-v2.json
+          if-no-files-found: warn
