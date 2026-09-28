@@ -15,19 +15,39 @@ function parseTarget(raw){
   return {area:t.area,entity:t.entity,instance:t.instance||"default"};
 }
 
-(async()=>{
+function assertApplyPreconditions({apply,expectedHardwareIdentity,readiness}){
+  if(!apply)return;
+  if(!expectedHardwareIdentity){
+    throw new Error("--apply requires --expected-hardware-identity");
+  }
+  if(!readiness||readiness.physical_write_ready!==true){
+    const blockers=(readiness&&readiness.write_blockers)||[];
+    throw new Error("physical_write_not_ready:"+blockers.join(","));
+  }
+  const actual=readiness?.hardware_identity?.identity_sha256||null;
+  if(!actual)throw new Error("physical_hardware_identity_unavailable");
+  if(actual!==expectedHardwareIdentity){
+    throw new Error("hardware_identity_mismatch");
+  }
+}
+
+async function main(){
   const url=arg("--url");
   const text=arg("--text");
   const target=parseTarget(arg("--target-json"));
+  const apply=flag("--apply");
+  const expectedHardwareIdentity=arg("--expected-hardware-identity")||null;
   if(!url)throw new Error("--url is required");
   if(!text)throw new Error("--text is required");
 
   const inspect=new WindowPilotHttpDriver({
     baseUrl:url,
     target,
-    expectedHardwareIdentity:arg("--expected-hardware-identity")||null
+    expectedHardwareIdentity
   });
   const readiness=await inspect.readiness();
+  assertApplyPreconditions({apply,expectedHardwareIdentity,readiness});
+
   const physicalState=await inspect.state();
   const pct=Number(physicalState?.thing_model?.window_open_pct);
   if(!Number.isFinite(pct))throw new Error("WindowPilot state has no valid window_open_pct");
@@ -51,7 +71,6 @@ function parseTarget(raw){
     }]
   };
 
-  const apply=flag("--apply");
   const result=await run(trajectory,{
     graph:arg("--graph"),
     judgement:arg("--judgement"),
@@ -59,7 +78,7 @@ function parseTarget(raw){
     physical:apply?"windowpilot":null,
     windowpilot_url:url,
     physical_target:target,
-    expected_hardware_identity:arg("--expected-hardware-identity")||null,
+    expected_hardware_identity:expectedHardwareIdentity,
     position_tolerance_pct:Number(arg("--tolerance")||1),
     physical_timeout_ms:Number(arg("--timeout-ms")||5000)
   });
@@ -81,4 +100,10 @@ function parseTarget(raw){
     physical_receipts:turn.physical_receipts||[],
     after:result.runtime.devices[key]?.slots||null
   },null,2));
-})().catch(e=>{console.error(e);process.exit(1)});
+}
+
+if(require.main===module){
+  main().catch(e=>{console.error(e);process.exit(1)});
+}
+
+module.exports={parseTarget,assertApplyPreconditions,main};
