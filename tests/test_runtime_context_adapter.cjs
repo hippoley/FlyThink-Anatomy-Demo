@@ -1,0 +1,10 @@
+"use strict";
+const {deriveContext}=require("../scripts/runtime_context_adapter.cjs");
+const L={area:"客厅",entity:"空调",instance:"default"},B={area:"主卧",entity:"空调",instance:"default"};
+let runtime={devices:{},pending:{p1:{status:"pending"}},executionLedger:[{id:"e1"}],protectedInvariants:{}};
+let c=deriveContext(runtime,[{outcome:"EXECUTE",applied_patches:[{op:"CLOSE_DEVICE",target:L}]}]);
+if(JSON.stringify(c.focused_target)!==JSON.stringify(L))throw Error("focus_not_derived");
+if(c.pending_ids[0]!=="p1"||c.executed_ids[0]!=="e1")throw Error("lifecycle_not_derived");
+c=deriveContext(runtime,[{outcome:"EXECUTE",applied_patches:[{op:"PATCH_SLOT",targets:[L,B]}]}]);
+if(c.referent_set.length!==2||c.focused_target!==null)throw Error("set_not_derived");
+console.log(JSON.stringify({ok:true,actual_runtime_context:true}));
