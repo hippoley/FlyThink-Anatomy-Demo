@@ -19,5 +19,13 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
+      - name: Check physical runtime JavaScript syntax
+        run: |
+          node --check scripts/physical_runtime.cjs
+          node --check scripts/windowpilot_http_driver.cjs
+          node --check scripts/stateful_checkpoint_trajectory.cjs
+          node --check scripts/probe_windowpilot_checkpoint_e2e.cjs
+          node --check scripts/run_stateful_checkpoint_v1.cjs
+          node --check scripts/run_long_checkpoint_e2e_v2.cjs
       - name: Verify patch -> execute -> observe -> reconcile
         run: node tests/physical_runtime.cjs
