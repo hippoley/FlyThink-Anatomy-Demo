@@ -3,7 +3,7 @@
 from semantic_patch_materializer import materialize
 from judgement_patch_pipeline import decide_and_compose
 from context_slot_resolver import resolve_slot
-from lexical_operation_evidence import operation_evidence,safe_block_override
+from lexical_operation_evidence import operation_evidence,safe_block_override,safe_lifecycle_override
 
 
 def predict(inference,capability_index,text,context=None,background=None):
@@ -17,6 +17,8 @@ def predict(inference,capability_index,text,context=None,background=None):
   j={"decision":"EXECUTE","confidence":j["confidence"],"override":{"from":"CLARIFY","evidence":ev}}
  elif j["decision"]=="BLOCK" and safe_block_override(ev,ctx,bg):
   j={"decision":"EXECUTE","confidence":j["confidence"],"override":{"from":"BLOCK","evidence":ev}}
+ elif j["decision"] in ("CANCEL_PENDING","UNDO_EXECUTED") and safe_lifecycle_override(ev,text,ctx,bg):
+  j={"decision":"EXECUTE","confidence":j["confidence"],"override":{"from":j["decision"],"evidence":ev}}
 
  if j["decision"]!="EXECUTE":
   return {"decision":j["decision"],"patches":[],"confidence":j["confidence"]}
