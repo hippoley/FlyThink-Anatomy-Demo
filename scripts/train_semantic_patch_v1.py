@@ -9,11 +9,15 @@ from train_flywire_delta import text_features,GRAPH_SHA
 from semantic_context_features import features as context_features
 from flywire_gated_patch_net import FlyWireGatedPatchNet
 from whole_home_patch_corpus_v11 import build
-from semantic_patch_contract import OPS,CARD,DIR,encode\nfrom flywire_topology_ablation import topology,MODES
+from semantic_patch_contract import OPS,CARD,DIR,encode
+from flywire_topology_ablation import topology,MODES
 
 class Net(torch.nn.Module):
- def __init__(self,g,disconnect=False,seed=3783):
-  super().__init__();torch.manual_seed(seed);self.core=FlyWireGatedPatchNet(g,seed=seed,disconnect=disconnect);n=len(self.core.read_idx)
+ def __init__(self,g,mode="real",seed=3783):
+  super().__init__();torch.manual_seed(seed);self.core=FlyWireGatedPatchNet(g,seed=seed,disconnect=(mode=="disconnected"))
+  pre,post,base=topology(g,mode,seed);self.core.pre=pre;self.core.post=post
+  den=torch.zeros(len(g["root_ids"])).index_add_(0,post,base.abs());self.core.base=.9*base/den[post].clamp_min(1)
+  n=len(self.core.read_idx)
   self.op=torch.nn.Linear(n,len(OPS));self.card=torch.nn.Linear(n,len(CARD));self.direction=torch.nn.Linear(n,len(DIR));self.value=torch.nn.Linear(n,2)
  def forward(self,x):
   c=self.core;b=x.shape[0];n=len(c.text_idx)+len(c.ctx_idx)+len(c.read_idx);drive=torch.zeros((b,n),device=x.device)
@@ -71,8 +75,8 @@ def counterfactual_pairs(rows):
     vb=(OPS.index(yb["op"]),CARD.index(yb["cardinality"]),DIR.index(yb["direction"]),int(yb["has_value"]))
     if va!=vb:out.append((ia,ib,va,vb))
  return out
-def train(g,tr,selection,epochs,disconnect=False,seed=3783):
- m=Net(g,disconnect,seed);x,y=pack(tr);weights=balanced_weights(tr);cf=counterfactual_pairs(tr);opt=torch.optim.AdamW(m.parameters(),lr=.004,weight_decay=.01);best=None;bad=0
+def train(g,tr,selection,epochs,mode="real",seed=3783):
+ m=Net(g,mode,seed);x,y=pack(tr);weights=balanced_weights(tr);cf=counterfactual_pairs(tr);opt=torch.optim.AdamW(m.parameters(),lr=.004,weight_decay=.01);best=None;bad=0
  for e in range(1,epochs+1):
   opt.zero_grad();zs=m(x);loss=(per_example_loss(zs,y)*weights).mean()
   # Pairwise counterfactual margin: identical text with different semantic truth must separate.
@@ -96,11 +100,11 @@ def main():
  ap=argparse.ArgumentParser();ap.add_argument("--graph",default="artifacts/flywire/connectome.json");ap.add_argument("--epochs",type=int,default=450);ap.add_argument("--out",type=Path,default=Path("artifacts/semantic-patch-v1"));a=ap.parse_args()
  torch.set_num_threads(2);g=json.loads(Path(a.graph).read_text());assert g["source_sha256"]==EXPECTED_SHA256 and digest(a.graph)==GRAPH_SHA
  d=build();fit,selection=stratified_split(d["train"]);rep={"truth":"semantic_patch_v13_four_topology_ablation","train":len(d["train"]),"fit":len(fit),"selection":len(selection),"dev":len(d["dev"]),"diagnostic":len(d["sealed"]),"family_counts":dict(Counter(r["family"] for r in d["train"])),"runs":{}}
- for name,off in [("real",False),("disconnected",True)]:
-  candidates=[]
-  for seed in ([2783,3783,4783] if name=="real" else [3783]):
-   m,ep=train(g,fit,selection,a.epochs,off,seed);candidates.append((score(m,selection)["exact"],seed,m,ep))
-  _,seed,m,ep=max(candidates,key=lambda z:z[0]);rep["runs"][name]={"epoch":ep,"seed":seed,"fit":score(m,fit),"selection":score(m,selection),"train_all":score(m,d["train"]),"dev":score(m,d["dev"]),"diagnostic":score(m,d["sealed"])}
+ for name in MODES:
+  candidates=[];seed_reports=[]
+  for seed in [2783,3783,4783]:
+   m,ep=train(g,fit,selection,a.epochs,name,seed);sr={"seed":seed,"epoch":ep,"selection":score(m,selection),"dev":score(m,d["dev"]),"diagnostic":score(m,d["sealed"])};seed_reports.append(sr);candidates.append((sr["selection"]["exact"],seed,m,ep))
+  _,seed,m,ep=max(candidates,key=lambda z:z[0]);rep["runs"][name]={"seeds":seed_reports,"selected_seed":seed,"epoch":ep,"fit":score(m,fit),"selection":score(m,selection),"train_all":score(m,d["train"]),"dev":score(m,d["dev"]),"diagnostic":score(m,d["sealed"])}
   if name=="real":
    a.out.mkdir(parents=True,exist_ok=True);torch.save({"state_dict":m.state_dict(),"graph_sha":GRAPH_SHA,"source_sha256":EXPECTED_SHA256,"seed":seed,"selected_epoch":ep,"truth":rep["truth"]},a.out/"model.pt")
  a.out.mkdir(parents=True,exist_ok=True);(a.out/"report.json").write_text(json.dumps(rep,ensure_ascii=False,indent=2));print(json.dumps(rep,ensure_ascii=False))
