@@ -11,18 +11,21 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: {python-version: "3.12"}
-      - run: pip install torch
+      - run: pip install --index-url https://download.pytorch.org/whl/cpu torch
       - name: Download judgement checkpoint
         uses: actions/download-artifact@v4
-        with: {name: context-judgement-v3, path: artifacts/judgement, github-token: "${{ github.token }}", run-id: "36372167785"}
+        with: {name: context-judgement-v3, path: artifacts/context-judgement-v3, github-token: "${{ github.token }}", run-id: "36372167785"}
       - name: Download semantic checkpoint
         uses: actions/download-artifact@v4
-        with: {name: semantic-patch-v1, path: artifacts/semantic, github-token: "${{ github.token }}", run-id: "36372786282"}
+        with: {name: semantic-patch-v1, path: artifacts/semantic-patch-v1, github-token: "${{ github.token }}", run-id: "36372786282"}
       - run: python scripts/train_flywire.py --download --epochs 1 --out artifacts/flywire
       - run: python scripts/build_capability_index.py
       - run: python scripts/generate_long_trajectory_benchmark_v2.py --count 120 --out benchmarks/long_trajectories_v2.json
       - run: python scripts/validate_long_trajectory_benchmark_v2.py benchmarks/long_trajectories_v2.json
       - name: Evaluate first 10 trajectories
-        run: node scripts/run_long_checkpoint_e2e_v2.cjs --benchmark benchmarks/long_trajectories_v2.json --limit 10 --graph artifacts/flywire/flywire_graph.json --judgement artifacts/judgement/context_judgement_v3.pt --semantic artifacts/semantic/semantic_patch_v1.pt | tee long-e2e-v2.json
+        shell: bash
+        run: |
+          set -o pipefail
+           node scripts/run_long_checkpoint_e2e_v2.cjs --benchmark benchmarks/long_trajectories_v2.json --limit 10 --graph artifacts/flywire/connectome.json --judgement artifacts/context-judgement-v3/model.pt --semantic artifacts/semantic-patch-v1/model.pt | tee long-e2e-v2.json
       - uses: actions/upload-artifact@v4
         with: {name: long-checkpoint-e2e-v2, path: long-e2e-v2.json}
