@@ -58,10 +58,33 @@ def balanced_weights(rows):
 def per_example_loss(zs,y):
  return sum(torch.nn.functional.cross_entropy(zs[i],y[:,i],reduction="none",label_smoothing=.05) for i in range(4))
 
+def counterfactual_pairs(rows):
+ groups=defaultdict(list)
+ for i,r in enumerate(rows):groups[r["text"]].append((i,encode(r)))
+ out=[]
+ for xs in groups.values():
+  if len(xs)<2:continue
+  for a in range(len(xs)):
+   for b in range(a+1,len(xs)):
+    ia,ya=xs[a];ib,yb=xs[b]
+    va=(OPS.index(ya["op"]),CARD.index(ya["cardinality"]),DIR.index(ya["direction"]),int(ya["has_value"]))
+    vb=(OPS.index(yb["op"]),CARD.index(yb["cardinality"]),DIR.index(yb["direction"]),int(yb["has_value"]))
+    if va!=vb:out.append((ia,ib,va,vb))
+ return out
 def train(g,tr,selection,epochs,disconnect=False,seed=3783):
- m=Net(g,disconnect,seed);x,y=pack(tr);weights=balanced_weights(tr);opt=torch.optim.AdamW(m.parameters(),lr=.004,weight_decay=.01);best=None;bad=0
+ m=Net(g,disconnect,seed);x,y=pack(tr);weights=balanced_weights(tr);cf=counterfactual_pairs(tr);opt=torch.optim.AdamW(m.parameters(),lr=.004,weight_decay=.01);best=None;bad=0
  for e in range(1,epochs+1):
-  opt.zero_grad();loss=(per_example_loss(m(x),y)*weights).mean();loss.backward();torch.nn.utils.clip_grad_norm_(m.parameters(),1);opt.step()
+  opt.zero_grad();zs=m(x);loss=(per_example_loss(zs,y)*weights).mean()
+  # Pairwise counterfactual margin: identical text with different semantic truth must separate.
+  if cf:
+   cf_loss=0.0
+   for ia,ib,va,vb in cf:
+    for h,(ga,gb) in enumerate(zip(va,vb)):
+     if ga!=gb:
+      pa=torch.log_softmax(zs[h][ia],0);pb=torch.log_softmax(zs[h][ib],0)
+      cf_loss+=torch.relu(torch.tensor(.5)-(pa[ga]-pa[gb]))+torch.relu(torch.tensor(.5)-(pb[gb]-pb[ga]))
+   loss=loss+.15*cf_loss/len(cf)
+  loss.backward();torch.nn.utils.clip_grad_norm_(m.parameters(),1);opt.step()
   if e%10==0:
    s=score(m,selection)["exact"]
    if best is None or s>best[0]:best=(s,e,{k:v.detach().cpu().clone() for k,v in m.state_dict().items()});bad=0
