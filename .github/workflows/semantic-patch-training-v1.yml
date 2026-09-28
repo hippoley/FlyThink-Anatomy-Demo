@@ -1,7 +1,7 @@
 name: semantic-patch-training-v1
 on:
   push:
-    paths: ["scripts/semantic_patch_contract.py","scripts/train_semantic_patch_v1.py",".github/workflows/semantic-patch-training-v1.yml"]
+    paths: ["scripts/semantic_patch_contract.py","scripts/train_semantic_patch_v1.py","scripts/whole_home_patch_corpus_v10.py",".github/workflows/semantic-patch-training-v1.yml"]
   workflow_dispatch:
 jobs:
  train:
@@ -11,7 +11,7 @@ jobs:
    - uses: actions/checkout@v4
    - uses: actions/setup-python@v5
      with: {python-version: "3.12"}
-   - run: python -m py_compile scripts/semantic_patch_contract.py scripts/train_semantic_patch_v1.py
+   - run: python -m py_compile scripts/semantic_patch_contract.py scripts/whole_home_patch_corpus_v10.py scripts/train_semantic_patch_v1.py
    - run: pip install --index-url https://download.pytorch.org/whl/cpu torch
    - run: python scripts/train_semantic_patch_v1.py --epochs 450
    - run: cat artifacts/semantic-patch-v1/report.json
