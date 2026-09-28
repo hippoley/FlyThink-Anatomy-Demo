@@ -2,6 +2,8 @@
 """Turn raw checkpoint predictions into semantic proposal fields only."""
 def materialize(raw,text):
  p={"op":raw["op"],"cardinality":raw["cardinality"]}
+ if raw["op"]=="CLOSE_DEVICE":p.update({"slot":"power","value":"OFF"})
+ elif raw["op"]=="ADD_DEVICE":p["slots"]={"power":"ON"}
  if raw["op"]=="PATCH_RELATIVE":
   p["delta"]=-1 if raw["direction"]=="NEG" else 1 if raw["direction"]=="POS" else 0
  # Values remain deterministic extraction/clarification, not invented by classifier.
