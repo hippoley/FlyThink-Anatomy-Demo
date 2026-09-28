@@ -36,7 +36,9 @@ def train(g,tr,dev,epochs,disconnect=False):
   opt.zero_grad();zs=m(x);loss=(per_example_loss(zs,y)*weights).mean();loss.backward();torch.nn.utils.clip_grad_norm_(m.parameters(),1);opt.step()
   if e%10==0:
    s=score(m,dev)["exact"]
-   if best is None or s>best[0]:best=(s,e,{k:v.detach().cpu().clone() for k,v in m.state_dict().items()});bad=0\n   else:bad+=1\n   if bad>=8:break
+   if best is None or s>best[0]:best=(s,e,{k:v.detach().cpu().clone() for k,v in m.state_dict().items()});bad=0
+   else:bad+=1
+   if bad>=8:break
  m.load_state_dict(best[2]);return m,best[1]
 def main():
  ap=argparse.ArgumentParser();ap.add_argument("--graph",default="artifacts/flywire/connectome.json");ap.add_argument("--epochs",type=int,default=400);ap.add_argument("--out",type=Path,default=Path("artifacts/semantic-patch-v1"));a=ap.parse_args()
