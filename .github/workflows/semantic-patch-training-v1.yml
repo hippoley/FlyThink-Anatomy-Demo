@@ -1,21 +1,31 @@
 name: semantic-patch-training-v1
 on:
   push:
-    paths: ["scripts/semantic_patch_contract.py","scripts/train_semantic_patch_v1.py","scripts/whole_home_patch_corpus_v10.py","scripts/whole_home_patch_corpus_v11.py",".github/workflows/semantic-patch-training-v1.yml"]
+    paths:
+      - "scripts/semantic_patch_contract.py"
+      - "scripts/train_semantic_patch_v1.py"
+      - "scripts/whole_home_patch_corpus_v10.py"
+      - "scripts/whole_home_patch_corpus_v11.py"
+      - ".github/workflows/semantic-patch-training-v1.yml"
   workflow_dispatch:
 jobs:
- train:
-  runs-on: ubuntu-latest
-  timeout-minutes: 30
-  steps:
-   - uses: actions/checkout@v4
-   - uses: actions/setup-python@v5
-     with: {python-version: "3.12"}
-   - run: python -m py_compile scripts/semantic_patch_contract.py scripts/whole_home_patch_corpus_v10.py scripts/whole_home_patch_corpus_v11.py scripts/train_semantic_patch_v1.py
-   - run: python -m py_compile scripts/train_semantic_patch_v1.py\n   - run: pip install --index-url https://download.pytorch.org/whl/cpu torch
-   - run: python scripts/train_semantic_patch_v1.py --epochs 450
-   - run: cat artifacts/semantic-patch-v1/report.json
-   - uses: actions/upload-artifact@v4
-     with:
-      name: semantic-patch-v1
-      path: artifacts/semantic-patch-v1/
+  train:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Compile training sources
+        run: python -m py_compile scripts/semantic_patch_contract.py scripts/whole_home_patch_corpus_v10.py scripts/whole_home_patch_corpus_v11.py scripts/train_semantic_patch_v1.py
+      - name: Install PyTorch CPU
+        run: pip install --index-url https://download.pytorch.org/whl/cpu torch
+      - name: Train semantic FlyWire checkpoint
+        run: python scripts/train_semantic_patch_v1.py --epochs 450
+      - name: Show report
+        run: cat artifacts/semantic-patch-v1/report.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: semantic-patch-v1
+          path: artifacts/semantic-patch-v1/
