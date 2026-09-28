@@ -1,0 +1,35 @@
+name: CommitBench Home v0
+
+on:
+  pull_request:
+    paths:
+      - "scripts/build_commitbench_home_v0.py"
+      - "scripts/evaluate_commitbench_home_v0.py"
+      - "scripts/evaluate_semantic_write_set.py"
+      - "scripts/commitbench_trace.cjs"
+      - "tests/test_commitbench_home_v0.py"
+      - "tests/test_semantic_write_set_eval.py"
+      - "tests/commitbench-trace.test.cjs"
+      - ".github/workflows/commitbench-home-v0.yml"
+  workflow_dispatch:
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install pytest
+        run: python -m pip install pytest
+      - name: Generate frozen source
+        run: python scripts/generate_long_trajectory_benchmark_v2.py --out benchmarks/long_trajectories_v2.json
+      - name: Validate frozen source
+        run: python scripts/validate_long_trajectory_benchmark_v2.py benchmarks/long_trajectories_v2.json
+      - name: Build CommitBench
+        run: python scripts/build_commitbench_home_v0.py --source benchmarks/long_trajectories_v2.json --ambiguity data/ambiguity-failure-cases.json --out benchmarks/commitbench_home_v0.json
+      - name: Python contract tests
+        run: python -m pytest -q tests/test_commitbench_home_v0.py tests/test_semantic_write_set_eval.py
+      - name: JS trace contract
+        run: node tests/commitbench-trace.test.cjs
