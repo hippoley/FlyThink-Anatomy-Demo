@@ -5,6 +5,7 @@ on:
       - "scripts/physical_runtime_protocol.cjs"
       - "scripts/windowpilot_transport.cjs"
       - "scripts/run_physical_checkpoint_e2e_v1.cjs"
+      - "scripts/run_windowpilot_checkpoint_e2e_v1.cjs"
       - "tests/physical-runtime-protocol.test.cjs"
       - "tests/windowpilot-transport.test.cjs"
       - "data/thing-model-runtime-bindings.json"
@@ -44,6 +45,8 @@ jobs:
         run: python scripts/inspect_physical_feedback_capabilities.py
       - name: Compile semantic checkpoint path
         run: python -m py_compile scripts/context_patch_composer.py scripts/checkpoint_jsonl_server.py scripts/checkpoint_inference.py scripts/train_semantic_patch_v1.py scripts/semantic_patch_materializer.py
+      - name: Check physical runtime entrypoints
+        run: node --check scripts/physical_runtime_protocol.cjs && node --check scripts/windowpilot_transport.cjs && node --check scripts/run_physical_checkpoint_e2e_v1.cjs && node --check scripts/run_windowpilot_checkpoint_e2e_v1.cjs
       - name: Test physical runtime protocol and WindowPilot service boundary
         run: node --test tests/physical-runtime-protocol.test.cjs tests/windowpilot-transport.test.cjs
       - name: Run checkpoint through physical E2E protocol
