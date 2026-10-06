@@ -24,7 +24,7 @@ def accuracy(m,items):
 def train(g,regime,seed,epochs):
  torch.manual_seed(seed);m=LayeredFlyWire(g,seed);tr=rows("train");x,ys=pack(tr);t=batch_targets(ys);opt=torch.optim.AdamW(m.parameters(),lr=.003,weight_decay=.01)
  for _ in range(epochs):
-  opt.zero_grad();o=m(x);loss,_=joint_loss(o,t,REGIMES[regime]);loss.backward();torch.nn.utils.clip_grad_norm_(m.parameters(),1);opt.step()
+  opt.zero_grad();o=m(x);exec_mask=t["judgement"]==0;loss,_=joint_loss(o,t,REGIMES[regime],masks={"resolution":exec_mask});loss.backward();torch.nn.utils.clip_grad_norm_(m.parameters(),1);opt.step()
  return m
 def main():
  ap=argparse.ArgumentParser();ap.add_argument("--graph",default="artifacts/flywire/connectome.json");ap.add_argument("--epochs",type=int,default=120);ap.add_argument("--out",default="artifacts/layered-ablation");a=ap.parse_args()
