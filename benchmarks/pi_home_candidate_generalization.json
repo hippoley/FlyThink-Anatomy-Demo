@@ -1,0 +1,294 @@
+{
+  "schema_version": "pi-home-candidate-generalization-v1",
+  "train_cases": [
+    {
+      "id": "train-quiet-a",
+      "context": {
+        "intent_family": "quiet-ventilation",
+        "candidates": [
+          {
+            "target": {
+              "area": "厨房",
+              "entity": "风机",
+              "instance": "default"
+            },
+            "features": {
+              "noise_cost": 0.9,
+              "ventilation_gain": 0.9
+            }
+          },
+          {
+            "target": {
+              "area": "客厅",
+              "entity": "窗户",
+              "instance": "default"
+            },
+            "features": {
+              "noise_cost": 0.2,
+              "ventilation_gain": 0.7
+            }
+          }
+        ]
+      },
+      "replay": {
+        "patches": [
+          {
+            "target": {
+              "area": "客厅",
+              "entity": "窗户",
+              "instance": "default"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "train-quiet-b",
+      "context": {
+        "intent_family": "quiet-ventilation",
+        "candidates": [
+          {
+            "target": {
+              "area": "卧室",
+              "entity": "风机",
+              "instance": "default"
+            },
+            "features": {
+              "noise_cost": 0.8,
+              "ventilation_gain": 0.6
+            }
+          },
+          {
+            "target": {
+              "area": "阳台",
+              "entity": "窗户",
+              "instance": "default"
+            },
+            "features": {
+              "noise_cost": 0.1,
+              "ventilation_gain": 0.8
+            }
+          }
+        ]
+      },
+      "replay": {
+        "patches": [
+          {
+            "target": {
+              "area": "阳台",
+              "entity": "窗户",
+              "instance": "default"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "train-rain-a",
+      "context": {
+        "intent_family": "rain-safe-opening",
+        "candidates": [
+          {
+            "target": {
+              "area": "厨房",
+              "entity": "窗户",
+              "instance": "windward"
+            },
+            "features": {
+              "rain_exposure": 0.9,
+              "leeward_score": 0.1
+            }
+          },
+          {
+            "target": {
+              "area": "客厅",
+              "entity": "窗户",
+              "instance": "leeward"
+            },
+            "features": {
+              "rain_exposure": 0.2,
+              "leeward_score": 0.8
+            }
+          }
+        ]
+      },
+      "replay": {
+        "patches": [
+          {
+            "target": {
+              "area": "客厅",
+              "entity": "窗户",
+              "instance": "leeward"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "train-rain-b",
+      "context": {
+        "intent_family": "rain-safe-opening",
+        "candidates": [
+          {
+            "target": {
+              "area": "书房",
+              "entity": "窗户",
+              "instance": "north"
+            },
+            "features": {
+              "rain_exposure": 0.7,
+              "leeward_score": 0.2
+            }
+          },
+          {
+            "target": {
+              "area": "卧室",
+              "entity": "窗户",
+              "instance": "south"
+            },
+            "features": {
+              "rain_exposure": 0.1,
+              "leeward_score": 0.9
+            }
+          }
+        ]
+      },
+      "replay": {
+        "patches": [
+          {
+            "target": {
+              "area": "卧室",
+              "entity": "窗户",
+              "instance": "south"
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "cases": [
+    {
+      "id": "compose-quiet-new-room",
+      "split": "compositional",
+      "context": {
+        "intent_family": "quiet-ventilation",
+        "room": "书房",
+        "candidates": [
+          {
+            "target": {
+              "area": "书房",
+              "entity": "风机",
+              "instance": "default"
+            },
+            "features": {
+              "noise_cost": 0.85,
+              "ventilation_gain": 0.95
+            }
+          },
+          {
+            "target": {
+              "area": "餐厅",
+              "entity": "窗户",
+              "instance": "default"
+            },
+            "features": {
+              "noise_cost": 0.15,
+              "ventilation_gain": 0.75
+            }
+          }
+        ]
+      },
+      "gold": {
+        "expected_targets": [
+          {
+            "area": "餐厅",
+            "entity": "窗户",
+            "instance": "default"
+          }
+        ],
+        "expected_action_count": 1,
+        "expected_goal_completion": true
+      },
+      "baseline": {
+        "goal_completed": false,
+        "requires_correction": true,
+        "patches": [
+          {
+            "target": {
+              "area": "书房",
+              "entity": "风机",
+              "instance": "default"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "topology-rain-new-apt",
+      "split": "topology",
+      "context": {
+        "intent_family": "rain-safe-opening",
+        "topology_id": "apt-z",
+        "candidates": [
+          {
+            "target": {
+              "area": "厨房",
+              "entity": "窗户",
+              "instance": "east"
+            },
+            "features": {
+              "rain_exposure": 0.8,
+              "leeward_score": 0.2
+            }
+          },
+          {
+            "target": {
+              "area": "餐厅",
+              "entity": "窗户",
+              "instance": "west"
+            },
+            "features": {
+              "rain_exposure": 0.25,
+              "leeward_score": 0.75
+            }
+          },
+          {
+            "target": {
+              "area": "卧室",
+              "entity": "窗户",
+              "instance": "south"
+            },
+            "features": {
+              "rain_exposure": 0.1,
+              "leeward_score": 0.95
+            }
+          }
+        ]
+      },
+      "gold": {
+        "expected_targets": [
+          {
+            "area": "卧室",
+            "entity": "窗户",
+            "instance": "south"
+          }
+        ],
+        "expected_action_count": 1,
+        "expected_goal_completion": true
+      },
+      "baseline": {
+        "goal_completed": false,
+        "requires_correction": true,
+        "patches": [
+          {
+            "target": {
+              "area": "厨房",
+              "entity": "窗户",
+              "instance": "east"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}
