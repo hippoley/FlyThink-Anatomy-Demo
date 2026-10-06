@@ -42,6 +42,7 @@ on:
       - "scripts/pi_home_candidate_rank_policy.cjs"
       - "scripts/run_pi_home_candidate_generalization.cjs"
       - "scripts/pi_home_generalization_counterfactual.cjs"
+      - "scripts/pi_home_generalization_claim.cjs"
       - "scripts/run_pi_home_generalization.cjs"
       - "tests/streaming_slu_e2e.cjs"
       - "tests/home_goal_runtime.cjs"
@@ -76,6 +77,7 @@ on:
       - "tests/pi_home_structural_transfer_policy.cjs"
       - "tests/pi_home_candidate_rank_policy.cjs"
       - "tests/pi_home_generalization_counterfactual.cjs"
+      - "tests/pi_home_generalization_claim.cjs"
       - "benchmarks/pi_home_candidate_generalization.json"
       - "benchmarks/pi_home_generalization_suite.json"
       - "benchmarks/pi_home_offline_replay.json"
@@ -143,6 +145,7 @@ on:
       - "scripts/pi_home_candidate_rank_policy.cjs"
       - "scripts/run_pi_home_candidate_generalization.cjs"
       - "scripts/pi_home_generalization_counterfactual.cjs"
+      - "scripts/pi_home_generalization_claim.cjs"
       - "scripts/run_pi_home_generalization.cjs"
       - "tests/streaming_slu_e2e.cjs"
       - "tests/home_goal_runtime.cjs"
@@ -177,6 +180,7 @@ on:
       - "tests/pi_home_structural_transfer_policy.cjs"
       - "tests/pi_home_candidate_rank_policy.cjs"
       - "tests/pi_home_generalization_counterfactual.cjs"
+      - "tests/pi_home_generalization_claim.cjs"
       - "benchmarks/pi_home_candidate_generalization.json"
       - "benchmarks/pi_home_generalization_suite.json"
       - "benchmarks/pi_home_offline_replay.json"
@@ -247,6 +251,7 @@ jobs:
           node tests/pi_home_structural_transfer_policy.cjs
           node tests/pi_home_candidate_rank_policy.cjs
           node tests/pi_home_generalization_counterfactual.cjs
+          node tests/pi_home_generalization_claim.cjs
           node tests/pi_home_generalization_eval.cjs
           node scripts/run_pi_home_generalization.cjs > pi-home-generalization.json
           cat pi-home-generalization.json
