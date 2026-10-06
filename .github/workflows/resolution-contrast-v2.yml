@@ -1,4 +1,4 @@
-name: resolution-contrast-v2
+name: resolution-contrast-v2 # entity-channel ablation
 on:
   workflow_dispatch:
   push:
