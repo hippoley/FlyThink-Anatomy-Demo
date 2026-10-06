@@ -1,0 +1,38 @@
+name: v3-flat-vs-compositional
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - scripts/contextual_state_transition_corpus_v3.py
+      - scripts/test_contextual_state_transition_corpus_v3.py
+      - scripts/layered_dataset.py
+      - scripts/layered_training_data.py
+      - scripts/responsibility_heads.py
+      - scripts/flat_responsibility_heads.py
+      - scripts/train_v3_flat_vs_compositional.py
+      - .github/workflows/v3-flat-vs-compositional.yml
+jobs:
+  train:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Compile V3
+        run: python -m py_compile scripts/contextual_state_transition_corpus_v3.py scripts/test_contextual_state_transition_corpus_v3.py scripts/flat_responsibility_heads.py scripts/train_v3_flat_vs_compositional.py
+      - name: Install PyTorch CPU
+        run: pip install --index-url https://download.pytorch.org/whl/cpu torch
+      - name: Validate clean V3 contract
+        run: python scripts/test_contextual_state_transition_corpus_v3.py
+      - name: Prepare verified FlyWire graph
+        run: python scripts/prepare_flywire_graph.py --download --neurons 512 --out artifacts/flywire
+      - name: Run paired flat vs compositional
+        run: python scripts/train_v3_flat_vs_compositional.py --graph artifacts/flywire/connectome.json --epochs 120
+      - name: Show paired report
+        run: cat artifacts/v3-flat-vs-compositional/report.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: v3-flat-vs-compositional
+          path: artifacts/v3-flat-vs-compositional/
