@@ -62,7 +62,7 @@ const origin={
     ],
     origin
   });
-  assert.equal(mixed.strategy.simulated_actions.length,2);
+  assert.equal(mixed.strategy.simulated_actions.length,1);
   assert.equal(mixed.strategy.unsupported_actions.length,1);
   assert.equal(mixed.strategy.complete_physics_coverage,false);
   assert.equal(mixed.trusted_for_promotion,false);
