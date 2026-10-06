@@ -242,10 +242,16 @@
           },
           "opening_pct": {
             "W1": 20
+          },
+          "scalar_values": {
+            "FAN1": 1
           }
         },
         "opening_map": {
           "餐厅::窗户::default": "W1"
+        },
+        "actuator_map": {
+          "书房::风机::default": "FAN1"
         }
       }
     },
@@ -343,13 +349,15 @@
             "W1": 0,
             "W2": 20,
             "W3": 0
-          }
+          },
+          "scalar_values": {}
         },
         "opening_map": {
           "厨房::窗户::east": "W1",
           "餐厅::窗户::west": "W2",
           "书房::窗户::south": "W3"
-        }
+        },
+        "actuator_map": {}
       }
     }
   ]
