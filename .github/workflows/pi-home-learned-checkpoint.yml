@@ -83,6 +83,7 @@ jobs:
 
           assert train["shadow_only"] is True
           assert train["device_execution_authorized"] is False
+          assert train["identity_isolation"]["overlap"] == []
           assert train["holdout"]["exact"] == 1.0
 
           assert test["shadow_only"] is True
