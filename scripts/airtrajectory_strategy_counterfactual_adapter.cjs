@@ -9,12 +9,33 @@ function deviceKey(target){return [target.area,target.entity,target.instance||"d
 function simulatableOpeningPatch(p){
   return p&&p.op==="PATCH_SLOT"&&p.slot==="opening"&&p.target&&Number.isFinite(Number(p.value));
 }
+function scalarMapping(p,actuator_map={}){
+  if(!p||p.op!=="PATCH_SLOT"||!p.target||!Number.isFinite(Number(p.value)))return null;
+  const raw=actuator_map[deviceKey(p.target)];
+  if(!raw)return null;
+  if(typeof raw==="string"){
+    return {actuator_id:raw,slot:null};
+  }
+  if(typeof raw!=="object"||!raw.actuator_id)return null;
+  return {actuator_id:String(raw.actuator_id),slot:raw.slot==null?null:String(raw.slot)};
+}
+function simulatableScalarPatch(p,actuator_map={}){
+  const mapping=scalarMapping(p,actuator_map);
+  return !!(mapping&&(mapping.slot===null||mapping.slot===p.slot));
+}
+function simulatablePhysicalPatch(p,{opening_map={},actuator_map={}}={}){
+  if(simulatableOpeningPatch(p)){
+    return Object.prototype.hasOwnProperty.call(opening_map,deviceKey(p.target));
+  }
+  return simulatableScalarPatch(p,actuator_map);
+}
 
 function buildStrategyRequest({
   label="shadow-strategy",
   patches=[],
   origin,
   opening_map={},
+  actuator_map={},
   profile_id,
   horizon_minutes=30,
   request_id=""
@@ -28,13 +49,24 @@ function buildStrategyRequest({
   for(const patch of patches||[]){
     if(simulatableOpeningPatch(patch)){
       const openingId=opening_map[deviceKey(patch.target)];
-      if(!openingId)throw new Error("strategy_counterfactual_opening_mapping_missing:"+deviceKey(patch.target));
+      if(!openingId){
+        unsupported.push({...clone(patch),unsupported_reason:"opening_mapping_missing"});
+        continue;
+      }
       actions.push({opening_id:openingId,target_pct:Number(patch.value)});
-    }else{
-      unsupported.push(clone(patch));
+      continue;
     }
+    if(simulatableScalarPatch(patch,actuator_map)){
+      const mapping=scalarMapping(patch,actuator_map);
+      actions.push({
+        actuator_id:mapping.actuator_id,
+        target_value:Number(patch.value)
+      });
+      continue;
+    }
+    unsupported.push({...clone(patch),unsupported_reason:"scalar_mapping_missing_or_patch_unsupported"});
   }
-  if(!actions.length)throw new Error("strategy_counterfactual_requires_opening_action");
+  if(!actions.length)throw new Error("strategy_counterfactual_requires_supported_action");
   return {
     request:{
       request_id,
@@ -51,6 +83,7 @@ function buildBatchStrategyRequest({
   candidates=[],
   origin,
   opening_map={},
+  actuator_map={},
   profile_id,
   horizon_minutes=30,
   request_id=""
@@ -73,6 +106,7 @@ function buildBatchStrategyRequest({
       patches:candidate.patches||[],
       origin,
       opening_map,
+      actuator_map,
       profile_id,
       horizon_minutes,
       request_id
@@ -103,7 +137,7 @@ function schemaNumber(value){
 function assertStrategyResponseContract(response,{profile_id}={}){
   if(!response||typeof response!=="object")throw new Error("airtrajectory_strategy_response_required");
   const version=schemaNumber(response.schema_version);
-  if(version===null||version<0.3)throw new Error("airtrajectory_strategy_schema_too_old");
+  if(version===null||version<0.4)throw new Error("airtrajectory_strategy_schema_too_old");
   if(response.backend!=="contamxpy")throw new Error("airtrajectory_strategy_backend_not_contam");
   if(String(response.physics_fidelity||"").toUpperCase()!=="CONTAM"){
     throw new Error("airtrajectory_strategy_fidelity_not_contam");
@@ -153,6 +187,7 @@ function normalizeStrategyOutcome({response,branch,patches,unsupported_actions}=
       end_co2_ppm:Number(branch.end_co2_ppm),
       end_co2_ppm_by_zone:clone(branch.end_co2_ppm_by_zone||{}),
       path_flow_kg_s:clone(branch.path_flow_kg_s||{}),
+      end_scalar_values:clone(branch.end_scalar_values||{}),
       series:clone(branch.series||[]),
       return_value:Number(branch.return)
     }
@@ -165,6 +200,7 @@ class AirTrajectoryStrategyCounterfactualAdapter{
     endpoint="/fork/contam-strategy",
     transport=null,
     opening_map={},
+    actuator_map={},
     profile_id
   }={}){
     if(!profile_id)throw new Error("strategy_counterfactual_profile_id_required");
@@ -172,6 +208,7 @@ class AirTrajectoryStrategyCounterfactualAdapter{
     this.endpoint=endpoint.startsWith("/")?endpoint:("/"+endpoint);
     this.transport=transport||this.defaultTransport.bind(this);
     this.opening_map={...opening_map};
+    this.actuator_map={...actuator_map};
     this.profile_id=profile_id;
   }
 
@@ -187,7 +224,7 @@ class AirTrajectoryStrategyCounterfactualAdapter{
 
   async simulate({label="shadow-strategy",patches,origin,horizon_minutes=30,request_id=""}={}){
     const built=buildStrategyRequest({
-      label,patches,origin,opening_map:this.opening_map,profile_id:this.profile_id,
+      label,patches,origin,opening_map:this.opening_map,actuator_map:this.actuator_map,profile_id:this.profile_id,
       horizon_minutes,request_id
     });
     const response=await this.transport(built.request);
@@ -203,6 +240,7 @@ class AirTrajectoryStrategyCounterfactualAdapter{
       candidates,
       origin,
       opening_map:this.opening_map,
+      actuator_map:this.actuator_map,
       profile_id:this.profile_id,
       horizon_minutes,
       request_id
@@ -234,5 +272,8 @@ module.exports={
   assertStrategyResponseContract,
   selectStrategyBranch,
   normalizeStrategyOutcome,
-  simulatableOpeningPatch
+  simulatableOpeningPatch,
+  scalarMapping,
+  simulatableScalarPatch,
+  simulatablePhysicalPatch
 };

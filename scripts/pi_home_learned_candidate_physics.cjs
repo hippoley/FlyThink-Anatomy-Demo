@@ -1,6 +1,9 @@
 "use strict";
 
-const {simulatableOpeningPatch}=require("./airtrajectory_strategy_counterfactual_adapter.cjs");
+const {
+  AirTrajectoryStrategyCounterfactualAdapter,
+  simulatablePhysicalPatch
+}=require("./airtrajectory_strategy_counterfactual_adapter.cjs");
 const {runStrategyTournament}=require("./pi_home_strategy_tournament.cjs");
 const {validateSemanticPhysicsAlignment}=require("./pi_home_generalization_counterfactual.cjs");
 
@@ -37,8 +40,23 @@ function materializeLearnedSelection(caseDef,learnedRow){
   };
 }
 
+function createCasePhysicsAdapter(caseDef,{transport=null,base_url="http://127.0.0.1:8765"}={}){
+  const physics=caseDef&&caseDef.physics||{};
+  if(!physics.profile_id)throw new Error("case_physics_profile_id_required");
+  return new AirTrajectoryStrategyCounterfactualAdapter({
+    base_url,
+    transport,
+    profile_id:physics.profile_id,
+    opening_map:physics.opening_map||{},
+    actuator_map:physics.actuator_map||{}
+  });
+}
+
 function buildCandidateSetStrategies(caseDef){
   const candidates=caseDef&&caseDef.context&&caseDef.context.candidates||[];
+  const physics=caseDef&&caseDef.physics||{};
+  const opening_map=physics.opening_map||{};
+  const actuator_map=physics.actuator_map||{};
   const eligible=[];
   const unsupported=[];
   candidates.forEach((candidate,index)=>{
@@ -51,12 +69,12 @@ function buildCandidateSetStrategies(caseDef){
       });
       return;
     }
-    if(!simulatableOpeningPatch(patch)){
+    if(!simulatablePhysicalPatch(patch,{opening_map,actuator_map})){
       unsupported.push({
         index,
         target:clone(candidate.target),
         patch,
-        reason:"candidate_not_supported_by_airtrajectory_opening_model"
+        reason:"candidate_not_mapped_to_airtrajectory_physics"
       });
       return;
     }
@@ -164,6 +182,7 @@ async function evaluateLearnedCandidatePhysics({
 module.exports={
   candidatePatch,
   materializeLearnedSelection,
+  createCasePhysicsAdapter,
   buildCandidateSetStrategies,
   evaluateLearnedCandidatePhysics
 };
