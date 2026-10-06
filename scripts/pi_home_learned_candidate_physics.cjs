@@ -1,6 +1,9 @@
 "use strict";
 
-const {simulatablePhysicalPatch}=require("./airtrajectory_strategy_counterfactual_adapter.cjs");
+const {
+  AirTrajectoryStrategyCounterfactualAdapter,
+  simulatablePhysicalPatch
+}=require("./airtrajectory_strategy_counterfactual_adapter.cjs");
 const {runStrategyTournament}=require("./pi_home_strategy_tournament.cjs");
 const {validateSemanticPhysicsAlignment}=require("./pi_home_generalization_counterfactual.cjs");
 
@@ -35,6 +38,18 @@ function materializeLearnedSelection(caseDef,learnedRow){
     patch,
     candidate:clone(candidate)
   };
+}
+
+function createCasePhysicsAdapter(caseDef,{transport=null,base_url="http://127.0.0.1:8765"}={}){
+  const physics=caseDef&&caseDef.physics||{};
+  if(!physics.profile_id)throw new Error("case_physics_profile_id_required");
+  return new AirTrajectoryStrategyCounterfactualAdapter({
+    base_url,
+    transport,
+    profile_id:physics.profile_id,
+    opening_map:physics.opening_map||{},
+    actuator_map:physics.actuator_map||{}
+  });
 }
 
 function buildCandidateSetStrategies(caseDef){
@@ -167,6 +182,7 @@ async function evaluateLearnedCandidatePhysics({
 module.exports={
   candidatePatch,
   materializeLearnedSelection,
+  createCasePhysicsAdapter,
   buildCandidateSetStrategies,
   evaluateLearnedCandidatePhysics
 };
