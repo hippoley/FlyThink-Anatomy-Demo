@@ -46,6 +46,8 @@ on:
       - "scripts/pi_home_learned_physics_gate.cjs"
       - "scripts/pi_home_learned_candidate_physics.cjs"
       - "scripts/run_pi_home_learned_real_contam.py"
+      - "scripts/eval_pi_home_candidate_checkpoint.py"
+      - "scripts/train_pi_home_candidate_checkpoint.py"
       - "scripts/run_pi_home_generalization.cjs"
       - "tests/streaming_slu_e2e.cjs"
       - "tests/home_goal_runtime.cjs"
@@ -364,9 +366,33 @@ jobs:
             pi-home-generalization.json
             pi-home-candidate-generalization.json
 
+  p47-learned-artifact:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install CPU PyTorch
+        run: pip install --index-url https://download.pytorch.org/whl/cpu torch
+      - name: Train shadow-only learned checkpoint
+        run: python scripts/train_pi_home_candidate_checkpoint.py --data benchmarks/pi_home_candidate_generalization.json --epochs 300 --out artifacts/pi-home-candidate-checkpoint > pi-home-learned-train.json
+      - name: Produce independent learned holdout predictions
+        run: python scripts/eval_pi_home_candidate_checkpoint.py --data benchmarks/pi_home_candidate_generalization.json --checkpoint artifacts/pi-home-candidate-checkpoint/model.pt > pi-home-learned-holdout.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pi-home-p47-learned-input
+          path: |
+            artifacts/pi-home-candidate-checkpoint/model.pt
+            artifacts/pi-home-candidate-checkpoint/report.json
+            pi-home-learned-train.json
+            pi-home-learned-holdout.json
+
   p47-real-contam:
+    needs: p47-learned-artifact
     runs-on: windows-latest
-    timeout-minutes: 30
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
 
@@ -381,19 +407,15 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install learned-checkpoint and real CONTAM runtimes
-        shell: pwsh
-        run: |
-          python -m pip install --index-url https://download.pytorch.org/whl/cpu torch
-          python -m pip install -e "vendor/AirTrajectory[contam]"
+      - name: Download learned checkpoint evidence input
+        uses: actions/download-artifact@v4
+        with:
+          name: pi-home-p47-learned-input
+          path: artifacts/p47-learned-input
 
-      - name: Train shadow-only learned checkpoint
+      - name: Install real CONTAM runtime
         shell: pwsh
-        run: python scripts/train_pi_home_candidate_checkpoint.py --data benchmarks/pi_home_candidate_generalization.json --epochs 300 --out artifacts/pi-home-candidate-checkpoint | Tee-Object -FilePath pi-home-learned-train.json
-
-      - name: Produce independent learned holdout predictions
-        shell: pwsh
-        run: python scripts/eval_pi_home_candidate_checkpoint.py --data benchmarks/pi_home_candidate_generalization.json --checkpoint artifacts/pi-home-candidate-checkpoint/model.pt | Tee-Object -FilePath pi-home-learned-holdout.json
+        run: python -m pip install -e "vendor/AirTrajectory[contam]"
 
       - name: Generate real ContamX three-room PRJ
         shell: pwsh
@@ -404,7 +426,7 @@ jobs:
 
       - name: Learned checkpoint to real ContamX counterfactual
         shell: pwsh
-        run: python scripts/run_pi_home_learned_real_contam.py --benchmark benchmarks/pi_home_candidate_generalization.json --learned-eval pi-home-learned-holdout.json --airtrajectory-root vendor/AirTrajectory --prj artifacts/airtrajectory/multispace.prj --provenance artifacts/airtrajectory/multispace.prj.json --out pi-home-real-contam-evidence.json | Tee-Object -FilePath pi-home-real-contam.log
+        run: python scripts/run_pi_home_learned_real_contam.py --benchmark benchmarks/pi_home_candidate_generalization.json --learned-eval artifacts/p47-learned-input/pi-home-learned-holdout.json --airtrajectory-root vendor/AirTrajectory --prj artifacts/airtrajectory/multispace.prj --provenance artifacts/airtrajectory/multispace.prj.json --out pi-home-real-contam-evidence.json | Tee-Object -FilePath pi-home-real-contam.log
 
       - name: Evidence acceptance gate
         shell: pwsh
@@ -449,10 +471,7 @@ jobs:
         with:
           name: pi-home-p47-real-contam-evidence
           path: |
-            artifacts/pi-home-candidate-checkpoint/model.pt
-            artifacts/pi-home-candidate-checkpoint/report.json
             artifacts/airtrajectory/multispace.prj
             artifacts/airtrajectory/multispace.prj.json
-            pi-home-learned-holdout.json
             pi-home-real-contam-evidence.json
             pi-home-real-contam.log
