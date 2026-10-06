@@ -44,7 +44,7 @@ const untrusted=summarizeShadowReport({
 });
 assert.equal(untrusted.comparable,0);
 assert.equal(untrusted.promotion_candidate,false);
-assert.equal(untrusted.rows[0].reason,"untrusted_outcome_provenance");
+assert.equal(untrusted.rows[0].reason,"unsupported_outcome_provenance");
 
 const toy=summarizeShadowReport({
   rows:[{
@@ -58,7 +58,30 @@ const toy=summarizeShadowReport({
 });
 assert.equal(toy.comparable,0);
 assert.equal(toy.promotion_candidate,false);
-assert.equal(toy.rows[0].reason,"untrusted_outcome_provenance");
+assert.equal(toy.rows[0].reason,"simulator_not_trusted_for_promotion");
+
+const partial=summarizeShadowReport({
+  rows:[{
+    id:"partial",
+    comparison:{any_disagreement:true},
+    actual_outcome:{
+      current:{provenance:"measured",goal_completed:false},
+      shadow:{
+        provenance:"counterfactual_simulation",
+        trusted_for_promotion:false,
+        strategy:{
+          complete_physics_coverage:false,
+          physics_coverage_ratio:0.5
+        },
+        goal_completed:true
+      }
+    }
+  }]
+});
+assert.equal(partial.comparable,0);
+assert.equal(partial.promotion_candidate,false);
+assert.equal(partial.rows[0].reason,"incomplete_physics_coverage");
+assert.equal(partial.rows[0].shadow_provenance_assessment.physics_coverage_ratio,0.5);
 
 console.log(JSON.stringify({
   ok:true,
