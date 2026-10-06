@@ -12,6 +12,8 @@ on:
       - "scripts/pi_home_trajectory.cjs"
       - "scripts/pi_home_trajectory_scorer.cjs"
       - "scripts/pi_home_replay_selector.cjs"
+      - "scripts/pi_home_offline_replay_eval.cjs"
+      - "scripts/run_pi_home_offline_replay.cjs"
       - "tests/streaming_slu_e2e.cjs"
       - "tests/home_goal_runtime.cjs"
       - "tests/desired_state_evaluator.cjs"
@@ -19,6 +21,8 @@ on:
       - "tests/pi_home_trajectory.cjs"
       - "tests/pi_home_trajectory_scorer.cjs"
       - "tests/pi_home_replay_selector.cjs"
+      - "tests/pi_home_offline_replay_eval.cjs"
+      - "benchmarks/pi_home_offline_replay.json"
       - "benchmarks/pi_home_goal_scenarios.json"
       - "tests/commit_gate.cjs"
       - "scripts/stateful_checkpoint_trajectory.cjs"
@@ -53,6 +57,8 @@ on:
       - "scripts/pi_home_trajectory.cjs"
       - "scripts/pi_home_trajectory_scorer.cjs"
       - "scripts/pi_home_replay_selector.cjs"
+      - "scripts/pi_home_offline_replay_eval.cjs"
+      - "scripts/run_pi_home_offline_replay.cjs"
       - "tests/streaming_slu_e2e.cjs"
       - "tests/home_goal_runtime.cjs"
       - "tests/desired_state_evaluator.cjs"
@@ -60,6 +66,8 @@ on:
       - "tests/pi_home_trajectory.cjs"
       - "tests/pi_home_trajectory_scorer.cjs"
       - "tests/pi_home_replay_selector.cjs"
+      - "tests/pi_home_offline_replay_eval.cjs"
+      - "benchmarks/pi_home_offline_replay.json"
       - "benchmarks/pi_home_goal_scenarios.json"
       - "tests/commit_gate.cjs"
       - "scripts/stateful_checkpoint_trajectory.cjs"
@@ -102,6 +110,9 @@ jobs:
           node tests/pi_home_trajectory.cjs
           node tests/pi_home_trajectory_scorer.cjs
           node tests/pi_home_replay_selector.cjs
+          node tests/pi_home_offline_replay_eval.cjs
+          node scripts/run_pi_home_offline_replay.cjs > pi-home-offline-replay.json
+          cat pi-home-offline-replay.json
           node scripts/run_pi_home_goal_benchmark.cjs > pi-home-goal-benchmark.json
           cat pi-home-goal-benchmark.json
       - run: pip install --index-url https://download.pytorch.org/whl/cpu torch
@@ -185,3 +196,4 @@ jobs:
             full-physical.json
             p0-streaming-e2e.json
             pi-home-goal-benchmark.json
+            pi-home-offline-replay.json
