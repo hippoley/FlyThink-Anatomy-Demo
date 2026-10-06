@@ -7,20 +7,25 @@ function openingPatch(patch){
   return patch&&patch.op==="PATCH_SLOT"&&patch.slot==="opening"&&patch.target&&Number.isFinite(Number(patch.value));
 }
 
-function buildForkRequest({patch,origin,opening_map={},topology_id="demo-3zone",horizon_minutes=30,request_id=""}={}){
+function buildForkRequest({
+  patch,origin,opening_map={},topology_id="demo-3zone",profile_id=null,
+  horizon_minutes=30,request_id=""
+}={}){
   if(!openingPatch(patch))throw new Error("counterfactual_requires_absolute_opening_patch");
   const openingId=opening_map[deviceKey(patch.target)];
   if(!openingId)throw new Error("counterfactual_opening_mapping_missing:"+deviceKey(patch.target));
   if(!origin||typeof origin.co2_ppm!=="object"||typeof origin.opening_pct!=="object"){
     throw new Error("counterfactual_origin_incomplete");
   }
-  return {
+  const out={
     request_id,
-    topology_id,
     opening_id:openingId,
     origin:clone(origin),
     horizon_minutes:Number(horizon_minutes)
   };
+  if(profile_id)out.profile_id=profile_id;
+  else out.topology_id=topology_id;
+  return out;
 }
 
 function selectExactBranch(response,targetPct){
@@ -77,13 +82,15 @@ class AirTrajectoryCounterfactualAdapter{
     endpoint="/fork",
     transport=null,
     opening_map={},
-    topology_id="demo-3zone"
+    topology_id="demo-3zone",
+    profile_id=null
   }={}){
     this.base_url=base_url.replace(/\/$/,"");
     this.endpoint=endpoint.startsWith("/")?endpoint:("/"+endpoint);
     this.transport=transport||this.defaultTransport.bind(this);
     this.opening_map={...opening_map};
     this.topology_id=topology_id;
+    this.profile_id=profile_id;
   }
 
   async defaultTransport(payload){
@@ -98,7 +105,7 @@ class AirTrajectoryCounterfactualAdapter{
 
   async simulate({patch,origin,horizon_minutes=30,request_id=""}={}){
     const request=buildForkRequest({
-      patch,origin,opening_map:this.opening_map,topology_id:this.topology_id,horizon_minutes,request_id
+      patch,origin,opening_map:this.opening_map,topology_id:this.topology_id,profile_id:this.profile_id,horizon_minutes,request_id
     });
     const response=await this.transport(request);
     const branch=selectExactBranch(response,patch.value);
