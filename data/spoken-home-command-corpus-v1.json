@@ -4,7 +4,7 @@
     "kind": "synthetic_tts",
     "claim_limit": "This corpus validates acoustic integration and execution semantics; it is not human-speech accuracy evidence.",
     "tts_model": "vits-icefall-zh-aishell3",
-    "asr_model": "sherpa-onnx-streaming-zipformer-zh-int8-2025-06-30",
+    "asr_model": "sherpa-onnx-streaming-zipformer-zh-xlarge-int8-2025-06-30",
     "contextual_bias": "data/home-asr-hotwords.txt"
   },
   "cases": [
