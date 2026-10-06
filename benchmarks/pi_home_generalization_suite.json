@@ -1,45 +1,320 @@
 {
-  "schema_version":"pi-home-generalization-suite-v1",
-  "cases":[
+  "schema_version": "pi-home-generalization-suite-v2",
+  "train_cases": [
     {
-      "id":"seen-kitchen-wrong-room",
-      "split":"seen",
-      "context":{"room":"厨房","signal":"闷","weather":"rain","correction_class":"wrong-room"},
-      "gold":{"expected_targets":[{"area":"客厅","entity":"窗户","instance":"default"}],"expected_action_count":1,"expected_goal_completion":true},
-      "baseline":{"goal_completed":false,"requires_correction":true,"patches":[{"target":{"area":"厨房","entity":"窗户","instance":"default"}}]},
-      "experimental":{"goal_completed":true,"replay_conditioned":true,"patches":[{"target":{"area":"客厅","entity":"窗户","instance":"default"}}]}
+      "id": "train-wrong-room-kitchen",
+      "context": {
+        "intent_family": "wrong-room-correction",
+        "room": "厨房",
+        "references": {
+          "corrected_target": {
+            "area": "客厅",
+            "entity": "窗户",
+            "instance": "default"
+          }
+        }
+      },
+      "baseline": {
+        "goal_completed": false,
+        "requires_correction": true,
+        "patches": [
+          {
+            "target": {
+              "area": "厨房",
+              "entity": "窗户",
+              "instance": "default"
+            }
+          }
+        ]
+      },
+      "replay": {
+        "goal_completed": true,
+        "patches": [
+          {
+            "target": {
+              "area": "客厅",
+              "entity": "窗户",
+              "instance": "default"
+            }
+          }
+        ]
+      }
     },
     {
-      "id":"compose-bedroom-wrong-room",
-      "split":"compositional",
-      "context":{"room":"卧室","signal":"闷","weather":"rain","correction_class":"wrong-room"},
-      "gold":{"expected_targets":[{"area":"书房","entity":"窗户","instance":"default"}],"expected_action_count":1,"expected_goal_completion":true},
-      "baseline":{"goal_completed":false,"requires_correction":true,"patches":[{"target":{"area":"卧室","entity":"窗户","instance":"default"}}]},
-      "experimental":{"goal_completed":true,"replay_conditioned":false,"patches":[{"target":{"area":"书房","entity":"窗户","instance":"default"}}]}
+      "id": "train-quiet-kitchen",
+      "context": {
+        "intent_family": "quiet-alternative",
+        "preference": "quiet",
+        "alternatives": {
+          "preferred_target": {
+            "area": "客厅",
+            "entity": "窗户",
+            "instance": "default"
+          }
+        }
+      },
+      "baseline": {
+        "goal_completed": false,
+        "requires_correction": true,
+        "patches": [
+          {
+            "target": {
+              "area": "厨房",
+              "entity": "油烟机",
+              "instance": "default"
+            }
+          }
+        ]
+      },
+      "replay": {
+        "goal_completed": true,
+        "patches": [
+          {
+            "target": {
+              "area": "客厅",
+              "entity": "窗户",
+              "instance": "default"
+            }
+          }
+        ]
+      }
     },
     {
-      "id":"compose-living-noise",
-      "split":"compositional",
-      "context":{"room":"客厅","signal":"闷","weather":"dry","preference":"quiet"},
-      "gold":{"expected_targets":[{"area":"客厅","entity":"窗户","instance":"default"}],"expected_action_count":1,"expected_goal_completion":true},
-      "baseline":{"goal_completed":false,"requires_correction":true,"patches":[{"target":{"area":"客厅","entity":"油烟机","instance":"default"}}]},
-      "experimental":{"goal_completed":true,"replay_conditioned":false,"patches":[{"target":{"area":"客厅","entity":"窗户","instance":"default"}}]}
+      "id": "train-topology-apt-a",
+      "context": {
+        "intent_family": "topology-opening-selection",
+        "topology_id": "apt-a",
+        "topology": {
+          "preferred_opening": {
+            "area": "客厅",
+            "entity": "窗户",
+            "instance": "east"
+          }
+        }
+      },
+      "baseline": {
+        "goal_completed": false,
+        "requires_correction": true,
+        "patches": [
+          {
+            "target": {
+              "area": "客厅",
+              "entity": "窗户",
+              "instance": "west"
+            }
+          }
+        ]
+      },
+      "replay": {
+        "goal_completed": true,
+        "patches": [
+          {
+            "target": {
+              "area": "客厅",
+              "entity": "窗户",
+              "instance": "east"
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "cases": [
+    {
+      "id": "seen-kitchen-wrong-room",
+      "split": "seen",
+      "context": {
+        "intent_family": "wrong-room-correction",
+        "room": "厨房",
+        "references": {
+          "corrected_target": {
+            "area": "客厅",
+            "entity": "窗户",
+            "instance": "default"
+          }
+        }
+      },
+      "gold": {
+        "expected_targets": [
+          {
+            "area": "客厅",
+            "entity": "窗户",
+            "instance": "default"
+          }
+        ],
+        "expected_action_count": 1,
+        "expected_goal_completion": true
+      },
+      "baseline": {
+        "goal_completed": false,
+        "requires_correction": true,
+        "patches": [
+          {
+            "target": {
+              "area": "厨房",
+              "entity": "窗户",
+              "instance": "default"
+            }
+          }
+        ]
+      }
     },
     {
-      "id":"topology-new-study-window",
-      "split":"topology",
-      "context":{"topology_id":"apt-b","room":"书房","signal":"闷","weather":"dry"},
-      "gold":{"expected_targets":[{"area":"书房","entity":"窗户","instance":"east"}],"expected_action_count":1,"expected_goal_completion":true},
-      "baseline":{"goal_completed":false,"requires_correction":true,"patches":[{"target":{"area":"书房","entity":"窗户","instance":"west"}}]},
-      "experimental":{"goal_completed":true,"replay_conditioned":false,"patches":[{"target":{"area":"书房","entity":"窗户","instance":"east"}}]}
+      "id": "compose-bedroom-wrong-room",
+      "split": "compositional",
+      "context": {
+        "intent_family": "wrong-room-correction",
+        "room": "卧室",
+        "references": {
+          "corrected_target": {
+            "area": "书房",
+            "entity": "窗户",
+            "instance": "default"
+          }
+        }
+      },
+      "gold": {
+        "expected_targets": [
+          {
+            "area": "书房",
+            "entity": "窗户",
+            "instance": "default"
+          }
+        ],
+        "expected_action_count": 1,
+        "expected_goal_completion": true
+      },
+      "baseline": {
+        "goal_completed": false,
+        "requires_correction": true,
+        "patches": [
+          {
+            "target": {
+              "area": "卧室",
+              "entity": "窗户",
+              "instance": "default"
+            }
+          }
+        ]
+      }
     },
     {
-      "id":"topology-new-cross-room",
-      "split":"topology",
-      "context":{"topology_id":"apt-c","room":"厨房","signal":"闷","weather":"rain"},
-      "gold":{"expected_targets":[{"area":"餐厅","entity":"窗户","instance":"default"}],"expected_action_count":1,"expected_goal_completion":true},
-      "baseline":{"goal_completed":false,"requires_correction":true,"patches":[{"target":{"area":"厨房","entity":"窗户","instance":"default"}}]},
-      "experimental":{"goal_completed":true,"replay_conditioned":false,"patches":[{"target":{"area":"餐厅","entity":"窗户","instance":"default"}}]}
+      "id": "compose-living-quiet",
+      "split": "compositional",
+      "context": {
+        "intent_family": "quiet-alternative",
+        "room": "客厅",
+        "preference": "quiet",
+        "alternatives": {
+          "preferred_target": {
+            "area": "阳台",
+            "entity": "窗户",
+            "instance": "default"
+          }
+        }
+      },
+      "gold": {
+        "expected_targets": [
+          {
+            "area": "阳台",
+            "entity": "窗户",
+            "instance": "default"
+          }
+        ],
+        "expected_action_count": 1,
+        "expected_goal_completion": true
+      },
+      "baseline": {
+        "goal_completed": false,
+        "requires_correction": true,
+        "patches": [
+          {
+            "target": {
+              "area": "客厅",
+              "entity": "风机",
+              "instance": "default"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "topology-new-study-window",
+      "split": "topology",
+      "context": {
+        "intent_family": "topology-opening-selection",
+        "topology_id": "apt-b",
+        "topology": {
+          "preferred_opening": {
+            "area": "书房",
+            "entity": "窗户",
+            "instance": "north"
+          }
+        }
+      },
+      "gold": {
+        "expected_targets": [
+          {
+            "area": "书房",
+            "entity": "窗户",
+            "instance": "north"
+          }
+        ],
+        "expected_action_count": 1,
+        "expected_goal_completion": true
+      },
+      "baseline": {
+        "goal_completed": false,
+        "requires_correction": true,
+        "patches": [
+          {
+            "target": {
+              "area": "书房",
+              "entity": "窗户",
+              "instance": "south"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "topology-new-dining-window",
+      "split": "topology",
+      "context": {
+        "intent_family": "topology-opening-selection",
+        "topology_id": "apt-c",
+        "topology": {
+          "preferred_opening": {
+            "area": "餐厅",
+            "entity": "窗户",
+            "instance": "leeward"
+          }
+        }
+      },
+      "gold": {
+        "expected_targets": [
+          {
+            "area": "餐厅",
+            "entity": "窗户",
+            "instance": "leeward"
+          }
+        ],
+        "expected_action_count": 1,
+        "expected_goal_completion": true
+      },
+      "baseline": {
+        "goal_completed": false,
+        "requires_correction": true,
+        "patches": [
+          {
+            "target": {
+              "area": "餐厅",
+              "entity": "窗户",
+              "instance": "windward"
+            }
+          }
+        ]
+      }
     }
   ]
 }
