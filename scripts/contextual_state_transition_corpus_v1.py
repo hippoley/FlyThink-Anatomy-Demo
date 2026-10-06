@@ -49,17 +49,17 @@ def build():
   b=copy.deepcopy(DEVICES);b["客厅::灯::default"]["brightness"]=brightness
   x.append(row("irrelevant-light-state","客厅空调调到22度",{"explicit_target":target("客厅","空调")},
    [("客厅::空调::default","temperature",22)],before=b,semantic={"op":"PATCH_SLOT","slot":"temperature","has_value":True}))
- # Set semantics and untouched other devices.
+ # Split-complete resolver/judgement groups: held-out surfaces, same causal skills.\n x.append(row("dev-explicit-slot","主卧空调设成23度",{"explicit_target":target("主卧","空调")},[("主卧::空调::default","temperature",23)],semantic={"op":"PATCH_SLOT","slot":"temperature","has_value":True}))\n x.append(row("dev-ambiguity","把空调打开",{"referent_set":[target("客厅","空调"),target("主卧","空调")]},[],decision="CLARIFY",semantic={"op":"PATCH_SLOT","slot":"power"}))\n x.append(row("train-ambiguity","把灯打开",{"referent_set":[target("客厅","灯"),target("主卧","灯")]},[],decision="CLARIFY",semantic={"op":"PATCH_SLOT","slot":"power"}))\n x.append(row("test-explicit-slot","客厅灯调到55%",{"explicit_target":target("客厅","灯")},[("客厅::灯::default","brightness",55)],semantic={"op":"PATCH_SLOT","slot":"brightness","has_value":True}))\n # Set semantics and untouched other devices.
  x.append(row("set-two-ac","两个空调都打开",{"referent_set":[target("客厅","空调"),target("主卧","空调")]},
    [("主卧::空调::default","power","ON")],semantic={"op":"PATCH_SLOT","cardinality":"SET","slot":"power"}))
- return {"truth":"contextual_state_transition_v1","examples":x}
+ return {"truth":"contextual_state_transition_v1_coverage_complete","examples":x}
 FROZEN_SPLIT={
  "focus-relative-temperature":"train",
  "referent-capability":"test",
  "add-vs-replace":"train",
  "lifecycle-same-text":"dev",
  "irrelevant-light-state":"train",
- "set-two-ac":"train",
+ "set-two-ac":"train",\n "dev-explicit-slot":"dev",\n "dev-ambiguity":"dev",\n "train-ambiguity":"train",\n "test-explicit-slot":"test",
 }
 def split_group(group):return FROZEN_SPLIT[group]
 if __name__=="__main__":
