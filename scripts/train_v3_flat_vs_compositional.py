@@ -43,8 +43,8 @@ def room_diagnostics(m,items):
     "pred":[int(v>=.5) for v in p[i]]})
  return out
 
-def train(g,seed,flat,epochs):
- torch.manual_seed(seed);m=Model(g,seed,flat);x,ys=pack(rows("train","v3"));t=batch_targets(ys)
+def train(g,seed,flat,epochs,dataset):
+ torch.manual_seed(seed);m=Model(g,seed,flat);x,ys=pack(rows("train",dataset));t=batch_targets(ys)
  opt=torch.optim.AdamW(m.parameters(),lr=.003,weight_decay=.01)
  for _ in range(epochs):
   opt.zero_grad();o=m(x)
@@ -55,16 +55,16 @@ def train(g,seed,flat,epochs):
 
 def main():
  ap=argparse.ArgumentParser();ap.add_argument("--graph",default="artifacts/flywire/connectome.json")
- ap.add_argument("--epochs",type=int,default=120);ap.add_argument("--out",default="artifacts/v3-flat-vs-compositional")
+ ap.add_argument("--epochs",type=int,default=120);ap.add_argument("--dataset",default="v3",choices=["v3","v4"]);ap.add_argument("--out",default="artifacts/v3-flat-vs-compositional")
  a=ap.parse_args();g=json.loads(Path(a.graph).read_text())
- report={"truth":"v3_clean_flat_vs_compositional_room_diagnostics","regimes":{}}
+ report={"truth":f"{a.dataset}_flat_vs_compositional_room_diagnostics","regimes":{}}
  for name,flat in (("flat_16_target",True),("compositional_room_entity",False)):
   report["regimes"][name]=[]
   for seed in (2783,3783,4783):
-   m=train(g,seed,flat,a.epochs)
+   m=train(g,seed,flat,a.epochs,a.dataset)
    report["regimes"][name].append({"seed":seed,
-    **{s:metrics(m,rows(s,"v3")) for s in ("train","dev","test")},
-    "room_diagnostics":{s:room_diagnostics(m,rows(s,"v3")) for s in ("dev","test")}})
+    **{s:metrics(m,rows(s,a.dataset)) for s in ("train","dev","test")},
+    "room_diagnostics":{s:room_diagnostics(m,rows(s,a.dataset)) for s in ("dev","test")}})
  Path(a.out).mkdir(parents=True,exist_ok=True)
  Path(a.out,"report.json").write_text(json.dumps(report,ensure_ascii=False,indent=2))
  print(json.dumps(report,ensure_ascii=False))
