@@ -133,7 +133,7 @@ class StreamingHomeSession{
       },
       semantic:{
         decision:prediction&&prediction.decision||null,
-        confidence:prediction&&prediction.confidence??null,
+        confidence:(prediction&&prediction.confidence)??null,
         raw:clone(prediction&&prediction.semantic_raw||null)
       },
       target_resolution:{
