@@ -28,6 +28,25 @@ class CandidateRankNet(torch.nn.Module):
     def forward(self,x):
         return self.score(x).squeeze(-1)
 
+def candidate_identities(cases):
+    ids=set()
+    for case in cases:
+        for cand in case.get("context",{}).get("candidates",[]):
+            ids.add(target_key(cand["target"]))
+    return ids
+
+def assert_identity_isolation(train_cases,eval_cases):
+    train_ids=candidate_identities(train_cases)
+    eval_ids=candidate_identities(eval_cases)
+    overlap=sorted(train_ids & eval_ids)
+    if overlap:
+        raise ValueError("candidate identity leakage across train/eval: "+",".join(overlap))
+    return {
+        "train_candidate_identities":len(train_ids),
+        "eval_candidate_identities":len(eval_ids),
+        "overlap":[]
+    }
+
 def training_pairs(train_cases):
     out=[]
     for case in train_cases:
@@ -93,12 +112,14 @@ def main():
     args=ap.parse_args()
     torch.set_num_threads(2)
     data=json.loads(Path(args.data).read_text())
+    isolation=assert_identity_isolation(data["train_cases"],data["cases"])
     model,pairs=fit(data["train_cases"],args.epochs,args.seed)
     report={
         "schema_version":"pi-home-candidate-checkpoint-report-v1",
         "shadow_only":True,
         "train_cases":len(data["train_cases"]),
         "pairwise_preferences":len(pairs),
+        "identity_isolation":isolation,
         "holdout":evaluate(model,data["cases"]),
         "features":FEATURES,
         "families":FAMILIES,
