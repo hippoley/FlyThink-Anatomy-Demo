@@ -9,6 +9,9 @@ on:
       - "scripts/sherpa_tts_fixture.py"
       - "scripts/asr_event_bridge.cjs"
       - "scripts/run_acoustic_slu_e2e.cjs"
+      - "scripts/run_acoustic_windowpilot_e2e.cjs"
+      - "scripts/live_acoustic_windowpilot.py"
+      - "tests/test_live_acoustic_windowpilot_cli.py"
       - "scripts/streaming_slu_e2e.cjs"
       - "scripts/checkpoint_runtime.py"
       - "scripts/commit_gate.cjs"
@@ -25,6 +28,9 @@ on:
       - "scripts/sherpa_tts_fixture.py"
       - "scripts/asr_event_bridge.cjs"
       - "scripts/run_acoustic_slu_e2e.cjs"
+      - "scripts/run_acoustic_windowpilot_e2e.cjs"
+      - "scripts/live_acoustic_windowpilot.py"
+      - "tests/test_live_acoustic_windowpilot_cli.py"
       - "scripts/streaming_slu_e2e.cjs"
       - "scripts/checkpoint_runtime.py"
       - "scripts/commit_gate.cjs"
@@ -48,9 +54,9 @@ jobs:
 
       - name: Verify provider-neutral ASR event protocol
         run: |
-          python -m unittest tests/test_asr_event_protocol.py -v
+          python -m unittest tests/test_asr_event_protocol.py tests/test_live_acoustic_windowpilot_cli.py -v
           node tests/asr_event_bridge.cjs
-          python -m py_compile scripts/asr_event_protocol.py scripts/sherpa_streaming_asr.py scripts/sherpa_tts_fixture.py
+          python -m py_compile scripts/asr_event_protocol.py scripts/sherpa_streaming_asr.py scripts/sherpa_tts_fixture.py scripts/live_acoustic_windowpilot.py
           node --check scripts/asr_event_bridge.cjs
           node --check scripts/run_acoustic_slu_e2e.cjs
 
