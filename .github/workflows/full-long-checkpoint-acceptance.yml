@@ -456,11 +456,15 @@ jobs:
           assert rain["winner"]["trusted_for_promotion"] is False
           assert rain["trusted_for_generalization_claim"] is False
           assert "rain_ingress" in rain["missing_dimensions"]
+          assert rain["semantic_physics_alignment_status"]=="NOT_ADJUDICABLE"
+          assert rain["semantic_physics_aligned"] is None
+          assert isinstance(rain["raw_target_match"],bool)
 
           print({
             "p47_real_contam":"PASS",
             "engine_version":rain["engine_version"],
-            "semantic_physics_aligned":rain["semantic_physics_aligned"],
+            "alignment_status":rain["semantic_physics_alignment_status"],
+            "raw_target_match":rain["raw_target_match"],
             "missing_dimensions":rain["missing_dimensions"],
             "profile_trusted_for_promotion":rain["profile_trusted_for_promotion"]
           })
