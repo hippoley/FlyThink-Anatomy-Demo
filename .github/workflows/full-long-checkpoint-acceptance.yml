@@ -4,6 +4,10 @@ on:
   pull_request:
     paths:
       - "scripts/run_long_checkpoint_e2e_v2.cjs"
+      - "scripts/run_streaming_checkpoint_e2e.cjs"
+      - "scripts/streaming_slu_e2e.cjs"
+      - "tests/streaming_slu_e2e.cjs"
+      - "tests/commit_gate.cjs"
       - "scripts/stateful_checkpoint_trajectory.cjs"
       - "scripts/whole_home_patch_contract.cjs"
       - "scripts/physical_runtime.cjs"
@@ -28,6 +32,10 @@ on:
       - main
     paths:
       - "scripts/run_long_checkpoint_e2e_v2.cjs"
+      - "scripts/run_streaming_checkpoint_e2e.cjs"
+      - "scripts/streaming_slu_e2e.cjs"
+      - "tests/streaming_slu_e2e.cjs"
+      - "tests/commit_gate.cjs"
       - "scripts/stateful_checkpoint_trajectory.cjs"
       - "scripts/whole_home_patch_contract.cjs"
       - "scripts/physical_runtime.cjs"
@@ -58,6 +66,10 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - name: P0 streaming safety contract
+        run: |
+          node tests/commit_gate.cjs
+          node tests/streaming_slu_e2e.cjs
       - run: pip install --index-url https://download.pytorch.org/whl/cpu torch
       - name: Download judgement checkpoint
         uses: actions/download-artifact@v4
@@ -85,6 +97,10 @@ jobs:
         run: |
           node scripts/run_long_checkpoint_e2e_v2.cjs --physical mock --benchmark benchmarks/long_trajectories_v2.json --graph artifacts/flywire/connectome.json --judgement artifacts/context-judgement-v3/model.pt --semantic artifacts/semantic-patch-v1/model.pt > full-physical.json
           cat full-physical.json
+      - name: P0 streaming checkpoint → physical → reconcile
+        run: |
+          node scripts/run_streaming_checkpoint_e2e.cjs --turns 8 --benchmark benchmarks/long_trajectories_v2.json --graph artifacts/flywire/connectome.json --judgement artifacts/context-judgement-v3/model.pt --semantic artifacts/semantic-patch-v1/model.pt > p0-streaming-e2e.json
+          cat p0-streaming-e2e.json
       - name: Acceptance gate
         run: |
           node - <<'NODE'
@@ -109,6 +125,22 @@ jobs:
               throw new Error(file+": semantic/state acceptance below exact");
             }
           }
+          const s=JSON.parse(fs.readFileSync("p0-streaming-e2e.json","utf8"));
+          console.log("p0-streaming-e2e.json",{
+            final_turns:s.final_turns,
+            hypotheses:s.hypotheses,
+            final_decision_exact:s.final_decision_exact,
+            final_patch_exact:s.final_patch_exact,
+            final_state_after_turn_exact:s.final_state_after_turn_exact,
+            speculative_physical_commands:s.speculative_physical_commands,
+            physical_commands:s.physical_commands,
+            stage_trace_complete:s.stage_trace_complete
+          });
+          if(!s.stage_trace_complete)throw new Error("streaming E2E stage trace incomplete");
+          if(s.speculative_physical_commands!==0)throw new Error("partial/stable hypothesis reached physical driver");
+          if(s.final_decision_exact!==1||s.final_patch_exact!==1||s.final_state_after_turn_exact!==1){
+            throw new Error("streaming checkpoint E2E below exact");
+          }
           NODE
       - uses: actions/upload-artifact@v4
         if: always()
@@ -117,3 +149,4 @@ jobs:
           path: |
             full-logical.json
             full-physical.json
+            p0-streaming-e2e.json
