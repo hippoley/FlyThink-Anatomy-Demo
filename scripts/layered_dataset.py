@@ -6,6 +6,8 @@ def source(version="v1"):
   from contextual_state_transition_corpus_v1 import build,split_group
  elif version=="v2":
   from contextual_state_transition_corpus_v2 import build,split_group
+ elif version=="v3":
+  from contextual_state_transition_corpus_v3 import build,split_group
  else:raise ValueError(version)
  return build,split_group
 def rows(split,version="v1"):
@@ -17,4 +19,4 @@ def audit(version="v1"):
  d={s:rows(s,version) for s in ("train","dev","test")}
  return {s:{"rows":len(xs),"groups":sorted({x["row"]["contrast_group"] for x in xs})} for s,xs in d.items()}
 if __name__=="__main__":
- print({"v1":audit("v1"),"v2":audit("v2")})
+ print({"v1":audit("v1"),"v2":audit("v2"),"v3":audit("v3")})
