@@ -36,6 +36,7 @@ async function actionBudgetMustBlockBeforePhysical(){
     max_actions:1,
     observe:async()=>({kitchen:{co2:1400}}),
     planner:async()=>({
+      strategy:{name:"should-not-commit"},
       patches:[
         patch("客厅","窗户","opening",40),
         patch("客厅","窗户","opening",60)
@@ -46,6 +47,7 @@ async function actionBudgetMustBlockBeforePhysical(){
   assert.equal(out.actions,0);
   assert.equal(driver.commands.length,0);
   assert.equal(goals.runtime.devices[key("客厅","窗户")].slots.opening,20);
+  assert.equal(goals.getEpisode("budget").strategy.name,"a");
 }
 
 async function stagnationMustStop(){
