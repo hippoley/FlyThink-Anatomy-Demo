@@ -117,7 +117,7 @@ def main():
     ap.add_argument("--seed",type=int,default=4517)
     args=ap.parse_args()
     torch.set_num_threads(2)
-    data=json.loads(Path(args.data).read_text())
+    data=json.loads(Path(args.data).read_text(encoding="utf-8"))
     isolation=assert_identity_isolation(data["train_cases"],data["cases"])
     model,pairs=fit(data["train_cases"],args.epochs,args.seed)
     fingerprint=train_fingerprint(data["train_cases"])
