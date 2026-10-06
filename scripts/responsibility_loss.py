@@ -13,6 +13,9 @@ def joint_loss(outputs,targets,weights=None,masks=None):
             r=sum(ce(outputs["resolution"][k],targets["resolution"][k]) for k in ("room","entity","slot"))
         elif bool(one.any()):
             r=r+sum(ce(outputs["resolution"][k][one],targets["resolution"][k][one]) for k in ("room","entity","slot"))
+        app=masks.get("resolution_applicable")
+        if app is not None and bool(app.any()):
+            r=r+ce(outputs["resolution"]["room_count"][app],targets["resolution"]["room_count"][app])
         if sett is not None and bool(sett.any()):
             for k in ("membership","room_membership","entity_membership"):
                 r=r+F.binary_cross_entropy_with_logits(outputs["resolution"][k][sett],targets["resolution"][k][sett])
