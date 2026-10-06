@@ -106,11 +106,56 @@ async function staleRevisionMustNotReachPhysicalDriver(){
   assert.equal(out.runtime.devices[key("客厅")].slots.temperature,22);
 }
 
+
+async function staleRevisionMayRecoverExactlyOnce(){
+  const initial=runtime();
+  const driver=new MockThingDriver(initial);
+  const attempts=[];
+  const predictor=async({attempt})=>{
+    attempts.push(attempt);
+    return {decision:"EXECUTE",confidence:0.99,patches:[patch("客厅",26)]};
+  };
+  const out=await runStreamingSequence([
+    {turn_id:"t5",kind:"final",text:"客厅空调调到26度",base_revision:-1}
+  ],{initialRuntime:initial,predictor,driver});
+
+  assert.deepEqual(attempts,[0,1]);
+  assert.equal(out.trace[0].recovery.attempted,true);
+  assert.equal(out.trace[0].recovery.initial_gate.reason,"stale_base_revision");
+  assert.equal(out.trace[0].recovery.retry_gate.allow,true);
+  assert.equal(out.physical_commands,1);
+  assert.equal(out.runtime.devices[key("客厅")].slots.temperature,26);
+}
+
+async function repeatedStaleMustStopAfterOneRecovery(){
+  const initial=runtime();
+  const driver=new MockThingDriver(initial);
+  const attempts=[];
+  const predictor=async({attempt})=>{
+    attempts.push(attempt);
+    return {decision:"EXECUTE",confidence:0.99,patches:[patch("客厅",26)]};
+  };
+  const out=await runStreamingSequence([
+    {
+      turn_id:"t6",kind:"final",text:"客厅空调调到26度",
+      base_revision:-1,retry_base_revision:-1
+    }
+  ],{initialRuntime:initial,predictor,driver});
+
+  assert.deepEqual(attempts,[0,1]);
+  assert.equal(out.trace[0].commit_gate.allow,false);
+  assert.equal(out.trace[0].commit_gate.reason,"stale_base_revision");
+  assert.equal(out.physical_commands,0);
+  assert.equal(out.runtime.devices[key("客厅")].slots.temperature,22);
+}
+
 (async()=>{
   await correctionMustNotExecuteStablePrefix();
   await feedbackMustOwnReconciledTruth();
   await finalClarifyMustNotExecute();
   await staleRevisionMustNotReachPhysicalDriver();
+  await staleRevisionMayRecoverExactlyOnce();
+  await repeatedStaleMustStopAfterOneRecovery();
   console.log(JSON.stringify({
     ok:true,
     contract:"streaming ASR -> semantic -> target -> patch -> commit -> thing model -> feedback -> reconcile"
