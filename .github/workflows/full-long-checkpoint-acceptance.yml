@@ -44,6 +44,7 @@ on:
       - "scripts/pi_home_generalization_counterfactual.cjs"
       - "scripts/pi_home_generalization_claim.cjs"
       - "scripts/pi_home_learned_physics_gate.cjs"
+      - "scripts/pi_home_learned_candidate_physics.cjs"
       - "scripts/run_pi_home_generalization.cjs"
       - "tests/streaming_slu_e2e.cjs"
       - "tests/home_goal_runtime.cjs"
@@ -80,6 +81,7 @@ on:
       - "tests/pi_home_generalization_counterfactual.cjs"
       - "tests/pi_home_generalization_claim.cjs"
       - "tests/pi_home_learned_physics_gate.cjs"
+      - "tests/pi_home_learned_candidate_physics.cjs"
       - "benchmarks/pi_home_candidate_generalization.json"
       - "benchmarks/pi_home_generalization_suite.json"
       - "benchmarks/pi_home_offline_replay.json"
@@ -149,6 +151,7 @@ on:
       - "scripts/pi_home_generalization_counterfactual.cjs"
       - "scripts/pi_home_generalization_claim.cjs"
       - "scripts/pi_home_learned_physics_gate.cjs"
+      - "scripts/pi_home_learned_candidate_physics.cjs"
       - "scripts/run_pi_home_generalization.cjs"
       - "tests/streaming_slu_e2e.cjs"
       - "tests/home_goal_runtime.cjs"
@@ -185,6 +188,7 @@ on:
       - "tests/pi_home_generalization_counterfactual.cjs"
       - "tests/pi_home_generalization_claim.cjs"
       - "tests/pi_home_learned_physics_gate.cjs"
+      - "tests/pi_home_learned_candidate_physics.cjs"
       - "benchmarks/pi_home_candidate_generalization.json"
       - "benchmarks/pi_home_generalization_suite.json"
       - "benchmarks/pi_home_offline_replay.json"
@@ -257,6 +261,7 @@ jobs:
           node tests/pi_home_generalization_counterfactual.cjs
           node tests/pi_home_generalization_claim.cjs
           node tests/pi_home_learned_physics_gate.cjs
+          node tests/pi_home_learned_candidate_physics.cjs
           node tests/pi_home_generalization_eval.cjs
           node scripts/run_pi_home_generalization.cjs > pi-home-generalization.json
           cat pi-home-generalization.json
