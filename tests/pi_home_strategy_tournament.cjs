@@ -42,6 +42,7 @@ const candidates=[
       calls++;
       seen=req;
       return {
+        schema_version:"0.3",
         profile_id:"home-v1",
         topology_id:"home-v1",
         backend:"contamxpy",
