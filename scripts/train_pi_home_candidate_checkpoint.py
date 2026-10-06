@@ -1,8 +1,18 @@
 #!/usr/bin/env python3
 """Train a small shadow-only candidate ranking checkpoint from recovery trajectories."""
-import argparse,json,random,hashlib
+import argparse
+import sys,json,random,hashlib
 from pathlib import Path
 import torch
+
+def _configure_utf8_stdio():
+    for stream in (sys.stdout,sys.stderr):
+        try:
+            stream.reconfigure(encoding="utf-8")
+        except (AttributeError,ValueError):
+            pass
+
+_configure_utf8_stdio()
 
 FEATURES=["noise_cost","ventilation_gain","rain_exposure","leeward_score"]
 FAMILIES=["quiet-ventilation","rain-safe-opening"]
