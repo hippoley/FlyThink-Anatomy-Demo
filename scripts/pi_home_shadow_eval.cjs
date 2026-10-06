@@ -9,6 +9,10 @@ function outcomeValue(x={}){
   );
 }
 
+function validProvenance(x){
+  return x&&["measured","counterfactual_simulation"].includes(x.provenance);
+}
+
 function adjudicateShadowRecord(record={}){
   const actual=record.actual_outcome||{};
   const current=actual.current||actual;
@@ -18,6 +22,15 @@ function adjudicateShadowRecord(record={}){
       id:record.id||null,
       comparable:false,
       reason:"shadow_outcome_missing"
+    };
+  }
+  if(!validProvenance(current)||!validProvenance(shadow)){
+    return {
+      id:record.id||null,
+      comparable:false,
+      reason:"untrusted_outcome_provenance",
+      current_provenance:current&&current.provenance||null,
+      shadow_provenance:shadow&&shadow.provenance||null
     };
   }
   const currentValue=outcomeValue(current);
@@ -59,4 +72,4 @@ function summarizeShadowReport(report={}){
   };
 }
 
-module.exports={outcomeValue,adjudicateShadowRecord,summarizeShadowReport};
+module.exports={outcomeValue,adjudicateShadowRecord,summarizeShadowReport,validProvenance};
