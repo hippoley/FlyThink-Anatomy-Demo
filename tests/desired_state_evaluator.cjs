@@ -44,6 +44,41 @@ async function evaluatorReportsDeficits(){
   assert.equal(result.clauses.find(x=>x.id==="window-bound").actual,20);
 }
 
+async function missingEvidenceMustBlockAutonomy(){
+  const initial=initialRuntime();
+  const driver=new MockThingDriver(initial);
+  const goals=new HomeGoalRuntime({initialRuntime:initial,driver});
+  goals.beginGoal({
+    id:"ventilation-missing",
+    goal:{type:"comfort",room:"厨房"},
+    strategy:{name:"quiet_cross_room"},
+    desired_state:desired()
+  });
+
+  let plannerCalls=0;
+  const result=await goals.recheckGoal("ventilation-missing",{
+    observation:{kitchen:{temperature:26.2},risk:{rain_ingress:false}},
+    planner:async()=>{plannerCalls++;return {patches:[patch("客厅","窗户","opening",75)]}}
+  });
+  assert.equal(result.completed,false);
+  assert.equal(result.action_taken,false);
+  assert.equal(result.blocked_reason,"required_observation_missing");
+  assert.equal(plannerCalls,0);
+  assert.equal(driver.commands.length,0);
+  assert.deepEqual(result.evaluation.missing_required.map(x=>x.id),["co2"]);
+}
+
+async function unconfiguredGoalMustNotAutoComplete(){
+  const initial=initialRuntime();
+  const driver=new MockThingDriver(initial);
+  const goals=new HomeGoalRuntime({initialRuntime:initial,driver});
+  goals.beginGoal({id:"no-desired",goal:{type:"comfort"}});
+  const result=await goals.recheckGoal("no-desired",{observation:{}});
+  assert.equal(result.completed,false);
+  assert.equal(result.blocked_reason,"desired_state_not_configured");
+  assert.equal(goals.getEpisode("no-desired").status,"active");
+}
+
 async function autonomousRecheckReachesGoal(){
   const initial=initialRuntime();
   const driver=new MockThingDriver(initial);
@@ -81,6 +116,8 @@ async function autonomousRecheckReachesGoal(){
 
 (async()=>{
   await evaluatorReportsDeficits();
+  await missingEvidenceMustBlockAutonomy();
+  await unconfiguredGoalMustNotAutoComplete();
   await autonomousRecheckReachesGoal();
   console.log(JSON.stringify({
     ok:true,
