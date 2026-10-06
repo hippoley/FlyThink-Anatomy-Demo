@@ -36,6 +36,7 @@ on:
       - "scripts/pi_home_policy_canary.cjs"
       - "scripts/pi_home_canary_rollback.cjs"
       - "scripts/pi_home_evidence_journal.cjs"
+      - "scripts/pi_home_policy_lifecycle.cjs"
       - "tests/streaming_slu_e2e.cjs"
       - "tests/home_goal_runtime.cjs"
       - "tests/desired_state_evaluator.cjs"
@@ -64,6 +65,7 @@ on:
       - "tests/pi_home_policy_canary.cjs"
       - "tests/pi_home_canary_rollback.cjs"
       - "tests/pi_home_evidence_journal.cjs"
+      - "tests/pi_home_policy_lifecycle.cjs"
       - "benchmarks/pi_home_offline_replay.json"
       - "benchmarks/pi_home_goal_scenarios.json"
       - "tests/commit_gate.cjs"
@@ -123,6 +125,7 @@ on:
       - "scripts/pi_home_policy_canary.cjs"
       - "scripts/pi_home_canary_rollback.cjs"
       - "scripts/pi_home_evidence_journal.cjs"
+      - "scripts/pi_home_policy_lifecycle.cjs"
       - "tests/streaming_slu_e2e.cjs"
       - "tests/home_goal_runtime.cjs"
       - "tests/desired_state_evaluator.cjs"
@@ -151,6 +154,7 @@ on:
       - "tests/pi_home_policy_canary.cjs"
       - "tests/pi_home_canary_rollback.cjs"
       - "tests/pi_home_evidence_journal.cjs"
+      - "tests/pi_home_policy_lifecycle.cjs"
       - "benchmarks/pi_home_offline_replay.json"
       - "benchmarks/pi_home_goal_scenarios.json"
       - "tests/commit_gate.cjs"
@@ -215,6 +219,7 @@ jobs:
           node tests/pi_home_policy_canary.cjs
           node tests/pi_home_canary_rollback.cjs
           node tests/pi_home_evidence_journal.cjs
+          node tests/pi_home_policy_lifecycle.cjs
           node scripts/run_pi_home_policy_replay.cjs > pi-home-policy-replay.json
           cat pi-home-policy-replay.json
           node scripts/run_pi_home_p2_dataset_build.cjs > pi-home-p2-dataset.json
