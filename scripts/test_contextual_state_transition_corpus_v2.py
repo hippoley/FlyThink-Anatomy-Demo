@@ -6,7 +6,7 @@ from resolution_gold import gold_resolution
 
 d = build()
 extra = [r for r in d["examples"] if r["contrast_group"] in V2_SPLIT]
-assert len(extra) == 6
+assert len(extra) == 6\nassert all("gold_resolution" in r for r in extra)\nassert d["truth"] == "contextual_state_transition_v2_explicit_resolution"
 for group, split in V2_SPLIT.items():
     assert split_group(group) == split
 
@@ -15,4 +15,4 @@ for split in ("train", "dev", "test"):
     assert any(len(gold_resolution(r)["targets"]) == 1 for r in rs)
     assert any(len(gold_resolution(r)["targets"]) > 1 for r in rs)
 
-print({"truth": d["truth"], "extra": len(extra), "each_split_has_ONE_and_SET": True, "split_routing": "PASS"})
+print({"truth": d["truth"], "extra": len(extra), "each_split_has_ONE_and_SET": True, "split_routing": "PASS", "explicit_resolution_gold": "PASS"})
