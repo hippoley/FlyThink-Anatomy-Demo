@@ -10,9 +10,14 @@ class PolicyRegistry{
     if(active_policy_id){
       if(!this.policies[active_policy_id])throw new Error("active_policy_not_registered:"+active_policy_id);
       this.active_policy_id=active_policy_id;
-      this.policies[active_policy_id].status="active";
+      for(const [id,policy] of Object.entries(this.policies)){
+        if(id===active_policy_id)policy.status="active";
+        else if(policy.status==="active")policy.status="inactive";
+      }
     }else{
-      this.active_policy_id=null;
+      const declared=Object.values(this.policies).filter(x=>x.status==="active");
+      if(declared.length>1)throw new Error("multiple_active_policies_declared");
+      this.active_policy_id=declared.length===1?declared[0].id:null;
     }
   }
 
