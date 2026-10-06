@@ -95,6 +95,26 @@ function buildBatchStrategyRequest({
   };
 }
 
+function schemaNumber(value){
+  const n=Number.parseFloat(String(value||""));
+  return Number.isFinite(n)?n:null;
+}
+
+function assertStrategyResponseContract(response,{profile_id}={}){
+  if(!response||typeof response!=="object")throw new Error("airtrajectory_strategy_response_required");
+  const version=schemaNumber(response.schema_version);
+  if(version===null||version<0.3)throw new Error("airtrajectory_strategy_schema_too_old");
+  if(response.backend!=="contamxpy")throw new Error("airtrajectory_strategy_backend_not_contam");
+  if(String(response.physics_fidelity||"").toUpperCase()!=="CONTAM"){
+    throw new Error("airtrajectory_strategy_fidelity_not_contam");
+  }
+  if(profile_id&&String(response.profile_id||"")!==String(profile_id)){
+    throw new Error("airtrajectory_strategy_profile_mismatch");
+  }
+  if(!Array.isArray(response.branches))throw new Error("airtrajectory_strategy_branches_required");
+  return true;
+}
+
 function selectStrategyBranch(response,label){
   const branch=(response&&response.branches||[]).find(x=>x.label===label);
   if(!branch)throw new Error("strategy_counterfactual_branch_missing:"+label);
@@ -171,6 +191,7 @@ class AirTrajectoryStrategyCounterfactualAdapter{
       horizon_minutes,request_id
     });
     const response=await this.transport(built.request);
+    assertStrategyResponseContract(response,{profile_id:this.profile_id});
     const branch=selectStrategyBranch(response,label);
     return normalizeStrategyOutcome({
       response,branch,patches,unsupported_actions:built.unsupported_actions
@@ -187,6 +208,7 @@ class AirTrajectoryStrategyCounterfactualAdapter{
       request_id
     });
     const response=await this.transport(built.request);
+    assertStrategyResponseContract(response,{profile_id:this.profile_id});
     return (candidates||[]).map(candidate=>{
       const label=String(candidate.label);
       const branch=selectStrategyBranch(response,label);
@@ -208,6 +230,8 @@ module.exports={
   AirTrajectoryStrategyCounterfactualAdapter,
   buildStrategyRequest,
   buildBatchStrategyRequest,
+  schemaNumber,
+  assertStrategyResponseContract,
   selectStrategyBranch,
   normalizeStrategyOutcome,
   simulatableOpeningPatch
