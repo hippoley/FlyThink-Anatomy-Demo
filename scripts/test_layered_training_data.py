@@ -7,7 +7,7 @@ for split in ("train","dev","test"):
  x,ys=pack(rows(split));t=batch_targets(ys)
  assert len(x)==len(ys)>0 and x.ndim==2
  assert all(v.shape[0]==len(ys) for v in t["semantic"].values())
- assert all(v.shape[0]==len(ys) for v in t["resolution"].items() if False)
+ assert all(v.shape[0]==len(ys) for v in t["resolution"].values())
  assert t["judgement"].shape[0]==len(ys)
  assert t["resolution_one_mask"].shape[0]==len(ys)
  assert t["resolution_set_mask"].shape[0]==len(ys)
