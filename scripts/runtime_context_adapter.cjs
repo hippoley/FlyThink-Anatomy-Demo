@@ -12,6 +12,16 @@ function deriveContext(runtime,history=[]){
  const successful=ledger.filter(x=>!x.status||x.status==="applied"||x.status==="success");
  const failed=ledger.filter(x=>x.status&&x.status!=="applied"&&x.status!=="success");
  const lastExecution=ledger.length?ledger[ledger.length-1]:null;
+ const activeGoals=Object.values((runtime&&runtime.tasks)||{})
+  .filter(x=>x&&x.kind==="goal_episode"&&x.status==="active")
+  .map(x=>({
+   id:x.id||null,
+   goal:x.goal||null,
+   strategy:x.strategy||null,
+   desired_state:x.desired_state||null,
+   constraints:x.constraints||null,
+   recent_feedback:Array.isArray(x.feedback)?x.feedback.slice(-3):[]
+  }));
  return {
   focused_target:focus,
   referent_set,
@@ -26,6 +36,7 @@ function deriveContext(runtime,history=[]){
    semantic_patch:lastExecution.semantic_patch||lastExecution.patch||null,
    observation:lastExecution.observation||null
   }:null,
+  active_goals:activeGoals,
   protected_paths:Object.keys((runtime&&runtime.protectedInvariants)||{}),
   device_keys:Object.keys((runtime&&runtime.devices)||{}),
   device_registry:Object.fromEntries(Object.entries((runtime&&runtime.devices)||{}).filter(([,v])=>v&&v.model_id).map(([k,v])=>[k,{model_id:v.model_id}]))

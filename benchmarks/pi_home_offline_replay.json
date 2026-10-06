@@ -1,0 +1,226 @@
+{
+  "version": "pi-home-offline-replay-v1",
+  "cases": [
+    {
+      "id": "wrong-room-correction",
+      "bucket": "hard",
+      "gold": {
+        "expected_targets": [
+          {
+            "area": "客厅",
+            "entity": "窗户",
+            "instance": "default"
+          }
+        ],
+        "expected_action_count": 1,
+        "expected_goal_completion": true
+      },
+      "baseline": {
+        "patches": [
+          {
+            "op": "PATCH_SLOT",
+            "target": {
+              "area": "厨房",
+              "entity": "窗户",
+              "instance": "default"
+            },
+            "slot": "opening",
+            "value": 50
+          }
+        ],
+        "requires_correction": true,
+        "goal_completed": false
+      },
+      "replay": {
+        "patches": [
+          {
+            "op": "PATCH_SLOT",
+            "target": {
+              "area": "客厅",
+              "entity": "窗户",
+              "instance": "default"
+            },
+            "slot": "opening",
+            "value": 50
+          }
+        ],
+        "goal_completed": true
+      },
+      "evidence": {
+        "intervention": "CORRECTION",
+        "text": "不是这个，是客厅窗"
+      },
+      "context": {
+        "scene": "cooking_ventilation",
+        "room": "厨房",
+        "utterance_class": "wrong_room_correction",
+        "weather": "rain"
+      }
+    },
+    {
+      "id": "noise-preference-recovery",
+      "bucket": "hard",
+      "gold": {
+        "expected_targets": [
+          {
+            "area": "厨房",
+            "entity": "油烟机",
+            "instance": "default"
+          },
+          {
+            "area": "客厅",
+            "entity": "窗户",
+            "instance": "default"
+          }
+        ],
+        "expected_action_count": 2,
+        "expected_goal_completion": true
+      },
+      "baseline": {
+        "patches": [
+          {
+            "op": "PATCH_SLOT",
+            "target": {
+              "area": "厨房",
+              "entity": "油烟机",
+              "instance": "default"
+            },
+            "slot": "level",
+            "value": 3
+          },
+          {
+            "op": "PATCH_SLOT",
+            "target": {
+              "area": "客厅",
+              "entity": "窗户",
+              "instance": "default"
+            },
+            "slot": "opening",
+            "value": 55
+          },
+          {
+            "op": "PATCH_SLOT",
+            "target": {
+              "area": "厨房",
+              "entity": "油烟机",
+              "instance": "default"
+            },
+            "slot": "level",
+            "value": 2
+          }
+        ],
+        "requires_correction": true,
+        "goal_completed": false
+      },
+      "replay": {
+        "patches": [
+          {
+            "op": "PATCH_SLOT",
+            "target": {
+              "area": "厨房",
+              "entity": "油烟机",
+              "instance": "default"
+            },
+            "slot": "level",
+            "value": 2
+          },
+          {
+            "op": "PATCH_SLOT",
+            "target": {
+              "area": "客厅",
+              "entity": "窗户",
+              "instance": "default"
+            },
+            "slot": "opening",
+            "value": 75
+          }
+        ],
+        "goal_completed": true
+      },
+      "evidence": {
+        "intervention": "PREFERENCE_FEEDBACK",
+        "text": "有点吵"
+      },
+      "context": {
+        "scene": "cooking_ventilation",
+        "room": "厨房",
+        "utterance_class": "noise_preference",
+        "weather": "rain"
+      }
+    },
+    {
+      "id": "oscillation-negative",
+      "bucket": "negative",
+      "gold": {
+        "expected_targets": [
+          {
+            "area": "客厅",
+            "entity": "窗户",
+            "instance": "default"
+          }
+        ],
+        "expected_action_count": 1,
+        "expected_goal_completion": true
+      },
+      "baseline": {
+        "patches": [
+          {
+            "op": "PATCH_SLOT",
+            "target": {
+              "area": "客厅",
+              "entity": "窗户",
+              "instance": "default"
+            },
+            "slot": "opening",
+            "value": 40
+          },
+          {
+            "op": "PATCH_SLOT",
+            "target": {
+              "area": "客厅",
+              "entity": "窗户",
+              "instance": "default"
+            },
+            "slot": "opening",
+            "value": 70
+          },
+          {
+            "op": "PATCH_SLOT",
+            "target": {
+              "area": "客厅",
+              "entity": "窗户",
+              "instance": "default"
+            },
+            "slot": "opening",
+            "value": 40
+          }
+        ],
+        "goal_completed": false
+      },
+      "replay": {
+        "patches": [
+          {
+            "op": "PATCH_SLOT",
+            "target": {
+              "area": "客厅",
+              "entity": "窗户",
+              "instance": "default"
+            },
+            "slot": "opening",
+            "value": 55
+          }
+        ],
+        "goal_completed": true
+      },
+      "evidence": {
+        "outcome": "OSCILLATION"
+      },
+      "context": {
+        "scene": "ventilation_control",
+        "room": "厨房",
+        "utterance_class": "oscillation_recovery",
+        "weather": "dry"
+      }
+    }
+  ]
+}
