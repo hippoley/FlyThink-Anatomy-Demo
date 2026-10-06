@@ -251,7 +251,10 @@
           "餐厅::窗户::default": "W1"
         },
         "actuator_map": {
-          "书房::风机::default": "FAN1"
+          "书房::风机::default": {
+            "actuator_id": "FAN1",
+            "slot": "level"
+          }
         }
       }
     },
