@@ -14,6 +14,7 @@ on:
       - "scripts/pi_home_replay_selector.cjs"
       - "scripts/pi_home_offline_replay_eval.cjs"
       - "scripts/run_pi_home_offline_replay.cjs"
+      - "scripts/pi_home_training_manifest.cjs"
       - "tests/streaming_slu_e2e.cjs"
       - "tests/home_goal_runtime.cjs"
       - "tests/desired_state_evaluator.cjs"
@@ -22,6 +23,7 @@ on:
       - "tests/pi_home_trajectory_scorer.cjs"
       - "tests/pi_home_replay_selector.cjs"
       - "tests/pi_home_offline_replay_eval.cjs"
+      - "tests/pi_home_training_manifest.cjs"
       - "benchmarks/pi_home_offline_replay.json"
       - "benchmarks/pi_home_goal_scenarios.json"
       - "tests/commit_gate.cjs"
@@ -59,6 +61,7 @@ on:
       - "scripts/pi_home_replay_selector.cjs"
       - "scripts/pi_home_offline_replay_eval.cjs"
       - "scripts/run_pi_home_offline_replay.cjs"
+      - "scripts/pi_home_training_manifest.cjs"
       - "tests/streaming_slu_e2e.cjs"
       - "tests/home_goal_runtime.cjs"
       - "tests/desired_state_evaluator.cjs"
@@ -67,6 +70,7 @@ on:
       - "tests/pi_home_trajectory_scorer.cjs"
       - "tests/pi_home_replay_selector.cjs"
       - "tests/pi_home_offline_replay_eval.cjs"
+      - "tests/pi_home_training_manifest.cjs"
       - "benchmarks/pi_home_offline_replay.json"
       - "benchmarks/pi_home_goal_scenarios.json"
       - "tests/commit_gate.cjs"
@@ -111,6 +115,7 @@ jobs:
           node tests/pi_home_trajectory_scorer.cjs
           node tests/pi_home_replay_selector.cjs
           node tests/pi_home_offline_replay_eval.cjs
+          node tests/pi_home_training_manifest.cjs
           node scripts/run_pi_home_offline_replay.cjs > pi-home-offline-replay.json
           cat pi-home-offline-replay.json
           node scripts/run_pi_home_goal_benchmark.cjs > pi-home-goal-benchmark.json
