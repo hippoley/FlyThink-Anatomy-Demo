@@ -20,9 +20,10 @@ function evaluateCommit({decision,patches,commit_state,mode="batch"}={}){
   }
   const state=commit_state||"safe_to_commit";
   const safe=mode==="streaming"?STREAMING_SAFE:SAFE;
-  if(safe.has(state))return {allow:true,deferred:false,reason:"safe_to_commit",commit_state:state,mode};
-  if(DEFER.has(state))return {allow:false,deferred:true,reason:"semantic_hypothesis_not_committed",commit_state:state,mode};
-  return {allow:false,deferred:true,reason:"unknown_commit_state",commit_state:state,mode};
+  const meta=mode==="streaming"?{mode}:{};
+  if(safe.has(state))return {allow:true,deferred:false,reason:"safe_to_commit",commit_state:state,...meta};
+  if(DEFER.has(state))return {allow:false,deferred:true,reason:"semantic_hypothesis_not_committed",commit_state:state,...meta};
+  return {allow:false,deferred:true,reason:"unknown_commit_state",commit_state:state,...meta};
 }
 
 module.exports={evaluateCommit,SAFE,STREAMING_SAFE,DEFER};
