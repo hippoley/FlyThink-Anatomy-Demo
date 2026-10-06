@@ -3,7 +3,7 @@
 import argparse,json
 from pathlib import Path
 from eval_pi_home_candidate_checkpoint import load_model,predict
-from train_pi_home_candidate_checkpoint import target_key
+from train_pi_home_candidate_checkpoint import target_key,train_fingerprint
 
 def metrics(decision,gold):
     patches=decision.get("patches") or []
@@ -34,7 +34,10 @@ def main():
     ap.add_argument("--checkpoint",default="artifacts/pi-home-candidate-checkpoint/model.pt")
     args=ap.parse_args()
     data=json.loads(Path(args.data).read_text())
-    model,_=load_model(args.checkpoint)
+    model,_=load_model(
+        args.checkpoint,
+        expected_train_fingerprint=train_fingerprint(data["train_cases"])
+    )
     rows=[]
     for case in data["cases"]:
         learned,ranking=learned_decision(model,case)
