@@ -1,9 +1,19 @@
 #!/usr/bin/env python3
 """Compare learned checkpoint decisions against the baseline on the same unseen holdout."""
-import argparse,json
+import argparse
+import sys,json
 from pathlib import Path
 from eval_pi_home_candidate_checkpoint import load_model,predict
 from train_pi_home_candidate_checkpoint import target_key,train_fingerprint
+
+def _configure_utf8_stdio():
+    for stream in (sys.stdout,sys.stderr):
+        try:
+            stream.reconfigure(encoding="utf-8")
+        except (AttributeError,ValueError):
+            pass
+
+_configure_utf8_stdio()
 
 def metrics(decision,gold):
     patches=decision.get("patches") or []
