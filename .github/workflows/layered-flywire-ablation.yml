@@ -5,6 +5,12 @@ on:
     paths:
       - scripts/contextual_state_transition_corpus_v1.py
       - scripts/layered_training_data.py
+      - scripts/responsibility_heads.py
+      - scripts/responsibility_loss.py
+      - scripts/responsibility_labels.py
+      - scripts/resolution_gold.py
+      - scripts/test_layered_training_data.py
+      - scripts/test_resolution_membership.py
       - scripts/train_layered_flywire_ablation.py
           scripts/prepare_flywire_graph.py
           scripts/test_layered_training_data.py
