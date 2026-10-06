@@ -1,0 +1,28 @@
+name: v5-freeze-contract
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - scripts/contextual_state_transition_corpus_v5.py
+      - scripts/test_contextual_state_transition_corpus_v5.py
+      - scripts/freeze_v5_corpus.py
+      - scripts/layered_dataset.py
+      - .github/workflows/v5-freeze-contract.yml
+jobs:
+  freeze:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Compile V5
+        run: python -m py_compile scripts/contextual_state_transition_corpus_v5.py scripts/test_contextual_state_transition_corpus_v5.py scripts/freeze_v5_corpus.py scripts/layered_dataset.py
+      - name: Validate leakage and coverage
+        run: python scripts/test_contextual_state_transition_corpus_v5.py
+      - name: Freeze canonical digest
+        run: python scripts/freeze_v5_corpus.py | tee v5-freeze.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: v5-freeze-contract
+          path: v5-freeze.json
