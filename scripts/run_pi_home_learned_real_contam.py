@@ -1,15 +1,6 @@
 #!/usr/bin/env python3
 """Run learned holdout candidates through the real AirTrajectory/ContamX fork.
 
-def _configure_utf8_stdio():
-    for stream in (sys.stdout,sys.stderr):
-        try:
-            stream.reconfigure(encoding="utf-8")
-        except (AttributeError,ValueError):
-            pass
-
-_configure_utf8_stdio()
-
 This script deliberately distinguishes:
 - real ContamX execution, from
 - engineering-trusted evidence.
@@ -25,6 +16,18 @@ from pathlib import Path
 from airtrajectory.contam import ContamControl
 from airtrajectory.contam_fork import ContamForkProfile, contam_strategy_fork_request
 from airtrajectory.layout import LayoutContract
+
+
+def _configure_utf8_stdio():
+    for stream in (sys.stdout,sys.stderr):
+        try:
+            stream.reconfigure(encoding="utf-8")
+        except (AttributeError,ValueError):
+            pass
+
+
+_configure_utf8_stdio()
+
 
 
 def target_key(target):
