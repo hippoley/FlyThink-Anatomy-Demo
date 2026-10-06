@@ -9,9 +9,19 @@ function deviceKey(target){return [target.area,target.entity,target.instance||"d
 function simulatableOpeningPatch(p){
   return p&&p.op==="PATCH_SLOT"&&p.slot==="opening"&&p.target&&Number.isFinite(Number(p.value));
 }
+function scalarMapping(p,actuator_map={}){
+  if(!p||p.op!=="PATCH_SLOT"||!p.target||!Number.isFinite(Number(p.value)))return null;
+  const raw=actuator_map[deviceKey(p.target)];
+  if(!raw)return null;
+  if(typeof raw==="string"){
+    return {actuator_id:raw,slot:null};
+  }
+  if(typeof raw!=="object"||!raw.actuator_id)return null;
+  return {actuator_id:String(raw.actuator_id),slot:raw.slot==null?null:String(raw.slot)};
+}
 function simulatableScalarPatch(p,actuator_map={}){
-  return p&&p.op==="PATCH_SLOT"&&p.target&&Number.isFinite(Number(p.value))&&
-    Object.prototype.hasOwnProperty.call(actuator_map,deviceKey(p.target));
+  const mapping=scalarMapping(p,actuator_map);
+  return !!(mapping&&(mapping.slot===null||mapping.slot===p.slot));
 }
 function simulatablePhysicalPatch(p,{opening_map={},actuator_map={}}={}){
   if(simulatableOpeningPatch(p)){
@@ -47,8 +57,9 @@ function buildStrategyRequest({
       continue;
     }
     if(simulatableScalarPatch(patch,actuator_map)){
+      const mapping=scalarMapping(patch,actuator_map);
       actions.push({
-        actuator_id:actuator_map[deviceKey(patch.target)],
+        actuator_id:mapping.actuator_id,
         target_value:Number(patch.value)
       });
       continue;
@@ -262,6 +273,7 @@ module.exports={
   selectStrategyBranch,
   normalizeStrategyOutcome,
   simulatableOpeningPatch,
+  scalarMapping,
   simulatableScalarPatch,
   simulatablePhysicalPatch
 };
