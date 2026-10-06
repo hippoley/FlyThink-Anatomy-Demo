@@ -74,10 +74,15 @@ def profile_from_generated_prj(airtrajectory_root, prj_path, provenance):
         provenance.get("engineering_truth") is True
         and engineering.get("engineering_ready") is True
     )
+    simulation_mode=str(provenance.get("contaminant_simulation_mode") or "unknown")
     evidence_level=(
         "engineering-trusted"
         if engineering_ready
-        else "real-contam-demo-profile"
+        else (
+            "real-contam-transient-demo-profile"
+            if simulation_mode=="transient"
+            else "real-contam-demo-profile"
+        )
     )
     profile=ContamForkProfile(
         profile_id=layout.topology_id,
@@ -182,7 +187,16 @@ def run_case(case,learned_row,profile):
     )
 
     by_label={x["label"]:x for x in candidates}
-    winner=max(response["branches"],key=lambda x:float(x["return"]))
+    branches=response["branches"]
+    winner=max(branches,key=lambda x:float(x["return"]))
+    co2_vectors=[
+        tuple(
+            round(float(value),6)
+            for _,value in sorted((branch.get("end_co2_ppm_by_zone") or {}).items())
+        )
+        for branch in branches
+    ]
+    co2_dynamics_discriminative=len(set(co2_vectors))>1
     winner_target=by_label[winner["label"]]["target"]
     learned_target=learned_row["predicted"]
     raw_target_match=target_key(winner_target)==target_key(learned_target)
@@ -223,6 +237,7 @@ def run_case(case,learned_row,profile):
         "covered_dimensions":sorted(covered),
         "missing_dimensions":missing,
         "dimension_coverage_complete":dimensions_complete,
+        "co2_dynamics_discriminative":co2_dynamics_discriminative,
         "trusted_for_generalization_claim":trusted,
         "winner":{
             "label":winner["label"],
@@ -233,7 +248,7 @@ def run_case(case,learned_row,profile):
             "provenance":winner.get("provenance"),
             "trusted_for_promotion":winner.get("trusted_for_promotion"),
         },
-        "branches":response["branches"],
+        "branches":branches,
     }
 
 
@@ -271,6 +286,8 @@ def main():
         "real_contam_executed":bool(executed),
         "engineering_profile_ready":engineering_ready,
         "evidence_level":evidence_level,
+        "contaminant_simulation_mode":provenance.get("contaminant_simulation_mode"),
+        "simulation_time_step_s":provenance.get("time_step_s"),
         "cases":len(results),
         "real_contam_cases":len(executed),
         "trusted_generalization_cases":len(trusted),
@@ -287,6 +304,14 @@ def main():
         raise SystemExit("no real CONTAM holdout case executed")
     if engineering_ready:
         raise SystemExit("generated demo PRJ unexpectedly became engineering trusted")
+    if provenance.get("contaminant_simulation_mode")!="transient":
+        raise SystemExit("real CONTAM evidence requires transient contaminant simulation")
+    if any(
+        x.get("status")=="REAL_CONTAM_EXECUTED"
+        and x.get("co2_dynamics_discriminative") is not True
+        for x in results
+    ):
+        raise SystemExit("real CONTAM candidate set lacks discriminative transient CO2 dynamics")
     if any(x.get("trusted_for_generalization_claim") for x in results):
         raise SystemExit("demo-profile CONTAM evidence must not support trusted generalization")
 
