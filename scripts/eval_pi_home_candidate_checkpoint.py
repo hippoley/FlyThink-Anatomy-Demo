@@ -1,9 +1,19 @@
 #!/usr/bin/env python3
 """Load the learned candidate ranking checkpoint and evaluate without training-time gold access."""
-import argparse,json
+import argparse
+import sys,json
 from pathlib import Path
 import torch
 from train_pi_home_candidate_checkpoint import CandidateRankNet,row_vector,target_key,train_fingerprint
+
+def _configure_utf8_stdio():
+    for stream in (sys.stdout,sys.stderr):
+        try:
+            stream.reconfigure(encoding="utf-8")
+        except (AttributeError,ValueError):
+            pass
+
+_configure_utf8_stdio()
 
 def load_model(path,expected_train_fingerprint=None):
     ckpt=torch.load(path,map_location="cpu",weights_only=True)
