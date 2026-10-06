@@ -171,12 +171,6 @@ class HomeGoalRuntime{
       observation:clone(observation),
       runtime:normalizeRuntime(this.runtime)
     })||{};
-    if(proposal.strategy!==undefined){
-      this.updateStrategy(goalId,proposal.strategy,{
-        reason:proposal.reason||"autonomous_recheck",
-        feedback:proposal.feedback||null
-      });
-    }
     const patches=Array.isArray(proposal.patches)?proposal.patches:[];
     const proposedActions=expandedPatchCount(patches);
     if(max_actions!=null&&proposedActions>max_actions){
@@ -191,6 +185,12 @@ class HomeGoalRuntime{
         runtime:normalizeRuntime(this.runtime),
         episode:clone(this.requireActive(goalId))
       };
+    }
+    if(proposal.strategy!==undefined){
+      this.updateStrategy(goalId,proposal.strategy,{
+        reason:proposal.reason||"autonomous_recheck",
+        feedback:proposal.feedback||null
+      });
     }
     if(!patches.length){
       return {
