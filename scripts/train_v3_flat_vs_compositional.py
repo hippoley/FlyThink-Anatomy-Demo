@@ -22,11 +22,11 @@ def metrics(m,items):
  prm=o["resolution"]["room_membership"].sigmoid()>=.5
  pem=o["resolution"]["entity_membership"].sigmoid()>=.5
  ps=o["resolution"]["slot"].argmax(1)
- vals={"target":[],"room":[],"entity":[],"slot":[]}
+ vals={"target":[],"room":[],"room_topk":[],"entity":[],"slot":[]}
  for i,y in enumerate(ys):
   if not y["resolution_set"]:continue
   vals["target"].append(torch.equal(pm[i].cpu(),torch.tensor(y["resolution"]["membership"],dtype=torch.bool)))
-  vals["room"].append(torch.equal(prm[i].cpu(),torch.tensor(y["resolution"]["room_membership"],dtype=torch.bool)))
+  gold_room=torch.tensor(y["resolution"]["room_membership"],dtype=torch.bool)\n  vals["room"].append(torch.equal(prm[i].cpu(),gold_room))\n  k=int(gold_room.sum());topk=torch.zeros_like(gold_room);topk[torch.topk(o["resolution"]["room_membership"][i].cpu(),k).indices]=True\n  vals["room_topk"].append(torch.equal(topk,gold_room))
   vals["entity"].append(torch.equal(pem[i].cpu(),torch.tensor(y["resolution"]["entity_membership"],dtype=torch.bool)))
   vals["slot"].append(int(ps[i])==y["resolution"]["slot"])
  return {k:(sum(map(bool,v))/len(v) if v else None) for k,v in vals.items()}|{"n":len(vals["target"])}
