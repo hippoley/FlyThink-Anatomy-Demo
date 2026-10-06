@@ -74,12 +74,25 @@ function buildCandidateSetStrategies(caseDef){
   };
 }
 
+function assessPhysicsDimensions(required=[],covered=[]){
+  const req=[...new Set(required||[])].sort();
+  const cov=[...new Set(covered||[])].sort();
+  const missing=req.filter(x=>!cov.includes(x));
+  return {
+    required:req,
+    covered:cov,
+    missing,
+    complete:missing.length===0
+  };
+}
+
 async function evaluateLearnedCandidatePhysics({
   case_def,
   learned_row,
   adapter,
   constraints=[],
   objectives=[],
+  evidence_dimensions=[],
   horizon_minutes=30,
   request_id=""
 }={}){
@@ -87,12 +100,17 @@ async function evaluateLearnedCandidatePhysics({
   if(!adapter)throw new Error("strategy_adapter_required");
   const selected=materializeLearnedSelection(case_def,learned_row);
   const set=buildCandidateSetStrategies(case_def);
+  const dimensions=assessPhysicsDimensions(
+    case_def&&case_def.physics&&case_def.physics.required_dimensions||[],
+    evidence_dimensions
+  );
   if(!set.eligible.length){
     return {
       schema_version:"pi-home-learned-candidate-physics-v1",
       case_id:case_def.id||null,
       selected,
       candidate_set:set,
+      physics_dimensions:dimensions,
       decision:"BLOCKED",
       reason:"no_physically_simulatable_candidates",
       counterfactual_confirmed:false,
@@ -129,9 +147,25 @@ async function evaluateLearnedCandidatePhysics({
       case_id:case_def.id||null,
       selected,
       candidate_set:set,
+      physics_dimensions:dimensions,
       tournament,
       decision:"BLOCKED",
       reason:"candidate_set_incomplete_physics_coverage",
+      counterfactual_confirmed:false,
+      trusted_for_generalization_claim:false
+    };
+  }
+
+  if(!dimensions.complete){
+    return {
+      schema_version:"pi-home-learned-candidate-physics-v1",
+      case_id:case_def.id||null,
+      selected,
+      candidate_set:set,
+      physics_dimensions:dimensions,
+      tournament,
+      decision:"PARTIAL_PHYSICS_EVIDENCE",
+      reason:"physics_constraint_coverage_incomplete",
       counterfactual_confirmed:false,
       trusted_for_generalization_claim:false
     };
@@ -152,6 +186,7 @@ async function evaluateLearnedCandidatePhysics({
     case_id:case_def.id||null,
     selected,
     candidate_set:set,
+    physics_dimensions:dimensions,
     tournament,
     alignment,
     decision:alignment.decision,
@@ -165,5 +200,6 @@ module.exports={
   candidatePatch,
   materializeLearnedSelection,
   buildCandidateSetStrategies,
-  evaluateLearnedCandidatePhysics
+  evaluateLearnedCandidatePhysics,
+  assessPhysicsDimensions
 };
