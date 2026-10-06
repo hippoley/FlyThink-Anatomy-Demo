@@ -11,12 +11,14 @@ on:
       - "scripts/run_pi_home_goal_benchmark.cjs"
       - "scripts/pi_home_trajectory.cjs"
       - "scripts/pi_home_trajectory_scorer.cjs"
+      - "scripts/pi_home_replay_selector.cjs"
       - "tests/streaming_slu_e2e.cjs"
       - "tests/home_goal_runtime.cjs"
       - "tests/desired_state_evaluator.cjs"
       - "tests/autonomous_episode.cjs"
       - "tests/pi_home_trajectory.cjs"
       - "tests/pi_home_trajectory_scorer.cjs"
+      - "tests/pi_home_replay_selector.cjs"
       - "benchmarks/pi_home_goal_scenarios.json"
       - "tests/commit_gate.cjs"
       - "scripts/stateful_checkpoint_trajectory.cjs"
@@ -50,12 +52,14 @@ on:
       - "scripts/run_pi_home_goal_benchmark.cjs"
       - "scripts/pi_home_trajectory.cjs"
       - "scripts/pi_home_trajectory_scorer.cjs"
+      - "scripts/pi_home_replay_selector.cjs"
       - "tests/streaming_slu_e2e.cjs"
       - "tests/home_goal_runtime.cjs"
       - "tests/desired_state_evaluator.cjs"
       - "tests/autonomous_episode.cjs"
       - "tests/pi_home_trajectory.cjs"
       - "tests/pi_home_trajectory_scorer.cjs"
+      - "tests/pi_home_replay_selector.cjs"
       - "benchmarks/pi_home_goal_scenarios.json"
       - "tests/commit_gate.cjs"
       - "scripts/stateful_checkpoint_trajectory.cjs"
@@ -97,6 +101,7 @@ jobs:
           node tests/autonomous_episode.cjs
           node tests/pi_home_trajectory.cjs
           node tests/pi_home_trajectory_scorer.cjs
+          node tests/pi_home_replay_selector.cjs
           node scripts/run_pi_home_goal_benchmark.cjs > pi-home-goal-benchmark.json
           cat pi-home-goal-benchmark.json
       - run: pip install --index-url https://download.pytorch.org/whl/cpu torch
