@@ -144,7 +144,7 @@ def main():
         "shadow_only":True,
         "train_fingerprint":fingerprint
     },args.out/"model.pt")
-    (args.out/"report.json").write_text(json.dumps(report,ensure_ascii=False,indent=2))
+    (args.out/"report.json").write_text(json.dumps(report,ensure_ascii=False,indent=2), encoding="utf-8")
     print(json.dumps(report,ensure_ascii=False))
 
 if __name__=="__main__": main()
