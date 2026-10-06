@@ -27,3 +27,13 @@ assert.equal(evaluateCommit({decision:"EXECUTE",patches:[],commit_state:"safe_to
 assert.equal(evaluateCommit({decision:"CLARIFY",patches:patch,commit_state:"safe_to_commit"}).allow,false);
 
 console.log(JSON.stringify({ok:true,contract:"semantic hypothesis != committed mutation"}));
+
+{
+  const g=evaluateCommit({decision:"EXECUTE",patches:patch,commit_state:"stable",mode:"streaming"});
+  assert.equal(g.allow,false);
+  assert.equal(g.deferred,true);
+}
+{
+  const g=evaluateCommit({decision:"EXECUTE",patches:patch,commit_state:"final",mode:"streaming"});
+  assert.equal(g.allow,true);
+}
