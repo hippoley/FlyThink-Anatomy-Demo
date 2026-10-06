@@ -9,7 +9,7 @@ const report={
       comparison:{any_disagreement:true},
       actual_outcome:{
         current:{provenance:"measured",goal_completed:false,wrong_target:1,correction_needed:1,extra_actions:1},
-        shadow:{provenance:"counterfactual_simulation",goal_completed:true,wrong_target:0,correction_needed:0,extra_actions:0}
+        shadow:{provenance:"counterfactual_simulation",trusted_for_promotion:true,goal_completed:true,wrong_target:0,correction_needed:0,extra_actions:0}
       }
     },
     {
@@ -17,7 +17,7 @@ const report={
       comparison:{any_disagreement:true},
       actual_outcome:{
         current:{provenance:"measured",goal_completed:true,wrong_target:0,correction_needed:0,extra_actions:0},
-        shadow:{provenance:"counterfactual_simulation",goal_completed:true,wrong_target:0,correction_needed:0,extra_actions:0}
+        shadow:{provenance:"counterfactual_simulation",trusted_for_promotion:true,goal_completed:true,wrong_target:0,correction_needed:0,extra_actions:0}
       }
     }
   ]
@@ -45,6 +45,20 @@ const untrusted=summarizeShadowReport({
 assert.equal(untrusted.comparable,0);
 assert.equal(untrusted.promotion_candidate,false);
 assert.equal(untrusted.rows[0].reason,"untrusted_outcome_provenance");
+
+const toy=summarizeShadowReport({
+  rows:[{
+    id:"toy",
+    comparison:{any_disagreement:true},
+    actual_outcome:{
+      current:{provenance:"measured",goal_completed:false},
+      shadow:{provenance:"counterfactual_simulation",trusted_for_promotion:false,goal_completed:true}
+    }
+  }]
+});
+assert.equal(toy.comparable,0);
+assert.equal(toy.promotion_candidate,false);
+assert.equal(toy.rows[0].reason,"untrusted_outcome_provenance");
 
 console.log(JSON.stringify({
   ok:true,
