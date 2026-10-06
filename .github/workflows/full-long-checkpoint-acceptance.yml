@@ -6,7 +6,9 @@ on:
       - "scripts/run_long_checkpoint_e2e_v2.cjs"
       - "scripts/run_streaming_checkpoint_e2e.cjs"
       - "scripts/streaming_slu_e2e.cjs"
+      - "scripts/home_goal_runtime.cjs"
       - "tests/streaming_slu_e2e.cjs"
+      - "tests/home_goal_runtime.cjs"
       - "tests/commit_gate.cjs"
       - "scripts/stateful_checkpoint_trajectory.cjs"
       - "scripts/whole_home_patch_contract.cjs"
@@ -34,7 +36,9 @@ on:
       - "scripts/run_long_checkpoint_e2e_v2.cjs"
       - "scripts/run_streaming_checkpoint_e2e.cjs"
       - "scripts/streaming_slu_e2e.cjs"
+      - "scripts/home_goal_runtime.cjs"
       - "tests/streaming_slu_e2e.cjs"
+      - "tests/home_goal_runtime.cjs"
       - "tests/commit_gate.cjs"
       - "scripts/stateful_checkpoint_trajectory.cjs"
       - "scripts/whole_home_patch_contract.cjs"
@@ -70,6 +74,7 @@ jobs:
         run: |
           node tests/commit_gate.cjs
           node tests/streaming_slu_e2e.cjs
+          node tests/home_goal_runtime.cjs
       - run: pip install --index-url https://download.pytorch.org/whl/cpu torch
       - name: Download judgement checkpoint
         uses: actions/download-artifact@v4
