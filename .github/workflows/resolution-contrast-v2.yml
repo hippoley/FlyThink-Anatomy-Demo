@@ -43,8 +43,18 @@ jobs:
         run: python scripts/prepare_flywire_graph.py --download --neurons 512 --out artifacts/flywire
       - name: Run paired baseline vs contrast
         run: python scripts/train_resolution_contrast_v2.py --graph artifacts/flywire/connectome.json --epochs 120
-      - name: Show report
-        run: cat artifacts/resolution-contrast-v2/report.json
+      - name: Show factor-level report
+        run: |
+          cat artifacts/resolution-contrast-v2/report.json
+          python - <<'PY'
+          import json
+          r=json.load(open('artifacts/resolution-contrast-v2/report.json'))
+          for regime,runs in r['regimes'].items():
+              for x in runs:
+                  for split in ('dev','test'):
+                      m=x[split]
+                      print(regime,x['seed'],split,{k:m.get(k) for k in ('resolution_one','set_room_exact','set_entity_exact','set_slot_exact','resolution_set')})
+          PY
       - uses: actions/upload-artifact@v4
         with:
           name: resolution-contrast-v2
