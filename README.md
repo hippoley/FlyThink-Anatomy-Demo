@@ -297,6 +297,67 @@ Thing Model gate remains the final schema boundary.
 This makes local small-agent models and frontier cloud agents directly
 comparable on the same home-control cases without changing the safety model.
 
+## Acoustic streaming ASR boundary
+
+The semantic-to-physical streaming runtime can now consume a provider-neutral
+ASR JSONL contract produced from real audio. The first implementation uses
+`sherpa-onnx`; the SLU runtime itself does not depend on sherpa-specific
+objects.
+
+The commit boundary is intentionally strict:
+
+```text
+acoustic partial  -> semantic speculation only
+acoustic stable   -> semantic speculation only
+acoustic final    -> eligible for commit gate
+```
+
+A repeated recognizer result is only `stable`. It never becomes `final`
+until endpoint detection or explicit end-of-input. ASR segments and revisions
+must be monotonic; stale results arriving after a final segment are rejected
+before semantic inference.
+
+Install the optional acoustic runtime:
+
+```bash
+pip install -r requirements-asr.txt
+```
+
+Decode a mono 16-bit PCM WAV with a sherpa streaming transducer model:
+
+```bash
+python scripts/sherpa_streaming_asr.py \
+  --wav command.wav \
+  --tokens /path/to/tokens.txt \
+  --encoder /path/to/encoder.onnx \
+  --decoder /path/to/decoder.onnx \
+  --joiner /path/to/joiner.onnx \
+  > asr-events.jsonl
+```
+
+For a live Linux microphone, raw PCM can be piped without introducing a
+microphone library into the semantic runtime:
+
+```bash
+arecord -q -f S16_LE -r 16000 -c 1 -t raw | \
+python scripts/sherpa_streaming_asr.py \
+  --pcm-stdin --input-sample-rate 16000 \
+  --tokens /path/to/tokens.txt \
+  --encoder /path/to/encoder.onnx \
+  --decoder /path/to/decoder.onnx \
+  --joiner /path/to/joiner.onnx
+```
+
+The emitted JSONL can be piped into `scripts/run_acoustic_slu_e2e.cjs`,
+which feeds every hypothesis through the same checkpoint-based
+`StreamingHomeSession`. CI uses an official sherpa Chinese streaming model
+and its real test WAV to prove the PCM -> ASR -> checkpoint SLU boundary while
+requiring zero speculative physical commands and zero actuation for the
+non-home speech fixture.
+
+This is an acoustic transport/safety proof, not yet a home-command ASR accuracy
+claim. A frozen spoken-home-command corpus is the next acceptance layer.
+
 ## Telemetry and trajectory replay
 
 [Local telemetry and Phoenix](TELEMETRY.md) records immutable turns in SQLite,

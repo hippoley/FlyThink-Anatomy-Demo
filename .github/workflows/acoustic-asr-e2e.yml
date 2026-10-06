@@ -1,0 +1,151 @@
+name: acoustic-asr-e2e
+
+on:
+  pull_request:
+    paths:
+      - "requirements-asr.txt"
+      - "scripts/asr_event_protocol.py"
+      - "scripts/sherpa_streaming_asr.py"
+      - "scripts/asr_event_bridge.cjs"
+      - "scripts/run_acoustic_slu_e2e.cjs"
+      - "scripts/streaming_slu_e2e.cjs"
+      - "scripts/checkpoint_runtime.py"
+      - "scripts/commit_gate.cjs"
+      - "tests/test_asr_event_protocol.py"
+      - "tests/asr_event_bridge.cjs"
+      - ".github/workflows/acoustic-asr-e2e.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "requirements-asr.txt"
+      - "scripts/asr_event_protocol.py"
+      - "scripts/sherpa_streaming_asr.py"
+      - "scripts/asr_event_bridge.cjs"
+      - "scripts/run_acoustic_slu_e2e.cjs"
+      - "scripts/streaming_slu_e2e.cjs"
+      - "scripts/checkpoint_runtime.py"
+      - "scripts/commit_gate.cjs"
+      - "tests/test_asr_event_protocol.py"
+      - "tests/asr_event_bridge.cjs"
+      - ".github/workflows/acoustic-asr-e2e.yml"
+  workflow_dispatch:
+
+jobs:
+  acoustic-e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Verify provider-neutral ASR event protocol
+        run: |
+          python -m unittest tests/test_asr_event_protocol.py -v
+          node tests/asr_event_bridge.cjs
+          python -m py_compile scripts/asr_event_protocol.py scripts/sherpa_streaming_asr.py
+          node --check scripts/asr_event_bridge.cjs
+          node --check scripts/run_acoustic_slu_e2e.cjs
+
+      - name: Install sherpa acoustic runtime
+        run: pip install -r requirements-asr.txt
+
+      - name: Download official 14M Chinese streaming model
+        run: |
+          wget -q https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-streaming-zipformer-zh-14M-2023-02-23.tar.bz2
+          tar xjf sherpa-onnx-streaming-zipformer-zh-14M-2023-02-23.tar.bz2
+
+      - name: Decode real WAV into revision-aware ASR events
+        run: |
+          MODEL=sherpa-onnx-streaming-zipformer-zh-14M-2023-02-23
+          python scripts/sherpa_streaming_asr.py \
+            --wav "$MODEL/test_wavs/0.wav" \
+            --tokens "$MODEL/tokens.txt" \
+            --encoder "$MODEL/encoder-epoch-99-avg-1.int8.onnx" \
+            --decoder "$MODEL/decoder-epoch-99-avg-1.onnx" \
+            --joiner "$MODEL/joiner-epoch-99-avg-1.int8.onnx" \
+            --stable-repeats 2 \
+            > acoustic-events.jsonl
+          cat acoustic-events.jsonl
+          python - <<'PY'
+          import json
+          rows=[json.loads(x) for x in open("acoustic-events.jsonl",encoding="utf-8") if x.strip()]
+          assert rows, "no ASR events"
+          assert any(x["kind"]=="partial" for x in rows), "no partial ASR event"
+          assert any(x["kind"]=="final" for x in rows), "no final ASR event"
+          assert all(x["source"]=="sherpa-onnx" for x in rows)
+          print({
+              "events":len(rows),
+              "partial":sum(x["kind"]=="partial" for x in rows),
+              "stable":sum(x["kind"]=="stable" for x in rows),
+              "final":sum(x["kind"]=="final" for x in rows),
+              "final_texts":[x["text"] for x in rows if x["kind"]=="final"],
+          })
+          PY
+
+      - name: Install semantic checkpoint runtime
+        run: pip install --index-url https://download.pytorch.org/whl/cpu torch
+
+      - name: Download judgement checkpoint
+        uses: actions/download-artifact@v4
+        with:
+          name: context-judgement-v3
+          path: artifacts/context-judgement-v3
+          github-token: ${{ github.token }}
+          run-id: "36372167785"
+
+      - name: Download semantic checkpoint
+        uses: actions/download-artifact@v4
+        with:
+          name: semantic-patch-v1
+          path: artifacts/semantic-patch-v1
+          github-token: ${{ github.token }}
+          run-id: "36372786282"
+
+      - name: Build runtime context
+        run: |
+          python scripts/train_flywire.py --download --epochs 1 --out artifacts/flywire
+          python scripts/build_capability_index.py
+          python scripts/generate_long_trajectory_benchmark_v2.py --count 1 --out benchmarks/acoustic-runtime.json
+
+      - name: Real PCM -> sherpa -> checkpoint SLU -> commit gate
+        run: |
+          cat acoustic-events.jsonl | node scripts/run_acoustic_slu_e2e.cjs \
+            --benchmark benchmarks/acoustic-runtime.json \
+            --graph artifacts/flywire/connectome.json \
+            --judgement artifacts/context-judgement-v3/model.pt \
+            --semantic artifacts/semantic-patch-v1/model.pt \
+            > acoustic-slu-e2e.json
+          cat acoustic-slu-e2e.json
+          node - <<'NODE'
+          const fs=require("fs");
+          const x=JSON.parse(fs.readFileSync("acoustic-slu-e2e.json","utf8"));
+          if(x.asr_events<1)throw new Error("no ASR events entered SLU runtime");
+          if(x.final_segments<1)throw new Error("no final acoustic segment entered SLU runtime");
+          if(x.speculative_physical_commands!==0){
+            throw new Error("partial/stable acoustic hypothesis reached physical driver");
+          }
+          if(x.physical_commands!==0){
+            throw new Error("non-home acoustic fixture unexpectedly actuated a device");
+          }
+          console.log({
+            truth:x.truth,
+            asr_events:x.asr_events,
+            final_segments:x.final_segments,
+            speculative_physical_commands:x.speculative_physical_commands,
+            physical_commands:x.physical_commands
+          });
+          NODE
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: acoustic-asr-e2e
+          path: |
+            acoustic-events.jsonl
+            acoustic-slu-e2e.json
