@@ -75,6 +75,10 @@ def create_recognizer(args):
         joiner=args.joiner,
         decoding_method=args.decoding_method,
         max_active_paths=args.max_active_paths,
+        hotwords_file=args.hotwords_file,
+        hotwords_score=args.hotwords_score,
+        modeling_unit=args.modeling_unit,
+        bpe_vocab=args.bpe_vocab,
         **common,
     )
 
@@ -199,6 +203,14 @@ def parse_args():
         default="greedy_search",
     )
     parser.add_argument("--max-active-paths", type=int, default=4)
+    parser.add_argument("--hotwords-file", default="")
+    parser.add_argument("--hotwords-score", type=float, default=1.5)
+    parser.add_argument(
+        "--modeling-unit",
+        choices=("cjkchar", "bpe", "cjkchar+bpe"),
+        default="cjkchar",
+    )
+    parser.add_argument("--bpe-vocab", default="")
     parser.add_argument("--rule1-silence", type=float, default=2.4)
     parser.add_argument("--rule2-silence", type=float, default=1.2)
     parser.add_argument("--rule3-length", type=float, default=20.0)
