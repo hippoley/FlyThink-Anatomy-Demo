@@ -31,7 +31,7 @@ def main():
     ap.add_argument("--data",default="benchmarks/pi_home_candidate_generalization.json")
     ap.add_argument("--checkpoint",default="artifacts/pi-home-candidate-checkpoint/model.pt")
     args=ap.parse_args()
-    data=json.loads(Path(args.data).read_text())
+    data=json.loads(Path(args.data).read_text(encoding="utf-8"))
     expected=train_fingerprint(data["train_cases"])
     model,ckpt=load_model(args.checkpoint,expected_train_fingerprint=expected)
     rows=[];correct=0
