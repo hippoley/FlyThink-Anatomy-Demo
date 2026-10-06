@@ -185,16 +185,19 @@ def run_case(case,learned_row,profile):
     winner=max(response["branches"],key=lambda x:float(x["return"]))
     winner_target=by_label[winner["label"]]["target"]
     learned_target=learned_row["predicted"]
-    aligned=target_key(winner_target)==target_key(learned_target)
+    raw_target_match=target_key(winner_target)==target_key(learned_target)
 
     required=set(physics.get("required_dimensions") or [])
     covered={"co2","airflow"}
     missing=sorted(required-covered)
     dimensions_complete=not missing
+    alignment_status=(
+        "ALIGNED" if raw_target_match else "MISALIGNED"
+    ) if dimensions_complete else "NOT_ADJUDICABLE"
     trusted=bool(
         response.get("trusted_for_promotion") is True
         and winner.get("trusted_for_promotion") is True
-        and aligned
+        and raw_target_match
         and dimensions_complete
     )
 
@@ -211,7 +214,11 @@ def run_case(case,learned_row,profile):
         "resolved_origin":origin,
         "learned_target":learned_target,
         "physical_winner_target":winner_target,
-        "semantic_physics_aligned":aligned,
+        "raw_target_match":raw_target_match,
+        "semantic_physics_alignment_status":alignment_status,
+        "semantic_physics_aligned":(
+            raw_target_match if dimensions_complete else None
+        ),
         "required_dimensions":sorted(required),
         "covered_dimensions":sorted(covered),
         "missing_dimensions":missing,
