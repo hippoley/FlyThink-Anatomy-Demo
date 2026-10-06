@@ -54,7 +54,7 @@ def build():
             {"referent_set": refs}, delta, before=before,
             semantic={"op": "PATCH_SLOT", "cardinality": "SET", "slot": slot, "has_value": True},
         ))
-    return {"truth": "contextual_state_transition_v2_resolver_causal", "examples": base + extra}
+    for r in extra:\n        if r.get("gold_decision", "EXECUTE") != "EXECUTE":\n            r["gold_resolution"] = {"applicable": False, "targets": [], "slot": "NONE"}\n            continue\n        sem = r.get("gold_semantic", {})\n        ctx = r.get("context", {})\n        if sem.get("cardinality") == "SET":\n            targets = list(ctx.get("referent_set", []))\n        elif ctx.get("focused_target"):\n            targets = [ctx["focused_target"]]\n        elif ctx.get("explicit_target"):\n            targets = [ctx["explicit_target"]]\n        else:\n            targets = []\n        r["gold_resolution"] = {"applicable": bool(targets), "targets": targets, "slot": sem.get("slot", "NONE")}\n    return {"truth": "contextual_state_transition_v2_explicit_resolution", "examples": base + extra}
 
 def split_group(group):
     if group in V2_SPLIT:
