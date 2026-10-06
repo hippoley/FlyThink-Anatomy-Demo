@@ -53,8 +53,8 @@ jobs:
         run: |
           wget -q https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/vits-icefall-zh-aishell3.tar.bz2
           tar xjf vits-icefall-zh-aishell3.tar.bz2
-          wget -q https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-streaming-zipformer-zh-int8-2025-06-30.tar.bz2
-          tar xjf sherpa-onnx-streaming-zipformer-zh-int8-2025-06-30.tar.bz2
+          wget -q https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-streaming-zipformer-zh-xlarge-int8-2025-06-30.tar.bz2
+          tar xjf sherpa-onnx-streaming-zipformer-zh-xlarge-int8-2025-06-30.tar.bz2
 
       - name: Install semantic checkpoint runtime
         run: pip install --index-url https://download.pytorch.org/whl/cpu torch
@@ -84,15 +84,18 @@ jobs:
 
       - name: Generate, recognize, execute, and verify three voices
         run: |
-          set -euo pipefail
+          set -uo pipefail
           TTS=vits-icefall-zh-aishell3
-          ASR=sherpa-onnx-streaming-zipformer-zh-int8-2025-06-30
+          ASR=sherpa-onnx-streaming-zipformer-zh-xlarge-int8-2025-06-30
           TEXT="打开主卧空调"
+          FAIL=0
+          : > artifacts/spoken-home/diagnostics.jsonl
 
           for SID in 10 33 99; do
             WAV="artifacts/spoken-home/open-main-bedroom-ac-sid-${SID}.wav"
             EVENTS="artifacts/spoken-home/open-main-bedroom-ac-sid-${SID}.events.jsonl"
             RESULT="artifacts/spoken-home/open-main-bedroom-ac-sid-${SID}.result.json"
+            VALIDATION="artifacts/spoken-home/open-main-bedroom-ac-sid-${SID}.validation.txt"
 
             python scripts/generate_spoken_home_fixture.py \
               --model "$TTS/model.onnx" \
@@ -101,7 +104,7 @@ jobs:
               --rule-fsts "$TTS/phone.fst,$TTS/date.fst,$TTS/number.fst" \
               --sid "$SID" \
               --output "$WAV" \
-              "$TEXT"
+              "$TEXT" || { echo "TTS failed for SID=$SID"; FAIL=1; continue; }
 
             python scripts/sherpa_streaming_asr.py \
               --wav "$WAV" \
@@ -113,23 +116,45 @@ jobs:
               --hotwords-file data/home-asr-hotwords.txt \
               --hotwords-score 2.0 \
               --modeling-unit cjkchar \
-              > "$EVENTS"
+              > "$EVENTS" || { echo "ASR failed for SID=$SID"; FAIL=1; continue; }
 
             cat "$EVENTS"
+            python - "$SID" "$EVENTS" >> artifacts/spoken-home/diagnostics.jsonl <<'PY'
+          import json,sys
+          sid=int(sys.argv[1])
+          rows=[json.loads(x) for x in open(sys.argv[2],encoding="utf-8") if x.strip()]
+          print(json.dumps({
+              "sid":sid,
+              "partials":[x["text"] for x in rows if x["kind"]=="partial"],
+              "stable":[x["text"] for x in rows if x["kind"]=="stable"],
+              "final":[x["text"] for x in rows if x["kind"]=="final"],
+          },ensure_ascii=False))
+          PY
 
-            cat "$EVENTS" | node scripts/run_acoustic_slu_e2e.cjs \
+            if ! cat "$EVENTS" | node scripts/run_acoustic_slu_e2e.cjs \
               --benchmark benchmarks/spoken-runtime.json \
               --graph artifacts/flywire/connectome.json \
               --judgement artifacts/context-judgement-v3/model.pt \
               --semantic artifacts/semantic-patch-v1/model.pt \
-              > "$RESULT"
+              > "$RESULT"; then
+              echo "SLU runtime failed for SID=$SID" | tee "$VALIDATION"
+              FAIL=1
+              continue
+            fi
 
-            node scripts/validate_spoken_home_acoustic.cjs \
+            if ! node scripts/validate_spoken_home_acoustic.cjs \
               --manifest data/spoken-home-command-corpus-v1.json \
               --case open-main-bedroom-ac \
               --events "$EVENTS" \
-              --result "$RESULT"
+              --result "$RESULT" | tee "$VALIDATION"; then
+              echo "VALIDATION FAILED SID=$SID" | tee -a "$VALIDATION"
+              FAIL=1
+            fi
           done
+
+          echo "=== all speaker diagnostics ==="
+          cat artifacts/spoken-home/diagnostics.jsonl
+          exit "$FAIL"
 
       - uses: actions/upload-artifact@v4
         if: always()
