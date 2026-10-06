@@ -20,3 +20,11 @@ assert all(len(v)==1 for v in groups.values()),groups
 required={"focus-relative-temperature","referent-capability","add-vs-replace","lifecycle-same-text","irrelevant-light-state","set-two-ac"}
 assert required<=set(groups)
 print({"truth":d["truth"],"examples":len(rows),"groups":len(groups),"group_split_isolation":True,"no_drift_contract":True})
+
+from layered_dataset import rows
+for split in ("train","dev","test"):
+ xs=rows(split);assert xs,split
+ assert any(x["labels"]["judgement"]=="EXECUTE" for x in xs),(split,"missing EXECUTE")
+ assert any(x["labels"]["judgement"]=="CLARIFY" for x in xs),(split,"missing CLARIFY")
+ assert any(any(v!="NONE" for v in x["labels"]["resolution"].values()) for x in xs if x["labels"]["judgement"]=="EXECUTE"),(split,"missing resolver supervision")
+print({"layered_split_coverage":"PASS"})
