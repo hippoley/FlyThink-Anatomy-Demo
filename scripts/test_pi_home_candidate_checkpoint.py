@@ -2,10 +2,14 @@
 import json,tempfile
 from pathlib import Path
 import torch
-from train_pi_home_candidate_checkpoint import fit,evaluate,CandidateRankNet
+from train_pi_home_candidate_checkpoint import fit,evaluate,CandidateRankNet,assert_identity_isolation
 from eval_pi_home_candidate_checkpoint import load_model,predict
 
 data=json.loads(Path("benchmarks/pi_home_candidate_generalization.json").read_text())
+isolation=assert_identity_isolation(data["train_cases"],data["cases"])
+assert isolation["overlap"]==[]
+assert isolation["train_candidate_identities"]>0
+assert isolation["eval_candidate_identities"]>0
 model,pairs=fit(data["train_cases"],epochs=300,seed=4517)
 assert len(pairs)>=4
 report=evaluate(model,data["cases"])
