@@ -33,11 +33,8 @@ const origin={
         trusted_for_promotion:true,
         horizon_minutes:10,
         branches:[{
-          label:"cross-room",
-          actions:[
-            {opening_id:"W1",target_pct:75},
-            {opening_id:"W2",target_pct:25}
-          ],
+          label:req.candidates[0].label,
+          actions:req.candidates[0].actions,
           end_co2_ppm:870,
           end_co2_ppm_by_zone:{living:870,bedroom:900},
           path_flow_kg_s:{W1:.2,W2:.1},
