@@ -417,12 +417,13 @@ jobs:
         shell: pwsh
         run: python -m pip install -e "vendor/AirTrajectory[contam]"
 
-      - name: Generate real ContamX three-room PRJ
+      - name: Generate transient ContamX three-room PRJ
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force artifacts/airtrajectory | Out-Null
-          python vendor/AirTrajectory/examples/generate_multispace_contam_prj.py --out artifacts/airtrajectory/multispace.prj --provenance-out artifacts/airtrajectory/multispace.prj.json | Tee-Object -FilePath artifacts/airtrajectory/generation.json
+          python vendor/AirTrajectory/examples/generate_multispace_contam_prj.py --prj-profile vendor/AirTrajectory/examples/contam_prj_profile.transient.example.json --out artifacts/airtrajectory/multispace.prj --provenance-out artifacts/airtrajectory/multispace.prj.json | Tee-Object -FilePath artifacts/airtrajectory/generation.json
           if (-not (Test-Path artifacts/airtrajectory/multispace.prj)) { exit 1 }
+          if (-not (Select-String -Path artifacts/airtrajectory/multispace.prj -Pattern "contaminant simulation: transient")) { exit 1 }
 
       - name: Learned checkpoint to real ContamX counterfactual
         shell: pwsh
@@ -440,6 +441,8 @@ jobs:
           assert payload["real_contam_executed"] is True
           assert payload["engineering_profile_ready"] is False
           assert payload["trusted_generalization_cases"] == 0
+          assert payload["contaminant_simulation_mode"]=="transient"
+          assert payload["simulation_time_step_s"]==60
 
           by_id={row["case_id"]:row for row in payload["results"]}
           quiet=by_id["compose-quiet-new-room"]
@@ -455,6 +458,7 @@ jobs:
           assert rain["origin_co2_source"]=="airtrajectory_prj_initial"
           assert rain["winner"]["trusted_for_promotion"] is False
           assert rain["trusted_for_generalization_claim"] is False
+          assert rain["co2_dynamics_discriminative"] is True
           assert "rain_ingress" in rain["missing_dimensions"]
           assert rain["semantic_physics_alignment_status"]=="NOT_ADJUDICABLE"
           assert rain["semantic_physics_aligned"] is None
@@ -465,6 +469,7 @@ jobs:
             "engine_version":rain["engine_version"],
             "alignment_status":rain["semantic_physics_alignment_status"],
             "raw_target_match":rain["raw_target_match"],
+            "co2_dynamics_discriminative":rain["co2_dynamics_discriminative"],
             "missing_dimensions":rain["missing_dimensions"],
             "profile_trusted_for_promotion":rain["profile_trusted_for_promotion"]
           })
