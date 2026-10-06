@@ -16,6 +16,7 @@ function summarizePhysicalGeneralization({
   ].includes(x.decision));
   const confirmed=evaluated.filter(x=>x.counterfactual_confirmed===true);
   const blocked=(alignments||[]).filter(x=>x&&x.decision==="BLOCKED");
+  const notAdjudicable=(alignments||[]).filter(x=>x&&x.decision==="NOT_ADJUDICABLE");
   const coverageRatio=holdoutCases?evaluated.length/holdoutCases:0;
   const confirmationRate=evaluated.length?confirmed.length/evaluated.length:0;
   const labelClaim=generalization_eval.claim&&generalization_eval.claim.generalization_reality_delta===true;
@@ -33,6 +34,7 @@ function summarizePhysicalGeneralization({
     physically_confirmed:confirmed.length,
     physical_disagreements:evaluated.length-confirmed.length,
     blocked_physical_cases:blocked.length,
+    not_adjudicable_physical_cases:notAdjudicable.length,
     physical_coverage_ratio:Number(coverageRatio.toFixed(4)),
     physical_confirmation_rate:Number(confirmationRate.toFixed(4)),
     thresholds:{
