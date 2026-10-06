@@ -25,7 +25,7 @@ const origin={
       "卧室::窗户::default":"W2"
     },
     actuator_map:{
-      "厨房::风机::default":"FAN1"
+      "厨房::风机::default":{actuator_id:"FAN1",slot:"level"}
     },
     transport:async req=>{
       seen=req;
@@ -75,6 +75,19 @@ const origin={
   assert.equal(scalar.strategy.unsupported_actions.length,0);
   assert.equal(scalar.strategy.complete_physics_coverage,true);
   assert.equal(scalar.trusted_for_promotion,true);
+
+  const wrongSlot=await adapter.simulate({
+    label:"wrong-slot",
+    patches:[
+      {op:"PATCH_SLOT",target:{area:"厨房",entity:"风机",instance:"default"},slot:"brightness",value:2},
+      patches[0]
+    ],
+    origin
+  });
+  assert.equal(wrongSlot.strategy.simulated_action_count,1);
+  assert.equal(wrongSlot.strategy.unsupported_action_count,1);
+  assert.equal(wrongSlot.strategy.complete_physics_coverage,false);
+  assert.equal(wrongSlot.trusted_for_promotion,false);
 
   const mixed=await adapter.simulate({
     label:"mixed",
@@ -134,7 +147,7 @@ const origin={
       "卧室::窗户::default":"W2"
     },
     actuator_map:{
-      "厨房::风机::default":"FAN1"
+      "厨房::风机::default":{actuator_id:"FAN1",slot:"level"}
     }
   });
   assert.equal(built.unsupported_actions.length,0);
