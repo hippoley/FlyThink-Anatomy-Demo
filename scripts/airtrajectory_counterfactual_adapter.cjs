@@ -72,15 +72,22 @@ function normalizeForkOutcome({response,patch,branch}={}){
 }
 
 class AirTrajectoryCounterfactualAdapter{
-  constructor({base_url="http://127.0.0.1:8765",transport=null,opening_map={},topology_id="demo-3zone"}={}){
+  constructor({
+    base_url="http://127.0.0.1:8765",
+    endpoint="/fork",
+    transport=null,
+    opening_map={},
+    topology_id="demo-3zone"
+  }={}){
     this.base_url=base_url.replace(/\/$/,"");
+    this.endpoint=endpoint.startsWith("/")?endpoint:("/"+endpoint);
     this.transport=transport||this.defaultTransport.bind(this);
     this.opening_map={...opening_map};
     this.topology_id=topology_id;
   }
 
   async defaultTransport(payload){
-    const response=await fetch(this.base_url+"/fork",{
+    const response=await fetch(this.base_url+this.endpoint,{
       method:"POST",
       headers:{"Content-Type":"application/json"},
       body:JSON.stringify(payload)
