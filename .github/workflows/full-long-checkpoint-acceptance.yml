@@ -8,9 +8,11 @@ on:
       - "scripts/streaming_slu_e2e.cjs"
       - "scripts/home_goal_runtime.cjs"
       - "scripts/desired_state_evaluator.cjs"
+      - "scripts/run_pi_home_goal_benchmark.cjs"
       - "tests/streaming_slu_e2e.cjs"
       - "tests/home_goal_runtime.cjs"
       - "tests/desired_state_evaluator.cjs"
+      - "benchmarks/pi_home_goal_scenarios.json"
       - "tests/commit_gate.cjs"
       - "scripts/stateful_checkpoint_trajectory.cjs"
       - "scripts/whole_home_patch_contract.cjs"
@@ -40,9 +42,11 @@ on:
       - "scripts/streaming_slu_e2e.cjs"
       - "scripts/home_goal_runtime.cjs"
       - "scripts/desired_state_evaluator.cjs"
+      - "scripts/run_pi_home_goal_benchmark.cjs"
       - "tests/streaming_slu_e2e.cjs"
       - "tests/home_goal_runtime.cjs"
       - "tests/desired_state_evaluator.cjs"
+      - "benchmarks/pi_home_goal_scenarios.json"
       - "tests/commit_gate.cjs"
       - "scripts/stateful_checkpoint_trajectory.cjs"
       - "scripts/whole_home_patch_contract.cjs"
@@ -80,6 +84,8 @@ jobs:
           node tests/streaming_slu_e2e.cjs
           node tests/home_goal_runtime.cjs
           node tests/desired_state_evaluator.cjs
+          node scripts/run_pi_home_goal_benchmark.cjs > pi-home-goal-benchmark.json
+          cat pi-home-goal-benchmark.json
       - run: pip install --index-url https://download.pytorch.org/whl/cpu torch
       - name: Download judgement checkpoint
         uses: actions/download-artifact@v4
@@ -160,3 +166,4 @@ jobs:
             full-logical.json
             full-physical.json
             p0-streaming-e2e.json
+            pi-home-goal-benchmark.json
