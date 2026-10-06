@@ -5,6 +5,8 @@ on:
     paths:
       - "requirements-asr.txt"
       - "data/spoken-home-command-corpus-v1.json"
+      - "data/home-asr-hotwords.txt"
+      - "data/home-asr-hotwords.txt"
       - "scripts/generate_spoken_home_fixture.py"
       - "scripts/sherpa_streaming_asr.py"
       - "scripts/asr_event_protocol.py"
@@ -51,8 +53,8 @@ jobs:
         run: |
           wget -q https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/vits-icefall-zh-aishell3.tar.bz2
           tar xjf vits-icefall-zh-aishell3.tar.bz2
-          wget -q https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-streaming-zipformer-zh-14M-2023-02-23.tar.bz2
-          tar xjf sherpa-onnx-streaming-zipformer-zh-14M-2023-02-23.tar.bz2
+          wget -q https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-streaming-zipformer-zh-int8-2025-06-30.tar.bz2
+          tar xjf sherpa-onnx-streaming-zipformer-zh-int8-2025-06-30.tar.bz2
 
       - name: Install semantic checkpoint runtime
         run: pip install --index-url https://download.pytorch.org/whl/cpu torch
@@ -84,7 +86,7 @@ jobs:
         run: |
           set -euo pipefail
           TTS=vits-icefall-zh-aishell3
-          ASR=sherpa-onnx-streaming-zipformer-zh-14M-2023-02-23
+          ASR=sherpa-onnx-streaming-zipformer-zh-int8-2025-06-30
           TEXT="打开主卧空调"
 
           for SID in 10 33 99; do
@@ -104,9 +106,13 @@ jobs:
             python scripts/sherpa_streaming_asr.py \
               --wav "$WAV" \
               --tokens "$ASR/tokens.txt" \
-              --encoder "$ASR/encoder-epoch-99-avg-1.int8.onnx" \
-              --decoder "$ASR/decoder-epoch-99-avg-1.onnx" \
-              --joiner "$ASR/joiner-epoch-99-avg-1.int8.onnx" \
+              --encoder "$ASR/encoder.int8.onnx" \
+              --decoder "$ASR/decoder.onnx" \
+              --joiner "$ASR/joiner.int8.onnx" \
+              --decoding-method modified_beam_search \
+              --hotwords-file data/home-asr-hotwords.txt \
+              --hotwords-score 2.0 \
+              --modeling-unit cjkchar \
               > "$EVENTS"
 
             cat "$EVENTS"
