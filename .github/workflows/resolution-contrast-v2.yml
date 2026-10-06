@@ -9,6 +9,7 @@ on:
       - scripts/layered_flywire.py
       - scripts/flywire_encoder.py
       - scripts/responsibility_heads.py
+      - scripts/test_compositional_resolution.py
       - scripts/responsibility_loss.py
       - scripts/resolution_gold.py
       - scripts/resolution_contrast_loss.py
@@ -24,7 +25,7 @@ jobs:
         with:
           python-version: "3.12"
       - name: Compile
-        run: python -m py_compile scripts/contextual_state_transition_corpus_v2.py scripts/layered_dataset.py scripts/layered_training_data.py scripts/layered_flywire.py scripts/resolution_contrast_loss.py scripts/train_resolution_contrast_v2.py scripts/test_contextual_state_transition_corpus_v2.py scripts/test_resolution_contrast_loss.py scripts/test_resolution_membership.py
+        run: python -m py_compile scripts/contextual_state_transition_corpus_v2.py scripts/layered_dataset.py scripts/layered_training_data.py scripts/layered_flywire.py scripts/resolution_contrast_loss.py scripts/train_resolution_contrast_v2.py scripts/test_contextual_state_transition_corpus_v2.py scripts/test_resolution_contrast_loss.py scripts/test_resolution_membership.py scripts/test_compositional_resolution.py
       - name: Install PyTorch CPU
         run: pip install --index-url https://download.pytorch.org/whl/cpu torch
       - name: Validate V2 corpus
@@ -33,6 +34,8 @@ jobs:
         run: python scripts/test_resolution_contrast_loss.py
       - name: Validate ONE/SET
         run: python scripts/test_resolution_membership.py
+      - name: Validate compositional SET resolution
+        run: python scripts/test_compositional_resolution.py
       - name: Prepare verified FlyWire graph
         run: python scripts/prepare_flywire_graph.py --download --neurons 512 --out artifacts/flywire
       - name: Run paired baseline vs contrast
