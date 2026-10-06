@@ -6,6 +6,7 @@ const {
   expandSetPatch
 }=require("./whole_home_patch_contract.cjs");
 const {executePhysicalTurn}=require("./physical_runtime.cjs");
+const {evaluateDesiredState}=require("./desired_state_evaluator.cjs");
 
 function clone(v){return v==null?v:JSON.parse(JSON.stringify(v))}
 function eq(a,b){return JSON.stringify(a)===JSON.stringify(b)}
@@ -90,6 +91,80 @@ class HomeGoalRuntime{
     const ep=this.requireActive(goalId);
     ep.feedback.push(clone(feedback));
     return clone(ep);
+  }
+
+  evaluateGoal(goalId,observation={}){
+    const ep=this.requireActive(goalId);
+    const evaluation=evaluateDesiredState(ep.desired_state,{
+      runtime:this.runtime,
+      observation
+    });
+    ep.last_evaluation=clone(evaluation);
+    ep.last_observation=clone(observation);
+    return clone(evaluation);
+  }
+
+  async recheckGoal(goalId,{observation={},planner=null,turn_id=null}={}){
+    const evaluation=this.evaluateGoal(goalId,observation);
+    if(evaluation.satisfied){
+      const ep=this.requireActive(goalId);
+      ep.status="completed";
+      ep.completed=true;
+      ep.completed_observation=clone(observation);
+      return {
+        completed:true,
+        action_taken:false,
+        evaluation:clone(evaluation),
+        runtime:normalizeRuntime(this.runtime),
+        episode:clone(ep)
+      };
+    }
+    if(typeof planner!=="function"){
+      return {
+        completed:false,
+        action_taken:false,
+        evaluation:clone(evaluation),
+        runtime:normalizeRuntime(this.runtime),
+        episode:clone(this.requireActive(goalId))
+      };
+    }
+    const ep=this.requireActive(goalId);
+    const proposal=await planner({
+      goal:clone(ep.goal),
+      strategy:clone(ep.strategy),
+      desired_state:clone(ep.desired_state),
+      constraints:clone(ep.constraints),
+      evaluation:clone(evaluation),
+      observation:clone(observation),
+      runtime:normalizeRuntime(this.runtime)
+    })||{};
+    if(proposal.strategy!==undefined){
+      this.updateStrategy(goalId,proposal.strategy,{
+        reason:proposal.reason||"autonomous_recheck",
+        feedback:proposal.feedback||null
+      });
+    }
+    const patches=Array.isArray(proposal.patches)?proposal.patches:[];
+    if(!patches.length){
+      return {
+        completed:false,
+        action_taken:false,
+        evaluation:clone(evaluation),
+        proposal:clone(proposal),
+        runtime:normalizeRuntime(this.runtime),
+        episode:clone(this.requireActive(goalId))
+      };
+    }
+    const applied=await this.applyAgentPatches(goalId,patches,{
+      turn_id:turn_id||("recheck:"+goalId)
+    });
+    return {
+      completed:false,
+      action_taken:true,
+      evaluation:clone(evaluation),
+      proposal:clone(proposal),
+      ...applied
+    };
   }
 
   captureOwnership(ep,patch,beforeRuntime){
