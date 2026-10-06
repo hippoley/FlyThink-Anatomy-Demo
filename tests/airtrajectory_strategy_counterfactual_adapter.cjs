@@ -26,6 +26,7 @@ const origin={
     transport:async req=>{
       seen=req;
       return {
+        schema_version:"0.3",
         profile_id:"home-v1",
         topology_id:"home-v1",
         backend:"contamxpy",
@@ -73,6 +74,38 @@ const origin={
   assert.equal(mixed.strategy.unsupported_action_count,1);
   assert.equal(mixed.trusted_for_promotion,false);
   assert.equal(mixed.simulator.trust_reason,"strategy_partially_simulated");
+
+  const stale=new AirTrajectoryStrategyCounterfactualAdapter({
+    profile_id:"home-v1",
+    opening_map:{"客厅::窗户::default":"W1"},
+    transport:async()=>({
+      schema_version:"0.2",
+      profile_id:"home-v1",
+      backend:"contamxpy",
+      physics_fidelity:"CONTAM",
+      branches:[]
+    })
+  });
+  await assert.rejects(
+    stale.simulate({label:"stale",patches:[patches[0]],origin}),
+    /schema_too_old/
+  );
+
+  const mismatch=new AirTrajectoryStrategyCounterfactualAdapter({
+    profile_id:"home-v1",
+    opening_map:{"客厅::窗户::default":"W1"},
+    transport:async()=>({
+      schema_version:"0.3",
+      profile_id:"other-home",
+      backend:"contamxpy",
+      physics_fidelity:"CONTAM",
+      branches:[]
+    })
+  });
+  await assert.rejects(
+    mismatch.simulate({label:"mismatch",patches:[patches[0]],origin}),
+    /profile_mismatch/
+  );
 
   const built=buildStrategyRequest({
     profile_id:"home-v1",
