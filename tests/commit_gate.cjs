@@ -26,8 +26,6 @@ for(const state of ["unstable","partial","tentative","streaming","hypothesis"]){
 assert.equal(evaluateCommit({decision:"EXECUTE",patches:[],commit_state:"safe_to_commit"}).allow,false);
 assert.equal(evaluateCommit({decision:"CLARIFY",patches:patch,commit_state:"safe_to_commit"}).allow,false);
 
-console.log(JSON.stringify({ok:true,contract:"semantic hypothesis != committed mutation"}));
-
 {
   const g=evaluateCommit({decision:"EXECUTE",patches:patch,commit_state:"stable",mode:"streaming"});
   assert.equal(g.allow,false);
@@ -37,3 +35,34 @@ console.log(JSON.stringify({ok:true,contract:"semantic hypothesis != committed m
   const g=evaluateCommit({decision:"EXECUTE",patches:patch,commit_state:"final",mode:"streaming"});
   assert.equal(g.allow,true);
 }
+
+// A semantic proposal based on an old world-state revision must not execute,
+// even when its semantic commit state is otherwise final.
+{
+  const g=evaluateCommit({
+    decision:"EXECUTE",patches:patch,commit_state:"final",mode:"streaming",
+    base_revision:41,current_revision:42
+  });
+  assert.equal(g.allow,false);
+  assert.equal(g.deferred,false);
+  assert.equal(g.reason,"stale_base_revision");
+  assert.equal(g.base_revision,41);
+  assert.equal(g.current_revision,42);
+}
+
+// Matching revisions preserve normal execution.
+{
+  const g=evaluateCommit({
+    decision:"EXECUTE",patches:patch,commit_state:"final",mode:"streaming",
+    base_revision:42,current_revision:42
+  });
+  assert.equal(g.allow,true);
+}
+
+console.log(JSON.stringify({
+  ok:true,
+  contracts:[
+    "semantic hypothesis != committed mutation",
+    "stale world-state revision != committed mutation"
+  ]
+}));
