@@ -78,15 +78,21 @@ function evaluateDesiredState(desiredState,context={}){
     };
   });
   const required=results.filter(x=>x.required);
+  const missingRequired=required.filter(x=>x.missing);
   const weighted=results.reduce((a,x)=>a+(x.satisfied?x.weight:0),0);
   const totalWeight=results.reduce((a,x)=>a+x.weight,0);
-  const satisfied=required.every(x=>x.satisfied);
+  const configured=results.length>0;
+  const ready=configured&&missingRequired.length===0;
+  const satisfied=ready&&required.every(x=>x.satisfied);
   return {
+    configured,
+    ready,
     satisfied,
-    score:totalWeight?weighted/totalWeight:1,
+    score:totalWeight?weighted/totalWeight:0,
     clauses:results,
     deficits:results.filter(x=>!x.satisfied),
-    missing:results.filter(x=>x.missing)
+    missing:results.filter(x=>x.missing),
+    missing_required:missingRequired
   };
 }
 
