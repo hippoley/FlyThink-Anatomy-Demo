@@ -58,6 +58,7 @@ function adapterFor(caseDef,bestTarget){
     adapter:adapterFor(quiet,quiet.gold.expected_targets[0]),
     constraints:[{path:"result.end_co2_ppm",op:"<",value:1000}],
     objectives:[{path:"result.end_co2_ppm",direction:"min",weight:1}],
+    evidence_dimensions:["co2","airflow"],
     request_id:"quiet"
   });
   assert.equal(quietOut.candidate_set.total,2);
@@ -75,15 +76,32 @@ function adapterFor(caseDef,bestTarget){
     adapter:adapterFor(rain,rain.gold.expected_targets[0]),
     constraints:[{path:"result.end_co2_ppm",op:"<",value:1000}],
     objectives:[{path:"result.end_co2_ppm",direction:"min",weight:1}],
+    evidence_dimensions:["co2","airflow"],
     request_id:"rain"
   });
   assert.equal(rainOut.candidate_set.total,3);
   assert.equal(rainOut.candidate_set.eligible.length,3);
   assert.equal(rainOut.candidate_set.unsupported.length,0);
   assert.equal(rainOut.candidate_set.candidate_set_complete,true);
-  assert.equal(rainOut.decision,"COUNTERFACTUAL_CONFIRMED");
-  assert.equal(rainOut.counterfactual_confirmed,true);
-  assert.equal(rainOut.trusted_for_generalization_claim,true);
+  assert.equal(rainOut.decision,"PARTIAL_PHYSICS_EVIDENCE");
+  assert.equal(rainOut.reason,"physics_constraint_coverage_incomplete");
+  assert.deepEqual(rainOut.physics_dimensions.missing,["rain_ingress"]);
+  assert.equal(rainOut.counterfactual_confirmed,false);
+  assert.equal(rainOut.trusted_for_generalization_claim,false);
+
+  const rainFullyCovered=await evaluateLearnedCandidatePhysics({
+    case_def:rain,
+    learned_row:rowFor(rain),
+    adapter:adapterFor(rain,rain.gold.expected_targets[0]),
+    constraints:[{path:"result.end_co2_ppm",op:"<",value:1000}],
+    objectives:[{path:"result.end_co2_ppm",direction:"min",weight:1}],
+    evidence_dimensions:["co2","airflow","rain_ingress"],
+    request_id:"rain-full"
+  });
+  assert.equal(rainFullyCovered.decision,"COUNTERFACTUAL_CONFIRMED");
+  assert.equal(rainFullyCovered.physics_dimensions.complete,true);
+  assert.equal(rainFullyCovered.counterfactual_confirmed,true);
+  assert.equal(rainFullyCovered.trusted_for_generalization_claim,true);
 
   console.log(JSON.stringify({
     ok:true,
