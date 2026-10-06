@@ -6,7 +6,6 @@ on:
       - "requirements-asr.txt"
       - "data/spoken-home-command-corpus-v1.json"
       - "data/home-asr-hotwords.txt"
-      - "data/home-asr-hotwords.txt"
       - "scripts/generate_spoken_home_fixture.py"
       - "scripts/sherpa_streaming_asr.py"
       - "scripts/asr_event_protocol.py"
@@ -22,6 +21,7 @@ on:
     paths:
       - "requirements-asr.txt"
       - "data/spoken-home-command-corpus-v1.json"
+      - "data/home-asr-hotwords.txt"
       - "scripts/generate_spoken_home_fixture.py"
       - "scripts/sherpa_streaming_asr.py"
       - "scripts/asr_event_protocol.py"
@@ -51,8 +51,13 @@ jobs:
 
       - name: Download Chinese TTS and streaming ASR models
         run: |
-          wget -q https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/vits-icefall-zh-aishell3.tar.bz2
-          tar xjf vits-icefall-zh-aishell3.tar.bz2
+          for MODEL in \
+            vits-melo-tts-zh_en \
+            sherpa-onnx-vits-zh-ll \
+            vits-zh-hf-fanchen-wnj; do
+            wget -q "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/${MODEL}.tar.bz2"
+            tar xjf "${MODEL}.tar.bz2"
+          done
           wget -q https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-streaming-zipformer-zh-xlarge-int8-2025-06-30.tar.bz2
           tar xjf sherpa-onnx-streaming-zipformer-zh-xlarge-int8-2025-06-30.tar.bz2
 
@@ -82,29 +87,38 @@ jobs:
           python scripts/generate_long_trajectory_benchmark_v2.py --count 1 --out benchmarks/spoken-runtime.json
           mkdir -p artifacts/spoken-home
 
-      - name: Generate, recognize, execute, and verify three voices
+      - name: Generate, recognize, execute, and verify three independent TTS engines
         run: |
           set -uo pipefail
-          TTS=vits-icefall-zh-aishell3
           ASR=sherpa-onnx-streaming-zipformer-zh-xlarge-int8-2025-06-30
           TEXT="打开主卧空调"
           FAIL=0
           : > artifacts/spoken-home/diagnostics.jsonl
 
-          for SID in 10 33 99; do
-            WAV="artifacts/spoken-home/open-main-bedroom-ac-sid-${SID}.wav"
-            EVENTS="artifacts/spoken-home/open-main-bedroom-ac-sid-${SID}.events.jsonl"
-            RESULT="artifacts/spoken-home/open-main-bedroom-ac-sid-${SID}.result.json"
-            VALIDATION="artifacts/spoken-home/open-main-bedroom-ac-sid-${SID}.validation.txt"
+          run_voice () {
+            ID="$1"
+            DIR="$2"
+            MODEL="$3"
+            SID="$4"
+            RULES="$5"
 
-            python scripts/generate_spoken_home_fixture.py \
-              --model "$TTS/model.onnx" \
-              --lexicon "$TTS/lexicon.txt" \
-              --tokens "$TTS/tokens.txt" \
-              --rule-fsts "$TTS/phone.fst,$TTS/date.fst,$TTS/number.fst" \
-              --sid "$SID" \
-              --output "$WAV" \
-              "$TEXT" || { echo "TTS failed for SID=$SID"; FAIL=1; continue; }
+            WAV="artifacts/spoken-home/${ID}.wav"
+            EVENTS="artifacts/spoken-home/${ID}.events.jsonl"
+            RESULT="artifacts/spoken-home/${ID}.result.json"
+            VALIDATION="artifacts/spoken-home/${ID}.validation.txt"
+
+            ARGS=(
+              --model "$DIR/$MODEL"
+              --lexicon "$DIR/lexicon.txt"
+              --tokens "$DIR/tokens.txt"
+              --sid "$SID"
+              --output "$WAV"
+            )
+            if [ -n "$RULES" ]; then
+              ARGS+=(--rule-fsts "$RULES")
+            fi
+            python scripts/generate_spoken_home_fixture.py "${ARGS[@]}" "$TEXT" \
+              || { echo "TTS failed for ID=$ID"; FAIL=1; return; }
 
             python scripts/sherpa_streaming_asr.py \
               --wav "$WAV" \
@@ -116,15 +130,15 @@ jobs:
               --hotwords-file data/home-asr-hotwords.txt \
               --hotwords-score 2.0 \
               --modeling-unit cjkchar \
-              > "$EVENTS" || { echo "ASR failed for SID=$SID"; FAIL=1; continue; }
+              > "$EVENTS" || { echo "ASR failed for ID=$ID"; FAIL=1; return; }
 
             cat "$EVENTS"
-            python - "$SID" "$EVENTS" >> artifacts/spoken-home/diagnostics.jsonl <<'PY'
+            python - "$ID" "$EVENTS" >> artifacts/spoken-home/diagnostics.jsonl <<'PY'
           import json,sys
-          sid=int(sys.argv[1])
+          voice=sys.argv[1]
           rows=[json.loads(x) for x in open(sys.argv[2],encoding="utf-8") if x.strip()]
           print(json.dumps({
-              "sid":sid,
+              "voice":voice,
               "partials":[x["text"] for x in rows if x["kind"]=="partial"],
               "stable":[x["text"] for x in rows if x["kind"]=="stable"],
               "final":[x["text"] for x in rows if x["kind"]=="final"],
@@ -137,9 +151,9 @@ jobs:
               --judgement artifacts/context-judgement-v3/model.pt \
               --semantic artifacts/semantic-patch-v1/model.pt \
               > "$RESULT"; then
-              echo "SLU runtime failed for SID=$SID" | tee "$VALIDATION"
+              echo "SLU runtime failed for ID=$ID" | tee "$VALIDATION"
               FAIL=1
-              continue
+              return
             fi
 
             if ! node scripts/validate_spoken_home_acoustic.cjs \
@@ -147,12 +161,33 @@ jobs:
               --case open-main-bedroom-ac \
               --events "$EVENTS" \
               --result "$RESULT" | tee "$VALIDATION"; then
-              echo "VALIDATION FAILED SID=$SID" | tee -a "$VALIDATION"
+              echo "VALIDATION FAILED ID=$ID" | tee -a "$VALIDATION"
               FAIL=1
             fi
-          done
+          }
 
-          echo "=== all speaker diagnostics ==="
+          run_voice \
+            melo-zh \
+            vits-melo-tts-zh_en \
+            model.onnx \
+            0 \
+            "vits-melo-tts-zh_en/phone.fst,vits-melo-tts-zh_en/date.fst,vits-melo-tts-zh_en/number.fst"
+
+          run_voice \
+            zh-ll-0 \
+            sherpa-onnx-vits-zh-ll \
+            model.onnx \
+            0 \
+            "sherpa-onnx-vits-zh-ll/phone.fst,sherpa-onnx-vits-zh-ll/number.fst"
+
+          run_voice \
+            fanchen-wnj \
+            vits-zh-hf-fanchen-wnj \
+            vits-zh-hf-fanchen-wnj.onnx \
+            0 \
+            "vits-zh-hf-fanchen-wnj/phone.fst,vits-zh-hf-fanchen-wnj/number.fst"
+
+          echo "=== cross-engine diagnostics ==="
           cat artifacts/spoken-home/diagnostics.jsonl
           exit "$FAIL"
 
