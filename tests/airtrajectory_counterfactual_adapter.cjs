@@ -42,10 +42,37 @@ const origin={
   assert.equal(out.simulator.trust_reason,"toy_backend_not_engineering_truth");
 
   const contamTrust=classifySimulationTrust(
-    {backend:"contamxpy",physics_fidelity:"CONTAM"},
-    {provenance:"backend-generated · CONTAM"}
+    {backend:"contamxpy",physics_fidelity:"CONTAM",trusted_for_promotion:true},
+    {provenance:"backend-generated · CONTAM",trusted_for_promotion:true}
   );
   assert.equal(contamTrust.trusted_for_promotion,true);
+
+  let contamSeen=null;
+  const contam=new AirTrajectoryCounterfactualAdapter({
+    endpoint:"/fork/contam",
+    profile_id:"home-v1",
+    opening_map:{"客厅::窗户::default":"W1"},
+    transport:async req=>{
+      contamSeen=req;
+      return {
+        backend:"contamxpy",
+        physics_fidelity:"CONTAM",
+        trusted_for_promotion:true,
+        branches:[{
+          target_pct:75,
+          end_co2_ppm:850,
+          series:[1400,1100,850],
+          return:1.2,
+          provenance:"backend-generated · CONTAM",
+          trusted_for_promotion:true
+        }]
+      };
+    }
+  });
+  const contamOut=await contam.simulate({patch,origin,request_id:"contam-shadow"});
+  assert.equal(contamSeen.profile_id,"home-v1");
+  assert.equal(contamSeen.topology_id,undefined);
+  assert.equal(contamOut.trusted_for_promotion,true);
 
   assert.throws(()=>selectExactBranch({branches:[{target_pct:50}]},75),/exact_branch_missing/);
 
