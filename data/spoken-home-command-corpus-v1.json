@@ -1,0 +1,28 @@
+{
+  "truth": "synthetic_spoken_home_command_corpus_v1",
+  "provenance": {
+    "kind": "synthetic_tts",
+    "claim_limit": "This corpus validates acoustic integration and execution semantics; it is not human-speech accuracy evidence.",
+    "tts_model": "vits-icefall-zh-aishell3",
+    "asr_model": "sherpa-onnx-streaming-zipformer-zh-14M-2023-02-23"
+  },
+  "cases": [
+    {
+      "id": "open-main-bedroom-ac",
+      "text": "打开主卧空调",
+      "speakers": [10, 33, 99],
+      "expected": {
+        "decision": "EXECUTE",
+        "op": "ADD_DEVICE",
+        "target": {
+          "area": "主卧",
+          "entity": "空调",
+          "instance": "default"
+        },
+        "slot": "power",
+        "value": "ON",
+        "physical_commands": 1
+      }
+    }
+  ]
+}
