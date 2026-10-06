@@ -33,7 +33,11 @@ function adapterFor(caseDef,bestTarget){
           simulator:{service:"AirTrajectory",backend:"contamxpy",physics_fidelity:"CONTAM"},
           strategy:{
             patches:[patch],
-            simulated_actions:[{opening_id:"W"+String(index+1),target_pct:patch.value}],
+            simulated_actions:[
+              patch.slot==="opening"
+                ?{kind:"opening",opening_id:"W"+String(index+1),target_pct:patch.value}
+                :{kind:"scalar",actuator_id:"FAN1",target_value:patch.value}
+            ],
             unsupported_actions:[],
             simulated_action_count:1,
             unsupported_action_count:0,
@@ -61,12 +65,27 @@ function adapterFor(caseDef,bestTarget){
     request_id:"quiet"
   });
   assert.equal(quietOut.candidate_set.total,2);
-  assert.equal(quietOut.candidate_set.eligible.length,1);
-  assert.equal(quietOut.candidate_set.unsupported.length,1);
-  assert.equal(quietOut.candidate_set.candidate_set_complete,false);
-  assert.equal(quietOut.decision,"BLOCKED");
-  assert.equal(quietOut.reason,"candidate_set_incomplete_physics_coverage");
-  assert.equal(quietOut.trusted_for_generalization_claim,false);
+  assert.equal(quietOut.candidate_set.eligible.length,2);
+  assert.equal(quietOut.candidate_set.unsupported.length,0);
+  assert.equal(quietOut.candidate_set.candidate_set_complete,true);
+  assert.equal(quietOut.decision,"COUNTERFACTUAL_CONFIRMED");
+  assert.equal(quietOut.counterfactual_confirmed,true);
+  assert.equal(quietOut.trusted_for_generalization_claim,true);
+
+  const quietWithoutMapping=JSON.parse(JSON.stringify(quiet));
+  quietWithoutMapping.physics.actuator_map={};
+  const blockedQuiet=await evaluateLearnedCandidatePhysics({
+    case_def:quietWithoutMapping,
+    learned_row:rowFor(quietWithoutMapping),
+    adapter:adapterFor(quietWithoutMapping,quietWithoutMapping.gold.expected_targets[0]),
+    constraints:[{path:"result.end_co2_ppm",op:"<",value:1000}],
+    objectives:[{path:"result.end_co2_ppm",direction:"min",weight:1}],
+    request_id:"quiet-mapping-missing"
+  });
+  assert.equal(blockedQuiet.candidate_set.eligible.length,1);
+  assert.equal(blockedQuiet.candidate_set.unsupported.length,1);
+  assert.equal(blockedQuiet.decision,"BLOCKED");
+  assert.equal(blockedQuiet.reason,"candidate_set_incomplete_physics_coverage");
 
   const rain=data.cases.find(x=>x.id==="topology-rain-new-apt");
   const rainOut=await evaluateLearnedCandidatePhysics({
@@ -87,6 +106,6 @@ function adapterFor(caseDef,bestTarget){
 
   console.log(JSON.stringify({
     ok:true,
-    contract:"learned target may claim physical confirmation only when the entire candidate set is physically comparable"
+    contract:"mapped mechanical actuators close candidate-set physics coverage; missing mappings still fail closed"
   }));
 })().catch(e=>{console.error(e);process.exit(1)});
