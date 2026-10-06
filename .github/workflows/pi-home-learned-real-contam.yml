@@ -8,6 +8,13 @@ on:
       - "scripts/eval_pi_home_candidate_checkpoint.py"
       - "benchmarks/pi_home_candidate_generalization.json"
       - ".github/workflows/pi-home-learned-real-contam.yml"
+  push:
+    paths:
+      - "scripts/run_pi_home_learned_real_contam.py"
+      - "scripts/train_pi_home_candidate_checkpoint.py"
+      - "scripts/eval_pi_home_candidate_checkpoint.py"
+      - "benchmarks/pi_home_candidate_generalization.json"
+      - ".github/workflows/pi-home-learned-real-contam.yml"
   workflow_dispatch:
 
 jobs:
