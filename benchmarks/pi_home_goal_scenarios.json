@@ -1,0 +1,56 @@
+{
+  "version": "pi-home-goal-v1",
+  "scenarios": [
+    {
+      "id": "cooking-rain-noise",
+      "goal": {"type": "comfort", "room": "厨房"},
+      "strategy": {"name": "cross_room_ventilation"},
+      "desired_state": [
+        {"id":"co2","source":"observation","path":"kitchen.co2","op":"<","value":900},
+        {"id":"temp","source":"observation","path":"kitchen.temperature","op":"between","min":25,"max":27},
+        {"id":"rain-safe","source":"observation","path":"risk.rain_ingress","op":"==","value":false}
+      ],
+      "observations": [
+        {"kitchen":{"co2":1450,"temperature":29.1},"risk":{"rain_ingress":false}},
+        {"kitchen":{"co2":1080,"temperature":27.8},"risk":{"rain_ingress":false}},
+        {"kitchen":{"co2":860,"temperature":26.6},"risk":{"rain_ingress":false}}
+      ],
+      "expected": {
+        "strategy_switch": true,
+        "completed": true
+      }
+    },
+    {
+      "id": "missing-co2-fail-closed",
+      "goal": {"type": "comfort", "room": "厨房"},
+      "strategy": {"name": "quiet_cross_room"},
+      "desired_state": [
+        {"id":"co2","source":"observation","path":"kitchen.co2","op":"<","value":900},
+        {"id":"rain-safe","source":"observation","path":"risk.rain_ingress","op":"==","value":false}
+      ],
+      "observations": [
+        {"kitchen":{"temperature":26.2},"risk":{"rain_ingress":false}}
+      ],
+      "expected": {
+        "blocked_reason": "required_observation_missing",
+        "physical_commands": 0
+      }
+    },
+    {
+      "id": "already-satisfied-no-action",
+      "goal": {"type": "comfort", "room": "厨房"},
+      "strategy": {"name": "quiet_cross_room"},
+      "desired_state": [
+        {"id":"co2","source":"observation","path":"kitchen.co2","op":"<","value":900},
+        {"id":"temp","source":"observation","path":"kitchen.temperature","op":"between","min":25,"max":27}
+      ],
+      "observations": [
+        {"kitchen":{"co2":780,"temperature":26.1}}
+      ],
+      "expected": {
+        "completed": true,
+        "physical_commands": 0
+      }
+    }
+  ]
+}
