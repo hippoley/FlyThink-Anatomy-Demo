@@ -9,10 +9,12 @@ on:
       - "scripts/home_goal_runtime.cjs"
       - "scripts/desired_state_evaluator.cjs"
       - "scripts/run_pi_home_goal_benchmark.cjs"
+      - "scripts/pi_home_trajectory.cjs"
       - "tests/streaming_slu_e2e.cjs"
       - "tests/home_goal_runtime.cjs"
       - "tests/desired_state_evaluator.cjs"
       - "tests/autonomous_episode.cjs"
+      - "tests/pi_home_trajectory.cjs"
       - "benchmarks/pi_home_goal_scenarios.json"
       - "tests/commit_gate.cjs"
       - "scripts/stateful_checkpoint_trajectory.cjs"
@@ -44,10 +46,12 @@ on:
       - "scripts/home_goal_runtime.cjs"
       - "scripts/desired_state_evaluator.cjs"
       - "scripts/run_pi_home_goal_benchmark.cjs"
+      - "scripts/pi_home_trajectory.cjs"
       - "tests/streaming_slu_e2e.cjs"
       - "tests/home_goal_runtime.cjs"
       - "tests/desired_state_evaluator.cjs"
       - "tests/autonomous_episode.cjs"
+      - "tests/pi_home_trajectory.cjs"
       - "benchmarks/pi_home_goal_scenarios.json"
       - "tests/commit_gate.cjs"
       - "scripts/stateful_checkpoint_trajectory.cjs"
@@ -87,6 +91,7 @@ jobs:
           node tests/home_goal_runtime.cjs
           node tests/desired_state_evaluator.cjs
           node tests/autonomous_episode.cjs
+          node tests/pi_home_trajectory.cjs
           node scripts/run_pi_home_goal_benchmark.cjs > pi-home-goal-benchmark.json
           cat pi-home-goal-benchmark.json
       - run: pip install --index-url https://download.pytorch.org/whl/cpu torch
