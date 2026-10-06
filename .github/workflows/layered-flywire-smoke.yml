@@ -1,0 +1,37 @@
+name: layered-flywire-smoke
+on:
+  push:
+    paths:
+      - "scripts/flywire_encoder.py"
+      - "scripts/layered_flywire.py"
+      - "scripts/layered_dataset.py"
+      - "scripts/audit_layered_coverage.py"
+      - ".github/workflows/layered-flywire-smoke.yml"
+  workflow_dispatch:
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - run: pip install --index-url https://download.pytorch.org/whl/cpu torch
+      - run: python -m py_compile scripts/flywire_encoder.py scripts/layered_flywire.py scripts/layered_dataset.py scripts/audit_layered_coverage.py
+      - run: python scripts/audit_layered_coverage.py
+      - run: |
+          python - <<'PY'
+          import json,sys,torch
+          from pathlib import Path
+          sys.path.insert(0,"scripts")
+          from layered_flywire import LayeredFlyWire
+          from train_flywire_delta import text_features
+          from semantic_context_features import features
+          p=Path("artifacts/flywire/connectome.json")
+          if not p.exists():
+            print("graph absent in smoke checkout; architecture compile/coverage PASS; graph forward deferred to training workflow")
+            raise SystemExit(0)
+          g=json.loads(p.read_text());m=LayeredFlyWire(g)
+          x=torch.cat([text_features("测试"),features({})]).unsqueeze(0);o=m(x)
+          assert set(o)=={"semantic","resolution","judgement"}
+          print({"layered_forward":"PASS","readout":m.encoder.output_dim})
+          PY
