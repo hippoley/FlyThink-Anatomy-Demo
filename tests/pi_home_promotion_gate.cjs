@@ -30,6 +30,24 @@ assert.equal(waiting.evidence_summary.duplicate_evidence,0);
 assert.equal(waiting.policy_switch_authorized,false);
 assert.equal(waiting.device_execution_authorized,false);
 
+const missingCandidate=evaluatePromotionGate(records,{
+  min_cases:3,
+  min_mean_advantage:.2,
+  approval:{approved:true,actor:"operator-1"}
+});
+assert.equal(missingCandidate.decision,"HOLD_SHADOW");
+assert.equal(missingCandidate.reason,"candidate_policy_id_required");
+
+const scopeMismatch=evaluatePromotionGate(records,{
+  min_cases:3,
+  min_mean_advantage:.2,
+  candidate_policy_id:"home-policy-v2",
+  approval:{approved:true,actor:"operator-1",scope:"home-policy-v3"}
+});
+assert.equal(scopeMismatch.decision,"AWAIT_HUMAN_APPROVAL");
+assert.equal(scopeMismatch.reason,"approval_scope_mismatch");
+assert.equal(scopeMismatch.policy_switch_authorized,false);
+
 const approved=evaluatePromotionGate(records,{
   min_cases:3,
   min_mean_advantage:.2,
