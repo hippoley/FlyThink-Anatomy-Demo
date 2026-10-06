@@ -24,7 +24,7 @@ def pack(items):
         xs.append(torch.cat([text_features(r["text"]),context_features({"text":r["text"],**r["context"]})]))
         ys.append({
             "semantic":{"op":OPS.index(sem["op"]),"cardinality":CARD.index(sem["cardinality"]),"direction":DIR.index(sem["direction"]),"has_value":int(sem["has_value"])},
-            "resolution":{"room":ROOMS.index(res["room"]),"entity":ENTITIES.index(res["entity"]),"slot":SLOTS.index(res["slot"]),"membership":membership,"room_membership":room_membership,"entity_membership":entity_membership},
+            "resolution":{"room":ROOMS.index(res["room"]),"entity":ENTITIES.index(res["entity"]),"slot":SLOTS.index(res["slot"]),"membership":membership,"room_membership":room_membership,"entity_membership":entity_membership,"room_count":len({t["area"] for t in ts}) if res.get("applicable",False) else 0},
             "resolution_one":one,"resolution_set":sett,"judgement":DECISIONS.index(lab["judgement"])
         })
     return torch.stack(xs),ys
@@ -32,9 +32,10 @@ def pack(items):
 def batch_targets(ys,device="cpu"):
     out={"semantic":{},"resolution":{}}
     for k in ("op","cardinality","direction","has_value"):out["semantic"][k]=torch.tensor([y["semantic"][k] for y in ys],device=device)
-    for k in ("room","entity","slot"):out["resolution"][k]=torch.tensor([y["resolution"][k] for y in ys],device=device)
+    for k in ("room","entity","slot","room_count"):out["resolution"][k]=torch.tensor([y["resolution"][k] for y in ys],device=device)
     for k in ("membership","room_membership","entity_membership"):out["resolution"][k]=torch.tensor([y["resolution"][k] for y in ys],dtype=torch.float32,device=device)
     out["judgement"]=torch.tensor([y["judgement"] for y in ys],device=device)
     out["resolution_one_mask"]=torch.tensor([y["resolution_one"] for y in ys],dtype=torch.bool,device=device)
+    out["resolution_applicable_mask"]=torch.tensor([y["resolution_one"] or y["resolution_set"] for y in ys],dtype=torch.bool,device=device)
     out["resolution_set_mask"]=torch.tensor([y["resolution_set"] for y in ys],dtype=torch.bool,device=device)
     return out
