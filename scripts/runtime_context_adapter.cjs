@@ -26,7 +26,7 @@ function deriveContext(runtime,history=[]){
    semantic_patch:lastExecution.semantic_patch||lastExecution.patch||null,
    observation:lastExecution.observation||null
   }:null,
-  protected_paths:Object.keys((runtime&&runtime.protectedInvariants)||{}),
+  active_goals:activeGoals,\n  protected_paths:Object.keys((runtime&&runtime.protectedInvariants)||{}),
   device_keys:Object.keys((runtime&&runtime.devices)||{}),
   device_registry:Object.fromEntries(Object.entries((runtime&&runtime.devices)||{}).filter(([,v])=>v&&v.model_id).map(([k,v])=>[k,{model_id:v.model_id}]))
  };
