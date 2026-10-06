@@ -44,6 +44,7 @@ on:
       - "scripts/pi_home_generalization_counterfactual.cjs"
       - "scripts/pi_home_generalization_claim.cjs"
       - "scripts/pi_home_evidence_adjudicator.cjs"
+      - "scripts/run_pi_home_evidence_pipeline.cjs"
       - "scripts/pi_home_learned_physics_gate.cjs"
       - "scripts/pi_home_learned_candidate_physics.cjs"
       - "scripts/run_pi_home_learned_real_contam.py"
@@ -85,6 +86,7 @@ on:
       - "tests/pi_home_generalization_counterfactual.cjs"
       - "tests/pi_home_generalization_claim.cjs"
       - "tests/pi_home_evidence_adjudicator.cjs"
+      - "tests/pi_home_evidence_pipeline.cjs"
       - "tests/pi_home_learned_physics_gate.cjs"
       - "tests/pi_home_learned_candidate_physics.cjs"
       - "benchmarks/pi_home_candidate_generalization.json"
@@ -267,6 +269,7 @@ jobs:
           node tests/pi_home_generalization_counterfactual.cjs
           node tests/pi_home_generalization_claim.cjs
           node tests/pi_home_evidence_adjudicator.cjs
+          node tests/pi_home_evidence_pipeline.cjs
           node tests/pi_home_learned_physics_gate.cjs
           node tests/pi_home_learned_candidate_physics.cjs
           node tests/pi_home_generalization_eval.cjs
@@ -432,6 +435,35 @@ jobs:
         shell: pwsh
         run: python scripts/run_pi_home_learned_real_contam.py --benchmark benchmarks/pi_home_candidate_generalization.json --learned-eval artifacts/p47-learned-input/pi-home-learned-holdout.json --airtrajectory-root vendor/AirTrajectory --prj artifacts/airtrajectory/multispace.prj --provenance artifacts/airtrajectory/multispace.prj.json --out pi-home-real-contam-evidence.json | Tee-Object -FilePath pi-home-real-contam.log
 
+      - name: Adjudicate real evidence through P4.9 claim gate
+        shell: pwsh
+        run: |
+          node scripts/run_pi_home_evidence_pipeline.cjs --evidence pi-home-real-contam-evidence.json --learned-eval artifacts/p47-learned-input/pi-home-learned-holdout.json --out pi-home-evidence-adjudication.json
+          @'
+          import json
+          x=json.load(open("pi-home-evidence-adjudication.json",encoding="utf-8"))
+          assert x["schema_version"]=="pi-home-p410-evidence-pipeline-v1"
+          assert x["shadow_only"] is True
+          assert x["device_execution_authorized"] is False
+          by_id={row["id"]:row for row in x["adjudications"]}
+          assert by_id["compose-quiet-new-room"]["decision"]=="BLOCKED"
+          rain=by_id["topology-rain-new-apt"]
+          assert rain["decision"]=="NOT_ADJUDICABLE"
+          assert rain["coverage"]["missing_dimensions"]==["rain_ingress"]
+          assert rain["coverage"]["trusted_coverage_complete"] is False
+          claim=x["claim"]
+          assert claim["physical_generalization_supported"] is False
+          assert claim["trusted_physically_evaluated"]==0
+          assert claim["trusted_physical_coverage_ratio"]==0
+          assert claim["claim_tier"]=="LABEL_ONLY_GENERALIZATION"
+          print({
+            "p410_evidence_pipeline":"PASS",
+            "rain_decision":rain["decision"],
+            "claim_tier":claim["claim_tier"],
+            "trusted_physical_coverage_ratio":claim["trusted_physical_coverage_ratio"]
+          })
+          '@ | python -
+
       - name: Evidence acceptance gate
         shell: pwsh
         run: |
@@ -486,4 +518,5 @@ jobs:
             artifacts/airtrajectory/multispace.prj
             artifacts/airtrajectory/multispace.prj.json
             pi-home-real-contam-evidence.json
+            pi-home-evidence-adjudication.json
             pi-home-real-contam.log
