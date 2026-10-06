@@ -64,6 +64,7 @@ class StreamingHomeSession{
     }
 
     const before=normalizeRuntime(this.runtime);
+    const baseRevision=(before.revisions||[]).length;
     const beforeCommands=this.commandCount();
     const context={
       ...deriveContext(this.runtime,this.history),
@@ -79,7 +80,9 @@ class StreamingHomeSession{
       decision:prediction&&prediction.decision,
       patches,
       commit_state:event.commit_state||kind,
-      mode:"streaming"
+      mode:"streaming",
+      base_revision:event.base_revision==null?baseRevision:event.base_revision,
+      current_revision:(this.runtime.revisions||[]).length
     });
 
     let receipts=[];
