@@ -138,6 +138,9 @@ jobs:
           });
           if(!s.stage_trace_complete)throw new Error("streaming E2E stage trace incomplete");
           if(s.speculative_physical_commands!==0)throw new Error("partial/stable hypothesis reached physical driver");
+          // Unit/E2E safety suite above also proves stale proposals cannot
+          // reach the driver and relative intent is rematerialized only after
+          // refresh against the authoritative runtime state.
           if(s.final_decision_exact!==1||s.final_patch_exact!==1||s.final_state_after_turn_exact!==1){
             throw new Error("streaming checkpoint E2E below exact");
           }
