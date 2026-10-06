@@ -183,6 +183,11 @@
             "features": {
               "noise_cost": 0.85,
               "ventilation_gain": 0.95
+            },
+            "action": {
+              "op": "PATCH_SLOT",
+              "slot": "level",
+              "value": 2
             }
           },
           {
@@ -194,6 +199,11 @@
             "features": {
               "noise_cost": 0.15,
               "ventilation_gain": 0.75
+            },
+            "action": {
+              "op": "PATCH_SLOT",
+              "slot": "opening",
+              "value": 55
             }
           }
         ]
@@ -221,6 +231,22 @@
             }
           }
         ]
+      },
+      "physics": {
+        "profile_id": "home-v1",
+        "topology_id": "home-v1",
+        "origin": {
+          "co2_ppm": {
+            "living": 1400,
+            "bedroom": 950
+          },
+          "opening_pct": {
+            "W1": 20
+          }
+        },
+        "opening_map": {
+          "餐厅::窗户::default": "W1"
+        }
       }
     },
     {
@@ -239,6 +265,11 @@
             "features": {
               "rain_exposure": 0.8,
               "leeward_score": 0.2
+            },
+            "action": {
+              "op": "PATCH_SLOT",
+              "slot": "opening",
+              "value": 55
             }
           },
           {
@@ -250,6 +281,11 @@
             "features": {
               "rain_exposure": 0.25,
               "leeward_score": 0.75
+            },
+            "action": {
+              "op": "PATCH_SLOT",
+              "slot": "opening",
+              "value": 55
             }
           },
           {
@@ -261,6 +297,11 @@
             "features": {
               "rain_exposure": 0.1,
               "leeward_score": 0.95
+            },
+            "action": {
+              "op": "PATCH_SLOT",
+              "slot": "opening",
+              "value": 55
             }
           }
         ]
@@ -288,6 +329,27 @@
             }
           }
         ]
+      },
+      "physics": {
+        "profile_id": "apt-z",
+        "topology_id": "apt-z",
+        "origin": {
+          "co2_ppm": {
+            "kitchen": 1450,
+            "dining": 1100,
+            "study": 980
+          },
+          "opening_pct": {
+            "W1": 0,
+            "W2": 20,
+            "W3": 0
+          }
+        },
+        "opening_map": {
+          "厨房::窗户::east": "W1",
+          "餐厅::窗户::west": "W2",
+          "书房::窗户::south": "W3"
+        }
       }
     }
   ]
