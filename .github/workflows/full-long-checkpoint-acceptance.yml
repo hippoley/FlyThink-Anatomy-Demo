@@ -17,6 +17,7 @@ on:
       - "scripts/pi_home_training_manifest.cjs"
       - "scripts/pi_home_preference_pairs.cjs"
       - "scripts/pi_home_advantage.cjs"
+      - "scripts/run_pi_home_p2_dataset_build.cjs"
       - "tests/streaming_slu_e2e.cjs"
       - "tests/home_goal_runtime.cjs"
       - "tests/desired_state_evaluator.cjs"
@@ -28,6 +29,7 @@ on:
       - "tests/pi_home_training_manifest.cjs"
       - "tests/pi_home_preference_pairs.cjs"
       - "tests/pi_home_advantage.cjs"
+      - "tests/pi_home_p2_dataset_build.cjs"
       - "benchmarks/pi_home_offline_replay.json"
       - "benchmarks/pi_home_goal_scenarios.json"
       - "tests/commit_gate.cjs"
@@ -68,6 +70,7 @@ on:
       - "scripts/pi_home_training_manifest.cjs"
       - "scripts/pi_home_preference_pairs.cjs"
       - "scripts/pi_home_advantage.cjs"
+      - "scripts/run_pi_home_p2_dataset_build.cjs"
       - "tests/streaming_slu_e2e.cjs"
       - "tests/home_goal_runtime.cjs"
       - "tests/desired_state_evaluator.cjs"
@@ -79,6 +82,7 @@ on:
       - "tests/pi_home_training_manifest.cjs"
       - "tests/pi_home_preference_pairs.cjs"
       - "tests/pi_home_advantage.cjs"
+      - "tests/pi_home_p2_dataset_build.cjs"
       - "benchmarks/pi_home_offline_replay.json"
       - "benchmarks/pi_home_goal_scenarios.json"
       - "tests/commit_gate.cjs"
@@ -126,6 +130,9 @@ jobs:
           node tests/pi_home_training_manifest.cjs
           node tests/pi_home_preference_pairs.cjs
           node tests/pi_home_advantage.cjs
+          node tests/pi_home_p2_dataset_build.cjs
+          node scripts/run_pi_home_p2_dataset_build.cjs > pi-home-p2-dataset.json
+          cat pi-home-p2-dataset.json
           node scripts/run_pi_home_offline_replay.cjs > pi-home-offline-replay.json
           cat pi-home-offline-replay.json
           node scripts/run_pi_home_goal_benchmark.cjs > pi-home-goal-benchmark.json
@@ -212,3 +219,4 @@ jobs:
             p0-streaming-e2e.json
             pi-home-goal-benchmark.json
             pi-home-offline-replay.json
+            pi-home-p2-dataset.json
