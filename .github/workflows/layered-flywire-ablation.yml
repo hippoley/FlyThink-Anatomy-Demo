@@ -11,6 +11,7 @@ on:
       - scripts/resolution_gold.py
       - scripts/test_layered_training_data.py
       - scripts/test_resolution_membership.py
+      - scripts/test_resolution_gold.py
       - scripts/train_layered_flywire_ablation.py
           scripts/prepare_flywire_graph.py
           scripts/test_layered_training_data.py
@@ -43,6 +44,8 @@ jobs:
         run: python scripts/audit_layered_coverage.py
       - name: Validate layered label encoding
         run: python scripts/test_layered_training_data.py
+      - name: Validate selected-target vs write-set gold
+        run: python scripts/test_resolution_gold.py
       - name: Validate ONE/SET resolver loss
         run: python scripts/test_resolution_membership.py
       - name: Download verified FlyWire graph
