@@ -55,6 +55,14 @@ const {evaluation,event:evaluationEvent}=lifecycle.evaluateCanary(plan,[
 ]);
 assert.equal(evaluation.decision,"ABORT_AND_ROLLBACK");
 
+assert.throws(
+  ()=>lifecycle.applyCanaryEvaluation(
+    {...evaluation,reason:"tampered"},
+    {actor:"operator-1"}
+  ),
+  /evidence_mismatch/
+);
+
 const rolled=lifecycle.applyCanaryEvaluation(evaluation,{actor:"operator-1"});
 assert.equal(rolled.changed,true);
 assert.equal(registry.active().id,"v1");
