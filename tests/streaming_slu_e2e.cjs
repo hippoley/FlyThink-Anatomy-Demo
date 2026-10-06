@@ -149,6 +149,43 @@ async function repeatedStaleMustStopAfterOneRecovery(){
   assert.equal(out.runtime.devices[key("客厅")].slots.temperature,22);
 }
 
+
+async function relativeIntentMustRematerializeAfterStale(){
+  const initial=runtime();
+  // The current authoritative world is already 25C. The stale proposal was
+  // produced from an older revision; recovery must preserve +1 intent rather
+  // than replaying an old absolute temperature.
+  initial.devices[key("客厅")].slots.temperature=25;
+  const driver=new MockThingDriver(initial);
+  const attempts=[];
+  const predictor=async({attempt})=>{
+    attempts.push(attempt);
+    return {
+      decision:"EXECUTE",
+      confidence:0.99,
+      patches:[{
+        op:"PATCH_RELATIVE",
+        target:target("客厅"),
+        slot:"temperature",
+        delta:1
+      }]
+    };
+  };
+  const out=await runStreamingSequence([
+    {turn_id:"t7",kind:"final",text:"客厅空调再调高一点",base_revision:-1}
+  ],{initialRuntime:initial,predictor,driver});
+
+  assert.deepEqual(attempts,[0,1]);
+  assert.equal(out.trace[0].recovery.initial_gate.reason,"stale_base_revision");
+  assert.equal(out.trace[0].recovery.retry_gate.allow,true);
+  assert.equal(out.trace[0].patch_proposal[0].op,"PATCH_RELATIVE");
+  assert.equal(out.trace[0].patch_proposal[0].delta,1);
+  assert.equal(out.trace[0].thing_model[0].physical_patch.op,"PATCH_SLOT");
+  assert.equal(out.trace[0].thing_model[0].physical_patch.value,26);
+  assert.equal(out.runtime.devices[key("客厅")].slots.temperature,26);
+  assert.equal(out.physical_commands,1);
+}
+
 (async()=>{
   await correctionMustNotExecuteStablePrefix();
   await feedbackMustOwnReconciledTruth();
@@ -156,6 +193,7 @@ async function repeatedStaleMustStopAfterOneRecovery(){
   await staleRevisionMustNotReachPhysicalDriver();
   await staleRevisionMayRecoverExactlyOnce();
   await repeatedStaleMustStopAfterOneRecovery();
+  await relativeIntentMustRematerializeAfterStale();
   console.log(JSON.stringify({
     ok:true,
     contract:"streaming ASR -> semantic -> target -> patch -> commit -> thing model -> feedback -> reconcile"
