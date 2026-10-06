@@ -43,6 +43,7 @@ on:
       - "scripts/run_pi_home_candidate_generalization.cjs"
       - "scripts/pi_home_generalization_counterfactual.cjs"
       - "scripts/pi_home_generalization_claim.cjs"
+      - "scripts/pi_home_evidence_adjudicator.cjs"
       - "scripts/pi_home_learned_physics_gate.cjs"
       - "scripts/pi_home_learned_candidate_physics.cjs"
       - "scripts/run_pi_home_learned_real_contam.py"
@@ -83,6 +84,7 @@ on:
       - "tests/pi_home_candidate_rank_policy.cjs"
       - "tests/pi_home_generalization_counterfactual.cjs"
       - "tests/pi_home_generalization_claim.cjs"
+      - "tests/pi_home_evidence_adjudicator.cjs"
       - "tests/pi_home_learned_physics_gate.cjs"
       - "tests/pi_home_learned_candidate_physics.cjs"
       - "benchmarks/pi_home_candidate_generalization.json"
@@ -264,6 +266,7 @@ jobs:
           node tests/pi_home_candidate_rank_policy.cjs
           node tests/pi_home_generalization_counterfactual.cjs
           node tests/pi_home_generalization_claim.cjs
+          node tests/pi_home_evidence_adjudicator.cjs
           node tests/pi_home_learned_physics_gate.cjs
           node tests/pi_home_learned_candidate_physics.cjs
           node tests/pi_home_generalization_eval.cjs
