@@ -73,6 +73,15 @@ function evaluatePromotionGate(records=[],{
     };
   }
 
+  if(!candidate_policy_id){
+    return {
+      ...base,
+      decision:"HOLD_SHADOW",
+      reason:"candidate_policy_id_required",
+      policy_switch_authorized:false
+    };
+  }
+
   if(!approval||approval.approved!==true){
     return {
       ...base,
@@ -88,6 +97,16 @@ function evaluatePromotionGate(records=[],{
       ...base,
       decision:"AWAIT_HUMAN_APPROVAL",
       reason:"approval_actor_required",
+      policy_switch_authorized:false,
+      approval:clone(approval)
+    };
+  }
+
+  if(approval.scope&&approval.scope!==candidate_policy_id){
+    return {
+      ...base,
+      decision:"AWAIT_HUMAN_APPROVAL",
+      reason:"approval_scope_mismatch",
       policy_switch_authorized:false,
       approval:clone(approval)
     };
