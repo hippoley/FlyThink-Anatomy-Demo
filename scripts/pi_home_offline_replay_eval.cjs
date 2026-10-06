@@ -27,11 +27,13 @@ function decisionMetrics(decision={},gold={}){
   const desiredActions=Number(gold.expected_action_count||0);
   const extra=Math.max(0,actions-desiredActions);
   const correctionNeeded=wrong>0||decision.requires_correction===true;
-  const goalCompleted=decision.goal_completed===true || (
+  const inferredGoalCompleted=
     wrong===0 &&
     (gold.expected_goal_completion===undefined || gold.expected_goal_completion===true) &&
-    actions>=desiredActions
-  );
+    actions>=desiredActions;
+  const goalCompleted=typeof decision.goal_completed==="boolean"
+    ?decision.goal_completed
+    :inferredGoalCompleted;
   return {
     wrong_target:wrong,
     correction_needed:correctionNeeded?1:0,
