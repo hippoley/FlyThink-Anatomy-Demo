@@ -108,12 +108,15 @@ async function run(trajectory,args={}){
  try{
   for(const turn of trajectory.turns){
    const derived=deriveContext(runtime,history);const context={...derived,...(turn.context_hint||{})};
+   const baseRevision=(runtime.revisions||[]).length;
    const pred=await predict({text:turn.text,context,background:{...context,...(turn.background||{})}});
    let outcome=pred.decision,error=null,applied=[],physicalReceipts=[],committed=false;
    const commitGate=evaluateCommit({
     decision:pred.decision,
     patches:pred.patches||[],
-    commit_state:turn.commit_state||context.commit_state||"safe_to_commit"
+    commit_state:turn.commit_state||context.commit_state||"safe_to_commit",
+    base_revision:turn.base_revision==null?baseRevision:turn.base_revision,
+    current_revision:(runtime.revisions||[]).length
    });
    if(outcome==="EXECUTE"&&commitGate.deferred)deferred++;
    if(outcome==="EXECUTE"&&commitGate.allow){
