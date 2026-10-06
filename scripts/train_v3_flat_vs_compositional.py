@@ -22,7 +22,7 @@ def metrics(m,items):
  prm=o["resolution"]["room_membership"].sigmoid()>=.5
  pem=o["resolution"]["entity_membership"].sigmoid()>=.5
  ps=o["resolution"]["slot"].argmax(1)
- vals={"target":[],"room":[],"room_topk":[],"room_count":[],"room_predk":[],"over_selection":[],"entity":[],"slot":[]}
+ vals={"target":[],"room":[],"room_topk":[],"room_count":[],"room_predk":[],"over_selection":[],"under_selection":[],"entity":[],"slot":[]}
  for i,y in enumerate(ys):
   if not y["resolution_set"]:continue
   vals["target"].append(torch.equal(pm[i].cpu(),torch.tensor(y["resolution"]["membership"],dtype=torch.bool)))
@@ -33,6 +33,7 @@ def metrics(m,items):
   if pred_k>0:predk[torch.topk(o["resolution"]["room_membership"][i].cpu(),min(pred_k,len(gold_room))).indices]=True
   vals["room_predk"].append(torch.equal(predk,gold_room))
   vals["over_selection"].append(int(predk.sum())>int(gold_room.sum()))
+  vals["under_selection"].append(int(predk.sum())<int(gold_room.sum()))
   vals["room"].append(torch.equal(prm[i].cpu(),gold_room))
   k=int(gold_room.sum())
   topk=torch.zeros_like(gold_room)
@@ -74,6 +75,13 @@ def main():
    report["regimes"][name].append({"seed":seed,
     **{s:metrics(m,rows(s,a.dataset)) for s in ("train","dev","test")},
     "room_diagnostics":{s:room_diagnostics(m,rows(s,a.dataset)) for s in ("dev","test")}})
+ for name,runs in report["regimes"].items():
+  report.setdefault("aggregate",{})[name]={}
+  for split in ("train","dev","test"):
+   report["aggregate"][name][split]={}
+   for key in ("target","room","room_topk","room_count","room_predk","over_selection","under_selection","entity","slot"):
+    vv=[r[split][key] for r in runs if r[split][key] is not None]
+    report["aggregate"][name][split][key]=sum(vv)/len(vv) if vv else None
  Path(a.out).mkdir(parents=True,exist_ok=True);Path(a.out,"report.json").write_text(json.dumps(report,ensure_ascii=False,indent=2))
  print(json.dumps(report,ensure_ascii=False))
 if __name__=="__main__":main()
