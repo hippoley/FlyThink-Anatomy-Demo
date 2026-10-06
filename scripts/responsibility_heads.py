@@ -23,6 +23,7 @@ class ResponsibilityHeads(torch.nn.Module):
             "slot":torch.nn.Linear(dim,len(SLOTS)),
             "room_membership":torch.nn.Linear(dim,len(ROOMS)-1),
             "entity_membership":torch.nn.Linear(dim,len(ENTITIES)-1),
+            "room_count":torch.nn.Linear(dim,len(ROOMS)), # classes 0..4 selected rooms
         })
         self.judgement=torch.nn.Linear(dim,len(DECISIONS))
 
