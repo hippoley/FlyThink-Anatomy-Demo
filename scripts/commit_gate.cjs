@@ -8,9 +8,10 @@
  * explicit commit_state for partial hypotheses.
  */
 const SAFE=new Set(["safe_to_commit","final","committed","stable"]);
-const DEFER=new Set(["unstable","partial","tentative","streaming","hypothesis"]);
+const STREAMING_SAFE=new Set(["safe_to_commit","final","committed"]);
+const DEFER=new Set(["unstable","partial","tentative","streaming","hypothesis","stable"]);
 
-function evaluateCommit({decision,patches,commit_state}={}){
+function evaluateCommit({decision,patches,commit_state,mode="batch"}={}){
   if(decision!=="EXECUTE"){
     return {allow:false,deferred:false,reason:"decision_not_execute",commit_state:commit_state||null};
   }
@@ -18,9 +19,11 @@ function evaluateCommit({decision,patches,commit_state}={}){
     return {allow:false,deferred:false,reason:"no_executable_patch",commit_state:commit_state||null};
   }
   const state=commit_state||"safe_to_commit";
-  if(SAFE.has(state))return {allow:true,deferred:false,reason:"safe_to_commit",commit_state:state};
-  if(DEFER.has(state))return {allow:false,deferred:true,reason:"semantic_hypothesis_not_committed",commit_state:state};
-  return {allow:false,deferred:true,reason:"unknown_commit_state",commit_state:state};
+  const safe=mode==="streaming"?STREAMING_SAFE:SAFE;
+  const meta=mode==="streaming"?{mode}:{};
+  if(safe.has(state))return {allow:true,deferred:false,reason:"safe_to_commit",commit_state:state,...meta};
+  if(DEFER.has(state))return {allow:false,deferred:true,reason:"semantic_hypothesis_not_committed",commit_state:state,...meta};
+  return {allow:false,deferred:true,reason:"unknown_commit_state",commit_state:state,...meta};
 }
 
-module.exports={evaluateCommit,SAFE,DEFER};
+module.exports={evaluateCommit,SAFE,STREAMING_SAFE,DEFER};
