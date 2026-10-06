@@ -38,6 +38,7 @@ on:
       - "scripts/pi_home_evidence_journal.cjs"
       - "scripts/pi_home_policy_lifecycle.cjs"
       - "scripts/pi_home_generalization_eval.cjs"
+      - "scripts/pi_home_structural_transfer_policy.cjs"
       - "scripts/run_pi_home_generalization.cjs"
       - "tests/streaming_slu_e2e.cjs"
       - "tests/home_goal_runtime.cjs"
@@ -69,6 +70,7 @@ on:
       - "tests/pi_home_evidence_journal.cjs"
       - "tests/pi_home_policy_lifecycle.cjs"
       - "tests/pi_home_generalization_eval.cjs"
+      - "tests/pi_home_structural_transfer_policy.cjs"
       - "benchmarks/pi_home_generalization_suite.json"
       - "benchmarks/pi_home_offline_replay.json"
       - "benchmarks/pi_home_goal_scenarios.json"
@@ -131,6 +133,7 @@ on:
       - "scripts/pi_home_evidence_journal.cjs"
       - "scripts/pi_home_policy_lifecycle.cjs"
       - "scripts/pi_home_generalization_eval.cjs"
+      - "scripts/pi_home_structural_transfer_policy.cjs"
       - "scripts/run_pi_home_generalization.cjs"
       - "tests/streaming_slu_e2e.cjs"
       - "tests/home_goal_runtime.cjs"
@@ -162,6 +165,7 @@ on:
       - "tests/pi_home_evidence_journal.cjs"
       - "tests/pi_home_policy_lifecycle.cjs"
       - "tests/pi_home_generalization_eval.cjs"
+      - "tests/pi_home_structural_transfer_policy.cjs"
       - "benchmarks/pi_home_generalization_suite.json"
       - "benchmarks/pi_home_offline_replay.json"
       - "benchmarks/pi_home_goal_scenarios.json"
@@ -228,6 +232,7 @@ jobs:
           node tests/pi_home_canary_rollback.cjs
           node tests/pi_home_evidence_journal.cjs
           node tests/pi_home_policy_lifecycle.cjs
+          node tests/pi_home_structural_transfer_policy.cjs
           node tests/pi_home_generalization_eval.cjs
           node scripts/run_pi_home_generalization.cjs > pi-home-generalization.json
           cat pi-home-generalization.json
