@@ -8,16 +8,16 @@ const report={
       id:"a",
       comparison:{any_disagreement:true},
       actual_outcome:{
-        current:{goal_completed:false,wrong_target:1,correction_needed:1,extra_actions:1},
-        shadow:{goal_completed:true,wrong_target:0,correction_needed:0,extra_actions:0}
+        current:{provenance:"measured",goal_completed:false,wrong_target:1,correction_needed:1,extra_actions:1},
+        shadow:{provenance:"counterfactual_simulation",goal_completed:true,wrong_target:0,correction_needed:0,extra_actions:0}
       }
     },
     {
       id:"b",
       comparison:{any_disagreement:true},
       actual_outcome:{
-        current:{goal_completed:true,wrong_target:0,correction_needed:0,extra_actions:0},
-        shadow:{goal_completed:true,wrong_target:0,correction_needed:0,extra_actions:0}
+        current:{provenance:"measured",goal_completed:true,wrong_target:0,correction_needed:0,extra_actions:0},
+        shadow:{provenance:"counterfactual_simulation",goal_completed:true,wrong_target:0,correction_needed:0,extra_actions:0}
       }
     }
   ]
@@ -31,6 +31,20 @@ assert.equal(out.current_wins,0);
 assert.equal(out.ties,1);
 assert.ok(out.average_realized_advantage>0);
 assert.equal(out.promotion_candidate,true);
+
+const untrusted=summarizeShadowReport({
+  rows:[{
+    id:"c",
+    comparison:{any_disagreement:true},
+    actual_outcome:{
+      current:{provenance:"measured",goal_completed:false},
+      shadow:{goal_completed:true}
+    }
+  }]
+});
+assert.equal(untrusted.comparable,0);
+assert.equal(untrusted.promotion_candidate,false);
+assert.equal(untrusted.rows[0].reason,"untrusted_outcome_provenance");
 
 console.log(JSON.stringify({
   ok:true,
