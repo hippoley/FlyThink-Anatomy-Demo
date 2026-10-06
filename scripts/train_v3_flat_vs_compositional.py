@@ -22,11 +22,17 @@ def metrics(m,items):
  prm=o["resolution"]["room_membership"].sigmoid()>=.5
  pem=o["resolution"]["entity_membership"].sigmoid()>=.5
  ps=o["resolution"]["slot"].argmax(1)
- vals={"target":[],"room":[],"room_topk":[],"entity":[],"slot":[]}
+ vals={"target":[],"room":[],"room_topk":[],"room_count":[],"room_predk":[],"over_selection":[],"entity":[],"slot":[]}
  for i,y in enumerate(ys):
   if not y["resolution_set"]:continue
   vals["target"].append(torch.equal(pm[i].cpu(),torch.tensor(y["resolution"]["membership"],dtype=torch.bool)))
   gold_room=torch.tensor(y["resolution"]["room_membership"],dtype=torch.bool)
+  pred_k=int(o["resolution"]["room_count"][i].argmax().item())
+  vals["room_count"].append(pred_k==int(gold_room.sum()))
+  predk=torch.zeros_like(gold_room)
+  if pred_k>0:predk[torch.topk(o["resolution"]["room_membership"][i].cpu(),min(pred_k,len(gold_room))).indices]=True
+  vals["room_predk"].append(torch.equal(predk,gold_room))
+  vals["over_selection"].append(int(predk.sum())>int(gold_room.sum()))
   vals["room"].append(torch.equal(prm[i].cpu(),gold_room))
   k=int(gold_room.sum())
   topk=torch.zeros_like(gold_room)
@@ -52,7 +58,7 @@ def train(g,seed,flat,epochs,dataset):
  for _ in range(epochs):
   opt.zero_grad();o=m(x)
   loss,_=joint_loss(o,t,{"semantic":1,"resolution":1,"judgement":1},
-   masks={"resolution_one":t["resolution_one_mask"],"resolution_set":t["resolution_set_mask"]})
+   masks={"resolution_one":t["resolution_one_mask"],"resolution_set":t["resolution_set_mask"],"resolution_applicable":t["resolution_applicable_mask"]})
   loss.backward();torch.nn.utils.clip_grad_norm_(m.parameters(),1);opt.step()
  return m
 
@@ -60,7 +66,7 @@ def main():
  ap=argparse.ArgumentParser();ap.add_argument("--graph",default="artifacts/flywire/connectome.json")
  ap.add_argument("--epochs",type=int,default=120);ap.add_argument("--dataset",default="v3",choices=["v3","v4"])
  ap.add_argument("--out",default="artifacts/v3-flat-vs-compositional");a=ap.parse_args()
- g=json.loads(Path(a.graph).read_text());report={"truth":f"{a.dataset}_flat_vs_compositional_room_ranking","regimes":{}}
+ g=json.loads(Path(a.graph).read_text());report={"truth":f"{a.dataset}_predicted_cardinality_safe_room_decoding","regimes":{}}
  for name,flat in (("flat_16_target",True),("compositional_room_entity",False)):
   report["regimes"][name]=[]
   for seed in (2783,3783,4783):
