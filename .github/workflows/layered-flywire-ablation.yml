@@ -17,7 +17,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: {python-version: "3.12"}
-      - run: pip install --index-url https://download.pytorch.org/whl/cpu torch
+      - run: python -m py_compile scripts/contextual_state_transition_corpus_v1.py scripts/layered_dataset.py scripts/layered_training_data.py scripts/train_layered_flywire_ablation.py\n      - run: pip install --index-url https://download.pytorch.org/whl/cpu torch
       - run: python scripts/test_contextual_state_transition_corpus_v1.py
       - run: python scripts/audit_layered_coverage.py
       - name: Download verified FlyWire graph
