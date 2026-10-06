@@ -7,6 +7,10 @@ const {
 }=require("./whole_home_patch_contract.cjs");
 const {executePhysicalTurn}=require("./physical_runtime.cjs");
 const {evaluateDesiredState}=require("./desired_state_evaluator.cjs");
+const {
+  normalizeHumanIntervention,
+  buildTrajectoryRecord
+}=require("./pi_home_trajectory.cjs");
 
 function clone(v){return v==null?v:JSON.parse(JSON.stringify(v))}
 function eq(a,b){return JSON.stringify(a)===JSON.stringify(b)}
@@ -56,6 +60,12 @@ function classifyEpisodeOutcome(reason){
   if(reason==="strategy_oscillation"){
     return {label:"OSCILLATION",success:false,intervention_recommended:true};
   }
+  if(reason==="human_takeover"){
+    return {label:"HUMAN_TAKEOVER",success:false,intervention_recommended:false};
+  }
+  if(reason==="user_cancelled"){
+    return {label:"CANCELLED_BY_USER",success:false,intervention_recommended:false};
+  }
   if(["action_budget_exceeded","action_budget_exhausted","step_budget_exhausted","duration_budget_exceeded"].includes(reason)){
     return {label:"BUDGET_EXHAUSTED",success:false,intervention_recommended:true};
   }
@@ -94,6 +104,7 @@ class HomeGoalRuntime{
       id,
       status:"active",
       goal:clone(goal),
+      initial_strategy:clone(strategy),
       strategy:clone(strategy),
       desired_state:clone(desired_state),
       constraints:clone(constraints),
@@ -101,6 +112,8 @@ class HomeGoalRuntime{
       agent_owned:{},
       strategy_history:[],
       feedback:[],
+      interventions:[],
+      initial_device_state:clone(this.runtime.devices||{}),
       started_revision:(this.runtime.revisions||[]).length
     };
     return clone(this.runtime.tasks[key]);
@@ -123,6 +136,76 @@ class HomeGoalRuntime{
     const ep=this.requireActive(goalId);
     ep.feedback.push(clone(feedback));
     return clone(ep);
+  }
+
+  recordHumanIntervention(goalId,input){
+    const ep=this.requireActive(goalId);
+    const event=normalizeHumanIntervention(input);
+    ep.interventions.push({
+      sequence:ep.interventions.length+1,
+      ...clone(event)
+    });
+    if(["CORRECTION","PREFERENCE_FEEDBACK"].includes(event.kind)){
+      ep.feedback.push({
+        source:"human_intervention",
+        kind:event.kind,
+        text:event.text,
+        dimension:event.dimension,
+        sentiment:event.sentiment,
+        correction:clone(event.correction),
+        target:clone(event.target)
+      });
+    }
+    return clone(ep.interventions[ep.interventions.length-1]);
+  }
+
+  async handleHumanIntervention(goalId,input){
+    const event=this.recordHumanIntervention(goalId,input);
+    if(event.kind==="CANCEL"){
+      const result=await this.cancelGoal(goalId,{turn_id:"human-cancel:"+goalId});
+      const ep=this.getEpisode(goalId);
+      ep.autonomy_stop_reason="user_cancelled";
+      ep.autonomy_outcome=classifyEpisodeOutcome("user_cancelled");
+      return {
+        event,
+        action:"cancelled",
+        outcome:clone(ep.autonomy_outcome),
+        ...result,
+        episode:clone(ep)
+      };
+    }
+    if(event.kind==="TAKEOVER"){
+      const ep=this.requireActive(goalId);
+      for(const owned of Object.values(ep.agent_owned||{})){
+        owned.user_override=true;
+      }
+      ep.status="handed_off";
+      ep.autonomy_stop_reason="human_takeover";
+      ep.autonomy_outcome=classifyEpisodeOutcome("human_takeover");
+      return {
+        event,
+        action:"handed_off",
+        outcome:clone(ep.autonomy_outcome),
+        runtime:normalizeRuntime(this.runtime),
+        episode:clone(ep)
+      };
+    }
+    return {
+      event,
+      action:"recorded",
+      runtime:normalizeRuntime(this.runtime),
+      episode:clone(this.requireActive(goalId))
+    };
+  }
+
+  exportTrajectory(goalId){
+    const ep=this.getEpisode(goalId);
+    if(!ep)throw new Error("goal_episode_not_found:"+goalId);
+    return buildTrajectoryRecord({
+      episode:ep,
+      runtime:this.runtime,
+      executionLedger:this.runtime.executionLedger||[]
+    });
   }
 
   evaluateGoal(goalId,observation={}){
@@ -321,6 +404,9 @@ class HomeGoalRuntime{
 
       trace.push({
         step,
+        observation:clone(observation||{}),
+        evaluation:clone(row.evaluation||null),
+        proposal:clone(row.proposal||null),
         score,
         action_taken:!!row.action_taken,
         actions_used:delta,
