@@ -1,0 +1,22 @@
+name: layered-flywire-ablation
+on:
+  workflow_dispatch:
+jobs:
+  train:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - run: pip install --index-url https://download.pytorch.org/whl/cpu torch
+      - run: python scripts/test_contextual_state_transition_corpus_v1.py
+      - run: python scripts/audit_layered_coverage.py
+      - name: Download verified FlyWire graph
+        run: python scripts/train_flywire.py --download --prepare-only --out artifacts/flywire
+      - run: python scripts/train_layered_flywire_ablation.py --graph artifacts/flywire/connectome.json --epochs 120
+      - run: cat artifacts/layered-ablation/report.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: layered-flywire-ablation
+          path: artifacts/layered-ablation/
