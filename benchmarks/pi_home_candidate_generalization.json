@@ -246,7 +246,11 @@
         },
         "opening_map": {
           "餐厅::窗户::default": "W1"
-        }
+        },
+        "required_dimensions": [
+          "co2",
+          "noise"
+        ]
       }
     },
     {
@@ -331,25 +335,31 @@
         ]
       },
       "physics": {
-        "profile_id": "apt-z",
-        "topology_id": "apt-z",
+        "profile_id": "demo.fixed-three-room.v1",
+        "topology_id": "demo.fixed-three-room.v1",
         "origin": {
           "co2_ppm": {
-            "kitchen": 1450,
-            "dining": 1100,
+            "living": 1450,
+            "bedroom": 1100,
             "study": 980
           },
           "opening_pct": {
             "W1": 0,
             "W2": 20,
-            "W3": 0
+            "W3": 0,
+            "D1": 100,
+            "D2": 100
           }
         },
         "opening_map": {
           "厨房::窗户::east": "W1",
           "餐厅::窗户::west": "W2",
           "书房::窗户::south": "W3"
-        }
+        },
+        "required_dimensions": [
+          "co2",
+          "rain_ingress"
+        ]
       }
     }
   ]
