@@ -1,0 +1,95 @@
+name: pi-home-learned-checkpoint
+
+on:
+  pull_request:
+    paths:
+      - "scripts/train_pi_home_candidate_checkpoint.py"
+      - "scripts/eval_pi_home_candidate_checkpoint.py"
+      - "scripts/test_pi_home_candidate_checkpoint.py"
+      - "benchmarks/pi_home_candidate_generalization.json"
+      - ".github/workflows/pi-home-learned-checkpoint.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "scripts/train_pi_home_candidate_checkpoint.py"
+      - "scripts/eval_pi_home_candidate_checkpoint.py"
+      - "scripts/test_pi_home_candidate_checkpoint.py"
+      - "benchmarks/pi_home_candidate_generalization.json"
+      - ".github/workflows/pi-home-learned-checkpoint.yml"
+  workflow_dispatch:
+
+jobs:
+  learned-shadow-checkpoint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Compile checkpoint sources
+        run: |
+          python -m py_compile \
+            scripts/train_pi_home_candidate_checkpoint.py \
+            scripts/eval_pi_home_candidate_checkpoint.py \
+            scripts/test_pi_home_candidate_checkpoint.py
+
+      - name: Install PyTorch CPU
+        run: pip install --index-url https://download.pytorch.org/whl/cpu torch
+
+      - name: Train learned candidate checkpoint
+        run: |
+          python scripts/train_pi_home_candidate_checkpoint.py \
+            --data benchmarks/pi_home_candidate_generalization.json \
+            --epochs 300 \
+            --out artifacts/pi-home-candidate-checkpoint \
+            > pi-home-learned-train.json
+          cat pi-home-learned-train.json
+
+      - name: Independent holdout inference
+        run: |
+          python scripts/eval_pi_home_candidate_checkpoint.py \
+            --data benchmarks/pi_home_candidate_generalization.json \
+            --checkpoint artifacts/pi-home-candidate-checkpoint/model.pt \
+            > pi-home-learned-holdout.json
+          cat pi-home-learned-holdout.json
+
+      - name: Checkpoint transfer contract
+        run: python scripts/test_pi_home_candidate_checkpoint.py
+
+      - name: Acceptance gate
+        run: |
+          python - <<'PY'
+          import json
+          train=json.load(open("pi-home-learned-train.json"))
+          test=json.load(open("pi-home-learned-holdout.json"))
+
+          assert train["shadow_only"] is True
+          assert train["device_execution_authorized"] is False
+          assert train["holdout"]["exact"] == 1.0
+
+          assert test["shadow_only"] is True
+          assert test["device_execution_authorized"] is False
+          assert test["exact_replay_hits"] == 0
+          assert test["exact"] == 1.0
+          assert test["cases"] >= 2
+
+          print({
+            "learned_checkpoint":"PASS",
+            "holdout_exact":test["exact"],
+            "exact_replay_hits":test["exact_replay_hits"],
+            "device_execution_authorized":test["device_execution_authorized"]
+          })
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pi-home-candidate-checkpoint
+          path: |
+            artifacts/pi-home-candidate-checkpoint/model.pt
+            artifacts/pi-home-candidate-checkpoint/report.json
+            pi-home-learned-train.json
+            pi-home-learned-holdout.json
