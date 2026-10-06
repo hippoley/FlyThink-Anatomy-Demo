@@ -13,7 +13,7 @@ REGIMES={"A_semantic":{"semantic":1.0,"resolution":0.0,"judgement":0.0},
 def accuracy(m,items):
  x,ys=pack(items)
  with torch.no_grad():o=m(x)
- pred_sem={k:v.argmax(1) for k,v in o["semantic"].items()};pred_res={k:v.argmax(1) for k,v in o["resolution"].items()};pred_j=o["judgement"].argmax(1)
+ pred_sem={k:v.argmax(1) for k,v in o["semantic"].items()};pred_res={k:v.argmax(1) for k,v in o["resolution"].items() if k!="membership"};pred_j=o["judgement"].argmax(1)
  sem=[];res=[];jud=[]
  for i,y in enumerate(ys):
   sem.append(all(int(pred_sem[k][i])==v for k,v in y["semantic"].items()))
@@ -24,11 +24,11 @@ def accuracy(m,items):
 def train(g,regime,seed,epochs):
  torch.manual_seed(seed);m=LayeredFlyWire(g,seed);tr=rows("train");x,ys=pack(tr);t=batch_targets(ys);opt=torch.optim.AdamW(m.parameters(),lr=.003,weight_decay=.01)
  for _ in range(epochs):
-  opt.zero_grad();o=m(x);loss,_=joint_loss(o,t,REGIMES[regime],masks={"resolution":t["resolution_mask"]});loss.backward();torch.nn.utils.clip_grad_norm_(m.parameters(),1);opt.step()
+  opt.zero_grad();o=m(x);loss,_=joint_loss(o,t,REGIMES[regime],masks={"resolution_one":t["resolution_one_mask"],"resolution_set":t["resolution_set_mask"]});loss.backward();torch.nn.utils.clip_grad_norm_(m.parameters(),1);opt.step()
  return m
 def main():
  ap=argparse.ArgumentParser();ap.add_argument("--graph",default="artifacts/flywire/connectome.json");ap.add_argument("--epochs",type=int,default=120);ap.add_argument("--out",default="artifacts/layered-ablation");a=ap.parse_args()
- g=json.loads(Path(a.graph).read_text());report={"truth":"layered_flywire_abc_paired_seed_v2_explicit_resolution_gold","regimes":{}}
+ g=json.loads(Path(a.graph).read_text());report={"truth":"layered_flywire_abc_paired_seed_v3_one_set_resolution","regimes":{}}
  for regime in REGIMES:
   report["regimes"][regime]=[]
   for seed in (2783,3783,4783):
