@@ -82,6 +82,11 @@ def profile_from_generated_prj(airtrajectory_root, prj_path, provenance):
         evaluation_zone="living",
         evidence_level=evidence_level,
         trusted_for_promotion=engineering_ready,
+        prj_initial_co2_ppm={
+            key:float(value)
+            for key,value in (provenance.get("initial_co2_ppm") or {}).items()
+        },
+        origin_state_mode="prj-initial-only",
     )
     return layout,profile,engineering_ready,evidence_level
 
@@ -137,11 +142,20 @@ def run_case(case,learned_row,profile):
             "trusted_for_generalization_claim":False,
         }
     physics=case["physics"]
+    origin=json.loads(json.dumps(physics["origin"]))
+    origin_co2_source=physics.get("origin_co2_source")
+    if origin_co2_source=="airtrajectory_prj_initial":
+        origin["co2_ppm"]={
+            key:float(value)
+            for key,value in profile.prj_initial_co2_ppm.items()
+        }
+    elif origin_co2_source:
+        raise ValueError("unsupported physics origin_co2_source: "+str(origin_co2_source))
     payload={
         "request_id":"p47-real-contam:"+case["id"],
         "profile_id":profile.profile_id,
         "topology_id":profile.profile_id,
-        "origin":physics["origin"],
+        "origin":origin,
         "candidates":[
             {"label":x["label"],"actions":x["actions"]}
             for x in candidates
@@ -180,6 +194,8 @@ def run_case(case,learned_row,profile):
         "evidence_level":response.get("evidence_level"),
         "engine_version":contam.get("version"),
         "profile_trusted_for_promotion":bool(response.get("trusted_for_promotion")),
+        "origin_co2_source":origin_co2_source or "benchmark-explicit",
+        "resolved_origin":origin,
         "learned_target":learned_target,
         "physical_winner_target":winner_target,
         "semantic_physics_aligned":aligned,
