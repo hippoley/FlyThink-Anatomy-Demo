@@ -51,6 +51,9 @@ const origin={
   assert.equal(out.strategy.simulated_actions.length,2);
   assert.equal(out.strategy.unsupported_actions.length,0);
   assert.equal(out.strategy.complete_physics_coverage,true);
+  assert.equal(out.strategy.physics_coverage_ratio,1);
+  assert.equal(out.strategy.simulated_action_count,2);
+  assert.equal(out.strategy.unsupported_action_count,0);
   assert.equal(out.trusted_for_promotion,true);
   assert.equal(out.result.end_co2_ppm,870);
 
@@ -65,6 +68,9 @@ const origin={
   assert.equal(mixed.strategy.simulated_actions.length,1);
   assert.equal(mixed.strategy.unsupported_actions.length,1);
   assert.equal(mixed.strategy.complete_physics_coverage,false);
+  assert.equal(mixed.strategy.physics_coverage_ratio,0.5);
+  assert.equal(mixed.strategy.simulated_action_count,1);
+  assert.equal(mixed.strategy.unsupported_action_count,1);
   assert.equal(mixed.trusted_for_promotion,false);
   assert.equal(mixed.simulator.trust_reason,"strategy_partially_simulated");
 
