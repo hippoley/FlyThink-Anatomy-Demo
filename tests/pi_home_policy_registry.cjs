@@ -12,6 +12,17 @@ const registry=new PolicyRegistry({
 });
 
 assert.equal(registry.active().id,"home-policy-v1");
+assert.equal(registry.get("home-policy-v2").status,"candidate");
+
+assert.throws(
+  ()=>new PolicyRegistry({
+    policies:[
+      {id:"a",status:"active"},
+      {id:"b",status:"active"}
+    ]
+  }),
+  /multiple_active_policies_declared/
+);
 
 assert.throws(
   ()=>registry.promote({
