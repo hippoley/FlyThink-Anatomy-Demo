@@ -55,7 +55,7 @@ function buildStrategyRequest({
     }
     unsupported.push({...clone(patch),unsupported_reason:"scalar_mapping_missing_or_patch_unsupported"});
   }
-  if(!actions.length)throw new Error("strategy_counterfactual_requires_opening_action");
+  if(!actions.length)throw new Error("strategy_counterfactual_requires_supported_action");
   return {
     request:{
       request_id,
