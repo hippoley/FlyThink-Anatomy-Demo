@@ -30,6 +30,19 @@ function currentSlot(runtime,target,slot){
   return {exists:true,value:clone(d.slots[slot])};
 }
 
+function expandedPatchCount(patches){
+  let n=0;
+  for(const proposed of patches||[])n+=expandSetPatch(proposed).length;
+  return n;
+}
+
+function strategySignature(strategy){
+  if(strategy==null)return "null";
+  if(typeof strategy==="string")return strategy;
+  if(strategy&&typeof strategy.name==="string")return strategy.name;
+  return JSON.stringify(strategy);
+}
+
 class HomeGoalRuntime{
   constructor({initialRuntime={},driver}={}){
     if(!driver)throw new Error("goal_runtime_driver_required");
@@ -104,7 +117,7 @@ class HomeGoalRuntime{
     return clone(evaluation);
   }
 
-  async recheckGoal(goalId,{observation={},planner=null,turn_id=null}={}){
+  async recheckGoal(goalId,{observation={},planner=null,turn_id=null,max_actions=null}={}){
     const evaluation=this.evaluateGoal(goalId,observation);
     if(!evaluation.configured){
       return {
@@ -165,6 +178,20 @@ class HomeGoalRuntime{
       });
     }
     const patches=Array.isArray(proposal.patches)?proposal.patches:[];
+    const proposedActions=expandedPatchCount(patches);
+    if(max_actions!=null&&proposedActions>max_actions){
+      return {
+        completed:false,
+        action_taken:false,
+        blocked_reason:"action_budget_exceeded",
+        proposed_actions:proposedActions,
+        remaining_actions:max_actions,
+        evaluation:clone(evaluation),
+        proposal:clone(proposal),
+        runtime:normalizeRuntime(this.runtime),
+        episode:clone(this.requireActive(goalId))
+      };
+    }
     if(!patches.length){
       return {
         completed:false,
@@ -185,6 +212,128 @@ class HomeGoalRuntime{
       proposal:clone(proposal),
       ...applied
     };
+  }
+
+  async runAutonomousEpisode(goalId,{
+    observe,
+    planner,
+    max_steps=6,
+    max_actions=12,
+    max_duration_ms=60000,
+    max_stagnant_steps=2,
+    min_score_improvement=0.01,
+    max_oscillations=2,
+    now=()=>Date.now()
+  }={}){
+    if(typeof observe!=="function")throw new Error("autonomous_observe_required");
+    if(typeof planner!=="function")throw new Error("autonomous_planner_required");
+    if(max_steps<1||max_actions<0||max_duration_ms<0)throw new Error("invalid_autonomy_budget");
+
+    const started=Number(now());
+    const trace=[];
+    let actionCount=0;
+    let previousScore=null;
+    let stagnantSteps=0;
+    let oscillations=0;
+    const strategies=[strategySignature(this.requireActive(goalId).strategy)];
+
+    const stop=(reason,extra={})=>{
+      const ep=this.requireActive(goalId);
+      ep.autonomy_stop_reason=reason;
+      ep.autonomy_trace=clone(trace);
+      ep.autonomy_budget={
+        max_steps,max_actions,max_duration_ms,max_stagnant_steps,
+        min_score_improvement,max_oscillations
+      };
+      return {
+        completed:false,
+        stopped:true,
+        stop_reason:reason,
+        steps:trace.length,
+        actions:actionCount,
+        trace:clone(trace),
+        runtime:normalizeRuntime(this.runtime),
+        episode:clone(ep),
+        ...extra
+      };
+    };
+
+    for(let step=0;step<max_steps;step++){
+      const elapsed=Number(now())-started;
+      if(elapsed>max_duration_ms)return stop("duration_budget_exceeded",{elapsed_ms:elapsed});
+      const remaining=max_actions-actionCount;
+      if(remaining<=0)return stop("action_budget_exhausted");
+
+      const observation=await observe({
+        goal_id:goalId,
+        step,
+        runtime:normalizeRuntime(this.runtime),
+        episode:clone(this.requireActive(goalId))
+      });
+
+      const beforeCommands=this.commandCount();
+      const row=await this.recheckGoal(goalId,{
+        observation:observation||{},
+        turn_id:"auto:"+goalId+":"+String(step+1),
+        max_actions:remaining,
+        planner:async input=>planner({...input,step,remaining_actions:remaining})
+      });
+      const afterCommands=this.commandCount();
+      const delta=(beforeCommands!=null&&afterCommands!=null)
+        ?Math.max(0,afterCommands-beforeCommands)
+        :(row.action_taken?expandedPatchCount(row.proposal&&row.proposal.patches||[]):0);
+      actionCount+=delta;
+
+      const strategy=strategySignature(this.getEpisode(goalId)&&this.getEpisode(goalId).strategy);
+      strategies.push(strategy);
+      if(strategies.length>=3){
+        const n=strategies.length;
+        if(strategies[n-1]===strategies[n-3]&&strategies[n-1]!==strategies[n-2])oscillations++;
+      }
+
+      const score=row.evaluation&&typeof row.evaluation.score==="number"?row.evaluation.score:null;
+      if(previousScore!=null&&score!=null&&row.action_taken){
+        const improvement=score-previousScore;
+        stagnantSteps=improvement<min_score_improvement?stagnantSteps+1:0;
+      }
+      if(score!=null)previousScore=score;
+
+      trace.push({
+        step,
+        score,
+        action_taken:!!row.action_taken,
+        actions_used:delta,
+        total_actions:actionCount,
+        strategy,
+        blocked_reason:row.blocked_reason||null,
+        completed:!!row.completed,
+        deficits:row.evaluation?row.evaluation.deficits.map(x=>x.id):[]
+      });
+
+      if(row.completed){
+        const ep=this.getEpisode(goalId);
+        ep.autonomy_trace=clone(trace);
+        ep.autonomy_stop_reason="goal_completed";
+        return {
+          completed:true,
+          stopped:false,
+          stop_reason:"goal_completed",
+          steps:trace.length,
+          actions:actionCount,
+          trace:clone(trace),
+          runtime:normalizeRuntime(this.runtime),
+          episode:clone(ep)
+        };
+      }
+      if(row.blocked_reason)return stop(row.blocked_reason,{last:clone(row)});
+      if(oscillations>=max_oscillations)return stop("strategy_oscillation");
+      if(stagnantSteps>=max_stagnant_steps)return stop("progress_stalled");
+    }
+    return stop("step_budget_exhausted");
+  }
+
+  commandCount(){
+    return Array.isArray(this.driver&&this.driver.commands)?this.driver.commands.length:null;
   }
 
   captureOwnership(ep,patch,beforeRuntime){
@@ -311,4 +460,4 @@ class HomeGoalRuntime{
   }
 }
 
-module.exports={HomeGoalRuntime,slotPath,patchSlot,currentSlot};
+module.exports={HomeGoalRuntime,slotPath,patchSlot,currentSlot,expandedPatchCount,strategySignature};
