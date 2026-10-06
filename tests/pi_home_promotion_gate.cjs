@@ -25,6 +25,8 @@ const waiting=evaluatePromotionGate(records,{
 });
 assert.equal(waiting.decision,"AWAIT_HUMAN_APPROVAL");
 assert.equal(waiting.evidence_ready,true);
+assert.equal(waiting.evidence_summary.unique_evidence,3);
+assert.equal(waiting.evidence_summary.duplicate_evidence,0);
 assert.equal(waiting.policy_switch_authorized,false);
 assert.equal(waiting.device_execution_authorized,false);
 
@@ -45,6 +47,19 @@ const insufficient=evaluatePromotionGate(records.slice(0,2),{
 });
 assert.equal(insufficient.decision,"HOLD_SHADOW");
 assert.equal(insufficient.policy_switch_authorized,false);
+
+const duplicate=evaluatePromotionGate([
+  evidence("same",.5),
+  evidence("same",.5),
+  evidence("same",.5)
+],{
+  min_cases:3,
+  min_mean_advantage:.2,
+  max_blocked_fraction:0
+});
+assert.equal(duplicate.decision,"HOLD_SHADOW");
+assert.equal(duplicate.evidence_summary.unique_evidence,1);
+assert.equal(duplicate.evidence_summary.duplicate_evidence,2);
 
 const blocked=evaluatePromotionGate([
   ...records,
