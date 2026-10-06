@@ -47,6 +47,54 @@ function buildStrategyRequest({
   };
 }
 
+function buildBatchStrategyRequest({
+  candidates=[],
+  origin,
+  opening_map={},
+  profile_id,
+  horizon_minutes=30,
+  request_id=""
+}={}){
+  if(!Array.isArray(candidates)||!candidates.length)throw new Error("strategy_counterfactual_candidates_required");
+  if(!profile_id)throw new Error("strategy_counterfactual_profile_id_required");
+  if(!origin||typeof origin.co2_ppm!=="object"||typeof origin.opening_pct!=="object"){
+    throw new Error("strategy_counterfactual_origin_incomplete");
+  }
+  const seen=new Set();
+  const requestCandidates=[];
+  const metadata={};
+  for(const candidate of candidates){
+    const label=String(candidate&&candidate.label||"");
+    if(!label)throw new Error("strategy_counterfactual_candidate_label_required");
+    if(seen.has(label))throw new Error("strategy_counterfactual_duplicate_label:"+label);
+    seen.add(label);
+    const built=buildStrategyRequest({
+      label,
+      patches:candidate.patches||[],
+      origin,
+      opening_map,
+      profile_id,
+      horizon_minutes,
+      request_id
+    });
+    requestCandidates.push(built.request.candidates[0]);
+    metadata[label]={
+      patches:clone(candidate.patches||[]),
+      unsupported_actions:clone(built.unsupported_actions||[])
+    };
+  }
+  return {
+    request:{
+      request_id,
+      profile_id,
+      origin:clone(origin),
+      horizon_minutes:Number(horizon_minutes),
+      candidates:requestCandidates
+    },
+    metadata
+  };
+}
+
 function selectStrategyBranch(response,label){
   const branch=(response&&response.branches||[]).find(x=>x.label===label);
   if(!branch)throw new Error("strategy_counterfactual_branch_missing:"+label);
@@ -128,11 +176,38 @@ class AirTrajectoryStrategyCounterfactualAdapter{
       response,branch,patches,unsupported_actions:built.unsupported_actions
     });
   }
+
+  async simulateMany({candidates,origin,horizon_minutes=30,request_id=""}={}){
+    const built=buildBatchStrategyRequest({
+      candidates,
+      origin,
+      opening_map:this.opening_map,
+      profile_id:this.profile_id,
+      horizon_minutes,
+      request_id
+    });
+    const response=await this.transport(built.request);
+    return (candidates||[]).map(candidate=>{
+      const label=String(candidate.label);
+      const branch=selectStrategyBranch(response,label);
+      const meta=built.metadata[label];
+      return {
+        label,
+        outcome:normalizeStrategyOutcome({
+          response,
+          branch,
+          patches:meta.patches,
+          unsupported_actions:meta.unsupported_actions
+        })
+      };
+    });
+  }
 }
 
 module.exports={
   AirTrajectoryStrategyCounterfactualAdapter,
   buildStrategyRequest,
+  buildBatchStrategyRequest,
   selectStrategyBranch,
   normalizeStrategyOutcome,
   simulatableOpeningPatch
