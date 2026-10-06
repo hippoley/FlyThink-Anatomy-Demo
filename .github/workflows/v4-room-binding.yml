@@ -1,4 +1,4 @@
-name: v4-room-binding
+name: v4-room-binding # aggregate-seed-audit
 on:
   workflow_dispatch:
   push:
