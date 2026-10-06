@@ -1,6 +1,14 @@
 name: layered-flywire-ablation
 on:
   workflow_dispatch:
+  push:
+    paths:
+      - "scripts/contextual_state_transition_corpus_v1.py"
+      - "scripts/layered_training_data.py"
+      - "scripts/train_layered_flywire_ablation.py"
+      - "scripts/layered_flywire.py"
+      - "scripts/flywire_encoder.py"
+      - ".github/workflows/layered-flywire-ablation.yml"
 jobs:
   train:
     runs-on: ubuntu-latest
