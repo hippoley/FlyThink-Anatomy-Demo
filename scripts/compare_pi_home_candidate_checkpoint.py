@@ -1,9 +1,19 @@
 #!/usr/bin/env python3
 """Compare learned checkpoint decisions against the baseline on the same unseen holdout."""
-import argparse,json
+import argparse
+import sys,json
 from pathlib import Path
 from eval_pi_home_candidate_checkpoint import load_model,predict
 from train_pi_home_candidate_checkpoint import target_key,train_fingerprint
+
+def _configure_utf8_stdio():
+    for stream in (sys.stdout,sys.stderr):
+        try:
+            stream.reconfigure(encoding="utf-8")
+        except (AttributeError,ValueError):
+            pass
+
+_configure_utf8_stdio()
 
 def metrics(decision,gold):
     patches=decision.get("patches") or []
@@ -33,7 +43,7 @@ def main():
     ap.add_argument("--data",default="benchmarks/pi_home_candidate_generalization.json")
     ap.add_argument("--checkpoint",default="artifacts/pi-home-candidate-checkpoint/model.pt")
     args=ap.parse_args()
-    data=json.loads(Path(args.data).read_text())
+    data=json.loads(Path(args.data).read_text(encoding="utf-8"))
     model,_=load_model(
         args.checkpoint,
         expected_train_fingerprint=train_fingerprint(data["train_cases"])

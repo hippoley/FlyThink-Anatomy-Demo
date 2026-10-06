@@ -5,7 +5,7 @@ import torch
 from train_pi_home_candidate_checkpoint import fit,evaluate,CandidateRankNet,assert_identity_isolation,train_fingerprint
 from eval_pi_home_candidate_checkpoint import load_model,predict
 
-data=json.loads(Path("benchmarks/pi_home_candidate_generalization.json").read_text())
+data=json.loads(Path("benchmarks/pi_home_candidate_generalization.json").read_text(encoding="utf-8"))
 isolation=assert_identity_isolation(data["train_cases"],data["cases"])
 assert isolation["overlap"]==[]
 assert isolation["train_candidate_identities"]>0

@@ -45,6 +45,9 @@ on:
       - "scripts/pi_home_generalization_claim.cjs"
       - "scripts/pi_home_learned_physics_gate.cjs"
       - "scripts/pi_home_learned_candidate_physics.cjs"
+      - "scripts/run_pi_home_learned_real_contam.py"
+      - "scripts/eval_pi_home_candidate_checkpoint.py"
+      - "scripts/train_pi_home_candidate_checkpoint.py"
       - "scripts/run_pi_home_generalization.cjs"
       - "tests/streaming_slu_e2e.cjs"
       - "tests/home_goal_runtime.cjs"
@@ -152,6 +155,7 @@ on:
       - "scripts/pi_home_generalization_claim.cjs"
       - "scripts/pi_home_learned_physics_gate.cjs"
       - "scripts/pi_home_learned_candidate_physics.cjs"
+      - "scripts/run_pi_home_learned_real_contam.py"
       - "scripts/run_pi_home_generalization.cjs"
       - "tests/streaming_slu_e2e.cjs"
       - "tests/home_goal_runtime.cjs"
@@ -361,3 +365,117 @@ jobs:
             pi-home-policy-replay.json
             pi-home-generalization.json
             pi-home-candidate-generalization.json
+
+  p47-learned-artifact:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install CPU PyTorch
+        run: pip install --index-url https://download.pytorch.org/whl/cpu torch
+      - name: Train shadow-only learned checkpoint
+        run: python scripts/train_pi_home_candidate_checkpoint.py --data benchmarks/pi_home_candidate_generalization.json --epochs 300 --out artifacts/pi-home-candidate-checkpoint > pi-home-learned-train.json
+      - name: Produce independent learned holdout predictions
+        run: python scripts/eval_pi_home_candidate_checkpoint.py --data benchmarks/pi_home_candidate_generalization.json --checkpoint artifacts/pi-home-candidate-checkpoint/model.pt > pi-home-learned-holdout.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pi-home-p47-learned-input
+          path: |
+            artifacts/pi-home-candidate-checkpoint/model.pt
+            artifacts/pi-home-candidate-checkpoint/report.json
+            pi-home-learned-train.json
+            pi-home-learned-holdout.json
+
+  p47-real-contam:
+    needs: p47-learned-artifact
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Checkout AirTrajectory main
+        uses: actions/checkout@v4
+        with:
+          repository: hippoley/AirTrajectory
+          ref: main
+          path: vendor/AirTrajectory
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Download learned checkpoint evidence input
+        uses: actions/download-artifact@v4
+        with:
+          name: pi-home-p47-learned-input
+          path: artifacts/p47-learned-input
+
+      - name: Install real CONTAM runtime
+        shell: pwsh
+        run: python -m pip install -e "vendor/AirTrajectory[contam]"
+
+      - name: Generate real ContamX three-room PRJ
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force artifacts/airtrajectory | Out-Null
+          python vendor/AirTrajectory/examples/generate_multispace_contam_prj.py --out artifacts/airtrajectory/multispace.prj --provenance-out artifacts/airtrajectory/multispace.prj.json | Tee-Object -FilePath artifacts/airtrajectory/generation.json
+          if (-not (Test-Path artifacts/airtrajectory/multispace.prj)) { exit 1 }
+
+      - name: Learned checkpoint to real ContamX counterfactual
+        shell: pwsh
+        run: python scripts/run_pi_home_learned_real_contam.py --benchmark benchmarks/pi_home_candidate_generalization.json --learned-eval artifacts/p47-learned-input/pi-home-learned-holdout.json --airtrajectory-root vendor/AirTrajectory --prj artifacts/airtrajectory/multispace.prj --provenance artifacts/airtrajectory/multispace.prj.json --out pi-home-real-contam-evidence.json | Tee-Object -FilePath pi-home-real-contam.log
+
+      - name: Evidence acceptance gate
+        shell: pwsh
+        run: |
+          @'
+          import json
+          payload=json.load(open("pi-home-real-contam-evidence.json",encoding="utf-8"))
+          assert payload["schema_version"]=="pi-home-p47-real-contam-evidence-v1"
+          assert payload["shadow_only"] is True
+          assert payload["device_execution_authorized"] is False
+          assert payload["real_contam_executed"] is True
+          assert payload["engineering_profile_ready"] is False
+          assert payload["trusted_generalization_cases"] == 0
+
+          by_id={row["case_id"]:row for row in payload["results"]}
+          quiet=by_id["compose-quiet-new-room"]
+          assert quiet["status"]=="BLOCKED"
+          assert quiet["reason"]=="candidate_set_not_fully_contam_modelled"
+
+          rain=by_id["topology-rain-new-apt"]
+          assert rain["status"]=="REAL_CONTAM_EXECUTED"
+          assert rain["backend"]=="contamxpy"
+          assert rain["physics_fidelity"]=="CONTAM"
+          assert rain["engine_version"]
+          assert rain["profile_trusted_for_promotion"] is False
+          assert rain["origin_co2_source"]=="airtrajectory_prj_initial"
+          assert rain["winner"]["trusted_for_promotion"] is False
+          assert rain["trusted_for_generalization_claim"] is False
+          assert "rain_ingress" in rain["missing_dimensions"]
+          assert rain["semantic_physics_alignment_status"]=="NOT_ADJUDICABLE"
+          assert rain["semantic_physics_aligned"] is None
+          assert isinstance(rain["raw_target_match"],bool)
+
+          print({
+            "p47_real_contam":"PASS",
+            "engine_version":rain["engine_version"],
+            "alignment_status":rain["semantic_physics_alignment_status"],
+            "raw_target_match":rain["raw_target_match"],
+            "missing_dimensions":rain["missing_dimensions"],
+            "profile_trusted_for_promotion":rain["profile_trusted_for_promotion"]
+          })
+          '@ | python -
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pi-home-p47-real-contam-evidence
+          path: |
+            artifacts/airtrajectory/multispace.prj
+            artifacts/airtrajectory/multispace.prj.json
+            pi-home-real-contam-evidence.json
+            pi-home-real-contam.log

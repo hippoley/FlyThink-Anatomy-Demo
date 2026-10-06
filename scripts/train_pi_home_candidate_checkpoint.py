@@ -1,8 +1,18 @@
 #!/usr/bin/env python3
 """Train a small shadow-only candidate ranking checkpoint from recovery trajectories."""
-import argparse,json,random,hashlib
+import argparse
+import sys,json,random,hashlib
 from pathlib import Path
 import torch
+
+def _configure_utf8_stdio():
+    for stream in (sys.stdout,sys.stderr):
+        try:
+            stream.reconfigure(encoding="utf-8")
+        except (AttributeError,ValueError):
+            pass
+
+_configure_utf8_stdio()
 
 FEATURES=["noise_cost","ventilation_gain","rain_exposure","leeward_score"]
 FAMILIES=["quiet-ventilation","rain-safe-opening"]
@@ -117,7 +127,7 @@ def main():
     ap.add_argument("--seed",type=int,default=4517)
     args=ap.parse_args()
     torch.set_num_threads(2)
-    data=json.loads(Path(args.data).read_text())
+    data=json.loads(Path(args.data).read_text(encoding="utf-8"))
     isolation=assert_identity_isolation(data["train_cases"],data["cases"])
     model,pairs=fit(data["train_cases"],args.epochs,args.seed)
     fingerprint=train_fingerprint(data["train_cases"])
@@ -144,7 +154,7 @@ def main():
         "shadow_only":True,
         "train_fingerprint":fingerprint
     },args.out/"model.pt")
-    (args.out/"report.json").write_text(json.dumps(report,ensure_ascii=False,indent=2))
+    (args.out/"report.json").write_text(json.dumps(report,ensure_ascii=False,indent=2), encoding="utf-8")
     print(json.dumps(report,ensure_ascii=False))
 
 if __name__=="__main__": main()
