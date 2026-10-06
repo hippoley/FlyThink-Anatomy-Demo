@@ -255,7 +255,11 @@
             "actuator_id": "FAN1",
             "slot": "level"
           }
-        }
+        },
+        "required_dimensions": [
+          "co2",
+          "noise"
+        ]
       }
     },
     {
@@ -340,18 +344,20 @@
         ]
       },
       "physics": {
-        "profile_id": "apt-z",
-        "topology_id": "apt-z",
+        "profile_id": "demo.fixed-three-room.v1",
+        "topology_id": "demo.fixed-three-room.v1",
         "origin": {
           "co2_ppm": {
-            "kitchen": 1450,
-            "dining": 1100,
+            "living": 1450,
+            "bedroom": 1100,
             "study": 980
           },
           "opening_pct": {
             "W1": 0,
             "W2": 20,
-            "W3": 0
+            "W3": 0,
+            "D1": 100,
+            "D2": 100
           },
           "scalar_values": {}
         },
@@ -360,7 +366,12 @@
           "餐厅::窗户::west": "W2",
           "书房::窗户::south": "W3"
         },
-        "actuator_map": {}
+        "actuator_map": {},
+        "required_dimensions": [
+          "co2",
+          "rain_ingress"
+        ],
+        "origin_co2_source": "airtrajectory_prj_initial"
       }
     }
   ]
