@@ -6,7 +6,7 @@ from train_pi_home_candidate_checkpoint import fit
 from compare_pi_home_candidate_checkpoint import learned_decision,metrics
 from eval_pi_home_candidate_checkpoint import load_model
 
-data=json.loads(Path("benchmarks/pi_home_candidate_generalization.json").read_text())
+data=json.loads(Path("benchmarks/pi_home_candidate_generalization.json").read_text(encoding="utf-8"))
 model,_=fit(data["train_cases"],epochs=300,seed=4517)
 with tempfile.TemporaryDirectory() as d:
     p=Path(d)/"model.pt"
