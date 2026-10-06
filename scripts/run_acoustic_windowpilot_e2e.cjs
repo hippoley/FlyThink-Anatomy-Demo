@@ -184,7 +184,7 @@ async function main(){
     processingError=e;
   }finally{
     await client.close();
-    if(apply&&driver.commands.length>0){
+    if(apply){
       try{
         closeoutEvidence=await closeout(
           driver,session.runtime,target,tolerancePct
