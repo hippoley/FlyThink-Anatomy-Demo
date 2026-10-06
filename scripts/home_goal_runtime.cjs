@@ -43,6 +43,25 @@ function strategySignature(strategy){
   return JSON.stringify(strategy);
 }
 
+function classifyEpisodeOutcome(reason){
+  if(reason==="goal_completed"){
+    return {label:"SUCCESS",success:true,intervention_recommended:false};
+  }
+  if(["required_observation_missing","desired_state_not_configured"].includes(reason)){
+    return {label:"BLOCKED_EVIDENCE",success:false,intervention_recommended:true};
+  }
+  if(reason==="progress_stalled"){
+    return {label:"STALLED",success:false,intervention_recommended:true};
+  }
+  if(reason==="strategy_oscillation"){
+    return {label:"OSCILLATION",success:false,intervention_recommended:true};
+  }
+  if(["action_budget_exceeded","action_budget_exhausted","step_budget_exhausted","duration_budget_exceeded"].includes(reason)){
+    return {label:"BUDGET_EXHAUSTED",success:false,intervention_recommended:true};
+  }
+  return {label:"INCOMPLETE",success:false,intervention_recommended:true};
+}
+
 class HomeGoalRuntime{
   constructor({initialRuntime={},driver}={}){
     if(!driver)throw new Error("goal_runtime_driver_required");
@@ -240,6 +259,7 @@ class HomeGoalRuntime{
     const stop=(reason,extra={})=>{
       const ep=this.requireActive(goalId);
       ep.autonomy_stop_reason=reason;
+      ep.autonomy_outcome=classifyEpisodeOutcome(reason);
       ep.autonomy_trace=clone(trace);
       ep.autonomy_budget={
         max_steps,max_actions,max_duration_ms,max_stagnant_steps,
@@ -253,6 +273,7 @@ class HomeGoalRuntime{
         actions:actionCount,
         trace:clone(trace),
         runtime:normalizeRuntime(this.runtime),
+        outcome:clone(ep.autonomy_outcome),
         episode:clone(ep),
         ...extra
       };
@@ -314,6 +335,7 @@ class HomeGoalRuntime{
         const ep=this.getEpisode(goalId);
         ep.autonomy_trace=clone(trace);
         ep.autonomy_stop_reason="goal_completed";
+        ep.autonomy_outcome=classifyEpisodeOutcome("goal_completed");
         return {
           completed:true,
           stopped:false,
@@ -321,6 +343,7 @@ class HomeGoalRuntime{
           steps:trace.length,
           actions:actionCount,
           trace:clone(trace),
+          outcome:clone(ep.autonomy_outcome),
           runtime:normalizeRuntime(this.runtime),
           episode:clone(ep)
         };
@@ -460,4 +483,4 @@ class HomeGoalRuntime{
   }
 }
 
-module.exports={HomeGoalRuntime,slotPath,patchSlot,currentSlot,expandedPatchCount,strategySignature};
+module.exports={HomeGoalRuntime,slotPath,patchSlot,currentSlot,expandedPatchCount,strategySignature,classifyEpisodeOutcome};
