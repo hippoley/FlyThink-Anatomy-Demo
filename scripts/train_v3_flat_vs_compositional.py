@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Clean V3 paired A/B with room-set probability diagnostics."""
+"""Paired resolver A/B for V3/V4 with threshold-free room ranking diagnostics."""
 import argparse,json,torch
 from pathlib import Path
 from flywire_encoder import FlyWireEncoder
@@ -26,7 +26,12 @@ def metrics(m,items):
  for i,y in enumerate(ys):
   if not y["resolution_set"]:continue
   vals["target"].append(torch.equal(pm[i].cpu(),torch.tensor(y["resolution"]["membership"],dtype=torch.bool)))
-  gold_room=torch.tensor(y["resolution"]["room_membership"],dtype=torch.bool)\n  vals["room"].append(torch.equal(prm[i].cpu(),gold_room))\n  k=int(gold_room.sum());topk=torch.zeros_like(gold_room);topk[torch.topk(o["resolution"]["room_membership"][i].cpu(),k).indices]=True\n  vals["room_topk"].append(torch.equal(topk,gold_room))
+  gold_room=torch.tensor(y["resolution"]["room_membership"],dtype=torch.bool)
+  vals["room"].append(torch.equal(prm[i].cpu(),gold_room))
+  k=int(gold_room.sum())
+  topk=torch.zeros_like(gold_room)
+  topk[torch.topk(o["resolution"]["room_membership"][i].cpu(),k).indices]=True
+  vals["room_topk"].append(torch.equal(topk,gold_room))
   vals["entity"].append(torch.equal(pem[i].cpu(),torch.tensor(y["resolution"]["entity_membership"],dtype=torch.bool)))
   vals["slot"].append(int(ps[i])==y["resolution"]["slot"])
  return {k:(sum(map(bool,v))/len(v) if v else None) for k,v in vals.items()}|{"n":len(vals["target"])}
@@ -37,10 +42,8 @@ def room_diagnostics(m,items):
  out=[]
  for i,y in enumerate(ys):
   if y["resolution_set"]:
-   out.append({"group":items[i]["row"]["contrast_group"],
-    "gold":y["resolution"]["room_membership"],
-    "prob":[round(float(v),4) for v in p[i]],
-    "pred":[int(v>=.5) for v in p[i]]})
+   out.append({"group":items[i]["row"]["contrast_group"],"gold":y["resolution"]["room_membership"],
+    "prob":[round(float(v),4) for v in p[i]],"pred":[int(v>=.5) for v in p[i]]})
  return out
 
 def train(g,seed,flat,epochs,dataset):
@@ -49,15 +52,15 @@ def train(g,seed,flat,epochs,dataset):
  for _ in range(epochs):
   opt.zero_grad();o=m(x)
   loss,_=joint_loss(o,t,{"semantic":1,"resolution":1,"judgement":1},
-    masks={"resolution_one":t["resolution_one_mask"],"resolution_set":t["resolution_set_mask"]})
+   masks={"resolution_one":t["resolution_one_mask"],"resolution_set":t["resolution_set_mask"]})
   loss.backward();torch.nn.utils.clip_grad_norm_(m.parameters(),1);opt.step()
  return m
 
 def main():
  ap=argparse.ArgumentParser();ap.add_argument("--graph",default="artifacts/flywire/connectome.json")
- ap.add_argument("--epochs",type=int,default=120);ap.add_argument("--dataset",default="v3",choices=["v3","v4"]);ap.add_argument("--out",default="artifacts/v3-flat-vs-compositional")
- a=ap.parse_args();g=json.loads(Path(a.graph).read_text())
- report={"truth":f"{a.dataset}_flat_vs_compositional_room_diagnostics","regimes":{}}
+ ap.add_argument("--epochs",type=int,default=120);ap.add_argument("--dataset",default="v3",choices=["v3","v4"])
+ ap.add_argument("--out",default="artifacts/v3-flat-vs-compositional");a=ap.parse_args()
+ g=json.loads(Path(a.graph).read_text());report={"truth":f"{a.dataset}_flat_vs_compositional_room_ranking","regimes":{}}
  for name,flat in (("flat_16_target",True),("compositional_room_entity",False)):
   report["regimes"][name]=[]
   for seed in (2783,3783,4783):
@@ -65,7 +68,6 @@ def main():
    report["regimes"][name].append({"seed":seed,
     **{s:metrics(m,rows(s,a.dataset)) for s in ("train","dev","test")},
     "room_diagnostics":{s:room_diagnostics(m,rows(s,a.dataset)) for s in ("dev","test")}})
- Path(a.out).mkdir(parents=True,exist_ok=True)
- Path(a.out,"report.json").write_text(json.dumps(report,ensure_ascii=False,indent=2))
+ Path(a.out).mkdir(parents=True,exist_ok=True);Path(a.out,"report.json").write_text(json.dumps(report,ensure_ascii=False,indent=2))
  print(json.dumps(report,ensure_ascii=False))
 if __name__=="__main__":main()
