@@ -7,6 +7,9 @@ on:
       - scripts/test_contextual_state_transition_corpus_v4.py
       - scripts/layered_dataset.py
       - scripts/train_v3_flat_vs_compositional.py
+      - scripts/responsibility_heads.py
+      - scripts/responsibility_loss.py
+      - scripts/layered_training_data.py
       - .github/workflows/v4-room-binding.yml
 jobs:
   train:
@@ -18,7 +21,7 @@ jobs:
         with:
           python-version: "3.12"
       - name: Compile V4
-        run: python -m py_compile scripts/contextual_state_transition_corpus_v4.py scripts/test_contextual_state_transition_corpus_v4.py scripts/layered_dataset.py scripts/train_v3_flat_vs_compositional.py
+        run: python -m py_compile scripts/contextual_state_transition_corpus_v4.py scripts/test_contextual_state_transition_corpus_v4.py scripts/layered_dataset.py scripts/layered_training_data.py scripts/responsibility_heads.py scripts/responsibility_loss.py scripts/train_v3_flat_vs_compositional.py
       - name: Install PyTorch CPU
         run: pip install --index-url https://download.pytorch.org/whl/cpu torch
       - name: Validate V4 causal contract
