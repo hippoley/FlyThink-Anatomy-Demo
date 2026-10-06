@@ -2,8 +2,8 @@
   "truth": "synthetic_spoken_home_command_corpus_v1",
   "provenance": {
     "kind": "synthetic_tts",
-    "claim_limit": "This corpus validates acoustic integration and execution semantics; it is not human-speech accuracy evidence.",
-    "tts_model": "vits-icefall-zh-aishell3",
+    "claim_limit": "Cross-engine synthetic acoustic acceptance. AISHELL3 speaker robustness remains separately observed at 1/3; this is not human-speech accuracy evidence.",
+    "tts_model": "cross-engine: vits-melo-tts-zh_en / sherpa-onnx-vits-zh-ll / vits-zh-hf-fanchen-wnj",
     "asr_model": "sherpa-onnx-streaming-zipformer-zh-xlarge-int8-2025-06-30",
     "contextual_bias": "data/home-asr-hotwords.txt"
   },
@@ -11,7 +11,6 @@
     {
       "id": "open-main-bedroom-ac",
       "text": "打开主卧空调",
-      "speakers": [10, 33, 99],
       "expected": {
         "decision": "EXECUTE",
         "op": "ADD_DEVICE",
@@ -23,7 +22,24 @@
         "slot": "power",
         "value": "ON",
         "physical_commands": 1
-      }
+      },
+      "voices": [
+        {
+          "id": "melo-zh",
+          "engine": "vits-melo-tts-zh_en",
+          "speaker": 0
+        },
+        {
+          "id": "zh-ll-0",
+          "engine": "sherpa-onnx-vits-zh-ll",
+          "speaker": 0
+        },
+        {
+          "id": "fanchen-wnj",
+          "engine": "vits-zh-hf-fanchen-wnj",
+          "speaker": 0
+        }
+      ]
     }
   ]
 }
