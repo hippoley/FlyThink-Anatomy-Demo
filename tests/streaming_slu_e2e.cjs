@@ -97,7 +97,7 @@ async function staleRevisionMustNotReachPhysicalDriver(){
   const out=await runStreamingSequence([
     // Simulate a proposal created from revision 0 arriving after the runtime
     // has already advanced. The gate must reject it before any driver command.
-    {turn_id:"t4",kind:"final",text:"客厅空调调到26度",base_revision:-1}
+    {turn_id:"t4",kind:"final",text:"客厅空调调到26度",base_revision:-1,retry_base_revision:-1}
   ],{initialRuntime:initial,predictor,driver});
 
   assert.equal(out.trace[0].commit_gate.allow,false);
