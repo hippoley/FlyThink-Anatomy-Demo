@@ -18,6 +18,9 @@ on:
       - "scripts/pi_home_preference_pairs.cjs"
       - "scripts/pi_home_advantage.cjs"
       - "scripts/run_pi_home_p2_dataset_build.cjs"
+      - "scripts/pi_home_replay_policy.cjs"
+      - "scripts/pi_home_policy_replay_harness.cjs"
+      - "scripts/run_pi_home_policy_replay.cjs"
       - "tests/streaming_slu_e2e.cjs"
       - "tests/home_goal_runtime.cjs"
       - "tests/desired_state_evaluator.cjs"
@@ -30,6 +33,7 @@ on:
       - "tests/pi_home_preference_pairs.cjs"
       - "tests/pi_home_advantage.cjs"
       - "tests/pi_home_p2_dataset_build.cjs"
+      - "tests/pi_home_policy_replay.cjs"
       - "benchmarks/pi_home_offline_replay.json"
       - "benchmarks/pi_home_goal_scenarios.json"
       - "tests/commit_gate.cjs"
@@ -71,6 +75,9 @@ on:
       - "scripts/pi_home_preference_pairs.cjs"
       - "scripts/pi_home_advantage.cjs"
       - "scripts/run_pi_home_p2_dataset_build.cjs"
+      - "scripts/pi_home_replay_policy.cjs"
+      - "scripts/pi_home_policy_replay_harness.cjs"
+      - "scripts/run_pi_home_policy_replay.cjs"
       - "tests/streaming_slu_e2e.cjs"
       - "tests/home_goal_runtime.cjs"
       - "tests/desired_state_evaluator.cjs"
@@ -83,6 +90,7 @@ on:
       - "tests/pi_home_preference_pairs.cjs"
       - "tests/pi_home_advantage.cjs"
       - "tests/pi_home_p2_dataset_build.cjs"
+      - "tests/pi_home_policy_replay.cjs"
       - "benchmarks/pi_home_offline_replay.json"
       - "benchmarks/pi_home_goal_scenarios.json"
       - "tests/commit_gate.cjs"
@@ -131,6 +139,9 @@ jobs:
           node tests/pi_home_preference_pairs.cjs
           node tests/pi_home_advantage.cjs
           node tests/pi_home_p2_dataset_build.cjs
+          node tests/pi_home_policy_replay.cjs
+          node scripts/run_pi_home_policy_replay.cjs > pi-home-policy-replay.json
+          cat pi-home-policy-replay.json
           node scripts/run_pi_home_p2_dataset_build.cjs > pi-home-p2-dataset.json
           cat pi-home-p2-dataset.json
           node scripts/run_pi_home_offline_replay.cjs > pi-home-offline-replay.json
@@ -220,3 +231,4 @@ jobs:
             pi-home-goal-benchmark.json
             pi-home-offline-replay.json
             pi-home-p2-dataset.json
+            pi-home-policy-replay.json
