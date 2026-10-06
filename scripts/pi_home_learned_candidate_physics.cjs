@@ -1,6 +1,6 @@
 "use strict";
 
-const {simulatableOpeningPatch}=require("./airtrajectory_strategy_counterfactual_adapter.cjs");
+const {simulatablePhysicalPatch}=require("./airtrajectory_strategy_counterfactual_adapter.cjs");
 const {runStrategyTournament}=require("./pi_home_strategy_tournament.cjs");
 const {validateSemanticPhysicsAlignment}=require("./pi_home_generalization_counterfactual.cjs");
 
@@ -39,6 +39,9 @@ function materializeLearnedSelection(caseDef,learnedRow){
 
 function buildCandidateSetStrategies(caseDef){
   const candidates=caseDef&&caseDef.context&&caseDef.context.candidates||[];
+  const physics=caseDef&&caseDef.physics||{};
+  const opening_map=physics.opening_map||{};
+  const actuator_map=physics.actuator_map||{};
   const eligible=[];
   const unsupported=[];
   candidates.forEach((candidate,index)=>{
@@ -51,12 +54,12 @@ function buildCandidateSetStrategies(caseDef){
       });
       return;
     }
-    if(!simulatableOpeningPatch(patch)){
+    if(!simulatablePhysicalPatch(patch,{opening_map,actuator_map})){
       unsupported.push({
         index,
         target:clone(candidate.target),
         patch,
-        reason:"candidate_not_supported_by_airtrajectory_opening_model"
+        reason:"candidate_not_mapped_to_airtrajectory_physics"
       });
       return;
     }
