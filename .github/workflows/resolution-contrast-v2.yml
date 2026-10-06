@@ -10,6 +10,9 @@ on:
       - scripts/flywire_encoder.py
       - scripts/responsibility_heads.py
       - scripts/test_compositional_resolution.py
+      - scripts/test_contextual_state_transition_corpus_v2.py
+      - scripts/test_resolution_contrast_loss.py
+      - scripts/test_resolution_membership.py
       - scripts/responsibility_loss.py
       - scripts/resolution_gold.py
       - scripts/resolution_contrast_loss.py
