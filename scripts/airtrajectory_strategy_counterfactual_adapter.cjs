@@ -55,7 +55,11 @@ function selectStrategyBranch(response,label){
 
 function normalizeStrategyOutcome({response,branch,patches,unsupported_actions}={}){
   const trust=classifySimulationTrust(response,branch);
-  const complete=(unsupported_actions||[]).length===0;
+  const simulatedCount=(branch&&branch.actions||[]).length;
+  const unsupportedCount=(unsupported_actions||[]).length;
+  const totalCount=simulatedCount+unsupportedCount;
+  const coverageRatio=totalCount?simulatedCount/totalCount:0;
+  const complete=unsupportedCount===0&&simulatedCount>0;
   return {
     provenance:"counterfactual_simulation",
     trusted_for_promotion:trust.trusted_for_promotion&&complete,
@@ -72,6 +76,9 @@ function normalizeStrategyOutcome({response,branch,patches,unsupported_actions}=
       patches:clone(patches||[]),
       simulated_actions:clone(branch&&branch.actions||[]),
       unsupported_actions:clone(unsupported_actions||[]),
+      simulated_action_count:simulatedCount,
+      unsupported_action_count:unsupportedCount,
+      physics_coverage_ratio:Number(coverageRatio.toFixed(4)),
       complete_physics_coverage:complete
     },
     result:{
