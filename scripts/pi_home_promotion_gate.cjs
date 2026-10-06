@@ -19,12 +19,17 @@ function summarizeEvidence(records=[]){
   const meanAdv=comparable.length
     ?comparable.reduce((a,x)=>a+Number(x.estimated_advantage),0)/comparable.length
     :0;
+  const requestIds=records.map(x=>x.tournament_request_id).filter(Boolean);
+  const uniqueRequestIds=new Set(requestIds);
   return {
     total:records.length,
     candidates:candidates.length,
     blocked:blocked.length,
     keep_current:keep.length,
     comparable:comparable.length,
+    evidence_with_id:requestIds.length,
+    unique_evidence:uniqueRequestIds.size,
+    duplicate_evidence:requestIds.length-uniqueRequestIds.size,
     mean_advantage:Number(meanAdv.toFixed(4)),
     blocked_fraction:records.length?Number((blocked.length/records.length).toFixed(4)):0
   };
@@ -41,6 +46,7 @@ function evaluatePromotionGate(records=[],{
   const evidenceReady=
     summary.total>=Number(min_cases) &&
     summary.comparable>=Number(min_cases) &&
+    summary.unique_evidence>=Number(min_cases) &&
     summary.mean_advantage>Number(min_mean_advantage) &&
     summary.blocked_fraction<=Number(max_blocked_fraction) &&
     summary.candidates>=Number(min_cases);
