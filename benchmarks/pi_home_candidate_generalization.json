@@ -359,7 +359,8 @@
         "required_dimensions": [
           "co2",
           "rain_ingress"
-        ]
+        ],
+        "origin_co2_source": "airtrajectory_prj_initial"
       }
     }
   ]
