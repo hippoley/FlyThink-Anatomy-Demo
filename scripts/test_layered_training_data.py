@@ -9,5 +9,5 @@ for split in ("train","dev","test"):
  assert x.ndim==2
  assert all(v.shape[0]==len(ys) for v in t["semantic"].values())
  assert all(v.shape[0]==len(ys) for v in t["resolution"].values())
- assert t["judgement"].shape[0]==len(ys)
+ assert t["judgement"].shape[0]==len(ys)\n assert t["resolution_mask"].shape[0]==len(ys)\n assert all((not y["resolution_applicable"] or len(y["resolution_targets"])!=1) == (not bool(t["resolution_mask"][i])) for i,y in enumerate(ys))
 print({"layered_training_data":"PASS"})
