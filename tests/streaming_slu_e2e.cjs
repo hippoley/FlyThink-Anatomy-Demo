@@ -87,10 +87,30 @@ async function finalClarifyMustNotExecute(){
   assert.deepEqual(out.runtime.devices,initial.devices);
 }
 
+
+async function staleRevisionMustNotReachPhysicalDriver(){
+  const initial=runtime();
+  const driver=new MockThingDriver(initial);
+  const predictor=async()=>({
+    decision:"EXECUTE",confidence:0.99,patches:[patch("客厅",26)]
+  });
+  const out=await runStreamingSequence([
+    // Simulate a proposal created from revision 0 arriving after the runtime
+    // has already advanced. The gate must reject it before any driver command.
+    {turn_id:"t4",kind:"final",text:"客厅空调调到26度",base_revision:-1}
+  ],{initialRuntime:initial,predictor,driver});
+
+  assert.equal(out.trace[0].commit_gate.allow,false);
+  assert.equal(out.trace[0].commit_gate.reason,"stale_base_revision");
+  assert.equal(out.physical_commands,0);
+  assert.equal(out.runtime.devices[key("客厅")].slots.temperature,22);
+}
+
 (async()=>{
   await correctionMustNotExecuteStablePrefix();
   await feedbackMustOwnReconciledTruth();
   await finalClarifyMustNotExecute();
+  await staleRevisionMustNotReachPhysicalDriver();
   console.log(JSON.stringify({
     ok:true,
     contract:"streaming ASR -> semantic -> target -> patch -> commit -> thing model -> feedback -> reconcile"
