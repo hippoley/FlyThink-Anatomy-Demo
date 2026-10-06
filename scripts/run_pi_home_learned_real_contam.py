@@ -1,6 +1,15 @@
 #!/usr/bin/env python3
 """Run learned holdout candidates through the real AirTrajectory/ContamX fork.
 
+def _configure_utf8_stdio():
+    for stream in (sys.stdout,sys.stderr):
+        try:
+            stream.reconfigure(encoding="utf-8")
+        except (AttributeError,ValueError):
+            pass
+
+_configure_utf8_stdio()
+
 This script deliberately distinguishes:
 - real ContamX execution, from
 - engineering-trusted evidence.
@@ -9,6 +18,7 @@ The generated AirTrajectory demo PRJ is real-engine executable but explicitly
 not engineering truth, so its evidence must remain non-promotable.
 """
 import argparse
+import sys
 import json
 from pathlib import Path
 
