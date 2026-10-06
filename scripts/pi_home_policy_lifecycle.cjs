@@ -94,6 +94,9 @@ class PolicyLifecycleOrchestrator{
     if(!evidenceEvent||evidenceEvent.type!=="CANARY_EVALUATION"){
       throw new Error("latest_journal_event_not_canary_evaluation");
     }
+    if(JSON.stringify(evidenceEvent.payload)!==JSON.stringify(evaluation)){
+      throw new Error("canary_evaluation_evidence_mismatch");
+    }
     const result=applyCanaryDecision({
       registry:this.registry,
       canary_evaluation:evaluation,
