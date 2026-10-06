@@ -3,14 +3,16 @@
 import argparse,json
 from pathlib import Path
 import torch
-from train_pi_home_candidate_checkpoint import CandidateRankNet,row_vector,target_key
+from train_pi_home_candidate_checkpoint import CandidateRankNet,row_vector,target_key,train_fingerprint
 
-def load_model(path):
+def load_model(path,expected_train_fingerprint=None):
     ckpt=torch.load(path,map_location="cpu",weights_only=True)
     if ckpt.get("schema_version")!="pi-home-candidate-checkpoint-v1":
         raise ValueError("unsupported candidate checkpoint schema")
     if ckpt.get("shadow_only") is not True:
         raise ValueError("candidate checkpoint must remain shadow-only")
+    if expected_train_fingerprint is not None and ckpt.get("train_fingerprint")!=expected_train_fingerprint:
+        raise ValueError("candidate checkpoint training fingerprint mismatch")
     model=CandidateRankNet(); model.load_state_dict(ckpt["state_dict"]); model.eval()
     return model,ckpt
 
@@ -30,7 +32,8 @@ def main():
     ap.add_argument("--checkpoint",default="artifacts/pi-home-candidate-checkpoint/model.pt")
     args=ap.parse_args()
     data=json.loads(Path(args.data).read_text())
-    model,ckpt=load_model(args.checkpoint)
+    expected=train_fingerprint(data["train_cases"])
+    model,ckpt=load_model(args.checkpoint,expected_train_fingerprint=expected)
     rows=[];correct=0
     for case in data["cases"]:
         ranking=predict(model,case)
