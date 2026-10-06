@@ -10,7 +10,12 @@ function outcomeValue(x={}){
 }
 
 function validProvenance(x){
-  return x&&["measured","counterfactual_simulation"].includes(x.provenance);
+  if(!x)return false;
+  if(x.provenance==="measured")return true;
+  if(x.provenance==="counterfactual_simulation"){
+    return x.trusted_for_promotion===true;
+  }
+  return false;
 }
 
 function adjudicateShadowRecord(record={}){
