@@ -1,0 +1,24 @@
+name: layered-training-contract
+on:
+  push:
+    paths:
+      - "scripts/responsibility_heads.py"
+      - "scripts/responsibility_labels.py"
+      - "scripts/responsibility_loss.py"
+      - "scripts/three_layer_accuracy.py"
+      - "scripts/test_three_layer_accuracy.py"
+      - "scripts/test_responsibility_loss.py"
+      - ".github/workflows/layered-training-contract.yml"
+  workflow_dispatch:
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - run: pip install --index-url https://download.pytorch.org/whl/cpu torch
+      - run: python -m py_compile scripts/responsibility_heads.py scripts/responsibility_labels.py scripts/responsibility_loss.py scripts/three_layer_accuracy.py scripts/test_three_layer_accuracy.py scripts/test_responsibility_loss.py
+      - run: python scripts/test_responsibility_heads.py
+      - run: python scripts/test_responsibility_loss.py
+      - run: python scripts/test_three_layer_accuracy.py
