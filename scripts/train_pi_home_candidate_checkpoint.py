@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Train a small shadow-only candidate ranking checkpoint from recovery trajectories."""
-import argparse,json,random
+import argparse,json,random,hashlib
 from pathlib import Path
 import torch
 
@@ -9,6 +9,12 @@ FAMILIES=["quiet-ventilation","rain-safe-opening"]
 
 def target_key(t):
     return f'{t["area"]}::{t["entity"]}::{t.get("instance","default")}'
+
+def canonical_json(value):
+    return json.dumps(value,ensure_ascii=False,sort_keys=True,separators=(",",":"))
+
+def train_fingerprint(train_cases):
+    return hashlib.sha256(canonical_json(train_cases).encode("utf-8")).hexdigest()
 
 def row_vector(family,candidate):
     fam=[1.0 if family==x else 0.0 for x in FAMILIES]
@@ -114,12 +120,14 @@ def main():
     data=json.loads(Path(args.data).read_text())
     isolation=assert_identity_isolation(data["train_cases"],data["cases"])
     model,pairs=fit(data["train_cases"],args.epochs,args.seed)
+    fingerprint=train_fingerprint(data["train_cases"])
     report={
         "schema_version":"pi-home-candidate-checkpoint-report-v1",
         "shadow_only":True,
         "train_cases":len(data["train_cases"]),
         "pairwise_preferences":len(pairs),
         "identity_isolation":isolation,
+        "train_fingerprint":fingerprint,
         "holdout":evaluate(model,data["cases"]),
         "features":FEATURES,
         "families":FAMILIES,
@@ -133,7 +141,8 @@ def main():
         "features":FEATURES,
         "families":FAMILIES,
         "schema_version":"pi-home-candidate-checkpoint-v1",
-        "shadow_only":True
+        "shadow_only":True,
+        "train_fingerprint":fingerprint
     },args.out/"model.pt")
     (args.out/"report.json").write_text(json.dumps(report,ensure_ascii=False,indent=2))
     print(json.dumps(report,ensure_ascii=False))
