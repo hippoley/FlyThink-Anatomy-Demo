@@ -9,13 +9,27 @@ function outcomeValue(x={}){
   );
 }
 
-function validProvenance(x){
-  if(!x)return false;
-  if(x.provenance==="measured")return true;
+function provenanceAssessment(x){
+  if(!x)return {valid:false,reason:"outcome_missing"};
+  if(x.provenance==="measured")return {valid:true,reason:"measured"};
   if(x.provenance==="counterfactual_simulation"){
-    return x.trusted_for_promotion===true;
+    if(x.strategy&&x.strategy.complete_physics_coverage===false){
+      return {
+        valid:false,
+        reason:"incomplete_physics_coverage",
+        physics_coverage_ratio:x.strategy.physics_coverage_ratio
+      };
+    }
+    if(x.trusted_for_promotion!==true){
+      return {valid:false,reason:"simulator_not_trusted_for_promotion"};
+    }
+    return {valid:true,reason:"trusted_counterfactual_simulation"};
   }
-  return false;
+  return {valid:false,reason:"unsupported_outcome_provenance"};
+}
+
+function validProvenance(x){
+  return provenanceAssessment(x).valid;
 }
 
 function adjudicateShadowRecord(record={}){
@@ -29,13 +43,17 @@ function adjudicateShadowRecord(record={}){
       reason:"shadow_outcome_missing"
     };
   }
-  if(!validProvenance(current)||!validProvenance(shadow)){
+  const currentAssessment=provenanceAssessment(current);
+  const shadowAssessment=provenanceAssessment(shadow);
+  if(!currentAssessment.valid||!shadowAssessment.valid){
     return {
       id:record.id||null,
       comparable:false,
-      reason:"untrusted_outcome_provenance",
+      reason:!currentAssessment.valid?currentAssessment.reason:shadowAssessment.reason,
       current_provenance:current&&current.provenance||null,
-      shadow_provenance:shadow&&shadow.provenance||null
+      shadow_provenance:shadow&&shadow.provenance||null,
+      current_provenance_assessment:currentAssessment,
+      shadow_provenance_assessment:shadowAssessment
     };
   }
   const currentValue=outcomeValue(current);
@@ -77,4 +95,4 @@ function summarizeShadowReport(report={}){
   };
 }
 
-module.exports={outcomeValue,adjudicateShadowRecord,summarizeShadowReport,validProvenance};
+module.exports={outcomeValue,adjudicateShadowRecord,summarizeShadowReport,validProvenance,provenanceAssessment};
