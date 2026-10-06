@@ -33,13 +33,17 @@ function classifySimulationTrust(response,branch){
   const backend=String(response&&response.backend||"");
   const fidelity=String(response&&response.physics_fidelity||"");
   const provenance=String(branch&&branch.provenance||"");
+  const explicit=(branch&&typeof branch.trusted_for_promotion==="boolean")
+    ?branch.trusted_for_promotion
+    :(response&&typeof response.trusted_for_promotion==="boolean"?response.trusted_for_promotion:null);
   const toy=backend.includes("toy")||fidelity.toLowerCase().includes("toy")||provenance.includes("not engineering truth");
   const contam=backend.toLowerCase().includes("contam")||fidelity.toUpperCase()==="CONTAM";
+  const trusted=explicit===false?false:!!(contam&&!toy&&explicit!==false);
   return {
     backend,
     physics_fidelity:fidelity||null,
-    trusted_for_promotion:!!(contam&&!toy),
-    trust_reason:toy?"toy_backend_not_engineering_truth":(contam?"contam_simulation":"unrecognized_simulator")
+    trusted_for_promotion:trusted,
+    trust_reason:explicit===false?"simulator_declared_untrusted":(toy?"toy_backend_not_engineering_truth":(contam?"contam_simulation":"unrecognized_simulator"))
   };
 }
 
