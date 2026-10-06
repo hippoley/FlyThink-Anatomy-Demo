@@ -65,15 +65,11 @@ def generate(args) -> dict:
         raise RuntimeError("tts_config_invalid")
 
     tts = sherpa_onnx.OfflineTts(config)
-    generation = sherpa_onnx.OfflineTtsGenerationConfig(
-        sid=args.speaker_id,
-        speed=args.speed,
-        silence_scale=args.silence_scale,
-    )
-    if hasattr(tts, "generate_with_config"):
-        audio = tts.generate_with_config(args.text, generation)
-    else:
-        audio = tts.generate(args.text)
+    generation = sherpa_onnx.GenerationConfig()
+    generation.sid = args.speaker_id
+    generation.speed = args.speed
+    generation.silence_scale = args.silence_scale
+    audio = tts.generate(args.text, generation)
 
     sample_rate = int(getattr(audio, "sample_rate", 0) or 0)
     samples = getattr(audio, "samples", None)
