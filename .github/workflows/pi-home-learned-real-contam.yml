@@ -17,11 +17,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Checkout AirTrajectory trust-contract branch
+      - name: Checkout AirTrajectory main
         uses: actions/checkout@v4
         with:
           repository: hippoley/AirTrajectory
-          ref: fix/contam-fork-profile-trust-p47
+          ref: main
           path: vendor/AirTrajectory
 
       - uses: actions/setup-python@v5
