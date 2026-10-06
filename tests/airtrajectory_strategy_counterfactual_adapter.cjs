@@ -12,7 +12,8 @@ const patches=[
 ];
 const origin={
   co2_ppm:{living:1400,bedroom:950},
-  opening_pct:{W1:25,W2:0}
+  opening_pct:{W1:25,W2:0},
+  scalar_values:{FAN1:1}
 };
 
 (async()=>{
@@ -23,10 +24,13 @@ const origin={
       "客厅::窗户::default":"W1",
       "卧室::窗户::default":"W2"
     },
+    actuator_map:{
+      "厨房::风机::default":"FAN1"
+    },
     transport:async req=>{
       seen=req;
       return {
-        schema_version:"0.3",
+        schema_version:"0.4",
         profile_id:"home-v1",
         topology_id:"home-v1",
         backend:"contamxpy",
@@ -39,6 +43,7 @@ const origin={
           end_co2_ppm:870,
           end_co2_ppm_by_zone:{living:870,bedroom:900},
           path_flow_kg_s:{W1:.2,W2:.1},
+          end_scalar_values:{FAN1:2},
           series:[1400,1100,870],
           return:1.5,
           provenance:"backend-generated · CONTAM · engineering simulation",
@@ -57,6 +62,19 @@ const origin={
   assert.equal(out.strategy.unsupported_action_count,0);
   assert.equal(out.trusted_for_promotion,true);
   assert.equal(out.result.end_co2_ppm,870);
+  assert.deepEqual(out.result.end_scalar_values,{FAN1:2});
+
+  const scalar=await adapter.simulate({
+    label:"fan",
+    patches:[
+      {op:"PATCH_SLOT",target:{area:"厨房",entity:"风机",instance:"default"},slot:"level",value:2}
+    ],
+    origin
+  });
+  assert.deepEqual(seen.candidates[0].actions,[{actuator_id:"FAN1",target_value:2}]);
+  assert.equal(scalar.strategy.unsupported_actions.length,0);
+  assert.equal(scalar.strategy.complete_physics_coverage,true);
+  assert.equal(scalar.trusted_for_promotion,true);
 
   const mixed=await adapter.simulate({
     label:"mixed",
@@ -79,7 +97,7 @@ const origin={
     profile_id:"home-v1",
     opening_map:{"客厅::窗户::default":"W1"},
     transport:async()=>({
-      schema_version:"0.2",
+      schema_version:"0.3",
       profile_id:"home-v1",
       backend:"contamxpy",
       physics_fidelity:"CONTAM",
@@ -95,7 +113,7 @@ const origin={
     profile_id:"home-v1",
     opening_map:{"客厅::窗户::default":"W1"},
     transport:async()=>({
-      schema_version:"0.3",
+      schema_version:"0.4",
       profile_id:"other-home",
       backend:"contamxpy",
       physics_fidelity:"CONTAM",
@@ -114,12 +132,15 @@ const origin={
     opening_map:{
       "客厅::窗户::default":"W1",
       "卧室::窗户::default":"W2"
+    },
+    actuator_map:{
+      "厨房::风机::default":"FAN1"
     }
   });
   assert.equal(built.unsupported_actions.length,0);
 
   console.log(JSON.stringify({
     ok:true,
-    contract:"multi-opening strategies are promotable only with complete simulator coverage"
+    contract:"opening and mapped scalar strategies are promotable only with complete simulator coverage"
   }));
 })().catch(e=>{console.error(e);process.exit(1)});
