@@ -106,6 +106,26 @@ class HomeGoalRuntime{
 
   async recheckGoal(goalId,{observation={},planner=null,turn_id=null}={}){
     const evaluation=this.evaluateGoal(goalId,observation);
+    if(!evaluation.configured){
+      return {
+        completed:false,
+        action_taken:false,
+        blocked_reason:"desired_state_not_configured",
+        evaluation:clone(evaluation),
+        runtime:normalizeRuntime(this.runtime),
+        episode:clone(this.requireActive(goalId))
+      };
+    }
+    if(!evaluation.ready){
+      return {
+        completed:false,
+        action_taken:false,
+        blocked_reason:"required_observation_missing",
+        evaluation:clone(evaluation),
+        runtime:normalizeRuntime(this.runtime),
+        episode:clone(this.requireActive(goalId))
+      };
+    }
     if(evaluation.satisfied){
       const ep=this.requireActive(goalId);
       ep.status="completed";
