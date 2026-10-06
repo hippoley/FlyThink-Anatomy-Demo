@@ -70,13 +70,14 @@ class StreamingHomeSession{
       ...deriveContext(this.runtime,this.history),
       ...(event.context_hint||{})
     };
-    const prediction=await this.predictor({
+    let prediction=await this.predictor({
       text:event.text,
       context,
-      background:{...context,...(event.background||{})}
+      background:{...context,...(event.background||{})},
+      attempt:0
     });
-    const patches=Array.isArray(prediction&&prediction.patches)?prediction.patches:[];
-    const gate=evaluateCommit({
+    let patches=Array.isArray(prediction&&prediction.patches)?prediction.patches:[];
+    let gate=evaluateCommit({
       decision:prediction&&prediction.decision,
       patches,
       commit_state:event.commit_state||kind,
@@ -84,6 +85,42 @@ class StreamingHomeSession{
       base_revision:event.base_revision==null?baseRevision:event.base_revision,
       current_revision:(this.runtime.revisions||[]).length
     });
+
+    let recovery=null;
+    if(kind==="final"&&gate.reason==="stale_base_revision"){
+      const refreshedRevision=(this.runtime.revisions||[]).length;
+      const refreshedContext={
+        ...deriveContext(this.runtime,this.history),
+        ...(event.context_hint||{})
+      };
+      const retryPrediction=await this.predictor({
+        text:event.text,
+        context:refreshedContext,
+        background:{...refreshedContext,...(event.background||{})},
+        attempt:1,
+        recovery_reason:"stale_base_revision"
+      });
+      const retryPatches=Array.isArray(retryPrediction&&retryPrediction.patches)?retryPrediction.patches:[];
+      const retryBaseRevision=event.retry_base_revision==null?refreshedRevision:event.retry_base_revision;
+      const retryGate=evaluateCommit({
+        decision:retryPrediction&&retryPrediction.decision,
+        patches:retryPatches,
+        commit_state:event.commit_state||kind,
+        mode:"streaming",
+        base_revision:retryBaseRevision,
+        current_revision:(this.runtime.revisions||[]).length
+      });
+      recovery={
+        attempted:true,
+        reason:"stale_base_revision",
+        initial_gate:clone(gate),
+        retry_base_revision:retryBaseRevision,
+        retry_gate:clone(retryGate)
+      };
+      prediction=retryPrediction;
+      patches=retryPatches;
+      gate=retryGate;
+    }
 
     let receipts=[];
     let committed=false;
@@ -144,6 +181,7 @@ class StreamingHomeSession{
       },
       patch_proposal:clone(patches),
       commit_gate:clone(gate),
+      recovery:clone(recovery),
       thing_model:thingModel,
       feedback,
       reconcile:{
