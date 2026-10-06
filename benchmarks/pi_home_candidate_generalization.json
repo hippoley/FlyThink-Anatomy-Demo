@@ -254,7 +254,7 @@
           },
           {
             "target": {
-              "area": "卧室",
+              "area": "书房",
               "entity": "窗户",
               "instance": "south"
             },
@@ -268,7 +268,7 @@
       "gold": {
         "expected_targets": [
           {
-            "area": "卧室",
+            "area": "书房",
             "entity": "窗户",
             "instance": "south"
           }
