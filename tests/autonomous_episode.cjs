@@ -44,6 +44,7 @@ async function actionBudgetMustBlockBeforePhysical(){
     })
   });
   assert.equal(out.stop_reason,"action_budget_exceeded");
+  assert.equal(out.outcome.label,"BUDGET_EXHAUSTED");
   assert.equal(out.actions,0);
   assert.equal(driver.commands.length,0);
   assert.equal(goals.runtime.devices[key("客厅","窗户")].slots.opening,20);
@@ -66,6 +67,7 @@ async function stagnationMustStop(){
     planner:async()=>({patches:[patch("客厅","窗户","opening",value+=10)]})
   });
   assert.equal(out.stop_reason,"progress_stalled");
+  assert.equal(out.outcome.label,"STALLED");
   assert.equal(out.completed,false);
   assert.ok(out.actions>=2);
   assert.ok(out.actions<=3);
@@ -93,6 +95,7 @@ async function oscillationMustStop(){
     }
   });
   assert.equal(out.stop_reason,"strategy_oscillation");
+  assert.equal(out.outcome.label,"OSCILLATION");
   assert.equal(out.completed,false);
   assert.ok(out.steps<=5);
 }
@@ -112,6 +115,8 @@ async function goalCompletionBeatsBudgets(){
   });
   assert.equal(out.completed,true);
   assert.equal(out.stop_reason,"goal_completed");
+  assert.equal(out.outcome.label,"SUCCESS");
+  assert.equal(out.outcome.intervention_recommended,false);
   assert.equal(out.actions,1);
 }
 
