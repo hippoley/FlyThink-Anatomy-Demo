@@ -25,4 +25,4 @@ def build():
   extra.append(row(group,f"{'和'.join(areas)}的{entity}都设置",{"referent_set":refs},delta,before=before,semantic={"op":"PATCH_SLOT","cardinality":"SET","slot":slot,"has_value":True}))
  return {"truth":"contextual_state_transition_v2_resolver_causal","examples":base+extra}
 V2_SPLIT={"v2-train-focus-ac":"train","v2-dev-focus-light":"dev","v2-test-explicit-window":"test","v2-train-set-lights":"train","v2-dev-set-ac":"dev","v2-test-set-windows":"test"}
-def split_group(group):return V2_SPLIT.get(group,split_v1(group))
+def split_group(group):\n if group in V2_SPLIT:return V2_SPLIT[group]\n return split_v1(group)
