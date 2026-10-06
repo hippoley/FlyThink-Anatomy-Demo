@@ -28,7 +28,7 @@ def metrics(m,items):
   vals["entity"].append(torch.equal(pem[i].cpu(),torch.tensor(y["resolution"]["entity_membership"],dtype=torch.bool)))
   vals["slot"].append(int(ps[i])==y["resolution"]["slot"])
  return {k:(sum(map(bool,v))/len(v) if v else None) for k,v in vals.items()}|{"n":len(vals["target"])}
-def train(g,seed,flat,epochs):
+def room_diagnostics(m,items):\n x,ys=pack(items)\n with torch.no_grad():o=m(x);p=o["resolution"]["room_membership"].sigmoid().cpu()\n out=[]\n for i,y in enumerate(ys):\n  if y["resolution_set"]:\n   out.append({"group":items[i]["row"]["contrast_group"],"gold":y["resolution"]["room_membership"],"prob":[round(float(v),4) for v in p[i]],"pred":[int(v>=.5) for v in p[i]]})\n return out\n\ndef train(g,seed,flat,epochs):
  torch.manual_seed(seed);m=Model(g,seed,flat);x,ys=pack(rows("train","v3"));t=batch_targets(ys);opt=torch.optim.AdamW(m.parameters(),lr=.003,weight_decay=.01)
  for _ in range(epochs):
   opt.zero_grad();o=m(x);loss,_=joint_loss(o,t,{"semantic":1,"resolution":1,"judgement":1},masks={"resolution_one":t["resolution_one_mask"],"resolution_set":t["resolution_set_mask"]});loss.backward();torch.nn.utils.clip_grad_norm_(m.parameters(),1);opt.step()
@@ -39,6 +39,6 @@ def main():
  for name,flat in (("flat_16_target",True),("compositional_room_entity",False)):
   report["regimes"][name]=[]
   for seed in (2783,3783,4783):
-   m=train(g,seed,flat,a.epochs);report["regimes"][name].append({"seed":seed,**{s:metrics(m,rows(s,"v3")) for s in ("train","dev","test")}})
+   m=train(g,seed,flat,a.epochs);report["regimes"][name].append({"seed":seed,**{s:metrics(m,rows(s,"v3")) for s in ("train","dev","test")},"room_diagnostics":{s:room_diagnostics(m,rows(s,"v3")) for s in ("dev","test")}})
  Path(a.out).mkdir(parents=True,exist_ok=True);Path(a.out,"report.json").write_text(json.dumps(report,ensure_ascii=False,indent=2));print(json.dumps(report,ensure_ascii=False))
 if __name__=="__main__":main()
