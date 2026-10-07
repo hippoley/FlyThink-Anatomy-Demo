@@ -21,6 +21,7 @@ const context=loadSceneContext(worldPath,receiptPath);
 
 assert.equal(context.schema,CONTEXT_SCHEMA);
 assert.equal(context.case_id,"interior-kitchen-original");
+assert.equal(context.world_snapshot_revision,world.revision);
 assert.equal(context.world_snapshot_sha256,receipt.world_snapshot_sha256);
 assert.equal(context.validation_receipt_sha256,receipt.receipt_sha256);
 assert.equal(context.source_fingerprint,receipt.source_fingerprint);
@@ -31,6 +32,15 @@ assert.equal(context.exterior_windows.length,1);
 assert.equal(context.exterior_windows[0].world_entity_id,"window::bed2-south-casement");
 assert.equal(context.exterior_windows[0].room_entity_id,"room::bed2");
 assert.equal(context.exterior_windows[0].opening_id,"opening::G-bed2");
+
+{
+  const tampered=JSON.parse(JSON.stringify(world));
+  tampered.revision=Number(world.revision)+1;
+  assert.throws(
+    ()=>validateSceneArtifacts(tampered,receipt),
+    /world_sha256_mismatch/
+  );
+}
 
 {
   const tampered=JSON.parse(JSON.stringify(world));
