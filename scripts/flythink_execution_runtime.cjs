@@ -14,6 +14,7 @@ const {
 }=require("./physical_runtime.cjs");
 const {executeAtomicPhysicalSet}=require("./atomic_physical_set.cjs");
 const {runRecoveryTransaction}=require("./recovery_transaction.cjs");
+const {runtimeRegistryDigest}=require("./spatialruntime_authorizer.cjs");
 const {
   SCHEMA_VERSION:RECEIPT_VERSION,
   digestObject:sha256Object,
@@ -30,7 +31,16 @@ function physicalReceiptsCommitted(receipts){
 
 function isSha256(v){return /^[0-9a-f]{64}$/.test(String(v||""))}
 
-function validateAuthorizationResult(result,requestedActions){
+function validateAuthorizationResult(
+  result,
+  requestedActions,
+  {
+    task_id=null,
+    source_step=0,
+    source_revision=0,
+    runtime=null
+  }={}
+){
   if(!result||typeof result!=="object")
     throw new Error("physical_authorization_result_required");
   if(result.allow!==true)
@@ -42,15 +52,36 @@ function validateAuthorizationResult(result,requestedActions){
   if(!result.receipt||typeof result.receipt!=="object")
     throw new Error("physical_authorization_receipt_required");
   const receipt=result.receipt;
+  if(receipt.allow!==true)
+    throw new Error("physical_authorization_receipt_not_allowed");
   if(receipt.single_use!==true)
     throw new Error("physical_authorization_single_use_required");
-  if(typeof receipt.authorization_id!=="string"||!receipt.authorization_id)
-    throw new Error("physical_authorization_id_required");
+  if(!isSha256(receipt.authorization_id))
+    throw new Error("physical_authorization_id_invalid");
   if(!isSha256(receipt.patch_digest)||
      receipt.patch_digest!==sha256Object(result.patches))
     throw new Error("physical_authorization_patch_digest_mismatch");
   if(!isSha256(receipt.registry_digest))
     throw new Error("physical_authorization_registry_digest_invalid");
+  if(!runtime)
+    throw new Error("physical_authorization_runtime_required");
+  if(receipt.registry_digest!==runtimeRegistryDigest(runtime))
+    throw new Error("physical_authorization_registry_digest_mismatch");
+  if(!Array.isArray(receipt.authorized_patches)||
+     sha256Object(receipt.authorized_patches)!==sha256Object(result.patches))
+    throw new Error("physical_authorization_receipt_patches_mismatch");
+  if(!isSha256(receipt.receipt_sha256))
+    throw new Error("physical_authorization_receipt_sha256_invalid");
+  const receiptBase=clone(receipt);
+  delete receiptBase.receipt_sha256;
+  if(sha256Object(receiptBase)!==receipt.receipt_sha256)
+    throw new Error("physical_authorization_receipt_sha256_mismatch");
+  if(typeof receipt.case_id!=="string"||receipt.case_id!==String(task_id||""))
+    throw new Error("physical_authorization_case_id_mismatch");
+  if(Number(receipt.source_step)!==Number(source_step))
+    throw new Error("physical_authorization_source_step_mismatch");
+  if(Number(receipt.source_revision)!==Number(source_revision))
+    throw new Error("physical_authorization_source_revision_mismatch");
 
   for(let i=0;i<requestedActions.length;i++){
     if(!samePatchIdentity(requestedActions[i],result.patches[i])){
@@ -186,7 +217,16 @@ async function runExecutionProposal({
 
   let authorization;
   try{
-    authorization=validateAuthorizationResult(rawAuthorization,requested);
+    authorization=validateAuthorizationResult(
+      rawAuthorization,
+      requested,
+      {
+        task_id:request.task_id,
+        source_step,
+        source_revision,
+        runtime:current
+      }
+    );
   }catch(err){
     return {
       ...noExecution("BLOCKED","physical_authorization_invalid"),
