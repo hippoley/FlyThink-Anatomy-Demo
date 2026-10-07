@@ -30,7 +30,11 @@ function physicalReceiptsCommitted(receipts){
 
 function isSha256(v){return /^[0-9a-f]{64}$/.test(String(v||""))}
 
-function validateAuthorizationResult(result,requestedActions){
+function validateAuthorizationResult(
+  result,
+  requestedActions,
+  {task_id=null,source_step=0,source_revision=0}={}
+){
   if(!result||typeof result!=="object")
     throw new Error("physical_authorization_result_required");
   if(result.allow!==true)
@@ -51,6 +55,12 @@ function validateAuthorizationResult(result,requestedActions){
     throw new Error("physical_authorization_patch_digest_mismatch");
   if(!isSha256(receipt.registry_digest))
     throw new Error("physical_authorization_registry_digest_invalid");
+  if(typeof receipt.case_id!=="string"||receipt.case_id!==String(task_id||""))
+    throw new Error("physical_authorization_case_id_mismatch");
+  if(Number(receipt.source_step)!==Number(source_step))
+    throw new Error("physical_authorization_source_step_mismatch");
+  if(Number(receipt.source_revision)!==Number(source_revision))
+    throw new Error("physical_authorization_source_revision_mismatch");
 
   for(let i=0;i<requestedActions.length;i++){
     if(!samePatchIdentity(requestedActions[i],result.patches[i])){
@@ -186,7 +196,15 @@ async function runExecutionProposal({
 
   let authorization;
   try{
-    authorization=validateAuthorizationResult(rawAuthorization,requested);
+    authorization=validateAuthorizationResult(
+      rawAuthorization,
+      requested,
+      {
+        task_id:request.task_id,
+        source_step,
+        source_revision
+      }
+    );
   }catch(err){
     return {
       ...noExecution("BLOCKED","physical_authorization_invalid"),
