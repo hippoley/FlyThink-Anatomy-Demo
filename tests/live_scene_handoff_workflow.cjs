@@ -15,6 +15,12 @@ assert.match(yaml,/context\['handoff_evidence'\]\['source_commit_sha'\]==upstrea
 assert.match(yaml,/context\['handoff_evidence'\]\['handoff_sha256'\]==handoff\['handoff_sha256'\]/);
 assert.match(yaml,/\/tmp\/interior-handoff\.json/);
 assert.match(yaml,/Verify pinned SpatialRuntime revision in live consumer/);
+assert.match(yaml,/repository_dispatch:/);
+assert.match(yaml,/interior-spatialruntime-handoff-updated/);
+assert.match(yaml,/schedule:/);
+assert.match(yaml,/cron: "17 3 \* \* \*"/);
+assert.match(yaml,/github\.event\.client_payload\.source_commit_sha \|\| 'main'/);
+assert.match(yaml,/assert upstream_sha==dispatch_sha/);
 
 console.log(JSON.stringify({
   ok:true,
