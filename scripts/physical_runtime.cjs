@@ -181,6 +181,41 @@ async function executePhysicalTurn(inputRuntime, patches, driver, options = {}) 
       }
 
       const physicalPatch = materializePatch(runtime, expanded);
+      const turnId=expanded.turn_id || options.turn_id || null;
+
+      if(
+        physicalPatch.target &&
+        isQuarantined(runtime,physicalPatch.target) &&
+        !isSafetyReducingPatch(runtime,physicalPatch)
+      ){
+        const observation={
+          target:clone(physicalPatch.target),
+          exists:!!activeDevice(runtime,physicalPatch.target),
+          slots:clone(activeDevice(runtime,physicalPatch.target)?.slots||{}),
+          evidence:{source:"runtime:quarantine",measured:false}
+        };
+        const id="quarantine:"+String(runtime.executionLedger.length+1);
+        runtime.executionLedger.push({
+          id,
+          turn_id:turnId,
+          kind:"physical",
+          status:"blocked",
+          reason:"device_quarantined",
+          semantic_patch:clone(expanded),
+          physical_patch:clone(physicalPatch),
+          observation:clone(observation)
+        });
+        receipts.push({
+          patch:clone(expanded),
+          physical_patch:clone(physicalPatch),
+          command_id:id,
+          status:"blocked",
+          reason:"device_quarantined",
+          observation:clone(observation)
+        });
+        continue;
+      }
+
       const command = await Promise.resolve(driver.execute(physicalPatch));
       if (!command || typeof command !== "object") {
         throw new Error("physical_driver_invalid_receipt");
@@ -188,8 +223,13 @@ async function executePhysicalTurn(inputRuntime, patches, driver, options = {}) 
       if (!command.observation) {
         throw new Error("physical_driver_missing_observation");
       }
-      const turnId=expanded.turn_id || options.turn_id || null;
       runtime = reconcileObservation(runtime, command.observation, turnId);
+      if(
+        physicalPatch.target &&
+        ["uncertain","unsafe"].includes(command.status)
+      ){
+        markQuarantined(runtime,physicalPatch.target,command,turnId);
+      }
       const executionRecord={
         id:command.id || "physical:"+String(runtime.executionLedger.length+1),
         turn_id:turnId,
