@@ -1,5 +1,21 @@
 "use strict";
 
+const crypto=require("crypto");
+
+function canonical(value){
+  if(Array.isArray(value))return "["+value.map(canonical).join(",")+"]";
+  if(value&&typeof value==="object"){
+    return "{"+Object.keys(value).sort().map(k=>JSON.stringify(k)+":"+canonical(value[k])).join(",")+"}";
+  }
+  return JSON.stringify(value);
+}
+
+function sha256(value){
+  return "sha256:"+crypto.createHash("sha256").update(
+    typeof value==="string"?value:canonical(value)
+  ).digest("hex");
+}
+
 function uniq(xs){return [...new Set((xs||[]).map(String))].sort()}
 function clone(v){return v==null?v:JSON.parse(JSON.stringify(v))}
 
@@ -37,12 +53,83 @@ function normalizeRegistryEntry(entry={}){
   };
 }
 
-function buildProviderTrustRegistry(entries=[]){
+function verifyCalibrationCertificate(certificate={}){
+  if(certificate.schema_version!=="pi-home-provider-calibration-certificate-v1"){
+    return {valid:false,reason:"unsupported_calibration_certificate_schema"};
+  }
+  if(certificate.passed!==true){
+    return {valid:false,reason:"calibration_certificate_not_passed"};
+  }
+  if(certificate.source_kind!=="measured"||certificate.source_kind_accepted!==true){
+    return {valid:false,reason:"calibration_certificate_source_not_measured"};
+  }
+  if(!Array.isArray(certificate.covered_dimensions)||!certificate.covered_dimensions.length){
+    return {valid:false,reason:"calibration_certificate_dimensions_missing"};
+  }
+  const core=clone(certificate);
+  const supplied=core.calibration_digest;
+  delete core.calibration_digest;
+  let normalized;
+  try{normalized=normalizeDigest(supplied)}
+  catch(_){return {valid:false,reason:"calibration_certificate_digest_invalid"}}
+  const expected=sha256(core);
+  if(normalized!==expected){
+    return {valid:false,reason:"calibration_certificate_digest_mismatch"};
+  }
+  return {valid:true,reason:"calibration_certificate_verified",certificate:clone(certificate)};
+}
+
+function certificateMatchesEntry(certificate,entry){
+  const certDims=uniq(certificate.covered_dimensions);
+  const allowed=uniq(entry.allowed_dimensions);
+  if(certificate.provider_id!==entry.provider_id)return "certificate_provider_mismatch";
+  if(certificate.scope_id!==entry.scope_id)return "certificate_scope_mismatch";
+  if(!entry.allowed_evidence_levels.includes(certificate.evidence_level))return "certificate_evidence_level_mismatch";
+  if(certDims.some(d=>!allowed.includes(d))||allowed.some(d=>!certDims.includes(d))){
+    return "certificate_dimension_mismatch";
+  }
+  if(certificate.calibration_ref!==entry.calibration_ref)return "certificate_ref_mismatch";
+  if(certificate.calibration_digest!==entry.calibration_digest)return "certificate_digest_entry_mismatch";
+  return null;
+}
+
+function buildProviderTrustRegistry(entries=[],{certificates=[]}={}){
+  const certByProvider={};
+  for(const raw of certificates||[]){
+    const verification=verifyCalibrationCertificate(raw);
+    const providerId=raw&&raw.provider_id?String(raw.provider_id):"";
+    if(!providerId)throw new Error("calibration_certificate_provider_id_required");
+    if(certByProvider[providerId])throw new Error("duplicate_calibration_certificate:"+providerId);
+    certByProvider[providerId]={raw:clone(raw),verification};
+  }
+
   const out={};
   for(const raw of entries||[]){
     const entry=normalizeRegistryEntry(raw);
     if(out[entry.provider_id])throw new Error("duplicate_provider_trust_entry:"+entry.provider_id);
-    out[entry.provider_id]=entry;
+    const certRecord=certByProvider[entry.provider_id]||null;
+    let certificate_verified=false;
+    let certificate_reason="calibration_certificate_missing";
+    let certificate_digest=null;
+    if(certRecord){
+      certificate_reason=certRecord.verification.reason;
+      if(certRecord.verification.valid){
+        const mismatch=certificateMatchesEntry(certRecord.raw,entry);
+        if(mismatch){
+          certificate_reason=mismatch;
+        }else{
+          certificate_verified=true;
+          certificate_reason="calibration_certificate_verified_and_matched";
+          certificate_digest=certRecord.raw.calibration_digest;
+        }
+      }
+    }
+    out[entry.provider_id]={
+      ...entry,
+      certificate_verified,
+      certificate_reason,
+      certificate_digest
+    };
   }
   return {
     schema_version:"pi-home-provider-trust-registry-v1",
@@ -81,6 +168,14 @@ function resolveProviderTrust(provider={},registry=null){
   if(!entry)return {...base,reason:"provider_not_registered"};
   if(entry.status!=="active"){
     return {...base,reason:"provider_trust_revoked",registry_entry:clone(entry)};
+  }
+  if(entry.certificate_verified!==true){
+    return {
+      ...base,
+      reason:"provider_calibration_certificate_unverified",
+      certificate_reason:entry.certificate_reason||null,
+      registry_entry:clone(entry)
+    };
   }
 
   const disallowed=covered.filter(d=>!entry.allowed_dimensions.includes(d));
@@ -137,8 +232,12 @@ function applyResolvedTrust(provider={},registry=null){
 }
 
 module.exports={
+  canonical,
+  sha256,
   normalizeDigest,
   normalizeRegistryEntry,
+  verifyCalibrationCertificate,
+  certificateMatchesEntry,
   buildProviderTrustRegistry,
   resolveProviderTrust,
   applyResolvedTrust
