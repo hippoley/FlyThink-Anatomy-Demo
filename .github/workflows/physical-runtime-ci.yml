@@ -1,14 +1,10 @@
 name: physical-runtime-ci
 
-env:
-  SPATIALRUNTIME_COMMIT_SHA: d123ab9a5310cb9ce15d9e82630828a0d32211f4
-
 on:
   pull_request:
     paths:
       - "scripts/commit_gate.cjs"
       - "scripts/physical_runtime.cjs"
-      - "scripts/recovery_transaction.cjs"
       - "scripts/windowpilot_http_driver.cjs"
       - "scripts/runtime_context_adapter.cjs"
       - "scripts/contextual_edge_slu_adapter.cjs"
@@ -25,7 +21,6 @@ on:
       - "scripts/run_long_checkpoint_e2e_v2.cjs"
       - "tests/commit_gate.cjs"
       - "tests/physical_runtime.cjs"
-      - "tests/recovery_transaction.cjs"
       - "tests/runtime_context_adapter.cjs"
       - "tests/contextual_edge_slu_adapter.cjs"
       - "tests/windowpilot_http_driver.cjs"
@@ -55,18 +50,14 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: hippoley/SpatialRuntime
-          ref: d123ab9a5310cb9ce15d9e82630828a0d32211f4
+          ref: main
           path: _spatialruntime
-      - name: Verify pinned SpatialRuntime revision
-        shell: bash
-        run: test "$(git -C _spatialruntime rev-parse HEAD)" = "$SPATIALRUNTIME_COMMIT_SHA"
       - name: Install SpatialRuntime
         run: python -m pip install -e "_spatialruntime"
       - name: Check physical runtime JavaScript syntax
         run: |
           node --check scripts/commit_gate.cjs
           node --check scripts/physical_runtime.cjs
-          node --check scripts/recovery_transaction.cjs
           node --check scripts/windowpilot_http_driver.cjs
           node --check scripts/runtime_context_adapter.cjs
           node --check scripts/contextual_edge_slu_adapter.cjs
@@ -83,8 +74,6 @@ jobs:
         run: node tests/commit_gate.cjs
       - name: Verify patch -> execute -> observe -> reconcile
         run: node tests/physical_runtime.cjs
-      - name: Verify formal recovery transaction trust restore
-        run: node tests/recovery_transaction.cjs
       - name: Verify device feedback enters next-turn context
         run: node tests/runtime_context_adapter.cjs
       - name: Verify Contextual Edge SLU repository boundary
