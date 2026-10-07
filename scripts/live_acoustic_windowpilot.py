@@ -153,13 +153,20 @@ def build_commands(args):
         node.append("--spatialruntime-authorize")
     world_snapshot = getattr(args, "world_snapshot", None)
     world_validation_receipt = getattr(args, "world_validation_receipt", None)
+    scene_context = getattr(args, "scene_context", None)
     if bool(world_snapshot) != bool(world_validation_receipt):
         raise ValueError(
             "--world-snapshot and --world-validation-receipt must be provided together"
         )
+    if scene_context and (world_snapshot or world_validation_receipt):
+        raise ValueError(
+            "--scene-context is mutually exclusive with full WorldSnapshot artifacts"
+        )
     if world_snapshot:
         node.extend(["--world-snapshot", str(world_snapshot)])
         node.extend(["--world-validation-receipt", str(world_validation_receipt)])
+    if scene_context:
+        node.extend(["--scene-context", str(scene_context)])
     if args.apply:
         node.append("--apply")
     return asr, node
@@ -234,6 +241,10 @@ def parse_args():
     p.add_argument(
         "--world-validation-receipt",
         help="validation receipt matching --world-snapshot",
+    )
+    p.add_argument(
+        "--scene-context",
+        help="provenance-pinned compact HomeAI scene-context JSON",
     )
     p.add_argument("--probe-open-pct", type=float, default=5.0)
     p.add_argument("--tolerance", type=float, default=1.0)
