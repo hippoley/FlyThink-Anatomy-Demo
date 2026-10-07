@@ -43,6 +43,9 @@ function validateSceneContext(context){
       throw new Error("spatialruntime_scene_context_sha_invalid:"+key);
     }
   }
+  if(!isGitCommit(context.source_commit_sha)){
+    throw new Error("spatialruntime_scene_context_source_commit_invalid");
+  }
   if(context.spatialruntime_commit_sha!=null&&!isGitCommit(context.spatialruntime_commit_sha)){
     throw new Error("spatialruntime_scene_context_runtime_commit_invalid");
   }
@@ -131,6 +134,15 @@ function validateSceneArtifacts(world,receipt,{windowEntityLabel="窗"}={}){
   }
 
   const facts=world.facts||{};
+  if(!isGitCommit(facts.source_commit_sha)){
+    throw new Error("spatialruntime_scene_world_source_commit_invalid");
+  }
+  if(!isGitCommit(receipt.source_commit_sha)){
+    throw new Error("spatialruntime_scene_receipt_source_commit_invalid");
+  }
+  if(receipt.source_commit_sha!==facts.source_commit_sha){
+    throw new Error("spatialruntime_scene_source_commit_mismatch");
+  }
   if(receipt.source_fingerprint!==facts.source_fingerprint){
     throw new Error("spatialruntime_scene_source_fingerprint_mismatch");
   }
@@ -191,6 +203,7 @@ function validateSceneArtifacts(world,receipt,{windowEntityLabel="窗"}={}){
     case_id:world.case_id,
     world_snapshot_sha256:receipt.world_snapshot_sha256,
     validation_receipt_sha256:receipt.receipt_sha256,
+    source_commit_sha:receipt.source_commit_sha,
     source_fingerprint:receipt.source_fingerprint,
     relation_graph_fingerprint:receipt.relation_graph_fingerprint,
     spatialruntime_commit_sha:receipt.spatialruntime_commit_sha||null,
@@ -219,6 +232,9 @@ function validateSceneHandoff(world,receipt,handoff,options={}){
   }
   if(options.expectedSourceCommit&&handoff.source_commit_sha!==options.expectedSourceCommit){
     throw new Error("spatialruntime_scene_handoff_source_commit_mismatch");
+  }
+  if(handoff.source_commit_sha!==context.source_commit_sha){
+    throw new Error("spatialruntime_scene_handoff_context_commit_mismatch");
   }
   if(handoff.case_id!==context.case_id){
     throw new Error("spatialruntime_scene_handoff_case_id_mismatch");
