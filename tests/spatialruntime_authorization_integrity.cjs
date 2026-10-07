@@ -89,6 +89,9 @@ function receipt(overrides={}){
 {
   const bad=receipt();
   bad.authorized_patches=[patch(3,{area:"卧室",entity:"窗",instance:"default"})];
+  // An attacker may also recompute the patch digest and outer receipt hash.
+  // The logical patch identity gate must still reject the redirected target.
+  bad.patch_digest=sha256Object(bad.authorized_patches);
   const base={...bad};delete base.receipt_sha256;
   bad.receipt_sha256=sha256Object(base);
   assert.throws(
