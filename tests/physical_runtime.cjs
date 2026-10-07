@@ -143,6 +143,70 @@ const initial = normalizeRuntime({devices:{
     assert.equal(closed.runtime.deviceHealth[wk].status,"healthy");
   }
 
+  // Effect-then-disconnect is epistemically indeterminate, not a safe retry signal.
+  {
+    const W={area:"客厅",entity:"窗户",instance:"default"};
+    const wk="客厅::窗户::default";
+    const windowRuntime=normalizeRuntime({devices:{
+      [wk]:{
+        key:wk,area:"客厅",entity:"窗户",instance:"default",
+        model_id:"CWDS-CA01",slots:{opening:0}
+      }
+    }});
+    let effects=0;
+    const world={opening:0};
+    const effectThenDisconnect={
+      execute:async patch=>{
+        effects++;
+        world.opening=Number(patch.value);
+        throw new Error("transport_lost_after_device_effect");
+      }
+    };
+    const out=await executePhysicalTurn(
+      windowRuntime,
+      [{op:"PATCH_SLOT",target:W,slot:"opening",value:50}],
+      effectThenDisconnect,
+      {turn_id:"truth-probe-1"}
+    );
+    assert.equal(effects,1);
+    assert.equal(world.opening,50,
+      "probe proves device-side effect may occur before transport failure");
+    assert.equal(out.ok,false);
+    assert.equal(out.reason,"physical_effect_indeterminate_after_driver_error");
+    assert.equal(out.receipts[0].status,"indeterminate");
+    assert.equal(out.receipts[0].safe_automatic_retry,false);
+    assert.equal(out.receipts[0].observation.evidence.measured,false);
+    assert.equal(
+      out.runtime.devices[wk].slots.opening,
+      0,
+      "runtime must not invent unmeasured physical state"
+    );
+    assert.equal(isQuarantined(out.runtime,W),true);
+    assert.equal(
+      out.runtime.deviceHealth[wk].source_status,
+      "indeterminate"
+    );
+    assert.equal(
+      out.runtime.executionLedger.at(-1).status,
+      "indeterminate"
+    );
+
+    const blocked=await executePhysicalTurn(
+      out.runtime,
+      [{op:"PATCH_SLOT",target:W,slot:"opening",value:60}],
+      effectThenDisconnect,
+      {turn_id:"truth-probe-retry"}
+    );
+    assert.equal(blocked.ok,false);
+    assert.equal(blocked.receipts[0].status,"blocked");
+    assert.equal(blocked.receipts[0].reason,"device_quarantined");
+    assert.equal(
+      effects,
+      1,
+      "indeterminate outcome must block unsafe automatic retry before driver"
+    );
+  }
+
   // A driver may not redirect a receipt/readback onto another device.
   {
     const wrongDriver={
@@ -196,7 +260,7 @@ const initial = normalizeRuntime({devices:{
 
   console.log(JSON.stringify({
     ok:true,
-    cases:6,
-    contract:"patch->execute->observe->reconcile + persistent quarantine + non-applied receipts never commit"
+    cases:7,
+    contract:"patch->execute->observe->reconcile + indeterminate transport loss quarantines + non-applied receipts never commit"
   }));
 })().catch(err=>{console.error(err);process.exit(1)});
