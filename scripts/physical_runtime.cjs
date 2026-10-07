@@ -104,6 +104,12 @@ function evaluateQuarantinePreflight(runtime,patches){
   };
 }
 
+function expectedObservationTarget(patch){
+  if(!patch)return null;
+  if(patch.op==="REPLACE_TARGET")return patch.to||null;
+  return patch.target||null;
+}
+
 function materializePatch(runtime, patch) {
   if (!patch) throw new Error("physical_patch_required");
   if (patch.op === "PATCH_RELATIVE") {
@@ -238,6 +244,49 @@ async function executeSinglePhysicalPatch(inputRuntime, expanded, driver, option
   const command = await Promise.resolve(driver.execute(physicalPatch));
   if (!command || typeof command !== "object") throw new Error("physical_driver_invalid_receipt");
   if (!command.observation) throw new Error("physical_driver_missing_observation");
+
+  const expectedTarget=expectedObservationTarget(physicalPatch);
+  const observedTarget=command.observation&&command.observation.target||null;
+  if(
+    expectedTarget&&(
+      !observedTarget||
+      deviceKey(observedTarget)!==deviceKey(expectedTarget)
+    )
+  ){
+    const unsafeCommand={
+      ...clone(command),
+      status:"unsafe",
+      reason:"physical_receipt_target_mismatch"
+    };
+    markQuarantined(runtime,expectedTarget,unsafeCommand,turnId);
+    const executionRecord={
+      id:command.id || "physical:"+String(runtime.executionLedger.length+1),
+      turn_id:turnId,
+      kind:"physical",
+      status:"unsafe",
+      reason:"physical_receipt_target_mismatch",
+      semantic_patch:clone(expanded),
+      physical_patch:clone(physicalPatch),
+      observation:clone(command.observation)
+    };
+    runtime.executionLedger.push(executionRecord);
+    return {
+      ok:false,
+      runtime,
+      receipts:[{
+        patch:clone(expanded),
+        physical_patch:clone(physicalPatch),
+        command_id:executionRecord.id,
+        status:"unsafe",
+        reason:"physical_receipt_target_mismatch",
+        expected_target:clone(expectedTarget),
+        observation:clone(command.observation),
+        driver_receipt:clone(command)
+      }],
+      reason:"physical_receipt_target_mismatch"
+    };
+  }
+
   runtime = reconcileObservation(runtime, command.observation, turnId);
   if(physicalPatch.target && ["uncertain","unsafe"].includes(command.status)){
     markQuarantined(runtime,physicalPatch.target,command,turnId);
@@ -289,6 +338,7 @@ async function executePhysicalTurn(inputRuntime, patches, driver, options = {}) 
 module.exports = {
   MockThingDriver,
   materializePatch,
+  expectedObservationTarget,
   reconcileObservation,
   deviceHealth,
   isQuarantined,
