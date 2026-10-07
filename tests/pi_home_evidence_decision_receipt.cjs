@@ -6,7 +6,8 @@ const {
   verifyEvidenceDecisionReceipt
 }=require("../scripts/pi_home_evidence_decision_receipt.cjs");
 const {
-  createTrustRegistrySnapshot
+  createTrustRegistrySnapshot,
+  revokeProvider
 }=require("../scripts/pi_home_provider_trust_lineage.cjs");
 const {
   resolveProviderTrust
@@ -95,7 +96,8 @@ const receipt=buildEvidenceDecisionReceipt({
   learned_candidate:learnedCandidate,
   adjudication,
   provider_results:providerResults,
-  trust_snapshot:snapshot
+  trust_snapshot:snapshot,
+  trust_lineage:[snapshot]
 });
 assert.match(receipt.receipt_digest,/^sha256:[0-9a-f]{64}$/);
 assert.equal(receipt.trust_snapshot.revision,1);
@@ -108,7 +110,8 @@ const verified=verifyEvidenceDecisionReceipt(receipt,{
   learned_candidate:learnedCandidate,
   adjudication,
   provider_results:providerResults,
-  trust_snapshot:snapshot
+  trust_snapshot:snapshot,
+  trust_lineage:[snapshot]
 });
 assert.equal(verified.valid,true);
 assert.equal(verified.receipt_digest,receipt.receipt_digest);
@@ -118,7 +121,8 @@ assert.throws(
     learned_candidate:{...learnedCandidate,label:"candidate-2"},
     adjudication,
     provider_results:providerResults,
-    trust_snapshot:snapshot
+    trust_snapshot:snapshot,
+    trust_lineage:[snapshot]
   }),
   /candidate_mismatch/
 );
@@ -130,7 +134,8 @@ assert.throws(
     learned_candidate:learnedCandidate,
     adjudication,
     provider_results:tamperedEvidence,
-    trust_snapshot:snapshot
+    trust_snapshot:snapshot,
+    trust_lineage:[snapshot]
   }),
   /provider_evidence_mismatch/
 );
@@ -142,7 +147,8 @@ assert.throws(
     learned_candidate:learnedCandidate,
     adjudication:tamperedAdjudication,
     provider_results:providerResults,
-    trust_snapshot:snapshot
+    trust_snapshot:snapshot,
+    trust_lineage:[snapshot]
   }),
   /adjudication_mismatch/
 );
@@ -154,7 +160,8 @@ assert.throws(
     learned_candidate:learnedCandidate,
     adjudication,
     provider_results:providerResults,
-    trust_snapshot:wrongSnapshot
+    trust_snapshot:wrongSnapshot,
+    trust_lineage:[snapshot]
   }),
   /snapshot_digest_mismatch/
 );
@@ -170,7 +177,8 @@ assert.throws(
     learned_candidate:learnedCandidate,
     adjudication:mismatchAdjudication,
     provider_results:providerResults,
-    trust_snapshot:snapshot
+    trust_snapshot:snapshot,
+    trust_lineage:[snapshot]
   }),
   /trust_snapshot_mismatch/
 );
@@ -213,7 +221,131 @@ assert.throws(
     learned_candidate:learnedCandidate,
     adjudication:wrongTimeAdjudication,
     provider_results:providerResults,
-    trust_snapshot:snapshot
+    trust_snapshot:snapshot,
+    trust_lineage:[snapshot]
   }),
   /evaluation_time_mismatch/
+);
+
+
+const revokedSnapshot=revokeProvider(snapshot,"rain-engineering-v1",{
+  changed_at:"2026-10-12T00:00:00Z",
+  changed_by:"operator-2",
+  reason:"calibration drift",
+  change_id:"registry-change-002"
+});
+
+assert.throws(
+  ()=>buildEvidenceDecisionReceipt({
+    decision_id:"decision-no-lineage",
+    evaluated_at:"2026-10-10T00:00:00Z",
+    actor:"home-policy-shadow",
+    learned_candidate:learnedCandidate,
+    adjudication,
+    provider_results:providerResults,
+    trust_snapshot:snapshot
+  }),
+  /trust_lineage_required/
+);
+
+assert.throws(
+  ()=>buildEvidenceDecisionReceipt({
+    decision_id:"decision-stale-snapshot",
+    evaluated_at:"2026-10-13T00:00:00Z",
+    actor:"home-policy-shadow",
+    learned_candidate:learnedCandidate,
+    adjudication,
+    provider_results:providerResults,
+    trust_snapshot:snapshot,
+    trust_lineage:[snapshot,revokedSnapshot]
+  }),
+  /snapshot_stale_at_evaluation_time/
+);
+
+const historicalReceipt=buildEvidenceDecisionReceipt({
+  decision_id:"decision-before-revoke",
+  evaluated_at:"2026-10-10T00:00:00Z",
+  actor:"home-policy-shadow",
+  learned_candidate:learnedCandidate,
+  adjudication,
+  provider_results:providerResults,
+  trust_snapshot:snapshot,
+  trust_lineage:[snapshot,revokedSnapshot]
+});
+assert.equal(historicalReceipt.trust_lineage_head.revision,2);
+assert.equal(
+  verifyEvidenceDecisionReceipt(historicalReceipt,{
+    learned_candidate:learnedCandidate,
+    adjudication,
+    provider_results:providerResults,
+    trust_snapshot:snapshot,
+    trust_lineage:[snapshot,revokedSnapshot]
+  }).valid,
+  true
+);
+
+assert.throws(
+  ()=>verifyEvidenceDecisionReceipt(historicalReceipt,{
+    learned_candidate:learnedCandidate,
+    adjudication,
+    provider_results:providerResults,
+    trust_snapshot:snapshot,
+    trust_lineage:[snapshot]
+  }),
+  /lineage_anchor_/
+);
+
+
+const preExtensionReceipt=buildEvidenceDecisionReceipt({
+  decision_id:"decision-pre-extension",
+  evaluated_at:"2026-10-10T00:00:00Z",
+  actor:"home-policy-shadow",
+  learned_candidate:learnedCandidate,
+  adjudication,
+  provider_results:providerResults,
+  trust_snapshot:snapshot,
+  trust_lineage:[snapshot]
+});
+assert.equal(preExtensionReceipt.trust_lineage_head.revision,1);
+
+const preExtensionVerifiedLater=verifyEvidenceDecisionReceipt(
+  preExtensionReceipt,
+  {
+    learned_candidate:learnedCandidate,
+    adjudication,
+    provider_results:providerResults,
+    trust_snapshot:snapshot,
+    trust_lineage:[snapshot,revokedSnapshot]
+  }
+);
+assert.equal(preExtensionVerifiedLater.valid,true);
+
+const forgedAnchor=JSON.parse(JSON.stringify(preExtensionReceipt));
+forgedAnchor.trust_lineage_head.snapshot_digest="sha256:"+"f".repeat(64);
+forgedAnchor.receipt_digest=require("../scripts/pi_home_evidence_decision_receipt.cjs")
+  .digestObject((()=>{
+    const x={
+      schema_version:"pi-home-evidence-decision-receipt-v1",
+      decision_id:forgedAnchor.decision_id,
+      evaluated_at:forgedAnchor.evaluated_at,
+      actor:forgedAnchor.actor,
+      learned_candidate_digest:forgedAnchor.learned_candidate_digest,
+      adjudication_digest:forgedAnchor.adjudication_digest,
+      provider_evidence_digests:forgedAnchor.provider_evidence_digests,
+      trust_snapshot:forgedAnchor.trust_snapshot,
+      trust_lineage_head:forgedAnchor.trust_lineage_head,
+      trusted_for_generalization_claim:forgedAnchor.trusted_for_generalization_claim,
+      device_execution_authorized:false
+    };
+    return x;
+  })());
+assert.throws(
+  ()=>verifyEvidenceDecisionReceipt(forgedAnchor,{
+    learned_candidate:learnedCandidate,
+    adjudication,
+    provider_results:providerResults,
+    trust_snapshot:snapshot,
+    trust_lineage:[snapshot,revokedSnapshot]
+  }),
+  /lineage_anchor_digest_mismatch/
 );
