@@ -151,8 +151,7 @@ async function runExecutionProposal({
   source_step=0,
   source_revision=0,
   max_uncertainty=0.35,
-  authorizationLedger=null,
-  expected_spatialruntime_commit_sha=null
+  authorizationLedger=null
 }={}){
   assertContextStateSnapshot(contextual_state);
   validateExecutionRequest(request);
@@ -346,6 +345,7 @@ async function runDecisionProposal({
   driver,
   physicalAuthorizer,
   authorization_context={},
+  expected_spatialruntime_commit_sha=null,
   source_step=0,
   max_uncertainty=0.35,
   authorizationLedger=null
