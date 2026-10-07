@@ -39,6 +39,23 @@ function canonicalPatch(p){
 function authorizationDigest(patches){
   return crypto.createHash("sha256").update(canonicalEncode((patches||[]).map(canonicalPatch)),"utf8").digest("hex");
 }
+function proofFrame(value){
+  const raw=Buffer.from(String(value??""),"utf8");
+  return Buffer.concat([Buffer.from(String(raw.length)+":","ascii"),raw]);
+}
+function authorizationProof(authorityKey,auth){
+  if(!authorityKey)throw new Error("authorization_authority_key_required");
+  const parts=[
+    auth.version,auth.authorization_id,auth.turn_id,auth.patch_digest,auth.registry_digest,auth.proof_type
+  ].map(proofFrame);
+  return crypto.createHmac("sha256",authorityKey).update(Buffer.concat(parts)).digest("hex");
+}
+function verifyAuthorizationProof(authorityKey,auth){
+  if(!auth||auth.proof_type!=="hmac-sha256-v1"||typeof auth.proof!=="string")return false;
+  const expected=authorizationProof(authorityKey,auth);
+  const a=Buffer.from(expected,"hex"),b=Buffer.from(auth.proof,"hex");
+  return a.length===b.length&&a.length>0&&crypto.timingSafeEqual(a,b);
+}
 function semanticPatch(p){
   const [area,entity,instance]=targetKey(p.target).split("::");
   return {op:"PATCH_SLOT",target:{area,entity,instance},slot:p.slot,value:p.value};
@@ -47,7 +64,7 @@ function assertLedger(ledger){
   if(!ledger||typeof ledger.reserve!=="function"||typeof ledger.consume!=="function"||typeof ledger.release!=="function")
     throw new Error("authorization_ledger_required");
 }
-function atomicApplyAuthorizedPlan(inputRuntime,plannerResult,currentRegistryDigest,authorizationLedger){
+function atomicApplyAuthorizedPlan(inputRuntime,plannerResult,currentRegistryDigest,authorizationLedger,authorizationAuthorityKey){
   const before=normalizeRuntime(inputRuntime);
   let reservedId=null;
   try{
@@ -58,6 +75,8 @@ function atomicApplyAuthorizedPlan(inputRuntime,plannerResult,currentRegistryDig
     const auth=plannerResult.authorization;
     if(!auth||auth.version!==2||!auth.authorization_id||!auth.patch_digest||!auth.registry_digest)
       throw new Error("planner_authorization_missing");
+    if(!authorizationAuthorityKey)throw new Error("authorization_authority_key_required");
+    if(!verifyAuthorizationProof(authorizationAuthorityKey,auth))throw new Error("planner_authorization_proof_invalid");
     if(currentRegistryDigest!==auth.registry_digest)throw new Error("planner_authorization_stale_registry");
     const patches=plannerResult.patches||[];
     if(authorizationDigest(patches)!==auth.patch_digest)throw new Error("planner_authorization_digest_mismatch");
@@ -106,4 +125,4 @@ function atomicApplyAuthorizedTurn(inputRuntime,patches,authorizedTargetKeys){
     return {ok:true,runtime:out.runtime,receipts:out.receipts,reason:null};
   }catch(e){return {ok:false,runtime:before,receipts:[],reason:String(e.message||e)};}
 }
-module.exports={atomicApplyAuthorizedTurn,atomicApplyAuthorizedPlan,authorizationDigest};
+module.exports={atomicApplyAuthorizedTurn,atomicApplyAuthorizedPlan,authorizationDigest,authorizationProof,verifyAuthorizationProof};
