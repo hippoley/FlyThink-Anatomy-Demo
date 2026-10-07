@@ -1,0 +1,208 @@
+name: live-acoustic-windowpilot-acceptance
+
+on:
+  workflow_dispatch:
+    inputs:
+      windowpilot_url:
+        description: "WindowPilot base URL reachable from the self-hosted runner"
+        required: true
+        type: string
+      area:
+        description: "Room/area name bound to the real window (for example 主卧)"
+        required: true
+        type: string
+      instance:
+        description: "Thing Model instance"
+        required: true
+        default: "default"
+        type: string
+      expected_hardware_identity:
+        description: "Expected WindowPilot hardware identity SHA-256"
+        required: true
+        type: string
+      wav_path:
+        description: "Absolute path to reviewed human-recorded mono PCM WAV on the self-hosted runner"
+        required: true
+        type: string
+      fixture_manifest_path:
+        description: "Absolute path to flythink.acoustic_fixture.v1 manifest for the WAV"
+        required: true
+        type: string
+      probe_open_pct:
+        description: "Bounded live opening probe percentage"
+        required: true
+        default: "5"
+        type: string
+      tolerance_pct:
+        description: "Measured readback tolerance percentage"
+        required: true
+        default: "1"
+        type: string
+      timeout_ms:
+        description: "WindowPilot command/readback timeout"
+        required: true
+        default: "5000"
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: physical-lab-windowpilot
+  cancel-in-progress: false
+
+jobs:
+  live-acceptance:
+    runs-on: [self-hosted, linux]
+    environment: physical-lab
+    timeout-minutes: 60
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Validate operator inputs before touching hardware
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f "${{ inputs.wav_path }}"
+          test -f "${{ inputs.fixture_manifest_path }}"
+          case "${{ inputs.expected_hardware_identity }}" in
+            [0-9a-fA-F][0-9a-fA-F]*) ;;
+            *) echo "expected_hardware_identity must be a hex SHA-256"; exit 2 ;;
+          esac
+          test "${#INPUT_HW}" -eq 64
+          python - <<'PY'
+          import json, os, pathlib, wave
+          wav=pathlib.Path(os.environ["INPUT_WAV"])
+          manifest_path=pathlib.Path(os.environ["INPUT_MANIFEST"])
+          manifest=json.loads(manifest_path.read_text(encoding="utf-8"))
+          assert manifest.get("schema")=="flythink.acoustic_fixture.v1"
+          assert manifest.get("source_kind")=="human_recording"
+          assert manifest.get("expected_text"), "expected_text missing"
+          max_cer=(manifest.get("acceptance") or {}).get("max_cer")
+          assert isinstance(max_cer,(int,float)) and 0 <= max_cer <= 1
+          with wave.open(str(wav),"rb") as wf:
+              assert wf.getnchannels()==1, "WAV must be mono"
+              assert wf.getsampwidth()==2, "WAV must be 16-bit PCM"
+              assert wf.getnframes()>0, "WAV has no frames"
+          print({
+              "source_kind":manifest["source_kind"],
+              "expected_text":manifest["expected_text"],
+              "max_cer":max_cer,
+              "wav_bytes":wav.stat().st_size,
+          })
+          PY
+        env:
+          INPUT_WAV: ${{ inputs.wav_path }}
+          INPUT_MANIFEST: ${{ inputs.fixture_manifest_path }}
+          INPUT_HW: ${{ inputs.expected_hardware_identity }}
+
+      - name: Install acoustic + checkpoint runtimes
+        run: |
+          pip install -r requirements-asr.txt
+          pip install --index-url https://download.pytorch.org/whl/cpu torch
+
+      - name: Download official Chinese streaming ASR model
+        run: |
+          wget -q https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-streaming-zipformer-zh-14M-2023-02-23.tar.bz2
+          tar xjf sherpa-onnx-streaming-zipformer-zh-14M-2023-02-23.tar.bz2
+
+      - name: Download frozen judgement checkpoint
+        uses: actions/download-artifact@v4
+        with:
+          name: context-judgement-v3
+          path: artifacts/context-judgement-v3
+          github-token: ${{ github.token }}
+          run-id: "36372167785"
+
+      - name: Download frozen semantic checkpoint
+        uses: actions/download-artifact@v4
+        with:
+          name: semantic-patch-v1
+          path: artifacts/semantic-patch-v1
+          github-token: ${{ github.token }}
+          run-id: "36372786282"
+
+      - name: Build FlyWire + immutable Thing Model runtime context
+        run: |
+          python scripts/train_flywire.py --download --epochs 1 --out artifacts/flywire
+          python scripts/build_capability_index.py
+
+      - name: DRY_RUN human WAV -> sherpa -> checkpoint -> WindowPilot readiness
+        shell: bash
+        run: |
+          set -euo pipefail
+          MODEL=sherpa-onnx-streaming-zipformer-zh-14M-2023-02-23
+          python scripts/live_acoustic_windowpilot.py             --wav "${{ inputs.wav_path }}"             --fixture-manifest "${{ inputs.fixture_manifest_path }}"             --require-human-fixture             --url "${{ inputs.windowpilot_url }}"             --area "${{ inputs.area }}"             --entity "窗"             --instance "${{ inputs.instance }}"             --expected-hardware-identity "${{ inputs.expected_hardware_identity }}"             --probe-open-pct "${{ inputs.probe_open_pct }}"             --tolerance "${{ inputs.tolerance_pct }}"             --timeout-ms "${{ inputs.timeout_ms }}"             --graph artifacts/flywire/connectome.json             --judgement artifacts/context-judgement-v3/model.pt             --semantic artifacts/semantic-patch-v1/model.pt             --tokens "$MODEL/tokens.txt"             --encoder "$MODEL/encoder-epoch-99-avg-1.int8.onnx"             --decoder "$MODEL/decoder-epoch-99-avg-1.onnx"             --joiner "$MODEL/joiner-epoch-99-avg-1.int8.onnx"             > live-acoustic-dry-run.json
+
+          node - <<'NODE'
+          const fs=require("fs");
+          const x=JSON.parse(fs.readFileSync("live-acoustic-dry-run.json","utf8"));
+          const finals=(x.trace||[]).filter(t=>t.asr&&t.asr.is_final);
+          if(x.mode!=="DRY_RUN")throw new Error("dry-run mode mismatch");
+          if(x.speculative_physical_commands!==0)throw new Error("speculative hypothesis reached driver");
+          if(x.physical_driver_commands!==0)throw new Error("dry-run touched physical driver");
+          if(x.final_segments!==1)throw new Error("expected exactly one final ASR segment");
+          if(finals.length!==1)throw new Error("expected exactly one final semantic trace");
+          const targets=(finals[0].target_resolution&&finals[0].target_resolution.targets)||[];
+          if(!targets.some(t=>t.area===process.env.EXPECTED_AREA&&(t.entity==="窗"||t.entity==="窗户"))){
+            throw new Error("dry-run semantic target does not match requested physical window");
+          }
+          console.log({
+            final_text:finals[0].asr.text,
+            decision:finals[0].semantic.decision,
+            targets,
+            physical_driver_commands:x.physical_driver_commands,
+            readiness:x.readiness
+          });
+          NODE
+        env:
+          EXPECTED_AREA: ${{ inputs.area }}
+
+      - name: APPLY human WAV -> sherpa -> checkpoint -> WindowPilot -> measured readback -> reconcile
+        shell: bash
+        run: |
+          set -euo pipefail
+          MODEL=sherpa-onnx-streaming-zipformer-zh-14M-2023-02-23
+          python scripts/live_acoustic_windowpilot.py             --wav "${{ inputs.wav_path }}"             --fixture-manifest "${{ inputs.fixture_manifest_path }}"             --require-human-fixture             --apply             --receipt live-acoustic-windowpilot-receipt.json             --url "${{ inputs.windowpilot_url }}"             --area "${{ inputs.area }}"             --entity "窗"             --instance "${{ inputs.instance }}"             --expected-hardware-identity "${{ inputs.expected_hardware_identity }}"             --probe-open-pct "${{ inputs.probe_open_pct }}"             --tolerance "${{ inputs.tolerance_pct }}"             --timeout-ms "${{ inputs.timeout_ms }}"             --graph artifacts/flywire/connectome.json             --judgement artifacts/context-judgement-v3/model.pt             --semantic artifacts/semantic-patch-v1/model.pt             --tokens "$MODEL/tokens.txt"             --encoder "$MODEL/encoder-epoch-99-avg-1.int8.onnx"             --decoder "$MODEL/decoder-epoch-99-avg-1.onnx"             --joiner "$MODEL/joiner-epoch-99-avg-1.int8.onnx"             > live-acoustic-windowpilot-result.json
+
+      - name: Independently verify human acoustic + hardware evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/verify_acoustic_windowpilot_evidence.cjs             --receipt live-acoustic-windowpilot-receipt.json             --wav "${{ inputs.wav_path }}"             --fixture-manifest "${{ inputs.fixture_manifest_path }}"             --require-human-fixture             > live-acoustic-windowpilot-verification.json
+          cat live-acoustic-windowpilot-verification.json
+          node - <<'NODE'
+          const fs=require("fs");
+          const x=JSON.parse(fs.readFileSync("live-acoustic-windowpilot-verification.json","utf8"));
+          if(!x.valid)throw new Error("live acoustic WindowPilot evidence invalid: "+JSON.stringify(x.reasons));
+          console.log({
+            valid:x.valid,
+            final_text:x.final_text,
+            transcript_cer:x.transcript_cer,
+            target:x.target,
+            hardware_identity:x.hardware_identity,
+            evidence_sha256:x.evidence_sha256
+          });
+          NODE
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: live-acoustic-windowpilot-evidence
+          if-no-files-found: error
+          path: |
+            live-acoustic-dry-run.json
+            live-acoustic-windowpilot-result.json
+            live-acoustic-windowpilot-receipt.json
+            live-acoustic-windowpilot-verification.json
+          retention-days: 30
