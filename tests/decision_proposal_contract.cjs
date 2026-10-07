@@ -150,13 +150,13 @@ function proposal(overrides={}){
   // 7. World revision drift blocks before authorizer/driver.
   {
     const {runtime,snapshot}=context();
-    runtime.revisions.push({turn_id:"physical-update"});
     let authorizerCalls=0;
     let driverCalls=0;
     const out=await runDecisionProposal({
       runtime,
       contextual_state:snapshot,
       decision_proposal:proposal({world_snapshot_revision:0}),
+      world_snapshot_revision:1,
       physicalAuthorizer:async()=>{authorizerCalls++;throw new Error("must not run")},
       driver:{execute:async()=>{driverCalls++;throw new Error("must not run")}}
     });
@@ -169,7 +169,26 @@ function proposal(overrides={}){
     assert.equal(out.receipt.proposal_id,"proposal-1");
   }
 
-  // 8. Confirmation-required proposal never reaches authorizer/driver.
+  // 8. Missing authoritative SpatialRuntime revision blocks before authorization.
+  {
+    const {runtime,snapshot}=context();
+    let authorizerCalls=0;
+    let driverCalls=0;
+    const out=await runDecisionProposal({
+      runtime,
+      contextual_state:snapshot,
+      decision_proposal:proposal(),
+      physicalAuthorizer:async()=>{authorizerCalls++;throw new Error("must not run")},
+      driver:{execute:async()=>{driverCalls++;throw new Error("must not run")}}
+    });
+    assert.equal(out.ok,false);
+    assert.equal(out.status,"BLOCKED");
+    assert.equal(out.reason,"spatialruntime_world_revision_required");
+    assert.equal(authorizerCalls,0);
+    assert.equal(driverCalls,0);
+  }
+
+  // 9. Confirmation-required proposal never reaches authorizer/driver.
   {
     const {runtime,snapshot}=context();
     let authorizerCalls=0;
@@ -178,6 +197,7 @@ function proposal(overrides={}){
       runtime,
       contextual_state:snapshot,
       decision_proposal:proposal({requires_confirmation:true}),
+      world_snapshot_revision:0,
       physicalAuthorizer:async()=>{authorizerCalls++;throw new Error("must not run")},
       driver:{execute:async()=>{driverCalls++;throw new Error("must not run")}}
     });
@@ -188,7 +208,7 @@ function proposal(overrides={}){
     assert.equal(driverCalls,0);
   }
 
-  // 9. Relative mutation must carry a finite numeric delta.
+  // 10. Relative mutation must carry a finite numeric delta.
   {
     assert.throws(
       ()=>validateDecisionProposal(proposal({
@@ -205,7 +225,7 @@ function proposal(overrides={}){
 
   console.log(JSON.stringify({
     ok:true,
-    cases:9,
+    cases:10,
     schema:"decision-proposal.v1",
     contract:"external reasoning proposal is untrusted, logical-target-only, revision-bound, and cannot directly reach physical execution"
   }));
