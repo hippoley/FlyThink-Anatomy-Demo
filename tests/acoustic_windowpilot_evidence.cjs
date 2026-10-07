@@ -376,3 +376,13 @@ console.log(JSON.stringify({
   ok:true,
   contract:"human acoustic flagship evidence requires causal fresh readback, stable hardware identity, one observable semantic action, and one matching applied closeout"
 }));
+
+
+{
+  const report=validateReceipt(valid,{
+    requireHumanFixture:true,
+    requireSpatialRuntimeAuthorization:true
+  });
+  assert.equal(report.valid,false);
+  assert.ok(report.reasons.includes("SpatialRuntime authorization evidence missing"));
+}
