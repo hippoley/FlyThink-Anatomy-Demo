@@ -44,6 +44,9 @@ async function authorizerOnlyRunsAfterSemanticCommit(){
   assert.equal(out.physical_commands,1);
   assert.equal(out.trace[0].physical_authorization,null);
   assert.equal(out.trace[1].physical_authorization,null);
+  assert.equal(out.trace[0].physical_revision,0);
+  assert.equal(out.trace[1].physical_revision,0);
+  assert.equal(out.trace[2].physical_revision,1);
   assert.equal(out.trace[2].commit_gate.allow,true);
   assert.equal(out.trace[2].patch_proposal[0].value,5);
   assert.equal(out.trace[2].authorized_patch_proposal[0].value,3);
