@@ -405,6 +405,13 @@ function verifyExecutionReceipt(receipt={},{
   )throw new Error("execution_receipt_after_runtime_mismatch");
 
   const auth=receipt.authorization||{};
+  if(
+    receipt.verification&&
+    receipt.verification.authorization_runtime_registry_binding_verified===true&&
+    !before_runtime
+  ){
+    throw new Error("execution_receipt_before_runtime_required_for_registry_verification");
+  }
   if(auth.receipt){
     if(auth.receipt_sha256!==digestObject(auth.receipt))
       throw new Error("execution_receipt_authorization_digest_mismatch");
