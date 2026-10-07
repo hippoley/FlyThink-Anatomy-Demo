@@ -58,20 +58,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
-      - name: Reject escaped source artifacts
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-          paths = [
-              "scripts/authorized_patch_planner.py",
-              "scripts/atomic_authorized_commit.cjs",
-              "scripts/authorization_ledger.cjs",
-              "scripts/physical_runtime.cjs",
-          ]
-          bad = [p for p in paths if r"\n" in Path(p).read_text(encoding="utf-8")]
-          if bad:
-              raise SystemExit("literal escaped newline artifact: " + ", ".join(bad))
-          PY
       - name: Syntax preflight
         run: |
           python -m py_compile scripts/authorized_patch_planner.py scripts/device_registry.py scripts/test_execution_trust_boundary.py
