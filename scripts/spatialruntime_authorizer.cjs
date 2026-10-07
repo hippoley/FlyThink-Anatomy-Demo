@@ -110,6 +110,9 @@ function validateAuthorizationReceipt(receipt,request,requestedPatches){
   if(sha256Object(base)!==receipt.receipt_sha256){
     throw new Error("spatialruntime_authorizer_receipt_sha256_mismatch");
   }
+  if(Number(receipt.requested_patch_count)!==requestedPatches.length){
+    throw new Error("spatialruntime_authorizer_requested_patch_count_mismatch");
+  }
   if(!Array.isArray(receipt.authorized_patches)||receipt.authorized_patches.length!==requestedPatches.length){
     throw new Error("spatialruntime_authorizer_patch_count_mismatch");
   }

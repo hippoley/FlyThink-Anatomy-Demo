@@ -139,6 +139,17 @@ function receipt(overrides={}){
   );
 }
 
+
+{
+  const bad=receipt({requested_patch_count:2});
+  const base={...bad};delete base.receipt_sha256;
+  bad.receipt_sha256=sha256Object(base);
+  assert.throws(
+    ()=>validateAuthorizationReceipt(bad,request(),request().patches),
+    /requested_patch_count_mismatch/
+  );
+}
+
 // source revision remains bound independently of the new provenance fields.
 {
   const bad=receipt({source_revision:9});
