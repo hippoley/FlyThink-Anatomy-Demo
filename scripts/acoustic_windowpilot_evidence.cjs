@@ -230,8 +230,30 @@ function validateReceipt(receipt,{requireHumanFixture=false}={}){
   if(commands.length!==2){
     reasons.push("expected exactly one semantic command plus one closeout command");
   }
+  function validateCausalCommand(command,label){
+    if(!command)return;
+    const beforeTick=Number(command.before_tick);
+    const afterTick=Number(
+      command.observation&&command.observation.evidence&&
+      command.observation.evidence.tick
+    );
+    if(!Number.isFinite(beforeTick)||!Number.isFinite(afterTick)||afterTick<=beforeTick){
+      reasons.push(label+" readback tick is not causally newer");
+    }
+    if(command.hardware_identity_before!==expected){
+      reasons.push(label+" pre-actuation hardware identity mismatch");
+    }
+    if(command.hardware_identity_after!==expected){
+      reasons.push(label+" post-readback hardware identity mismatch");
+    }
+    if(!command.readiness_before||command.readiness_before.physical_write_ready!==true){
+      reasons.push(label+" command readiness was not write-ready");
+    }
+  }
+
   const semanticCommand=commands[0];
   if(semanticCommand){
+    validateCausalCommand(semanticCommand,"semantic");
     if(semanticCommand.status!=="applied")reasons.push("semantic physical command not applied");
     const requested=Number(semanticCommand.requested_position_pct);
     if(!Number.isFinite(requested)||requested<=0||requested>5){
@@ -263,6 +285,7 @@ function validateReceipt(receipt,{requireHumanFixture=false}={}){
   }
   const closeoutCommand=commands[1];
   if(closeoutCommand){
+    validateCausalCommand(closeoutCommand,"closeout");
     if(closeoutCommand.status!=="applied"){
       reasons.push("closeout driver command not applied");
     }
@@ -276,6 +299,12 @@ function validateReceipt(receipt,{requireHumanFixture=false}={}){
     );
     if(!Number.isFinite(measured)||measured>tolerance){
       reasons.push("closeout driver readback is not closed");
+    }
+    if(
+      closeout&&closeout.receipt&&
+      sha256Object(closeout.receipt)!==sha256Object(closeoutCommand)
+    ){
+      reasons.push("closeout receipt does not match driver command");
     }
   }
 
