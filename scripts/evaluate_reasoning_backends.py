@@ -10,7 +10,12 @@ import argparse
 import json
 from pathlib import Path
 
-from reasoning_backend import BackendConfig, ReasoningBackend, safe_for_commit
+from reasoning_backend import (
+    BackendConfig,
+    ReasoningBackend,
+    legacy_state_to_context_state,
+    safe_for_commit,
+)
 
 
 def load_cases(path: Path):
@@ -32,7 +37,12 @@ def main():
     for case in cases:
         proposal = backend.propose(
             utterance=case["utterance"],
-            state=case.get("state", {}),
+            state=(
+                case["state"]
+                if isinstance(case.get("state"), dict)
+                and case["state"].get("contract_version") == "contextual-state.v1"
+                else legacy_state_to_context_state(case.get("state", {}))
+            ),
             capability_candidates=case.get("capability_candidates", []),
             session_events=case.get("session_events", []),
         )
