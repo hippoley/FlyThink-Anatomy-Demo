@@ -13,12 +13,15 @@ on:
       - "scripts/physical_driver_capabilities.cjs"
       - "scripts/physical_transaction_router.cjs"
       - "scripts/physical_runtime.cjs"
+      - "scripts/flythink_execution_runtime.cjs"
+      - "scripts/execution_reasoning_contract.cjs"
       - "scripts/whole_home_patch_contract.cjs"
       - "scripts/test_execution_trust_boundary.py"
       - "scripts/test_atomic_physical_set.cjs"
       - "scripts/test_authorization_ledger.cjs"
       - "scripts/test_physical_transaction_router.cjs"
       - "scripts/test_production_physical_turn_atomicity.cjs"
+      - "tests/flythink_execution_runtime.cjs"
       - ".github/workflows/execution-trust-boundary.yml"
   pull_request:
     paths:
@@ -61,6 +64,9 @@ jobs:
           node --check scripts/physical_driver_capabilities.cjs
           node --check scripts/physical_transaction_router.cjs
           node --check scripts/physical_runtime.cjs
+          node --check scripts/execution_reasoning_contract.cjs
+          node --check scripts/flythink_execution_runtime.cjs
+          node --check tests/flythink_execution_runtime.cjs
           node --check scripts/test_atomic_physical_set.cjs
           node --check scripts/test_authorization_ledger.cjs
           node --check scripts/test_physical_transaction_router.cjs
@@ -89,3 +95,5 @@ jobs:
         run: node scripts/test_physical_transaction_router.cjs
       - name: Prove production executor cannot bypass atomic SET routing
         run: node scripts/test_production_physical_turn_atomicity.cjs
+      - name: Prove reasoning authorization execution runtime boundary
+        run: node tests/flythink_execution_runtime.cjs
