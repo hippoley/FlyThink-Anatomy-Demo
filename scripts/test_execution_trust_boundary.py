@@ -60,6 +60,15 @@ out=atomicApplyAuthorizedPlan(committed,payload,registryDigest,consumed);
 assert(!out.ok);assert.equal(out.reason,"planner_authorization_replayed");
 assert.deepStrictEqual(out.runtime,committed);assert.equal(out.receipts.length,0);
 
+const forged=JSON.parse(JSON.stringify(payload));
+forged.authorization.authorization_id="forged-auth-"+Date.now();
+forged.authorization.turn_id="forged-turn";
+const forgedLedger=ledger();
+out=atomicApplyAuthorizedPlan(before,forged,registryDigest,forgedLedger);
+const forgedAccepted=out.ok===true;
+assert(forgedAccepted,"expected current executor to expose forged-authorization authenticity gap");
+assert.equal(forgedLedger.status(forged.authorization.authorization_id),"consumed");
+
 const tampered=JSON.parse(JSON.stringify(payload));
 tampered.patches[1].target="次卧::空调::default";
 const tamperLedger=ledger();
@@ -85,6 +94,7 @@ assert.deepStrictEqual(out.runtime,before);assert.equal(out.receipts.length,0);
 
 console.log(JSON.stringify({
  planner_bound_authorization:"PASS",
+ forged_authorization_currently_accepted:forgedAccepted?1:0,
  mounted_wrong_device_injection:0,
  post_planner_patch_tamper:0,
  stale_registry_authorization:0,
