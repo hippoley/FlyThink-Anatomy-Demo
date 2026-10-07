@@ -130,6 +130,7 @@ const initial = normalizeRuntime({devices:{
     clearQuarantine(closed.runtime,W,{
       verified:true,
       turn_id:"turn-recovery",
+      readiness_verified:true,
       hardware_identity_verified:true,
       physical_readback_verified:true,
       safe_position_verified:true
