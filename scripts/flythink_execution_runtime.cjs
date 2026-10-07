@@ -246,15 +246,34 @@ class FlyThinkExecutionRuntime{
     runtime={},
     driver,
     physicalAuthorizer,
-    maxUncertainty=0.35
+    maxUncertainty=0.35,
+    receiptLedger=null,
+    requireDurableReceipt=false
   }={}){
     this.runtime=normalizeRuntime(runtime);
     this.driver=driver;
     this.physicalAuthorizer=physicalAuthorizer;
     this.maxUncertainty=maxUncertainty;
+    this.receiptLedger=receiptLedger;
+    this.requireDurableReceipt=requireDurableReceipt===true;
   }
 
   async execute(input={}){
+    const ledger=input.receiptLedger===undefined
+      ?this.receiptLedger
+      :input.receiptLedger;
+    const requireDurable=input.require_durable_receipt==null
+      ?this.requireDurableReceipt
+      :input.require_durable_receipt===true;
+    if(
+      requireDurable&&(
+        !ledger||typeof ledger.appendVerifiedReceipt!=="function"
+      )
+    ){
+      throw new Error("execution_receipt_ledger_required");
+    }
+
+    const beforeRuntime=normalizeRuntime(this.runtime);
     const out=await runExecutionProposal({
       ...input,
       runtime:this.runtime,
@@ -265,7 +284,62 @@ class FlyThinkExecutionRuntime{
         :input.max_uncertainty
     });
     this.runtime=out.runtime;
-    return out;
+    const physicalOk=out.ok===true;
+
+    if(!ledger||typeof ledger.appendVerifiedReceipt!=="function"){
+      return {
+        ...out,
+        physical_ok:physicalOk,
+        receipt_journal:{
+          persisted:false,
+          required:requireDurable,
+          reason:"execution_receipt_ledger_not_configured"
+        }
+      };
+    }
+
+    try{
+      const persisted=ledger.appendVerifiedReceipt(out.receipt,{
+        contextual_state:input.contextual_state,
+        request:input.request,
+        proposal:input.proposal,
+        before_runtime:beforeRuntime,
+        after_runtime:out.runtime
+      });
+      return {
+        ...out,
+        physical_ok:physicalOk,
+        receipt_journal:{
+          persisted:true,
+          required:requireDurable,
+          sequence:persisted.event&&persisted.event.sequence||null,
+          event_hash:persisted.event&&persisted.event.hash||null,
+          seal_digest:persisted.seal&&persisted.seal.seal_digest||null,
+          physical_truth_verified:
+            persisted.verified&&persisted.verified.physical_truth_verified===true
+        }
+      };
+    }catch(err){
+      const failed={
+        ...out,
+        physical_ok:physicalOk,
+        receipt_journal:{
+          persisted:false,
+          required:requireDurable,
+          error:String(err&&err.message||err)
+        }
+      };
+      if(
+        requireDurable&&
+        out.receipt&&
+        out.receipt.physical_committed===true
+      ){
+        failed.ok=false;
+        failed.status="EVIDENCE_NOT_DURABLE";
+        failed.reason="execution_receipt_journal_append_failed";
+      }
+      return failed;
+    }
   }
 
   async recover(input={}){
