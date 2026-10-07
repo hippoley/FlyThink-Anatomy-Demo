@@ -39,6 +39,8 @@ function atomicApplyAuthorizedPlan(inputRuntime,plannerResult,currentRegistryDig
       const k=targetKey(t);
       if(!before.devices[k])throw new Error("authorized_target_not_mounted:"+k);
     }
+    const reserved=authorizationLedger.reserve(auth.authorization_id,{turn_id:auth.turn_id||null,patch_digest:auth.patch_digest,registry_digest:auth.registry_digest});
+    if(!reserved)throw new Error("planner_authorization_replayed");
     const out=applyTurn(before,patches.map(semanticPatch));
     const consumed=authorizationLedger.add(auth.authorization_id,{
       turn_id:auth.turn_id||null,
