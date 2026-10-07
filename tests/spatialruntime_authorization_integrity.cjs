@@ -4,6 +4,7 @@ const assert=require("assert");
 const {
   RECEIPT_SCHEMA,
   sha256Object,
+  runtimeRegistryDigest,
   validateAuthorizationReceipt
 }=require("../scripts/spatialruntime_authorizer.cjs");
 
@@ -23,10 +24,20 @@ function request(){
     case_id:"turn-1",
     source_step:2,
     source_revision:2,
-    runtime:{},
+    runtime:{devices:{
+      "客厅::窗::default":{
+        key:"客厅::窗::default",
+        area:"客厅",
+        entity:"窗",
+        instance:"default",
+        model_id:"CWDS-CA01",
+        slots:{opening:0}
+      }
+    }},
     patches:[{op:"PATCH_SLOT",target:target(),slot:"opening",value:5}],
     spatial_context:{},
-    max_open_ratio_delta:0.25
+    max_open_ratio_delta:0.25,
+    get registry_digest(){return runtimeRegistryDigest(this.runtime)}
   };
 }
 function receipt(overrides={}){
@@ -39,6 +50,10 @@ function receipt(overrides={}){
     source_revision:2,
     requested_patch_count:1,
     authorized_patches:[patch(3)],
+    patch_digest:sha256Object([patch(3)]),
+    registry_digest:request().registry_digest,
+    authorization_id:"c".repeat(64),
+    single_use:true,
     blocked:[],
     rain:"dry",
     exterior_window_keys:[],
@@ -92,6 +107,37 @@ function receipt(overrides={}){
 }
 
 {
+  const bad=receipt({patch_digest:"0".repeat(64)});
+  const base={...bad};delete base.receipt_sha256;
+  bad.receipt_sha256=sha256Object(base);
+  assert.throws(
+    ()=>validateAuthorizationReceipt(bad,request(),request().patches),
+    /patch_digest_mismatch/
+  );
+}
+
+{
+  const bad=receipt({registry_digest:"0".repeat(64)});
+  const base={...bad};delete base.receipt_sha256;
+  bad.receipt_sha256=sha256Object(base);
+  assert.throws(
+    ()=>validateAuthorizationReceipt(bad,request(),request().patches),
+    /registry_digest_mismatch/
+  );
+}
+
+{
+  const bad=receipt({single_use:false});
+  const base={...bad};delete base.receipt_sha256;
+  bad.receipt_sha256=sha256Object(base);
+  assert.throws(
+    ()=>validateAuthorizationReceipt(bad,request(),request().patches),
+    /single_use_required/
+  );
+}
+
+// source revision remains bound independently of the new provenance fields.
+{
   const bad=receipt({source_revision:9});
   const base={...bad};delete base.receipt_sha256;
   bad.receipt_sha256=sha256Object(base);
@@ -103,5 +149,5 @@ function receipt(overrides={}){
 
 console.log(JSON.stringify({
   ok:true,
-  contract:"SpatialRuntime authorization must match request identity, revision, trace hash and receipt SHA before dispatch"
+  contract:"SpatialRuntime authorization must bind request identity, revision, exact patch digest, registry digest, single-use intent, trace hash and receipt SHA before dispatch"
 }));
