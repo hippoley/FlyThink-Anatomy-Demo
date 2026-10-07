@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Fail-closed planner with deterministic authorization binding."""
-import hashlib,json
+import hashlib,json,uuid
 from semantic_capability_map import validate_value
 
 def parse_key(key):
@@ -15,7 +15,7 @@ def authorization_digest(patches):
  payload=json.dumps([canonical_patch(p) for p in patches],ensure_ascii=False,sort_keys=True,separators=(",",":"))
  return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
-def plan(registry,target_keys,slot,value):
+def plan(registry,target_keys,slot,value,turn_id=None):
  patches=[];rejected=[]
  for key in target_keys:
   try:b=registry.resolve(parse_key(key))
@@ -26,4 +26,4 @@ def plan(registry,target_keys,slot,value):
    rejected.append({"target":key,"model_id":b.model_id,"slot":slot,"reason":v["reason"]});continue
   patches.append({"target":key,"model_id":b.model_id,"slot":slot,"capability":v["capability"]["codes"][0],"value":value})
  if rejected:return {"ok":False,"patches":[],"authorization":None,"rejected":rejected,"reason":"authorized_set_validation_failed"}
- return {"ok":True,"patches":patches,"authorization":{"version":1,"patch_digest":authorization_digest(patches),"registry_digest":registry.snapshot_digest()},"rejected":[]}
+ \n auth={"version":1,"authorization_id":str(uuid.uuid4()),"turn_id":turn_id,"patch_digest":authorization_digest(patches),"registry_digest":registry.snapshot_digest()}\n return {"ok":True,"patches":patches,"authorization":auth,"rejected":[]}
