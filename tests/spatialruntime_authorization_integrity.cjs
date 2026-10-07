@@ -5,7 +5,8 @@ const {
   RECEIPT_SCHEMA,
   sha256Object,
   runtimeRegistryDigest,
-  validateAuthorizationReceipt
+  validateAuthorizationReceipt,
+  consumeAuthorizationId
 }=require("../scripts/spatialruntime_authorizer.cjs");
 
 function target(){return {area:"客厅",entity:"窗",instance:"default"}}
@@ -54,7 +55,7 @@ function receipt(overrides={}){
     authorized_patches:[patch(3)],
     patch_digest:sha256Object([patch(3)]),
     registry_digest:request().registry_digest,
-    authorization_id:"c".repeat(64),
+    authorization_id:null,
     single_use:true,
     blocked:[],
     rain:"dry",
@@ -66,6 +67,17 @@ function receipt(overrides={}){
     commit_summary:{ready_to_dispatch:true},
     ...overrides
   };
+  if(!Object.prototype.hasOwnProperty.call(overrides,"authorization_id")){
+    body.authorization_id=sha256Object({
+      case_id:body.case_id,
+      source_step:body.source_step,
+      source_revision:body.source_revision,
+      patch_digest:body.patch_digest,
+      registry_digest:body.registry_digest,
+      spatialruntime_commit_sha:body.spatialruntime_commit_sha,
+      trace_hash:body.trace_hash
+    });
+  }
   body.receipt_sha256=sha256Object(body);
   return body;
 }
@@ -217,6 +229,39 @@ function receipt(overrides={}){
   assert.throws(
     ()=>validateAuthorizationReceipt(bad,request(),request().patches),
     /trace_hash_invalid/
+  );
+}
+
+
+
+{
+  const bad=receipt({authorization_id:"f".repeat(64)});
+  const base={...bad};delete base.receipt_sha256;
+  bad.receipt_sha256=sha256Object(base);
+  assert.throws(
+    ()=>validateAuthorizationReceipt(bad,request(),request().patches),
+    /authorization_id_mismatch/
+  );
+}
+
+{
+  const bad=receipt({authorization_id:"not-a-sha"});
+  const base={...bad};delete base.receipt_sha256;
+  bad.receipt_sha256=sha256Object(base);
+  assert.throws(
+    ()=>validateAuthorizationReceipt(bad,request(),request().patches),
+    /authorization_id_invalid/
+  );
+}
+
+{
+  const used=new Set();
+  const id=receipt().authorization_id;
+  consumeAuthorizationId(used,id);
+  assert.equal(used.has(id),true);
+  assert.throws(
+    ()=>consumeAuthorizationId(used,id),
+    /authorization_reused/
   );
 }
 
