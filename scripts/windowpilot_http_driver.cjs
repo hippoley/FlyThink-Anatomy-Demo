@@ -16,6 +16,10 @@ class WindowPilotHttpDriver {
     this.pollIntervalMs=Number(options.pollIntervalMs??200);
     this.timeoutMs=Number(options.timeoutMs??5000);
     this.defaultOpenPct=options.defaultOpenPct==null?50:Number(options.defaultOpenPct);
+    this.maxOpenPct=options.maxOpenPct==null?null:Number(options.maxOpenPct);
+    if(this.maxOpenPct!=null&&(!Number.isFinite(this.maxOpenPct)||this.maxOpenPct<0||this.maxOpenPct>100)){
+      throw new Error("windowpilot_max_open_pct_invalid");
+    }
     this.canonicalPositionSlot=options.canonicalPositionSlot||"opening";
     this.maxPolls=options.maxPolls==null?null:Number(options.maxPolls);
     this.expectedHardwareIdentity=options.expectedHardwareIdentity||null;
@@ -144,6 +148,10 @@ class WindowPilotHttpDriver {
     const identity=readiness&&readiness.hardware_identity&&readiness.hardware_identity.identity_sha256;
     if(this.expectedHardwareIdentity&&identity!==this.expectedHardwareIdentity){
       return this._blocked(patch,before,beforePct,"hardware_identity_mismatch",readiness);
+    }
+
+    if(this.maxOpenPct!=null&&targetPct>this.maxOpenPct){
+      return this._blocked(patch,before,beforePct,"target_above_max_open_pct",readiness);
     }
 
     // Opening requires trustworthy current rain evidence. Closing is allowed

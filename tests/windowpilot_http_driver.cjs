@@ -157,5 +157,28 @@ function state(pct,extra={}){
     assert.equal(out.runtime.devices[key].slots.power,"ON");
   }
 
-  console.log(JSON.stringify({ok:true,cases:6,contract:"WindowPilot ACK != Reality; bounded readback + STOP on uncertainty"}));
+  // 7. A live acceptance max-open bound is enforced before actuator POST.
+  {
+    const calls=[];
+    const driver=new WindowPilotHttpDriver({
+      baseUrl:"http://windowpilot.test",target,maxOpenPct:5,
+      requestJson:async(method,path,payload)=>{
+        calls.push({method,path,payload});
+        if(path==="/api/physical-readiness")return readiness();
+        if(path==="/api/state")return state(0);
+        throw new Error("unexpected:"+path);
+      }
+    });
+    const out=await executePhysicalTurn(
+      initial,
+      [{op:"PATCH_SLOT",target,slot:"opening",value:50}],
+      driver
+    );
+    assert.equal(out.receipts[0].status,"blocked");
+    assert.equal(out.receipts[0].reason,"target_above_max_open_pct");
+    assert.equal(out.runtime.devices[key].slots.opening,0);
+    assert.equal(calls.filter(x=>x.method==="POST").length,0);
+  }
+
+  console.log(JSON.stringify({ok:true,cases:7,contract:"WindowPilot ACK != Reality; bounded readback + pre-actuation open limit + STOP on uncertainty"}));
 })().catch(e=>{console.error(e);process.exit(1)});

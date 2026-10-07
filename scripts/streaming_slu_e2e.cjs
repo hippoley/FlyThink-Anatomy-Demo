@@ -39,6 +39,22 @@ function bindingFor(runtime,patch){
   };
 }
 
+function receiptsApplied(receipts){
+  return Array.isArray(receipts)&&receipts.length>0&&receipts.every(
+    x=>x&&(x.local_only===true||x.status==="applied")
+  );
+}
+
+function receiptFailure(receipts){
+  const failed=(receipts||[]).filter(
+    x=>!x||(x.local_only!==true&&x.status!=="applied")
+  );
+  if(!failed.length)return null;
+  return "physical_receipt_not_applied:"+failed.map(
+    x=>x&&x.status||"missing_status"
+  ).join(",");
+}
+
 class StreamingHomeSession{
   constructor({initialRuntime={},predictor,driver=null}={}){
     if(typeof predictor!=="function")throw new Error("streaming_predictor_required");
@@ -95,7 +111,8 @@ class StreamingHomeSession{
         );
         this.runtime=applied.runtime;
         receipts=applied.receipts||[];
-        committed=true;
+        committed=receiptsApplied(receipts);
+        if(!committed)error=receiptFailure(receipts)||"physical_commit_has_no_applied_receipt";
       }catch(e){
         error=String(e&&e.message||e);
       }
@@ -183,4 +200,10 @@ async function runStreamingSequence(sequence,options={}){
   };
 }
 
-module.exports={StreamingHomeSession,runStreamingSequence,targetsOf};
+module.exports={
+  StreamingHomeSession,
+  runStreamingSequence,
+  targetsOf,
+  receiptsApplied,
+  receiptFailure
+};
