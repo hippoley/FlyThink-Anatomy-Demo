@@ -108,6 +108,7 @@ function buildReceipt({
         patches:clone(x.patch_proposal||[]),
         authorized_patches:clone(x.authorized_patch_proposal||x.patch_proposal||[]),
         physical_authorization:clone(x.physical_authorization||null),
+        physical_authorization_binding:clone(x.physical_authorization_binding||null),
         thing_model:clone(x.thing_model||[]),
         feedback:clone(x.feedback||[]),
         reconcile:clone(x.reconcile||null)
@@ -233,6 +234,9 @@ function validateReceipt(receipt,{requireHumanFixture=false,requireSpatialRuntim
         if(auth.allow!==true){
           reasons.push("SpatialRuntime authorization did not allow");
         }
+        if(auth.canonicalization!=="sorted-json-number-normalized-v1"){
+          reasons.push("SpatialRuntime authorization canonicalization mismatch");
+        }
         if(!/^[0-9a-f]{64}$/.test(String(auth.trace_hash||""))){
           reasons.push("SpatialRuntime trace hash missing");
         }
@@ -244,6 +248,40 @@ function validateReceipt(receipt,{requireHumanFixture=false,requireSpatialRuntim
         const authorized=committed.authorized_patches||[];
         if(!Array.isArray(authorized)||authorized.length!==1){
           reasons.push("expected exactly one SpatialRuntime-authorized patch");
+        }
+
+        const binding=committed.physical_authorization_binding;
+        if(!binding){
+          reasons.push("SpatialRuntime physical binding evidence missing");
+        }else{
+          if(binding.schema!=="homeai_spatialruntime_physical_binding_v1"){
+            reasons.push("SpatialRuntime physical binding schema mismatch");
+          }
+          if(binding.authorization_receipt_sha256!==auth.receipt_sha256){
+            reasons.push("SpatialRuntime binding authorization receipt mismatch");
+          }
+          if(binding.authorization_trace_hash!==auth.trace_hash){
+            reasons.push("SpatialRuntime binding trace hash mismatch");
+          }
+          const savedBinding=binding.binding_sha256;
+          const bindingBase=clone(binding);delete bindingBase.binding_sha256;
+          if(!savedBinding||savedBinding!==sha256Object(bindingBase)){
+            reasons.push("SpatialRuntime physical binding SHA256 mismatch");
+          }
+          if(!Array.isArray(binding.bindings)||binding.bindings.length!==1){
+            reasons.push("expected exactly one SpatialRuntime physical binding row");
+          }else{
+            const row=binding.bindings[0]||{};
+            if(row.status!=="applied"){
+              reasons.push("SpatialRuntime-bound physical command not applied");
+            }
+            if(row.authorization_patch_sha256!==row.physical_patch_sha256){
+              reasons.push("SpatialRuntime authorized patch differs from physical patch");
+            }
+            if(!/^[0-9a-f]{64}$/.test(String(row.observation_sha256||""))){
+              reasons.push("SpatialRuntime bound observation SHA256 missing");
+            }
+          }
         }
       }
     }
@@ -302,6 +340,16 @@ function validateReceipt(receipt,{requireHumanFixture=false,requireSpatialRuntim
       const authorizedPct=Number(authorized[0]&&authorized[0].value);
       if(!Number.isFinite(authorizedPct)||authorizedPct!==requested){
         reasons.push("physical command does not match SpatialRuntime-authorized patch");
+      }
+      const binding=committed.physical_authorization_binding;
+      const bindingRow=binding&&Array.isArray(binding.bindings)&&binding.bindings[0];
+      if(bindingRow){
+        if(bindingRow.physical_patch_sha256!==sha256Object(semanticCommand.patch)){
+          reasons.push("SpatialRuntime binding physical patch hash does not match driver command");
+        }
+        if(bindingRow.observation_sha256!==sha256Object(semanticCommand.observation)){
+          reasons.push("SpatialRuntime binding observation hash does not match driver readback");
+        }
       }
     }
     const measured=Number(semanticCommand.observation&&semanticCommand.observation.evidence&&

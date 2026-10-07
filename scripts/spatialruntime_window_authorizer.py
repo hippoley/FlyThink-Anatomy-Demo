@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import math
 import sys
 from hashlib import sha256
 from typing import Any, Mapping
@@ -14,8 +15,26 @@ REQUEST_SCHEMA = "homeai_spatialruntime_authorization_request_v1"
 RECEIPT_SCHEMA = "homeai_spatialruntime_authorization_receipt_v1"
 
 
+def canonical_value(value: Any) -> Any:
+    if isinstance(value, Mapping):
+        return {str(k): canonical_value(value[k]) for k in sorted(value)}
+    if isinstance(value, list):
+        return [canonical_value(item) for item in value]
+    if isinstance(value, float):
+        if not math.isfinite(value):
+            raise ValueError("authorization_receipt_non_finite_number")
+        if value.is_integer():
+            return int(value)
+    return value
+
+
 def canonical(value: Any) -> str:
-    return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    return json.dumps(
+        canonical_value(value),
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+    )
 
 
 def digest(value: Any) -> str:
@@ -182,6 +201,7 @@ def authorize(request: Mapping[str, Any]) -> dict[str, Any]:
     )
     body = {
         "schema": RECEIPT_SCHEMA,
+        "canonicalization": "sorted-json-number-normalized-v1",
         "allow": allow,
         "case_id": case_id,
         "source_step": step,

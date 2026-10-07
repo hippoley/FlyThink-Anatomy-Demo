@@ -1,5 +1,6 @@
 "use strict";
 
+const crypto=require("crypto");
 const {
   deviceKey,
   diffLeaves,
@@ -15,6 +16,79 @@ const {evaluateCommit}=require("./commit_gate.cjs");
 
 function clone(v){return v==null?v:JSON.parse(JSON.stringify(v))}
 function eq(a,b){return JSON.stringify(a)===JSON.stringify(b)}
+
+
+function canonical(v){
+  if(Array.isArray(v))return v.map(canonical);
+  if(v&&typeof v==="object"){
+    const out={};
+    for(const k of Object.keys(v).sort())out[k]=canonical(v[k]);
+    return out;
+  }
+  return v;
+}
+function sha256Object(v){
+  return crypto.createHash("sha256")
+    .update(JSON.stringify(canonical(v)))
+    .digest("hex");
+}
+function patchIdentity(p){
+  return {
+    op:p&&p.op||null,
+    target:clone(p&&p.target||null),
+    slot:p&&p.slot||null
+  };
+}
+function samePatchIdentity(a,b){
+  return JSON.stringify(canonical(patchIdentity(a)))===JSON.stringify(canonical(patchIdentity(b)));
+}
+function bindSpatialRuntimeAuthorization(receipt,authorizedPatches,physicalReceipts){
+  if(!receipt||receipt.schema!=="homeai_spatialruntime_authorization_receipt_v1")return null;
+  const rows=(physicalReceipts||[]).filter(x=>x&&x.local_only!==true);
+  if(rows.length!==authorizedPatches.length){
+    throw new Error("spatialruntime_physical_receipt_count_mismatch");
+  }
+  const bindings=[];
+  for(let i=0;i<authorizedPatches.length;i++){
+    const authorized=authorizedPatches[i];
+    const row=rows[i];
+    const physical=row&&clone(row.physical_patch||row.patch);
+    if(!samePatchIdentity(authorized,physical)){
+      throw new Error("spatialruntime_physical_patch_identity_mismatch:"+String(i));
+    }
+    if(Number(physical&&physical.value)!==Number(authorized&&authorized.value)){
+      throw new Error("spatialruntime_physical_patch_value_mismatch:"+String(i));
+    }
+    const observation=clone(row&&row.observation||null);
+    if(!observation||!samePatchIdentity(
+      authorized,
+      {op:authorized.op,target:observation.target,slot:authorized.slot}
+    )){
+      throw new Error("spatialruntime_observation_target_mismatch:"+String(i));
+    }
+    const observedValue=Number(
+      observation&&observation.slots&&observation.slots[authorized.slot]
+    );
+    if(!Number.isFinite(observedValue)){
+      throw new Error("spatialruntime_observation_value_missing:"+String(i));
+    }
+    bindings.push({
+      command_id:row.command_id||null,
+      status:row.status||null,
+      authorization_patch_sha256:sha256Object(authorized),
+      physical_patch_sha256:sha256Object(physical),
+      observation_sha256:sha256Object(observation),
+      observed_value:observedValue
+    });
+  }
+  const body={
+    schema:"homeai_spatialruntime_physical_binding_v1",
+    authorization_receipt_sha256:receipt.receipt_sha256,
+    authorization_trace_hash:receipt.trace_hash,
+    bindings
+  };
+  return {...body,binding_sha256:sha256Object(body)};
+}
 
 function targetsOf(patches){
   const out=[];
@@ -108,6 +182,7 @@ class StreamingHomeSession{
     let committed=false;
     let error=null;
     let physicalAuthorization=null;
+    let physicalAuthorizationBinding=null;
     let authorizedPatches=clone(patches);
     if(gate.allow){
       const preflight=evaluateQuarantinePreflight(this.runtime,patches);
@@ -141,8 +216,14 @@ class StreamingHomeSession{
             this.driver,
             {turn_id:event.turn_id||("stream:"+String(this.sequence+1))}
           );
+          const candidateReceipts=applied.receipts||[];
+          physicalAuthorizationBinding=bindSpatialRuntimeAuthorization(
+            physicalAuthorization,
+            authorizedPatches,
+            candidateReceipts
+          );
           this.runtime=applied.runtime;
-          receipts=applied.receipts||[];
+          receipts=candidateReceipts;
           committed=receiptsApplied(receipts);
           if(committed)this.physicalRevision++;
           if(!committed)error=receiptFailure(receipts)||"physical_commit_has_no_applied_receipt";
@@ -194,6 +275,7 @@ class StreamingHomeSession{
       },
       patch_proposal:clone(patches),
       physical_authorization:clone(physicalAuthorization),
+      physical_authorization_binding:clone(physicalAuthorizationBinding),
       authorized_patch_proposal:clone(authorizedPatches),
       commit_gate:clone(gate),
       thing_model:thingModel,
@@ -219,6 +301,7 @@ class StreamingHomeSession{
         semantic_patches:clone(patches),
         applied_patches:committed?clone(authorizedPatches):[],
         physical_authorization:clone(physicalAuthorization),
+        physical_authorization_binding:clone(physicalAuthorizationBinding),
         physical_receipts:clone(receipts),
         commit_gate:clone(gate),
         error,
@@ -245,5 +328,6 @@ module.exports={
   runStreamingSequence,
   targetsOf,
   receiptsApplied,
-  receiptFailure
+  receiptFailure,
+  bindSpatialRuntimeAuthorization
 };
