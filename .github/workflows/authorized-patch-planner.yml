@@ -1,0 +1,21 @@
+name: authorized-patch-planner
+on:
+  push:
+    paths:
+      - scripts/authorized_patch_planner.py
+      - scripts/test_authorized_patch_planner.py
+      - scripts/device_registry.py
+      - scripts/semantic_capability_map.py
+      - scripts/resolver_vocabulary.py
+      - .github/workflows/authorized-patch-planner.yml
+  workflow_dispatch:
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m py_compile scripts/authorized_patch_planner.py scripts/test_authorized_patch_planner.py scripts/device_registry.py scripts/semantic_capability_map.py
+      - run: python scripts/test_authorized_patch_planner.py
