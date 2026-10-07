@@ -34,8 +34,11 @@ function patchIdentity(p){
     slot:p&&p.slot||null
   };
 }
+function sameObject(a,b){
+  return JSON.stringify(canonical(a))===JSON.stringify(canonical(b));
+}
 function samePatchIdentity(a,b){
-  return JSON.stringify(canonical(patchIdentity(a)))===JSON.stringify(canonical(patchIdentity(b)));
+  return sameObject(patchIdentity(a),patchIdentity(b));
 }
 
 function validateAuthorizationReceipt(receipt,request,requestedPatches){
@@ -194,6 +197,7 @@ module.exports={
   canonical,
   sha256Object,
   patchIdentity,
+  sameObject,
   samePatchIdentity,
   validateAuthorizationReceipt,
   createSpatialRuntimeAuthorizer
