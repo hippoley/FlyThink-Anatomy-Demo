@@ -65,6 +65,7 @@ class StreamingHomeSession{
     this.history=[];
     this.trace=[];
     this.sequence=0;
+    this.physicalRevision=0;
   }
 
   commandCount(){
@@ -113,8 +114,8 @@ class StreamingHomeSession{
             event:clone(event),
             context:clone(context),
             prediction:clone(prediction),
-            source_step:this.sequence,
-            source_revision:this.sequence
+            source_step:this.physicalRevision,
+            source_revision:this.physicalRevision
           });
           if(!authorization||authorization.allow!==true){
             throw new Error("physical_authorizer_did_not_allow");
@@ -134,6 +135,7 @@ class StreamingHomeSession{
         this.runtime=applied.runtime;
         receipts=applied.receipts||[];
         committed=receiptsApplied(receipts);
+        if(committed)this.physicalRevision++;
         if(!committed)error=receiptFailure(receipts)||"physical_commit_has_no_applied_receipt";
       }catch(e){
         error=String(e&&e.message||e);
@@ -165,6 +167,7 @@ class StreamingHomeSession{
 
     const row={
       sequence:++this.sequence,
+      physical_revision:this.physicalRevision,
       turn_id:event.turn_id||null,
       asr:{
         kind,
