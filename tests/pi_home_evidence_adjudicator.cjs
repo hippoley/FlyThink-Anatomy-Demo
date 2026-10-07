@@ -160,8 +160,20 @@ console.log(JSON.stringify({
   const trusted=adjudicateCandidateEvidence({
     required_dimensions:["co2","rain_ingress"],
     provider_results:[
-      {...contamScores,id:"contam-engineering",evidence_level:"engineering-validated",trusted_for_promotion:true},
-      {...rainScores,id:"rain-engineering",evidence_level:"engineering-validated",trusted_for_promotion:true}
+      {
+        ...contamScores,
+        id:"contam-engineering",
+        evidence_level:"engineering-validated",
+        trusted_for_promotion:true,
+        calibration:{status:"validated",validation_id:"contam-cal-v1",covered_dimensions:["co2"]}
+      },
+      {
+        ...rainScores,
+        id:"rain-engineering",
+        evidence_level:"engineering-validated",
+        trusted_for_promotion:true,
+        calibration:{status:"validated",validation_id:"rain-cal-v1",covered_dimensions:["rain_ingress"]}
+      }
     ],
     learned_candidate_label:"candidate-3",
     dimension_weights:{co2:.6,rain_ingress:.4}
