@@ -44,6 +44,9 @@ function validateAuthorizationReceipt(receipt,request,requestedPatches){
   if(receipt.canonicalization!=="sorted-json-number-normalized-v1"){
     throw new Error("spatialruntime_authorizer_canonicalization_mismatch");
   }
+  if(receipt.canonicalization!=="sorted-json-number-normalized-v1"){
+    throw new Error("spatialruntime_authorizer_canonicalization_mismatch");
+  }
   if(receipt.case_id!==request.case_id){
     throw new Error("spatialruntime_authorizer_case_id_mismatch");
   }
@@ -63,6 +66,9 @@ function validateAuthorizationReceipt(receipt,request,requestedPatches){
   delete base.receipt_sha256;
   if(sha256Object(base)!==receipt.receipt_sha256){
     throw new Error("spatialruntime_authorizer_receipt_sha256_mismatch");
+  }
+  if(Number(receipt.requested_patch_count)!==requestedPatches.length){
+    throw new Error("spatialruntime_authorizer_requested_patch_count_mismatch");
   }
   if(!Array.isArray(receipt.authorized_patches)||receipt.authorized_patches.length!==requestedPatches.length){
     throw new Error("spatialruntime_authorizer_patch_count_mismatch");
