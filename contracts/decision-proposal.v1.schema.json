@@ -9,6 +9,7 @@
     "proposal_id",
     "task_id",
     "context_revision",
+    "context_sha256",
     "world_snapshot_revision",
     "world_snapshot_sha256",
     "intent",
@@ -32,6 +33,10 @@
     "context_revision": {
       "type": "integer",
       "minimum": 0
+    },
+    "context_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
     },
     "world_snapshot_revision": {
       "type": "integer",
