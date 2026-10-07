@@ -75,9 +75,75 @@ async function blockedAuthorizationNeverReachesDriver(){
   assert.equal(out.runtime.devices[key()].slots.opening,0);
 }
 
+async function bindingFailurePreservesRealityAndQuarantinesTarget(){
+  const initial=runtime(0);
+  const driver=new MockThingDriver(initial,{
+    transform:patchValue=>(
+      patchValue.op==="PATCH_SLOT"&&patchValue.slot==="opening"
+        ?{value:9}
+        :null
+    )
+  });
+  const receipt={
+    schema:"homeai_spatialruntime_authorization_receipt_v1",
+    allow:true,
+    case_id:"window-bind-fail",
+    source_step:0,
+    source_revision:0,
+    receipt_sha256:"r".repeat(64),
+    trace_hash:"t".repeat(64)
+  };
+  const physicalAuthorizer=async({patches})=>({
+    allow:true,
+    patches:patches.map(p=>({...p,value:5})),
+    receipt
+  });
+  const predictor=async()=>({decision:"EXECUTE",confidence:0.99,patches:[patch(5)]});
+  const out=await runStreamingSequence([
+    {turn_id:"window-bind-fail",kind:"final",text:"把客厅窗户开到5%"}
+  ],{
+    initialRuntime:initial,
+    predictor,
+    driver,
+    physicalAuthorizer,
+    physicalAuthorizationTolerancePct:1
+  });
+
+  const row=out.trace[0];
+  assert.equal(out.physical_commands,1);
+  assert.equal(out.runtime.devices[key()].slots.opening,9);
+  assert.equal(row.committed,false);
+  assert.equal(row.physical_revision,0);
+  assert.match(row.error,/physical_authorization_binding_failed/);
+  assert.equal(
+    out.runtime.deviceHealth[key()].status,
+    "quarantined"
+  );
+  assert.match(
+    out.runtime.deviceHealth[key()].reason,
+    /spatialruntime_observation_outside_authorized_tolerance/
+  );
+
+  const second=await runStreamingSequence([
+    {turn_id:"window-after-quarantine",kind:"final",text:"把客厅窗户开到20%"}
+  ],{
+    initialRuntime:out.runtime,
+    predictor:async()=>({
+      decision:"EXECUTE",
+      confidence:0.99,
+      patches:[patch(20)]
+    }),
+    driver:new MockThingDriver(out.runtime),
+    physicalAuthorizer
+  });
+  assert.equal(second.physical_commands,0);
+  assert.match(second.trace[0].error,/device_quarantined/);
+}
+
 (async()=>{
   await authorizerOnlyRunsAfterSemanticCommit();
   await blockedAuthorizationNeverReachesDriver();
+  await bindingFailurePreservesRealityAndQuarantinesTarget();
   console.log(JSON.stringify({
     ok:true,
     contract:"semantic commit -> physical authorizer -> authorized patch -> driver; blocked authorization cannot reach driver"

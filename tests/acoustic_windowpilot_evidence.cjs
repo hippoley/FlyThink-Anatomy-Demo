@@ -413,6 +413,9 @@ console.log(JSON.stringify({
   const auth={...authBase,receipt_sha256:sha256Object(authBase)};
   const bindingBase={
     schema:"homeai_spatialruntime_physical_binding_v1",
+    case_id:"evidence-turn",
+    source_step:0,
+    source_revision:0,
     authorization_receipt_sha256:auth.receipt_sha256,
     authorization_trace_hash:auth.trace_hash,
     bindings:[{
@@ -421,12 +424,17 @@ console.log(JSON.stringify({
       authorization_patch_sha256:sha256Object(semanticPatch),
       physical_patch_sha256:sha256Object(semanticPatch),
       observation_sha256:sha256Object(feedback),
-      observed_value:5
+      authorized_value:5,
+      requested_position_pct:5,
+      observed_value:5,
+      convergence_error_pct:0
     }]
   };
   const binding={...bindingBase,binding_sha256:sha256Object(bindingBase)};
   const traceWithAuthorization=[{
     ...trace[0],
+    turn_id:"evidence-turn",
+    physical_revision:1,
     authorized_patch_proposal:[semanticPatch],
     physical_authorization:auth,
     physical_authorization_binding:binding
@@ -459,6 +467,42 @@ console.log(JSON.stringify({
     requireSpatialRuntimeAuthorization:true
   });
   assert.equal(report.valid,true,JSON.stringify(report.reasons));
+
+
+  const wrongTurn=JSON.parse(JSON.stringify(receipt));
+  wrongTurn.semantic.committed_finals[0].turn_id="another-turn";
+  delete wrongTurn.evidence_sha256;
+  const resignedWrongTurn=finalizeReceipt(wrongTurn);
+  const wrongTurnReport=validateReceipt(resignedWrongTurn,{
+    requireHumanFixture:true,
+    requireSpatialRuntimeAuthorization:true
+  });
+  assert.equal(wrongTurnReport.valid,false);
+  assert.ok(wrongTurnReport.reasons.includes(
+    "SpatialRuntime authorization case/turn mismatch"
+  ));
+
+  const wrongConvergence=JSON.parse(JSON.stringify(receipt));
+  const wrongRow=wrongConvergence.semantic.committed_finals[0]
+    .physical_authorization_binding.bindings[0];
+  wrongRow.observed_value=9;
+  wrongRow.convergence_error_pct=4;
+  const bindingBase2={
+    ...wrongConvergence.semantic.committed_finals[0].physical_authorization_binding
+  };
+  delete bindingBase2.binding_sha256;
+  wrongConvergence.semantic.committed_finals[0]
+    .physical_authorization_binding.binding_sha256=sha256Object(bindingBase2);
+  delete wrongConvergence.evidence_sha256;
+  const resignedWrongConvergence=finalizeReceipt(wrongConvergence);
+  const convergenceReport=validateReceipt(resignedWrongConvergence,{
+    requireHumanFixture:true,
+    requireSpatialRuntimeAuthorization:true
+  });
+  assert.equal(convergenceReport.valid,false);
+  assert.ok(convergenceReport.reasons.includes(
+    "SpatialRuntime authorized readback outside tolerance"
+  ));
 
   const tampered=JSON.parse(JSON.stringify(receipt));
   tampered.semantic.committed_finals[0].physical_authorization_binding
