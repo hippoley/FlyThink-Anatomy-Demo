@@ -105,13 +105,13 @@ function runtimes(){
   const before=normalizeRuntime({devices:{
     "客厅::窗::default":{
       key:"客厅::窗::default",area:"客厅",entity:"窗",instance:"default",
-      slots:{opening:0}
+      model_id:"CWDS-CA01",slots:{opening:0}
     }
   }});
   const after=normalizeRuntime({devices:{
     "客厅::窗::default":{
       key:"客厅::窗::default",area:"客厅",entity:"窗",instance:"default",
-      slots:{opening:5}
+      model_id:"CWDS-CA01",slots:{opening:5}
     }
   }});
   after.revisions.push({op:"PATCH_SLOT",turn_id:"task-1"});
@@ -255,7 +255,10 @@ function buildVerified(){
       status:"EXECUTED",
       physical_committed:true
     });
-    const verified=verifyExecutionReceipt(receipt);
+    const verified=verifyExecutionReceipt(receipt,{
+      before_runtime:before,
+      after_runtime:after
+    });
     assert.equal(verified.valid,true);
     assert.equal(verified.physical_committed,true);
     assert.equal(verified.physical_truth_verified,false);
