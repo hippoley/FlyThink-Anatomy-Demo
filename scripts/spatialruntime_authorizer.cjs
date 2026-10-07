@@ -3,12 +3,6 @@
 const crypto=require("crypto");
 const path=require("path");
 const {spawnSync}=require("child_process");
-const {
-  loadSceneContext,
-  loadPinnedSceneContext,
-  validateSceneContext,
-  targetKey
-}=require("./spatialruntime_world_context.cjs");
 
 const REQUEST_SCHEMA="homeai_spatialruntime_authorization_request_v1";
 const RECEIPT_SCHEMA="homeai_spatialruntime_authorization_receipt_v1";
@@ -36,11 +30,8 @@ function patchIdentity(p){
     slot:p&&p.slot||null
   };
 }
-function sameObject(a,b){
-  return JSON.stringify(canonical(a))===JSON.stringify(canonical(b));
-}
 function samePatchIdentity(a,b){
-  return sameObject(patchIdentity(a),patchIdentity(b));
+  return JSON.stringify(canonical(patchIdentity(a)))===JSON.stringify(canonical(patchIdentity(b)));
 }
 
 function validateAuthorizationReceipt(receipt,request,requestedPatches){
@@ -61,14 +52,6 @@ function validateAuthorizationReceipt(receipt,request,requestedPatches){
   }
   if(Number(receipt.source_revision)!==Number(request.source_revision)){
     throw new Error("spatialruntime_authorizer_source_revision_mismatch");
-  }
-  const requestedScene=request&&request.spatial_context&&request.spatial_context.scene_evidence;
-  if(requestedScene){
-    if(!receipt.scene_evidence||!sameObject(receipt.scene_evidence,requestedScene)){
-      throw new Error("spatialruntime_authorizer_scene_evidence_mismatch");
-    }
-  }else if(receipt.scene_evidence!=null){
-    throw new Error("spatialruntime_authorizer_unrequested_scene_evidence");
   }
   if(!isSha256(receipt.trace_hash)){
     throw new Error("spatialruntime_authorizer_trace_hash_invalid");
@@ -111,59 +94,14 @@ function createSpatialRuntimeAuthorizer(options={}){
   const python=options.python||process.env.PYTHON||"python";
   const script=options.script||path.join(__dirname,"spatialruntime_window_authorizer.py");
   const maxOpenRatioDelta=options.maxOpenRatioDelta==null?0.25:Number(options.maxOpenRatioDelta);
-  const hasScenePath=!!(options.worldSnapshotPath||options.worldValidationReceiptPath);
-  if(hasScenePath&&!(options.worldSnapshotPath&&options.worldValidationReceiptPath)){
-    throw new Error("spatialruntime_scene_world_and_receipt_required");
-  }
-  const configuredSceneSources=[
-    options.sceneContext?1:0,
-    options.sceneContextPath?1:0,
-    hasScenePath?1:0
-  ].reduce((a,b)=>a+b,0);
-  if(configuredSceneSources>1){
-    throw new Error("spatialruntime_scene_context_sources_are_mutually_exclusive");
-  }
-  const sceneContext=options.sceneContext
-    ?validateSceneContext(options.sceneContext)
-    :(options.sceneContextPath
-      ?loadPinnedSceneContext(options.sceneContextPath)
-      :(hasScenePath
-        ?loadSceneContext(
-          options.worldSnapshotPath,
-          options.worldValidationReceiptPath,
-          {windowEntityLabel:options.windowEntityLabel||"窗"}
-        )
-        :null));
   return async function authorize({runtime,patches,event,context,source_step,source_revision}={}){
     const requestedPatches=clone(patches||[]);
     const hint=(event&&event.context_hint&&event.context_hint.spatialruntime)||{};
-    const hintedKeys=Array.isArray(hint.exterior_window_keys)
-      ?hint.exterior_window_keys.map(String)
-      :[];
-    if(sceneContext){
-      const reviewed=new Set(sceneContext.exterior_window_keys||[]);
-      for(const key of hintedKeys){
-        if(!reviewed.has(key)){
-          throw new Error("spatialruntime_scene_hint_not_reviewed:"+key);
-        }
-      }
-      for(const patch of requestedPatches){
-        if(!patch||!patch.target||!reviewed.has(targetKey(patch.target))){
-          throw new Error(
-            "spatialruntime_scene_target_not_reviewed:"+
-            targetKey(patch&&patch.target||{})
-          );
-        }
-      }
-    }
     const spatialContext={
       rain:hint.rain ?? context?.rain ?? context?.sensors?.rain?.value ?? "dry",
-      exterior_window_keys:sceneContext
-        ?clone(sceneContext.exterior_window_keys||[])
-        :(hintedKeys.length
-          ?hintedKeys
-          :(Array.isArray(options.exteriorWindowKeys)?options.exteriorWindowKeys:[])),
-      scene_evidence:sceneContext?clone(sceneContext):null
+      exterior_window_keys:Array.isArray(hint.exterior_window_keys)
+        ?hint.exterior_window_keys
+        :(Array.isArray(options.exteriorWindowKeys)?options.exteriorWindowKeys:[])
     };
     const request={
       schema:REQUEST_SCHEMA,
@@ -209,7 +147,6 @@ module.exports={
   canonical,
   sha256Object,
   patchIdentity,
-  sameObject,
   samePatchIdentity,
   validateAuthorizationReceipt,
   createSpatialRuntimeAuthorizer
