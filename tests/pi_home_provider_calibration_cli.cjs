@@ -48,3 +48,63 @@ console.log(JSON.stringify({
   ok:true,
   contract:"synthetic calibration may score perfectly but cannot emit provider trust"
 }));
+
+
+const measuredFixture=path.join(root,"measured.json");
+const measuredRows=[];
+for(let i=0;i<12;i++){
+  measuredRows.push({
+    case_id:"measured-"+String(i+1),
+    candidates:[
+      {label:"candidate-1",predicted:.1,observed:.1},
+      {label:"candidate-2",predicted:.5,observed:.5},
+      {label:"candidate-3",predicted:.9,observed:.9}
+    ]
+  });
+}
+fs.writeFileSync(measuredFixture,JSON.stringify({
+  schema_version:"pi-home-provider-calibration-dataset-v1",
+  provider_id:"rain-engineering-cli",
+  dimension:"rain_ingress",
+  scope_id:"rain-cli-v1",
+  source_kind:"measured",
+  fixture_only:false,
+  direction:"min",
+  measurement_provenance:{
+    dataset_id:"rain-cli-measured-v1",
+    collected_by:"engineering-lab"
+  },
+  rows:measuredRows
+},null,2));
+
+const timeBoundedOut=path.join(root,"time-bounded-trust.json");
+const timeBoundedTrust=spawnSync(process.execPath,[
+  runner,
+  "--dataset",measuredFixture,
+  "--out",path.join(root,"time-bounded-report.json"),
+  "--calibration-ref","calibration://rain/cli-v1",
+  "--approved-by","engineering-review-board",
+  "--trust-entry-out",timeBoundedOut,
+  "--not-before","2026-10-01T00:00:00Z",
+  "--expires-at","2026-11-01T00:00:00Z",
+  "--reviewed-at","2026-10-01T00:00:00Z",
+  "--review-due-at","2026-10-20T00:00:00Z"
+],{encoding:"utf8"});
+assert.equal(timeBoundedTrust.status,0,timeBoundedTrust.stdout+"\n"+timeBoundedTrust.stderr);
+const timedPayload=JSON.parse(fs.readFileSync(timeBoundedOut,"utf8"));
+assert.equal(timedPayload.registry_entry.not_before,"2026-10-01T00:00:00.000Z");
+assert.equal(timedPayload.registry_entry.expires_at,"2026-11-01T00:00:00.000Z");
+assert.equal(timedPayload.registry_entry.reviewed_at,"2026-10-01T00:00:00.000Z");
+assert.equal(timedPayload.registry_entry.review_due_at,"2026-10-20T00:00:00.000Z");
+
+const partialLifecycle=spawnSync(process.execPath,[
+  runner,
+  "--dataset",measuredFixture,
+  "--out",path.join(root,"partial-report.json"),
+  "--calibration-ref","calibration://rain/cli-v1",
+  "--approved-by","engineering-review-board",
+  "--trust-entry-out",path.join(root,"partial-trust.json"),
+  "--not-before","2026-10-01T00:00:00Z"
+],{encoding:"utf8"});
+assert.notEqual(partialLifecycle.status,0);
+assert.match(partialLifecycle.stderr,/time-bounded trust requires/);
