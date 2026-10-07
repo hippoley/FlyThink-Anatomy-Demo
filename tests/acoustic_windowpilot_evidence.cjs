@@ -50,6 +50,7 @@ const fixture={
   schema:"flythink.acoustic_fixture.v1",
   source_kind:"human_recording",
   expected_text:"打开主卧窗",
+  max_cer:0.25,
   wav_sha256:"a".repeat(64),
   manifest_sha256:"b".repeat(64),
   provenance_note:"reviewed microphone recording",
@@ -98,7 +99,7 @@ const valid=buildReceipt({
   const report=validateReceipt(bad,{requireHumanFixture:true});
   assert.equal(report.valid,false);
   assert.ok(report.reasons.includes("evidence SHA256 mismatch"));
-  assert.ok(report.reasons.includes("final ASR transcript does not match frozen fixture text"));
+  assert.ok(report.reasons.includes("ASR CER exceeds frozen fixture threshold"));
 }
 
 {
@@ -144,6 +145,7 @@ const valid=buildReceipt({
     source_kind:"human_recording",
     expected_text:"打开主卧窗",
     provenance_note:"reviewed microphone recording",
+    acceptance:{max_cer:0.25},
     wav:{sha256:wavSha}
   };
   fs.writeFileSync(manifestPath,JSON.stringify(manifest,null,2)+"\n");
@@ -180,6 +182,7 @@ const valid=buildReceipt({
       schema:"flythink.acoustic_fixture.v1",
       source_kind:"human_recording",
       expected_text:"打开主卧窗",
+      max_cer:0.25,
       wav_sha256:wavSha,
       manifest_sha256:manifestSha,
       provenance_note:"reviewed microphone recording",
