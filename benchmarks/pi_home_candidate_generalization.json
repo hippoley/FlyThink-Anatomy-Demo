@@ -259,7 +259,11 @@
         "required_dimensions": [
           "co2",
           "noise"
-        ]
+        ],
+        "dimension_weights": {
+          "co2": 0.3,
+          "noise": 0.7
+        }
       }
     },
     {
@@ -371,7 +375,11 @@
           "co2",
           "rain_ingress"
         ],
-        "origin_co2_source": "airtrajectory_prj_initial"
+        "origin_co2_source": "airtrajectory_prj_initial",
+        "dimension_weights": {
+          "co2": 0.3,
+          "rain_ingress": 0.7
+        }
       }
     }
   ]
