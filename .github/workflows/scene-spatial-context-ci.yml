@@ -205,5 +205,6 @@ jobs:
           path: |
             /tmp/interior-world.json
             /tmp/interior-validation.json
+            /tmp/interior-handoff.json
             /tmp/interior-homeai-context.json
             /tmp/interior-upstream-sha.txt
