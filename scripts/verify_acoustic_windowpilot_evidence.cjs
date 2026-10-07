@@ -19,6 +19,7 @@ const manifestPath=arg("--fixture-manifest");
 const requireHuman=flag("--require-human-fixture");
 const requireSpatialRuntime=flag("--require-spatialruntime-authorization");
 const requireSpatialRuntimeScene=flag("--require-spatialruntime-scene-evidence");
+const requireFlyThinkExecutionRuntime=flag("--require-flythink-execution-runtime");
 
 if(!receiptPath)throw new Error("--receipt is required");
 if(requireHuman&&(!wavPath||!manifestPath)){
@@ -32,7 +33,8 @@ const receipt=JSON.parse(fs.readFileSync(receiptPath,"utf8"));
 const report=validateReceipt(receipt,{
   requireHumanFixture:requireHuman,
   requireSpatialRuntimeAuthorization:requireSpatialRuntime,
-  requireSpatialRuntimeSceneEvidence:requireSpatialRuntimeScene
+  requireSpatialRuntimeSceneEvidence:requireSpatialRuntimeScene,
+  requireFlyThinkExecutionRuntime
 });
 const reasons=[...report.reasons];
 
