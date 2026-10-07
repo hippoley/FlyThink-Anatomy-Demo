@@ -7,4 +7,7 @@ assert compose([9,8,1,0],[7,1,0,0],2,1,mounted)==["客厅::空调::default","主
 assert compose([9,1,0,8],[7,1,0,0],2,1,mounted)==["客厅::空调::default"]
 # Cardinality zero means no authorized target.
 assert compose([9,8,1,0],[7,1,0,0],0,1,mounted)==[]
+# Multi-entity composition is explicit and bounded by predicted entity_count.
+mounted2=mounted|{"客厅::灯::default","主卧::灯::default"}
+assert compose([9,8,1,0],[9,8,0,0],2,2,mounted2)==["客厅::空调::default","客厅::灯::default","主卧::空调::default","主卧::灯::default"]
 print("authorized target composer: PASS")
