@@ -254,7 +254,18 @@ async function executePhysicalTurn(inputRuntime, patches, driver, options = {}) 
         command_id: executionRecord.id,
         status: executionRecord.status,
         reason: executionRecord.reason,
-        observation: clone(command.observation)
+        observation: clone(command.observation),
+        driver_receipt: clone(command),
+        ack: clone(command.ack||null),
+        polls: command.polls==null?null:command.polls,
+        requested_position_pct:
+          command.requested_position_pct==null?null:command.requested_position_pct,
+        before_tick: command.before_tick==null?null:command.before_tick,
+        hardware_identity_before: command.hardware_identity_before||null,
+        hardware_identity_after: command.hardware_identity_after||null,
+        readiness_before: clone(command.readiness_before||command.readiness||null),
+        readiness_after: clone(command.readiness_after||null),
+        safety_stop: clone(command.safety_stop||null)
       });
     }
   }
