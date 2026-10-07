@@ -358,6 +358,66 @@ non-home speech fixture.
 This is an acoustic transport/safety proof, not yet a home-command ASR accuracy
 claim. A frozen spoken-home-command corpus is the next acceptance layer.
 
+### Last-mile human acoustic + WindowPilot evidence
+
+A live hardware smoke test and a claim of human acoustic acceptance are kept
+separate. To claim the latter, freeze the exact reviewed microphone WAV first:
+
+```bash
+python scripts/acoustic_fixture_manifest.py create \
+  --wav human-home-command.wav \
+  --source-kind human_recording \
+  --expected-text "打开主卧窗" \
+  --provenance-note "reviewed microphone recording" \
+  --out human-home-command.manifest.json
+
+python scripts/acoustic_fixture_manifest.py verify \
+  --wav human-home-command.wav \
+  --manifest human-home-command.manifest.json \
+  --require-source-kind human_recording
+```
+
+Then run the same acoustic pipeline against the identity-pinned WindowPilot
+target. `--apply` requires a receipt path; the process refuses to actuate
+without one:
+
+```bash
+python scripts/live_acoustic_windowpilot.py \
+  --wav human-home-command.wav \
+  --fixture-manifest human-home-command.manifest.json \
+  --require-human-fixture \
+  --url http://127.0.0.1:8001 \
+  --area 主卧 --entity 窗 \
+  --expected-hardware-identity <sha256> \
+  --probe-open-pct 5 \
+  --graph artifacts/flywire/connectome.json \
+  --judgement artifacts/context-judgement-v3/model.pt \
+  --semantic artifacts/semantic-patch-v1/model.pt \
+  --tokens <asr>/tokens.txt \
+  --encoder <asr>/encoder.onnx \
+  --decoder <asr>/decoder.onnx \
+  --joiner <asr>/joiner.onnx \
+  --receipt artifacts/human-acoustic-windowpilot-receipt.json \
+  --apply
+```
+
+The receipt freezes ASR revisions/final text, semantic target and patch,
+hardware identity, measured WindowPilot readback, closeout, reconciled runtime,
+the reviewed WAV SHA-256 and the manifest SHA-256. It can be verified later
+without the device being online:
+
+```bash
+node scripts/verify_acoustic_windowpilot_evidence.cjs \
+  --receipt artifacts/human-acoustic-windowpilot-receipt.json \
+  --wav human-home-command.wav \
+  --fixture-manifest human-home-command.manifest.json \
+  --require-human-fixture
+```
+
+Replacing the WAV, changing the manifest, losing measured readback, targeting
+different hardware, allowing speculative partial/stable execution, or failing
+to restore the window closed makes the evidence invalid.
+
 ## Telemetry and trajectory replay
 
 [Local telemetry and Phoenix](TELEMETRY.md) records immutable turns in SQLite,
