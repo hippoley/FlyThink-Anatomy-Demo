@@ -18,6 +18,8 @@ on:
       - "scripts/execution_proof_bundle.cjs"
       - "scripts/execution_reasoning_contract.cjs"
       - "scripts/decision_proposal_contract.cjs"
+      - "scripts/contextual_edge_slu_adapter.cjs"
+      - "scripts/contextual_edge_slu_adapter.cjs"
       - "scripts/whole_home_patch_contract.cjs"
       - "scripts/test_execution_trust_boundary.py"
       - "scripts/test_atomic_physical_set.cjs"
@@ -33,6 +35,8 @@ on:
       - "contracts/execution-proof-bundle.v1.schema.json"
       - "tests/execution_reasoning_contract.cjs"
       - "tests/decision_proposal_contract.cjs"
+      - "tests/contextual_edge_slu_adapter.cjs"
+      - "tests/contextual_edge_slu_adapter.cjs"
   pull_request:
     paths:
       - "scripts/authorized_patch_planner.py"
@@ -89,6 +93,7 @@ jobs:
           node --check scripts/physical_runtime.cjs
           node --check scripts/execution_reasoning_contract.cjs
           node --check scripts/decision_proposal_contract.cjs
+          node --check scripts/contextual_edge_slu_adapter.cjs
           node --check scripts/flythink_execution_runtime.cjs
           node --check scripts/execution_receipt.cjs
           node --check scripts/execution_proof_bundle.cjs
@@ -97,6 +102,7 @@ jobs:
           node --check tests/execution_proof_bundle.cjs
           node --check tests/execution_reasoning_contract.cjs
           node --check tests/decision_proposal_contract.cjs
+          node --check tests/contextual_edge_slu_adapter.cjs
           node --check scripts/test_atomic_physical_set.cjs
           node --check scripts/test_authorization_ledger.cjs
           node --check scripts/test_physical_transaction_router.cjs
@@ -127,6 +133,8 @@ jobs:
         run: node scripts/test_production_physical_turn_atomicity.cjs
       - name: Prove shared execution reasoning contract parity
         run: node tests/execution_reasoning_contract.cjs
+      - name: Prove contextual-state.v1 identity remains externally owned
+        run: node tests/contextual_edge_slu_adapter.cjs
       - name: Prove decision-proposal.v1 external trust boundary
         run: node tests/decision_proposal_contract.cjs
       - name: Prove reasoning authorization execution runtime boundary
