@@ -118,11 +118,11 @@ jobs:
       - name: Install SpatialRuntime
         run: python -m pip install -e "_spatialruntime"
 
-      - name: Checkout latest authored interior scene
+      - name: Checkout dispatched or latest authored interior scene
         uses: actions/checkout@v4
         with:
           repository: hippoley/interior-kitchen-original
-          ref: main
+          ref: ${{ github.event.client_payload.source_commit_sha || 'main' }}
           path: _interior
           token: ${{ secrets.CROSS_REPO_READ_TOKEN || github.token }}
 
@@ -184,6 +184,9 @@ jobs:
           context=json.load(open('/tmp/interior-homeai-context.json',encoding='utf-8'))
           handoff=json.load(open('/tmp/interior-handoff.json',encoding='utf-8'))
           upstream_sha=open('/tmp/interior-upstream-sha.txt',encoding='utf-8').read().strip()
+          dispatch_sha='${{ github.event.client_payload.source_commit_sha || '' }}'.strip()
+          if dispatch_sha:
+              assert upstream_sha==dispatch_sha
           assert receipt['source_fingerprint_verified'] is True
           assert context['source_fingerprint']==receipt['source_fingerprint']
           assert context['world_snapshot_sha256']==receipt['world_snapshot_sha256']
