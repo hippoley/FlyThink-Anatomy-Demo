@@ -1,6 +1,7 @@
 "use strict";
 
 const crypto=require("crypto");
+const {buildProviderTrustRegistry}=require("./pi_home_provider_trust.cjs");
 
 function clone(v){return v==null?v:JSON.parse(JSON.stringify(v))}
 function uniq(xs){return [...new Set((xs||[]).map(String))].sort()}
@@ -167,6 +168,18 @@ function registryEntryFromCertificate(certificate,{approved_by,status="active"}=
   };
 }
 
+function buildCertifiedProviderTrustRegistry(items=[]){
+  const entries=[];
+  const certificates=[];
+  for(const item of items||[]){
+    if(!item||!item.certificate)throw new Error("calibration_certificate_required");
+    const entry=registryEntryFromCertificate(item.certificate,{approved_by:item.approved_by});
+    entries.push(entry);
+    certificates.push(item.certificate);
+  }
+  return buildProviderTrustRegistry(entries,{certificates});
+}
+
 module.exports={
   canonical,
   sha256,
@@ -174,5 +187,6 @@ module.exports={
   metricsFor,
   normalizeThresholds,
   evaluateCalibrationDataset,
-  registryEntryFromCertificate
+  registryEntryFromCertificate,
+  buildCertifiedProviderTrustRegistry
 };
