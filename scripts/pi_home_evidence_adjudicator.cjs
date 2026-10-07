@@ -5,7 +5,7 @@ const {applyResolvedTrust}=require("./pi_home_provider_trust.cjs");
 function uniq(xs){return [...new Set((xs||[]).map(String))].sort()}
 function clone(v){return v==null?v:JSON.parse(JSON.stringify(v))}
 
-function normalizeProvider(provider={},trust_registry=null){
+function normalizeProvider(provider={},trust_registry=null,{at=null}={}){
   if(!provider.id)throw new Error("evidence_provider_id_required");
   const dimensions=uniq(provider.covered_dimensions);
   if(!dimensions.length)throw new Error("evidence_provider_dimensions_required");
@@ -13,7 +13,7 @@ function normalizeProvider(provider={},trust_registry=null){
     ...provider,
     id:String(provider.id),
     covered_dimensions:dimensions
-  },trust_registry);
+  },trust_registry,{at});
   return {
     id:String(provider.id),
     kind:String(provider.kind||"unknown"),
@@ -26,9 +26,18 @@ function normalizeProvider(provider={},trust_registry=null){
   };
 }
 
-function buildEvidenceCoverage({required_dimensions=[],providers=[],trust_registry=null}={}){
+function buildEvidenceCoverage({
+  required_dimensions=[],
+  providers=[],
+  trust_registry=null,
+  trust_evaluation_time=null
+}={}){
   const required=uniq(required_dimensions);
-  const normalized=(providers||[]).map(x=>normalizeProvider(x,trust_registry));
+  const normalized=(providers||[]).map(x=>normalizeProvider(
+    x,
+    trust_registry,
+    {at:trust_evaluation_time}
+  ));
   const byDimension={};
   for(const dimension of required){
     const covering=normalized.filter(p=>p.covered_dimensions.includes(dimension));
@@ -64,9 +73,15 @@ function adjudicateEvidence({
   providers=[],
   raw_target_match=null,
   physical_candidate_comparison_available=false,
-  trust_registry=null
+  trust_registry=null,
+  trust_evaluation_time=null
 }={}){
-  const coverage=buildEvidenceCoverage({required_dimensions,providers,trust_registry});
+  const coverage=buildEvidenceCoverage({
+    required_dimensions,
+    providers,
+    trust_registry,
+    trust_evaluation_time
+  });
   if(!physical_candidate_comparison_available){
     return {
       schema_version:"pi-home-evidence-adjudication-v1",
