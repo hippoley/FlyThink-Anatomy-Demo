@@ -14,6 +14,15 @@ accepted=[
     ("nested",{"b":1.0,"a":[-0.0,1e-7]}),
     ("safe_integer_max",9007199254740991),
 ]
+fixed_expected={
+    "integer":"e35f2fbdf5eb83fb6af0c48a4f714ec8d46d66200c79a307fe0e63bd09e0db3a",
+    "float_integral":"e35f2fbdf5eb83fb6af0c48a4f714ec8d46d66200c79a307fe0e63bd09e0db3a",
+    "negative_zero":"5e16b6192bfe6c1917f8120a0b223de1506dc43694b5b90e2cb2797da58e23e8",
+    "small_exp":"3a3f9eb1b59b8b1b9730f495812bf25b58b449f560a032c6719a659aaf35da0b",
+    "unicode":"f73d3b69afbe95a09f3ef59ce310c6305fb9dc710597b5ff846e5d27e48d7376",
+    "nested":"604124d6a8a17a1d951c1dc582172ebe6781e9b8c896d61ae41f37c7d22050f7",
+    "safe_integer_max":"3ca9f68f9df08641789edd4a6b2603a7333ba27689acc079df6fe23260d3829b",
+}
 rejected=[
     ("large_integral_float",1e21),
     ("unsafe_integer",9007199254740992),
@@ -58,8 +67,9 @@ for name,value in accepted:
     except Exception as e:
         py={"ok":False,"error":str(e)}
     js_result=node_result(value)
-    if not py["ok"] or not js_result["ok"] or py.get("digest")!=js_result.get("digest"):
-        mismatches.append({"case":name,"expected":"accept_same_digest","python":py,"js":js_result})
+    expected=fixed_expected[name]
+    if (not py["ok"] or not js_result["ok"] or py.get("digest")!=expected or js_result.get("digest")!=expected):
+        mismatches.append({"case":name,"expected":"fixed_digest:"+expected,"python":py,"js":js_result})
 
 for name,value in rejected:
     patch={"target":"room::window::1","model_id":"CWDS-CA01","slot":"position","capability":"SET","value":value}
