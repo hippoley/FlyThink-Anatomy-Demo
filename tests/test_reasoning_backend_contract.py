@@ -3,7 +3,13 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 
-from reasoning_backend import safe_for_commit, validate_proposal_shape
+from reasoning_backend import (
+    CONTEXT_STATE_VERSION,
+    legacy_state_to_context_state,
+    safe_for_commit,
+    validate_context_state,
+    validate_proposal_shape,
+)
 
 
 def test_valid_proposal_shape():
@@ -56,3 +62,34 @@ def test_invalid_operation_rejected():
     except ValueError:
         return
     raise AssertionError("invalid operation should be rejected")
+
+
+def test_context_state_contract_accepts_canonical_envelope():
+    state = legacy_state_to_context_state({"focused": "legacy"})
+    assert state["contract_version"] == CONTEXT_STATE_VERSION
+    validate_context_state(state)
+
+
+def test_context_state_contract_rejects_private_runtime_shape():
+    try:
+        validate_context_state({"devices": {}, "pending": {}})
+    except ValueError as exc:
+        assert "unsupported_context_state_contract" in str(exc)
+        return
+    raise AssertionError("private runtime shape must not cross reasoning boundary")
+
+
+def test_context_state_contract_rejects_physical_id_in_logical_focus():
+    state = legacy_state_to_context_state({})
+    state["conversation"]["focused_target"] = {
+        "area": "主卧",
+        "entity": "空调",
+        "instance": "default",
+        "entity_id": "physical-123",
+    }
+    try:
+        validate_context_state(state)
+    except ValueError as exc:
+        assert "logical_target_contract_violation" in str(exc)
+        return
+    raise AssertionError("physical ids must not enter semantic reasoning target")
