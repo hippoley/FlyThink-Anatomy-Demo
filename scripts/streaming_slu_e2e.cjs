@@ -6,7 +6,11 @@ const {
   diffLeaves,
   normalizeRuntime
 }=require("./whole_home_patch_contract.cjs");
-const {deriveSemanticContext}=require("./contextual_edge_slu_adapter.cjs");
+const {
+  deriveSemanticContext,
+  toContextStateSnapshot
+}=require("./contextual_edge_slu_adapter.cjs");
+const {verifyExecutionReceipt}=require("./flythink_execution_runtime.cjs");
 const {
   MockThingDriver,
   executePhysicalTurn,
@@ -162,13 +166,73 @@ function receiptFailure(receipts){
   ).join(",");
 }
 
+function buildExecutionBoundaryInput({
+  runtime,
+  history=[],
+  event={},
+  prediction={},
+  patches=[],
+  sequence=0
+}={}){
+  const turnId=event.turn_id||("stream:"+String(sequence+1));
+  const contextualState=toContextStateSnapshot(runtime,history,{
+    conversation_id:event.conversation_id||null,
+    active_task_id:turnId
+  });
+  const request={
+    request_version:"flythink-execution-request.v1",
+    task_id:turnId,
+    goal:{
+      type:"streaming_commit",
+      source:"streaming-home-session"
+    },
+    resolved_targets:targetsOf(patches),
+    constraints:[],
+    candidate_actions:clone(patches)
+  };
+  const proposal={
+    schema_version:"flythink-execution-proposal.v1",
+    proposal_id:"streaming:"+turnId,
+    task_id:turnId,
+    decision:"PROPOSE",
+    strategy:{adapter:"streaming-commit-v1"},
+    proposed_actions:clone(patches),
+    uncertainty:{
+      score:0,
+      reasons:["UPSTREAM_STREAMING_COMMIT_GATE_APPROVED"]
+    },
+    evidence_refs:[],
+    reason_code:"UPSTREAM_STREAMING_COMMIT"
+  };
+  return {
+    turn_id:turnId,
+    contextual_state:contextualState,
+    request,
+    proposal
+  };
+}
+
 class StreamingHomeSession{
-  constructor({initialRuntime={},predictor,driver=null,physicalAuthorizer=null,physicalAuthorizationTolerancePct=1}={}){
+  constructor({
+    initialRuntime={},
+    predictor,
+    driver=null,
+    physicalAuthorizer=null,
+    physicalAuthorizationTolerancePct=1,
+    executionRuntime=null
+  }={}){
     if(typeof predictor!=="function")throw new Error("streaming_predictor_required");
     this.runtime=normalizeRuntime(initialRuntime);
     this.predictor=predictor;
     this.driver=driver||new MockThingDriver(this.runtime);
     this.physicalAuthorizer=physicalAuthorizer;
+    this.executionRuntime=executionRuntime;
+    if(
+      this.executionRuntime!=null&&
+      typeof this.executionRuntime.execute!=="function"
+    ){
+      throw new Error("streaming_execution_runtime_invalid");
+    }
     this.physicalAuthorizationTolerancePct=Number(physicalAuthorizationTolerancePct);
     if(!Number.isFinite(this.physicalAuthorizationTolerancePct)||this.physicalAuthorizationTolerancePct<0){
       throw new Error("physical_authorization_tolerance_invalid");
@@ -217,6 +281,7 @@ class StreamingHomeSession{
     let physicalAuthorization=null;
     let physicalAuthorizationBinding=null;
     let authorizedPatches=clone(patches);
+    let executionRuntimeEvidence=null;
     if(gate.allow){
       const preflight=evaluateQuarantinePreflight(this.runtime,patches);
       if(!preflight.allow){
@@ -224,67 +289,169 @@ class StreamingHomeSession{
         error="semantic_preflight_blocked:device_quarantined:"+keys;
       }else{
         try{
-          if(this.physicalAuthorizer){
-            const authorization=await this.physicalAuthorizer({
-              runtime:clone(this.runtime),
-              patches:clone(patches),
-              event:clone(event),
-              context:clone(context),
-              prediction:clone(prediction),
+          const turnId=event.turn_id||("stream:"+String(this.sequence+1));
+          if(this.executionRuntime){
+            const boundary=buildExecutionBoundaryInput({
+              runtime:this.runtime,
+              history:this.history,
+              event,
+              prediction,
+              patches,
+              sequence:this.sequence
+            });
+            const executionBefore=normalizeRuntime(this.runtime);
+            const executed=await this.executionRuntime.execute({
+              contextual_state:boundary.contextual_state,
+              request:boundary.request,
+              proposal:boundary.proposal,
+              authorization_context:clone(context),
               source_step:this.physicalRevision,
               source_revision:this.physicalRevision
             });
-            if(!authorization||authorization.allow!==true){
-              throw new Error("physical_authorizer_did_not_allow");
-            }
-            if(!Array.isArray(authorization.patches)||authorization.patches.length!==patches.length){
-              throw new Error("physical_authorizer_invalid_patches");
-            }
-            authorizedPatches=clone(authorization.patches);
-            physicalAuthorization=clone(authorization.receipt||authorization);
-          }
-          const turnId=event.turn_id||("stream:"+String(this.sequence+1));
-          const applied=await executePhysicalTurn(
-            this.runtime,
-            authorizedPatches,
-            this.driver,
-            {turn_id:turnId}
-          );
-          const candidateReceipts=applied.receipts||[];
-          // Physical facts must survive even when authorization↔execution binding fails.
-          this.runtime=applied.runtime;
-          receipts=candidateReceipts;
-          committed=receiptsApplied(receipts);
-          if(this.physicalAuthorizer&&receipts.length){
-            try{
-              physicalAuthorizationBinding=bindSpatialRuntimeAuthorization(
-                physicalAuthorization,
-                authorizedPatches,
-                candidateReceipts,
-                this.physicalAuthorizationTolerancePct
-              );
-            }catch(bindingError){
-              committed=false;
-              error="physical_authorization_binding_failed:"+String(
-                bindingError&&bindingError.message||bindingError
-              );
-              for(const authorized of authorizedPatches){
-                if(!authorized||!authorized.target)continue;
-                markQuarantined(
-                  this.runtime,
-                  authorized.target,
+            this.runtime=executed.runtime;
+            receipts=clone(executed.physical_receipts||[]);
+            authorizedPatches=clone(executed.authorized_actions||[]);
+            physicalAuthorization=clone(executed.authorization||null);
+            committed=executed.ok===true&&executed.status==="EXECUTED";
+            error=committed?null:(executed.reason||executed.status||"execution_runtime_not_committed");
+
+            let executionReceiptVerification=null;
+            if(executed.receipt){
+              try{
+                executionReceiptVerification=verifyExecutionReceipt(
+                  executed.receipt,
                   {
-                    status:"uncertain",
-                    reason:error,
-                    id:(candidateReceipts[0]&&candidateReceipts[0].command_id)||null
-                  },
-                  turnId
+                    contextual_state:boundary.contextual_state,
+                    request:boundary.request,
+                    proposal:boundary.proposal,
+                    before_runtime:executionBefore,
+                    after_runtime:this.runtime
+                  }
                 );
+              }catch(receiptError){
+                committed=false;
+                error="execution_receipt_verification_failed:"+String(
+                  receiptError&&receiptError.message||receiptError
+                );
+                for(const authorized of authorizedPatches){
+                  if(!authorized||!authorized.target)continue;
+                  markQuarantined(
+                    this.runtime,
+                    authorized.target,
+                    {
+                      status:"uncertain",
+                      reason:error,
+                      id:(receipts[0]&&receipts[0].command_id)||null
+                    },
+                    turnId
+                  );
+                }
+              }
+            }else if(committed){
+              committed=false;
+              error="execution_receipt_missing";
+            }
+
+            executionRuntimeEvidence={
+              contextual_state:clone(boundary.contextual_state),
+              request:clone(boundary.request),
+              proposal:clone(boundary.proposal),
+              before_runtime:clone(executionBefore),
+              after_runtime:clone(this.runtime),
+              receipt:clone(executed.receipt||null),
+              verification:clone(executionReceiptVerification)
+            };
+
+            if(physicalAuthorization&&receipts.length){
+              try{
+                physicalAuthorizationBinding=bindSpatialRuntimeAuthorization(
+                  physicalAuthorization,
+                  authorizedPatches,
+                  receipts,
+                  this.physicalAuthorizationTolerancePct
+                );
+              }catch(bindingError){
+                committed=false;
+                error="physical_authorization_binding_failed:"+String(
+                  bindingError&&bindingError.message||bindingError
+                );
+                for(const authorized of authorizedPatches){
+                  if(!authorized||!authorized.target)continue;
+                  markQuarantined(
+                    this.runtime,
+                    authorized.target,
+                    {
+                      status:"uncertain",
+                      reason:error,
+                      id:(receipts[0]&&receipts[0].command_id)||null
+                    },
+                    turnId
+                  );
+                }
               }
             }
+          }else{
+            if(this.physicalAuthorizer){
+              const authorization=await this.physicalAuthorizer({
+                runtime:clone(this.runtime),
+                patches:clone(patches),
+                event:clone(event),
+                context:clone(context),
+                prediction:clone(prediction),
+                source_step:this.physicalRevision,
+                source_revision:this.physicalRevision
+              });
+              if(!authorization||authorization.allow!==true){
+                throw new Error("physical_authorizer_did_not_allow");
+              }
+              if(!Array.isArray(authorization.patches)||authorization.patches.length!==patches.length){
+                throw new Error("physical_authorizer_invalid_patches");
+              }
+              authorizedPatches=clone(authorization.patches);
+              physicalAuthorization=clone(authorization.receipt||authorization);
+            }
+            const applied=await executePhysicalTurn(
+              this.runtime,
+              authorizedPatches,
+              this.driver,
+              {turn_id:turnId}
+            );
+            const candidateReceipts=applied.receipts||[];
+            // Physical facts must survive even when authorization↔execution binding fails.
+            this.runtime=applied.runtime;
+            receipts=candidateReceipts;
+            committed=receiptsApplied(receipts);
+            if(this.physicalAuthorizer&&receipts.length){
+              try{
+                physicalAuthorizationBinding=bindSpatialRuntimeAuthorization(
+                  physicalAuthorization,
+                  authorizedPatches,
+                  candidateReceipts,
+                  this.physicalAuthorizationTolerancePct
+                );
+              }catch(bindingError){
+                committed=false;
+                error="physical_authorization_binding_failed:"+String(
+                  bindingError&&bindingError.message||bindingError
+                );
+                for(const authorized of authorizedPatches){
+                  if(!authorized||!authorized.target)continue;
+                  markQuarantined(
+                    this.runtime,
+                    authorized.target,
+                    {
+                      status:"uncertain",
+                      reason:error,
+                      id:(candidateReceipts[0]&&candidateReceipts[0].command_id)||null
+                    },
+                    turnId
+                  );
+                }
+              }
+            }
+            if(!committed&&!error)error=receiptFailure(receipts)||"physical_commit_has_no_applied_receipt";
           }
           if(committed)this.physicalRevision++;
-          if(!committed&&!error)error=receiptFailure(receipts)||"physical_commit_has_no_applied_receipt";
         }catch(e){
           error=String(e&&e.message||e);
           if(!physicalAuthorization&&e&&e.receipt)physicalAuthorization=clone(e.receipt);
@@ -334,6 +501,7 @@ class StreamingHomeSession{
       patch_proposal:clone(patches),
       physical_authorization:clone(physicalAuthorization),
       physical_authorization_binding:clone(physicalAuthorizationBinding),
+      execution_runtime:clone(executionRuntimeEvidence),
       authorized_patch_proposal:clone(authorizedPatches),
       commit_gate:clone(gate),
       thing_model:thingModel,
@@ -360,6 +528,7 @@ class StreamingHomeSession{
         applied_patches:committed?clone(authorizedPatches):[],
         physical_authorization:clone(physicalAuthorization),
         physical_authorization_binding:clone(physicalAuthorizationBinding),
+        execution_runtime:clone(executionRuntimeEvidence),
         physical_receipts:clone(receipts),
         commit_gate:clone(gate),
         error,
@@ -387,5 +556,6 @@ module.exports={
   targetsOf,
   receiptsApplied,
   receiptFailure,
+  buildExecutionBoundaryInput,
   bindSpatialRuntimeAuthorization
 };
