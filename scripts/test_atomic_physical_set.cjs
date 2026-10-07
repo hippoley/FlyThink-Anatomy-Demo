@@ -17,7 +17,7 @@ const patches=[
  // Sequential-only drivers are not allowed to masquerade as atomic physical SET.
  let calls=0;
  let out=await executeAtomicPhysicalSet(initial,patches,{execute(){calls++;}});
- assert(!out.ok);assert.equal(out.reason,"physical_atomic_batch_unsupported");
+ assert(!out.ok);assert.equal(out.reason,"physical_capability_not_declared:atomic_multi_target_set");
  assert.equal(calls,0);assert.deepStrictEqual(out.runtime,initial);assert.equal(out.receipts.length,0);
 
  // Batch rejection returns no committed runtime/receipts.
@@ -30,7 +30,7 @@ const patches=[
  assert.deepStrictEqual(out.runtime,initial);assert.equal(out.receipts.length,0);
 
  // A driver that can guarantee batch commit yields reconciled readback for all targets.
- const atomic={executeAtomicBatch(){return [
+ const atomic={capabilities(){return ["atomic_multi_target_set","readback"];},executeAtomicBatch(){return [
    {id:"a:1",status:"applied",observation:{target:L,exists:true,slots:{power:"ON",temperature:22}}},
    {id:"a:2",status:"applied",observation:{target:B,exists:true,slots:{power:"ON",temperature:22}}}
  ];}};
