@@ -3,7 +3,8 @@
 const assert=require("assert");
 const {
   buildEvidenceCoverage,
-  adjudicateEvidence
+  adjudicateEvidence,
+  adjudicateCandidateEvidence
 }=require("../scripts/pi_home_evidence_adjudicator.cjs");
 
 const contam={
@@ -109,3 +110,83 @@ console.log(JSON.stringify({
   ok:true,
   contract:"missing dimensions are NOT_ADJUDICABLE; complete untrusted evidence cannot promote; only complete trusted evidence may support a trusted claim"
 }));
+
+
+{
+  const contamScores={
+    id:"contam-demo",
+    kind:"simulation",
+    evidence_level:"real-contam-demo-profile",
+    trusted_for_promotion:false,
+    dimensions:{
+      co2:{
+        direction:"min",
+        scores:{
+          "candidate-1":900,
+          "candidate-2":850,
+          "candidate-3":900
+        }
+      }
+    }
+  };
+  const rainScores={
+    id:"rain-screening",
+    kind:"heuristic-screening",
+    evidence_level:"feature-derived-screening",
+    trusted_for_promotion:false,
+    dimensions:{
+      rain_ingress:{
+        direction:"min",
+        scores:{
+          "candidate-1":.8,
+          "candidate-2":.25,
+          "candidate-3":.1
+        }
+      }
+    }
+  };
+  const screening=adjudicateCandidateEvidence({
+    required_dimensions:["co2","rain_ingress"],
+    provider_results:[contamScores,rainScores],
+    learned_candidate_label:"candidate-3",
+    dimension_weights:{co2:.6,rain_ingress:.4}
+  });
+  assert.equal(screening.decision,"SCREENING_ALIGNED");
+  assert.equal(screening.winner.label,"candidate-3");
+  assert.equal(screening.coverage.coverage_complete,true);
+  assert.equal(screening.coverage.trusted_coverage_complete,false);
+  assert.equal(screening.trusted_for_generalization_claim,false);
+
+  const trusted=adjudicateCandidateEvidence({
+    required_dimensions:["co2","rain_ingress"],
+    provider_results:[
+      {
+        ...contamScores,
+        id:"contam-engineering",
+        evidence_level:"engineering-validated",
+        trusted_for_promotion:true,
+        calibration:{status:"validated",validation_id:"contam-cal-v1",covered_dimensions:["co2"]}
+      },
+      {
+        ...rainScores,
+        id:"rain-engineering",
+        evidence_level:"engineering-validated",
+        trusted_for_promotion:true,
+        calibration:{status:"validated",validation_id:"rain-cal-v1",covered_dimensions:["rain_ingress"]}
+      }
+    ],
+    learned_candidate_label:"candidate-3",
+    dimension_weights:{co2:.6,rain_ingress:.4}
+  });
+  assert.equal(trusted.decision,"ALIGNED");
+  assert.equal(trusted.coverage.trusted_coverage_complete,true);
+  assert.equal(trusted.trusted_for_generalization_claim,true);
+
+  const missing=adjudicateCandidateEvidence({
+    required_dimensions:["co2","rain_ingress"],
+    provider_results:[contamScores],
+    learned_candidate_label:"candidate-2"
+  });
+  assert.equal(missing.decision,"NOT_ADJUDICABLE");
+  assert.equal(missing.trusted_for_generalization_claim,false);
+}
