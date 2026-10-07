@@ -163,12 +163,20 @@ function receiptFailure(receipts){
 }
 
 class StreamingHomeSession{
-  constructor({initialRuntime={},predictor,driver=null,physicalAuthorizer=null,physicalAuthorizationTolerancePct=1}={}){
+  constructor({
+    initialRuntime={},
+    predictor,
+    driver=null,
+    physicalAuthorizer=null,
+    physicalAuthorizationTolerancePct=1,
+    semanticOnly=false
+  }={}){
     if(typeof predictor!=="function")throw new Error("streaming_predictor_required");
     this.runtime=normalizeRuntime(initialRuntime);
     this.predictor=predictor;
     this.driver=driver||new MockThingDriver(this.runtime);
     this.physicalAuthorizer=physicalAuthorizer;
+    this.semanticOnly=semanticOnly===true;
     this.physicalAuthorizationTolerancePct=Number(physicalAuthorizationTolerancePct);
     if(!Number.isFinite(this.physicalAuthorizationTolerancePct)||this.physicalAuthorizationTolerancePct<0){
       throw new Error("physical_authorization_tolerance_invalid");
@@ -217,7 +225,7 @@ class StreamingHomeSession{
     let physicalAuthorization=null;
     let physicalAuthorizationBinding=null;
     let authorizedPatches=clone(patches);
-    if(gate.allow){
+    if(gate.allow&&!this.semanticOnly){
       const preflight=evaluateQuarantinePreflight(this.runtime,patches);
       if(!preflight.allow){
         const keys=preflight.violations.map(x=>x.device_key).join(",");
@@ -343,6 +351,8 @@ class StreamingHomeSession{
         before_device_state:clone(before.devices),
         after_device_state:clone(after.devices)
       },
+      semantic_ready:gate.allow===true,
+      physical_boundary_crossed:gate.allow===true&&!this.semanticOnly,
       committed,
       error,
       physical_command_count_before:beforeCommands,
@@ -362,6 +372,8 @@ class StreamingHomeSession{
         physical_authorization_binding:clone(physicalAuthorizationBinding),
         physical_receipts:clone(receipts),
         commit_gate:clone(gate),
+        semantic_ready:gate.allow===true,
+        physical_boundary_crossed:gate.allow===true&&!this.semanticOnly,
         error,
         context:clone(context)
       });
