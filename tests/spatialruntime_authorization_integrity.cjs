@@ -32,6 +32,7 @@ function request(){
 function receipt(overrides={}){
   const body={
     schema:RECEIPT_SCHEMA,
+    canonicalization:"sorted-json-number-normalized-v1",
     allow:true,
     case_id:"turn-1",
     source_step:2,
