@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Canonical semantic slots mapped to immutable Thing Model capability codes."""
+"""Canonical semantic slots mapped to immutable Thing Model capability codes."""\nimport math
 CANONICAL={
  "AWGD-ZA01":{
   "power":{"codes":["power"],"type":"bool"},
@@ -24,7 +24,7 @@ def validate_value(model_id,slot,value):
  c=semantic_capability(model_id,slot)
  if not c:return {"ok":False,"reason":"unsupported_semantic_slot"}
  if c["type"]=="number":
-  if isinstance(value,bool) or not isinstance(value,(int,float)):return {"ok":False,"reason":"numeric_value_required"}
+  if isinstance(value,bool) or not isinstance(value,(int,float)):return {"ok":False,"reason":"numeric_value_required"}\n  if isinstance(value,float) and not math.isfinite(value):return {"ok":False,"reason":"non_finite_numeric_value"}\n  if isinstance(value,int) and abs(value)>9007199254740991:return {"ok":False,"reason":"unsafe_numeric_value"}
   if value<c.get("min",value) or value>c.get("max",value):return {"ok":False,"reason":"value_out_of_range","min":c.get("min"),"max":c.get("max")}
  return {"ok":True,"capability":c}
 
