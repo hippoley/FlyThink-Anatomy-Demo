@@ -49,19 +49,29 @@ def inspect_wav(path: Path) -> dict:
     }
 
 
-def build_manifest(path: Path,source_kind: str,expected_text: str,provenance_note: str) -> dict:
+def build_manifest(
+    path: Path,
+    source_kind: str,
+    expected_text: str,
+    provenance_note: str,
+    max_cer: float=0.25,
+) -> dict:
     if source_kind not in SOURCE_KINDS:
         raise ValueError("acoustic_fixture_source_kind_invalid")
     if not expected_text.strip():
         raise ValueError("acoustic_fixture_expected_text_required")
     if source_kind=="human_recording" and not provenance_note.strip():
         raise ValueError("human_recording_requires_provenance_note")
+    max_cer=float(max_cer)
+    if not 0 <= max_cer <= 1:
+        raise ValueError("acoustic_fixture_max_cer_must_be_in_0_1")
     info=inspect_wav(path)
     return {
         "schema":SCHEMA,
         "source_kind":source_kind,
         "expected_text":expected_text.strip(),
         "provenance_note":provenance_note.strip() or None,
+        "acceptance":{"max_cer":max_cer},
         "wav":{
             "sha256":sha256_file(path),
             "bytes":path.stat().st_size,
@@ -85,6 +95,12 @@ def verify_manifest(path: Path,manifest: dict,required_source_kind: str|None=Non
         reasons.append("human acoustic fixture missing provenance note")
     if not str(manifest.get("expected_text") or "").strip():
         reasons.append("acoustic fixture expected text missing")
+    try:
+        max_cer=float((manifest.get("acceptance") or {}).get("max_cer"))
+        if not 0 <= max_cer <= 1:
+            raise ValueError("out of range")
+    except (TypeError,ValueError):
+        reasons.append("acoustic fixture max CER invalid")
 
     try:
         actual=inspect_wav(path)
@@ -121,6 +137,7 @@ def main():
     create.add_argument("--source-kind",required=True,choices=sorted(SOURCE_KINDS))
     create.add_argument("--expected-text",required=True)
     create.add_argument("--provenance-note",default="")
+    create.add_argument("--max-cer",type=float,default=0.25)
     create.add_argument("--out",required=True)
 
     verify=sub.add_parser("verify")
@@ -132,7 +149,7 @@ def main():
     wav=Path(args.wav)
     if args.command=="create":
         manifest=build_manifest(
-            wav,args.source_kind,args.expected_text,args.provenance_note
+            wav,args.source_kind,args.expected_text,args.provenance_note,args.max_cer
         )
         Path(args.out).write_text(
             json.dumps(manifest,ensure_ascii=False,indent=2)+"\n",
