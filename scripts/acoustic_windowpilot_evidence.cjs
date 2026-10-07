@@ -1,6 +1,7 @@
 "use strict";
 
 const crypto=require("crypto");
+const {verifyExecutionReceipt}=require("./execution_receipt.cjs");
 
 const SCHEMA="flythink.acoustic_windowpilot_evidence.v1";
 
@@ -111,6 +112,7 @@ function buildReceipt({
         authorized_patches:clone(x.authorized_patch_proposal||x.patch_proposal||[]),
         physical_authorization:clone(x.physical_authorization||null),
         physical_authorization_binding:clone(x.physical_authorization_binding||null),
+        execution_runtime:clone(x.execution_runtime||null),
         thing_model:clone(x.thing_model||[]),
         feedback:clone(x.feedback||[]),
         reconcile:clone(x.reconcile||null)
@@ -129,7 +131,8 @@ function buildReceipt({
 function validateReceipt(receipt,{
   requireHumanFixture=false,
   requireSpatialRuntimeAuthorization=false,
-  requireSpatialRuntimeSceneEvidence=false
+  requireSpatialRuntimeSceneEvidence=false,
+  requireFlyThinkExecutionRuntime=false
 }={}){
   const reasons=[];
   if(!receipt||receipt.schema!==SCHEMA)reasons.push("evidence schema mismatch");
@@ -227,6 +230,39 @@ function validateReceipt(receipt,{
       x=>!x||!x.evidence||x.evidence.measured!==true
     )){
       reasons.push("device feedback is not measured");
+    }
+
+    if(requireFlyThinkExecutionRuntime){
+      const execution=committed.execution_runtime;
+      if(!execution){
+        reasons.push("FlyThink execution runtime evidence missing");
+      }else if(!execution.receipt){
+        reasons.push("FlyThink execution receipt missing");
+      }else{
+        try{
+          const verified=verifyExecutionReceipt(execution.receipt,{
+            contextual_state:execution.contextual_state,
+            request:execution.request,
+            proposal:execution.proposal,
+            before_runtime:execution.before_runtime,
+            after_runtime:execution.after_runtime
+          });
+          if(!verified||verified.valid!==true){
+            reasons.push("FlyThink execution receipt verification failed");
+          }
+          if(execution.receipt.schema_version!=="execution-receipt.v1"){
+            reasons.push("FlyThink execution receipt schema mismatch");
+          }
+          if(execution.receipt.result!=="APPLIED"){
+            reasons.push("FlyThink execution receipt result is not APPLIED");
+          }
+        }catch(e){
+          reasons.push(
+            "FlyThink execution receipt invalid:"+
+            String(e&&e.message||e)
+          );
+        }
+      }
     }
 
     if(requireSpatialRuntimeAuthorization){
