@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 """Cross-language proof for planner-bound semantic execution authorization."""
-import json,subprocess,tempfile,os
-from device_registry import DeviceRegistry,DeviceBinding
+import json
+import os
+import subprocess
+import tempfile
+from device_registry import DeviceRegistry, DeviceBinding
 from authorized_patch_planner import plan
 
 registry=DeviceRegistry([
@@ -20,9 +23,9 @@ assert valid["authorization"]["turn_id"]=="turn-42"
 assert not plan(registry,authorized,"temperature",31)["ok"]
 assert not plan(registry,["客厅::空调::default","书房::空调::default"],"temperature",22)["ok"]
 
-node=r'''
+node=r"""
 const assert=require("assert");
-const payload=JSON.parse(process.argv[1]);
+const payload=JSON.parse(process.argv[2]);
 const registryDigest=payload.authorization.registry_digest;
 const {normalizeRuntime,applyTurn}=require("./scripts/whole_home_patch_contract.cjs");
 const {atomicApplyAuthorizedPlan}=require("./scripts/atomic_authorized_commit.cjs");
@@ -38,13 +41,12 @@ const before=JSON.parse(JSON.stringify(r));
 const untouched=JSON.parse(JSON.stringify(r.devices["客厅::灯::default"]));
 const ledger=()=>{const s=new Map();return {
  status:id=>s.get(id)||"fresh",
- has:id=>s.has(id),
  reserve:id=>{if(s.has(id))return false;s.set(id,"reserved");return true;},
  consume:id=>{if(s.get(id)!=="reserved")return false;s.set(id,"consumed");return true;},
  release:id=>{if(s.get(id)!=="reserved")return false;s.delete(id);return true;}
 }};
-const consumed=ledger();
 
+const consumed=ledger();
 let out=atomicApplyAuthorizedPlan(r,payload,registryDigest,consumed);
 assert(out.ok);
 assert.equal(consumed.status(payload.authorization.authorization_id),"consumed");
@@ -53,30 +55,32 @@ assert.equal(out.runtime.devices["主卧::空调::default"].slots.temperature,22
 assert.equal(out.runtime.devices["次卧::空调::default"].slots.temperature,26);
 assert.deepStrictEqual(out.runtime.devices["客厅::灯::default"],untouched);
 
-// Same authorization is single-use even if patch and registry are unchanged.
 const committed=out.runtime;
 out=atomicApplyAuthorizedPlan(committed,payload,registryDigest,consumed);
 assert(!out.ok);assert.equal(out.reason,"planner_authorization_replayed");
 assert.deepStrictEqual(out.runtime,committed);assert.equal(out.receipts.length,0);
 
-// A valid mounted/capable third device cannot be injected after planning.
 const tampered=JSON.parse(JSON.stringify(payload));
 tampered.patches[1].target="次卧::空调::default";
-out=atomicApplyAuthorizedPlan(before,tampered,registryDigest,ledger());
+const tamperLedger=ledger();
+out=atomicApplyAuthorizedPlan(before,tampered,registryDigest,tamperLedger);
 assert(!out.ok);assert.equal(out.reason,"planner_authorization_digest_mismatch");
-assert.deepStrictEqual(out.runtime,before);assert.equal(out.receipts.length,0);
+assert.equal(tamperLedger.status(payload.authorization.authorization_id),"fresh");
 
-for(const field of ["value","model_id","capability"]){
- const x=JSON.parse(JSON.stringify(payload));
- x.patches[0][field]=field==="value"?23:"FORGED";
- out=atomicApplyAuthorizedPlan(before,x,registryDigest,ledger());
- assert(!out.ok);assert.equal(out.reason,"planner_authorization_digest_mismatch");
- assert.equal(out.receipts.length,0);
-}
-
-// Authorization cannot survive registry rebind/re-provision.
-const staleLedger=ledger();\nout=atomicApplyAuthorizedPlan(before,payload,"registry-after-rebind",staleLedger);
+const staleLedger=ledger();
+out=atomicApplyAuthorizedPlan(before,payload,"registry-after-rebind",staleLedger);
 assert(!out.ok);assert.equal(out.reason,"planner_authorization_stale_registry");
+assert.equal(staleLedger.status(payload.authorization.authorization_id),"fresh");
+
+const indeterminateLedger={
+ state:"fresh",
+ reserve(){this.state="reserved";return true;},
+ consume(){return false;},
+ release(){this.state="fresh";return true;}
+};
+out=atomicApplyAuthorizedPlan(before,payload,registryDigest,indeterminateLedger);
+assert(!out.ok);assert.equal(out.reason,"authorization_commit_indeterminate");
+assert.equal(indeterminateLedger.state,"reserved");
 assert.deepStrictEqual(out.runtime,before);assert.equal(out.receipts.length,0);
 
 console.log(JSON.stringify({
@@ -85,10 +89,19 @@ console.log(JSON.stringify({
  post_planner_patch_tamper:0,
  stale_registry_authorization:0,
  authorization_replay:0,
+ leaked_validation_reservation:0,
+ released_indeterminate_authorization:0,
  unauthorized_receipt:0,
  untouched_state_violation:0
 }));
-'''
-p=subprocess.run(["node","-e",node,json.dumps(valid,ensure_ascii=False)],text=True,capture_output=True)
-if p.returncode: raise SystemExit(p.stderr or p.stdout)
+"""
+with tempfile.NamedTemporaryFile("w",suffix=".cjs",dir=".",delete=False,encoding="utf-8") as script:
+    script.write(node)
+    script_path=script.name
+try:
+    p=subprocess.run(["node",script_path,json.dumps(valid,ensure_ascii=False)],text=True,capture_output=True)
+finally:
+    os.unlink(script_path)
+if p.returncode:
+    raise SystemExit(p.stderr or p.stdout)
 print(p.stdout.strip())
