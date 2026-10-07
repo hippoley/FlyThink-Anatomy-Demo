@@ -337,6 +337,7 @@ async function runDecisionProposal({
   contextual_state,
   decision_proposal,
   world_snapshot_revision=null,
+  world_snapshot_sha256=null,
   driver,
   physicalAuthorizer,
   authorization_context={},
@@ -372,6 +373,63 @@ async function runDecisionProposal({
       ok:false,
       status:"BLOCKED",
       reason:"spatialruntime_world_revision_required",
+      runtime:current,
+      authorization:null,
+      authorized_actions:[],
+      physical_receipts:[],
+      receipt
+    };
+  }
+  const worldSha=String(world_snapshot_sha256||"").toLowerCase();
+  if(!isSha256(worldSha)){
+    const {request,internal_proposal}=decisionProposalToExecutionContracts(
+      contextual_state,
+      decision_proposal
+    );
+    const receipt=buildRuntimeReceipt({
+      contextual_state,
+      request,
+      proposal:internal_proposal,
+      status:"BLOCKED",
+      reason:"spatialruntime_world_snapshot_sha256_required",
+      before_runtime:current,
+      after_runtime:current,
+      source_step,
+      source_revision:worldRevision
+    });
+    return {
+      ok:false,
+      status:"BLOCKED",
+      reason:"spatialruntime_world_snapshot_sha256_required",
+      runtime:current,
+      authorization:null,
+      authorized_actions:[],
+      physical_receipts:[],
+      receipt
+    };
+  }
+  if(worldSha!==decision_proposal.world_snapshot_sha256){
+    const {request,internal_proposal}=decisionProposalToExecutionContracts(
+      contextual_state,
+      decision_proposal
+    );
+    const receipt=buildRuntimeReceipt({
+      contextual_state,
+      request,
+      proposal:internal_proposal,
+      status:"BLOCKED",
+      reason:"decision_proposal_world_snapshot_sha256_mismatch",
+      before_runtime:current,
+      after_runtime:current,
+      source_step,
+      source_revision:worldRevision
+    });
+    return {
+      ok:false,
+      status:"BLOCKED",
+      reason:"decision_proposal_world_snapshot_sha256_mismatch",
+      expected_world_snapshot_sha256:worldSha,
+      supplied_world_snapshot_sha256:decision_proposal.world_snapshot_sha256,
       runtime:current,
       authorization:null,
       authorized_actions:[],
