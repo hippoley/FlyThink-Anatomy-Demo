@@ -145,6 +145,7 @@ function buildVerified(){
     assert.equal(receipt.verification.fresh_readback_verified,true);
     assert.equal(receipt.verification.hardware_identity_verified,true);
     assert.equal(receipt.verification.measured_readback_verified,true);
+    assert.equal(receipt.verification.effect_verified,true);
     assert.equal(receipt.verification.physical_truth_verified,true);
     const {before,after}=runtimes();
     const verified=verifyExecutionReceipt(receipt,{
@@ -180,7 +181,18 @@ function buildVerified(){
     );
   }
 
-  // 4. ACK tampering cannot retain a verified causal receipt.
+  // 4. Measured effect tampering is detected after outer/evidence re-sealing.
+  {
+    let forged=buildVerified();
+    forged.physical.evidence[0].observation.slots.opening=99;
+    forged=refreshEvidenceDigest(forged);
+    assert.throws(
+      ()=>verifyExecutionReceipt(forged),
+      /execution_receipt_physical_checks_mismatch/
+    );
+  }
+
+  // 5. ACK tampering cannot retain a verified causal receipt.
   {
     let forged=buildVerified();
     forged.physical.evidence[0].ack.ok=false;
@@ -191,7 +203,7 @@ function buildVerified(){
     );
   }
 
-  // 5. Hardware identity drift cannot retain a verified receipt.
+  // 6. Hardware identity drift cannot retain a verified receipt.
   {
     let forged=buildVerified();
     forged.physical.evidence[0].hardware_identity.after="hw-swapped";
@@ -202,7 +214,7 @@ function buildVerified(){
     );
   }
 
-  // 6. Applied physical evidence with a different target is rejected at build time.
+  // 7. Applied physical evidence with a different target is rejected at build time.
   {
     const bad=verifiedPhysicalReceipt();
     bad.observation.target=OTHER;
@@ -224,7 +236,7 @@ function buildVerified(){
     );
   }
 
-  // 7. "Applied" without causal physical evidence is valid as a record, but not verified truth.
+  // 8. "Applied" without causal physical evidence is valid as a record, but not verified truth.
   {
     const {before,after}=runtimes();
     const mock={
@@ -262,7 +274,33 @@ function buildVerified(){
     assert.equal(receipt.verification.measured_readback_verified,false);
   }
 
-  // 8. EXECUTED cannot be minted without applied physical evidence.
+  // 8. Measured state outside the requested effect cannot be reported as verified success.
+  {
+    const {before,after}=runtimes();
+    const badEffect=verifiedPhysicalReceipt();
+    badEffect.observation.slots.opening=99;
+    badEffect.observation.evidence.position_pct=99;
+    const receipt=buildExecutionReceipt({
+      contextual_state:contextualState,
+      request,
+      proposal,
+      authorization,
+      authorized_actions:[action],
+      physical_receipts:[badEffect],
+      before_runtime:before,
+      after_runtime:after,
+      status:"EXECUTED",
+      physical_committed:true
+    });
+    assert.equal(receipt.result,"APPLIED_UNVERIFIED");
+    assert.equal(receipt.verification.effect_verified,false);
+    assert.equal(receipt.verification.physical_truth_verified,false);
+    const verified=verifyExecutionReceipt(receipt);
+    assert.equal(verified.valid,true);
+    assert.equal(verified.physical_truth_verified,false);
+  }
+
+  // 9. EXECUTED cannot be minted without applied physical evidence.
   {
     const {before,after}=runtimes();
     assert.throws(
@@ -282,7 +320,7 @@ function buildVerified(){
     );
   }
 
-  // 9. Authorization binding cannot be detached from the physical semantic patch.
+  // 10. Authorization binding cannot be detached from the physical semantic patch.
   {
     const physical=verifiedPhysicalReceipt();
     physical.patch={...clone(action),value:9};
@@ -304,7 +342,7 @@ function buildVerified(){
     );
   }
 
-  // 10. Authorization receipt may self-reseal, but cannot change the exact authorized action.
+  // 11. Authorization receipt may self-reseal, but cannot change the exact authorized action.
   {
     let forged=buildVerified();
     forged.authorization.receipt.authorized_patches[0].value=9;
@@ -325,7 +363,7 @@ function buildVerified(){
     );
   }
 
-  // 11. An independently supplied source artifact must match the receipt digest binding.
+  // 12. An independently supplied source artifact must match the receipt digest binding.
   {
     const receipt=buildVerified();
     const forgedRequest=clone(request);
@@ -338,7 +376,7 @@ function buildVerified(){
 
   console.log(JSON.stringify({
     ok:true,
-    cases:11,
+    cases:13,
     schema:"execution-receipt.v1",
     contract:"authorized action + physical patch + target + ACK + causal readback + hardware identity are digest-bound and independently checked"
   }));
