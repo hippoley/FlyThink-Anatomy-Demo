@@ -41,6 +41,14 @@ async function ordinaryOpeningPassesSpatialRuntime(){
   assert.equal(row.physical_authorization.trace_status,"completed");
   assert.equal(row.physical_authorization.trace_hash.length,64);
   assert.equal(row.physical_authorization.receipt_sha256.length,64);
+  assert.equal(row.physical_authorization_binding.schema,"homeai_spatialruntime_physical_binding_v1");
+  assert.equal(row.physical_authorization_binding.authorization_receipt_sha256,row.physical_authorization.receipt_sha256);
+  assert.equal(row.physical_authorization_binding.authorization_trace_hash,row.physical_authorization.trace_hash);
+  assert.equal(row.physical_authorization_binding.bindings.length,1);
+  assert.equal(row.physical_authorization_binding.bindings[0].status,"applied");
+  assert.equal(row.physical_authorization_binding.bindings[0].authorization_patch_sha256,row.physical_authorization_binding.bindings[0].physical_patch_sha256);
+  assert.equal(row.physical_authorization_binding.bindings[0].observation_sha256.length,64);
+  assert.equal(row.physical_authorization_binding.binding_sha256.length,64);
   assert.equal(out.physical_commands,1);
   assert.equal(out.runtime.devices[key()].slots.opening,5);
 }
@@ -69,6 +77,7 @@ async function reviewedExteriorRainForcesCloseBeforeDriver(){
   assert.deepEqual(row.physical_authorization.safety_forced_entities,[key()]);
   assert.equal(row.authorized_patch_proposal[0].value,0);
   assert.equal(row.authorized_patch_proposal[0].spatialruntime_decision,"commit_safety_override");
+  assert.equal(row.physical_authorization_binding.bindings[0].observed_value,0);
   assert.equal(driver.commands.length,1);
   assert.equal(driver.commands[0].patch.value,0);
   assert.equal(out.runtime.devices[key()].slots.opening,0);
