@@ -109,7 +109,11 @@ function authorizationReceiptVerification(authorization,authorizedActions=[]){
   if(!authorization||typeof authorization!=="object"){
     return {
       receipt_integrity_verified:false,
-      authorized_patches_verified:false
+      authorized_patches_verified:false,
+      patch_digest_verified:false,
+      registry_digest_verified:false,
+      authorization_id_verified:false,
+      single_use_verified:false
     };
   }
   let receiptIntegrity=false;
@@ -122,9 +126,19 @@ function authorizationReceiptVerification(authorization,authorizedActions=[]){
   const authorizedPatchesVerified=
     Array.isArray(authorization.authorized_patches)&&
     digestObject(authorization.authorized_patches)===digestObject(authorizedActions);
+  const patchDigestVerified=
+    isDigest(authorization.patch_digest)&&
+    authorization.patch_digest===digestObject(authorizedActions);
+  const registryDigestVerified=isDigest(authorization.registry_digest);
+  const authorizationIdVerified=isDigest(authorization.authorization_id);
+  const singleUseVerified=authorization.single_use===true;
   return {
     receipt_integrity_verified:receiptIntegrity,
-    authorized_patches_verified:authorizedPatchesVerified
+    authorized_patches_verified:authorizedPatchesVerified,
+    patch_digest_verified:patchDigestVerified,
+    registry_digest_verified:registryDigestVerified,
+    authorization_id_verified:authorizationIdVerified,
+    single_use_verified:singleUseVerified
   };
 }
 
@@ -214,6 +228,14 @@ function buildExecutionReceipt({
       authorizationReceiptChecks.receipt_integrity_verified,
     authorization_receipt_patches_verified:
       authorizationReceiptChecks.authorized_patches_verified,
+    authorization_patch_digest_verified:
+      authorizationReceiptChecks.patch_digest_verified,
+    authorization_registry_digest_verified:
+      authorizationReceiptChecks.registry_digest_verified,
+    authorization_id_verified:
+      authorizationReceiptChecks.authorization_id_verified,
+    authorization_single_use_verified:
+      authorizationReceiptChecks.single_use_verified,
     authorization_binding_verified:authorizationBindingVerified,
     logical_target_binding_verified:logicalTargetBindingVerified,
     target_binding_verified:
@@ -231,6 +253,10 @@ function buildExecutionReceipt({
     physical_committed===true&&
     verification.authorization_receipt_integrity_verified&&
     verification.authorization_receipt_patches_verified&&
+    verification.authorization_patch_digest_verified&&
+    verification.authorization_registry_digest_verified&&
+    verification.authorization_id_verified&&
+    verification.authorization_single_use_verified&&
     verification.authorization_binding_verified&&
     verification.logical_target_binding_verified&&
     verification.target_binding_verified&&
@@ -435,6 +461,14 @@ function verifyExecutionReceipt(receipt={},{
       authorizationReceiptChecks.receipt_integrity_verified,
     authorization_receipt_patches_verified:
       authorizationReceiptChecks.authorized_patches_verified,
+    authorization_patch_digest_verified:
+      authorizationReceiptChecks.patch_digest_verified,
+    authorization_registry_digest_verified:
+      authorizationReceiptChecks.registry_digest_verified,
+    authorization_id_verified:
+      authorizationReceiptChecks.authorization_id_verified,
+    authorization_single_use_verified:
+      authorizationReceiptChecks.single_use_verified,
     authorization_binding_verified:authorizationBindingVerified,
     logical_target_binding_verified:logicalTargetBindingVerified,
     target_binding_verified:
@@ -452,6 +486,10 @@ function verifyExecutionReceipt(receipt={},{
     physical.committed===true&&
     expectedVerification.authorization_receipt_integrity_verified&&
     expectedVerification.authorization_receipt_patches_verified&&
+    expectedVerification.authorization_patch_digest_verified&&
+    expectedVerification.authorization_registry_digest_verified&&
+    expectedVerification.authorization_id_verified&&
+    expectedVerification.authorization_single_use_verified&&
     expectedVerification.authorization_binding_verified&&
     expectedVerification.logical_target_binding_verified&&
     expectedVerification.target_binding_verified&&
