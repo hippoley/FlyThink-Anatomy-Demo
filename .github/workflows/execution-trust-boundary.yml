@@ -8,8 +8,11 @@ on:
       - "scripts/device_registry.py"
       - "scripts/semantic_capability_map.py"
       - "scripts/atomic_authorized_commit.cjs"
+      - "scripts/atomic_physical_set.cjs"
+      - "scripts/physical_runtime.cjs"
       - "scripts/whole_home_patch_contract.cjs"
       - "scripts/test_execution_trust_boundary.py"
+      - "scripts/test_atomic_physical_set.cjs"
       - ".github/workflows/execution-trust-boundary.yml"
   pull_request:
     paths:
@@ -17,8 +20,11 @@ on:
       - "scripts/device_registry.py"
       - "scripts/semantic_capability_map.py"
       - "scripts/atomic_authorized_commit.cjs"
+      - "scripts/atomic_physical_set.cjs"
+      - "scripts/physical_runtime.cjs"
       - "scripts/whole_home_patch_contract.cjs"
       - "scripts/test_execution_trust_boundary.py"
+      - "scripts/test_atomic_physical_set.cjs"
       - ".github/workflows/execution-trust-boundary.yml"
   workflow_dispatch:
 
@@ -36,3 +42,5 @@ jobs:
           node-version: "20"
       - name: Prove planner-to-commit safety invariants
         run: python scripts/test_execution_trust_boundary.py
+      - name: Prove multi-target physical SET cannot degrade to sequential writes
+        run: node scripts/test_atomic_physical_set.cjs
