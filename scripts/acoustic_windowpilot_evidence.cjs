@@ -273,6 +273,9 @@ function validateReceipt(receipt,{
             if(!/^[0-9a-f]{64}$/.test(String(scene.context_sha256||""))){
               reasons.push("SpatialRuntime scene context SHA256 missing");
             }
+            if(!/^[0-9a-f]{40}$/.test(String(scene.source_commit_sha||""))){
+              reasons.push("SpatialRuntime scene source commit missing");
+            }
             if(!/^[0-9a-f]{40}$/.test(String(scene.spatialruntime_commit_sha||""))){
               reasons.push("SpatialRuntime scene dependency commit missing");
             }
@@ -291,6 +294,8 @@ function validateReceipt(receipt,{
               }
               if(!/^[0-9a-f]{40}$/.test(String(handoff.source_commit_sha||""))){
                 reasons.push("SpatialRuntime scene handoff source commit missing");
+              }else if(handoff.source_commit_sha!==scene.source_commit_sha){
+                reasons.push("SpatialRuntime scene handoff source commit mismatch");
               }
               if(!/^[0-9a-f]{64}$/.test(String(handoff.handoff_sha256||""))){
                 reasons.push("SpatialRuntime scene handoff SHA256 missing");
