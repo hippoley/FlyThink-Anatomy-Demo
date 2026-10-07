@@ -37,7 +37,11 @@ const patches=[
  ];}};
  out=await executeAtomicPhysicalSet(initial,patches,rejecting);
  assert(!out.ok);assert.equal(out.reason,"physical_atomic_batch_not_committed");
- assert.deepStrictEqual(out.runtime,initial);assert.equal(out.receipts.length,0);
+ assert.equal(out.runtime.devices["客厅::空调::default"].slots.temperature,24);
+ assert.equal(out.runtime.devices["主卧::空调::default"].slots.temperature,25);
+ assert.equal(out.runtime.deviceHealth["客厅::空调::default"].status,"quarantined");
+ assert.equal(out.runtime.deviceHealth["主卧::空调::default"].status,"quarantined");
+ assert.equal(out.receipts.length,0);
 
  const wrongTargets={capabilities(){return ["atomic_multi_target_set","readback"];},executeAtomicBatch(){return [
    {id:"w:1",status:"applied",observation:{target:B,exists:true,slots:{power:"ON",temperature:22}}},
@@ -45,7 +49,11 @@ const patches=[
  ];}};
  out=await executeAtomicPhysicalSet(initial,patches,wrongTargets);
  assert(!out.ok);assert.equal(out.reason,"physical_atomic_batch_receipt_target_mismatch:0");
- assert.deepStrictEqual(out.runtime,initial);assert.equal(out.receipts.length,0);
+ assert.equal(out.runtime.devices["客厅::空调::default"].slots.temperature,24);
+ assert.equal(out.runtime.devices["主卧::空调::default"].slots.temperature,25);
+ assert.equal(out.runtime.deviceHealth["客厅::空调::default"].status,"quarantined");
+ assert.equal(out.runtime.deviceHealth["主卧::空调::default"].status,"quarantined");
+ assert.equal(out.receipts.length,0);
 
  const atomic={capabilities(){return ["atomic_multi_target_set","readback"];},executeAtomicBatch(){return [
    {id:"a:1",status:"applied",observation:{target:L,exists:true,slots:{power:"ON",temperature:22}}},
