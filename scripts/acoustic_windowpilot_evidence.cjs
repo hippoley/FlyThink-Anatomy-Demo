@@ -251,6 +251,12 @@ function validateReceipt(receipt,{requireHumanFixture=false,requireSpatialRuntim
         if(!/^[0-9a-f]{64}$/.test(String(auth.trace_hash||""))){
           reasons.push("SpatialRuntime trace hash missing");
         }
+        if(
+          auth.spatialruntime_pin!=null&&
+          !/^[0-9a-f]{40}$/.test(String(auth.spatialruntime_pin))
+        ){
+          reasons.push("SpatialRuntime consumer pin invalid");
+        }
         const saved=auth.receipt_sha256;
         const authBase=clone(auth);delete authBase.receipt_sha256;
         if(!saved||saved!==sha256Object(authBase)){
@@ -273,6 +279,9 @@ function validateReceipt(receipt,{requireHumanFixture=false,requireSpatialRuntim
           }
           if(binding.authorization_trace_hash!==auth.trace_hash){
             reasons.push("SpatialRuntime binding trace hash mismatch");
+          }
+          if((binding.spatialruntime_pin||null)!==(auth.spatialruntime_pin||null)){
+            reasons.push("SpatialRuntime binding consumer pin mismatch");
           }
           if(binding.case_id!==auth.case_id){
             reasons.push("SpatialRuntime physical binding case mismatch");
