@@ -1,0 +1,183 @@
+{
+  "schema_version": "flythink-execution-contract-cases-v1",
+  "base": {
+    "target": {
+      "area": "客厅",
+      "entity": "窗",
+      "instance": "default"
+    },
+    "action": {
+      "op": "PATCH_SLOT",
+      "target": {
+        "area": "客厅",
+        "entity": "窗",
+        "instance": "default"
+      },
+      "slot": "opening",
+      "value": 40
+    },
+    "request": {
+      "request_version": "flythink-execution-request.v1",
+      "task_id": "task-parity",
+      "goal": {
+        "type": "desired_state",
+        "metric": "comfort"
+      },
+      "resolved_targets": [
+        {
+          "area": "客厅",
+          "entity": "窗",
+          "instance": "default"
+        }
+      ],
+      "constraints": [],
+      "candidate_actions": [
+        {
+          "op": "PATCH_SLOT",
+          "target": {
+            "area": "客厅",
+            "entity": "窗",
+            "instance": "default"
+          },
+          "slot": "opening",
+          "value": 40
+        }
+      ]
+    },
+    "proposal": {
+      "schema_version": "flythink-execution-proposal.v1",
+      "task_id": "task-parity",
+      "decision": "PROPOSE",
+      "strategy": {
+        "kind": "fixture"
+      },
+      "proposed_actions": [
+        {
+          "op": "PATCH_SLOT",
+          "target": {
+            "area": "客厅",
+            "entity": "窗",
+            "instance": "default"
+          },
+          "slot": "opening",
+          "value": 40
+        }
+      ],
+      "uncertainty": {
+        "score": 0.1,
+        "reasons": []
+      },
+      "evidence_refs": [
+        "fixture:evidence"
+      ],
+      "reason_code": "FIXTURE"
+    }
+  },
+  "cases": [
+    {
+      "id": "valid",
+      "kind": "proposal",
+      "expect": "PASS"
+    },
+    {
+      "id": "nested_semantic_request",
+      "kind": "request",
+      "mutations": [
+        {
+          "path": "goal.utterance",
+          "value": "这里有点闷"
+        }
+      ],
+      "expect_error": "semantic_input_forbidden"
+    },
+    {
+      "id": "unresolved_candidate_target",
+      "kind": "request",
+      "mutations": [
+        {
+          "path": "candidate_actions.0.target.area",
+          "value": "卧室"
+        }
+      ],
+      "expect_error": "candidate_action_target_not_resolved"
+    },
+    {
+      "id": "duplicate_candidate",
+      "kind": "request",
+      "append_candidate_from": 0,
+      "expect_error": "duplicate_candidate_action"
+    },
+    {
+      "id": "empty_propose",
+      "kind": "proposal",
+      "mutations": [
+        {
+          "path": "proposed_actions",
+          "value": []
+        }
+      ],
+      "expect_error": "propose_requires_action"
+    },
+    {
+      "id": "non_propose_with_action",
+      "kind": "proposal",
+      "mutations": [
+        {
+          "path": "decision",
+          "value": "DEFER"
+        }
+      ],
+      "expect_error": "non_propose_decision_must_not_emit_actions"
+    },
+    {
+      "id": "invalid_evidence_refs",
+      "kind": "proposal",
+      "mutations": [
+        {
+          "path": "evidence_refs",
+          "value": [
+            123
+          ]
+        }
+      ],
+      "expect_error": "execution_evidence_refs_invalid"
+    },
+    {
+      "id": "duplicate_proposed_action",
+      "kind": "proposal",
+      "append_proposed_from": 0,
+      "expect_error": "duplicate_proposed_action"
+    },
+    {
+      "id": "conflicting_proposed_identity",
+      "kind": "proposal",
+      "extra_candidate": {
+        "op": "PATCH_SLOT",
+        "target": {
+          "area": "客厅",
+          "entity": "窗",
+          "instance": "default"
+        },
+        "slot": "opening",
+        "value": 20
+      },
+      "append_extra_proposed": true,
+      "expect_error": "conflicting_proposed_action_identity"
+    },
+    {
+      "id": "nested_semantic_proposal",
+      "kind": "proposal",
+      "mutations": [
+        {
+          "path": "strategy.frames",
+          "value": [
+            {
+              "area": "客厅"
+            }
+          ]
+        }
+      ],
+      "expect_error": "semantic_output_forbidden"
+    }
+  ]
+}

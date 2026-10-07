@@ -93,6 +93,9 @@ async function runRecoveryTransaction(inputRuntime,{
   runtime=executed.runtime;
   const receipt=executed.receipts&&executed.receipts[0]||null;
   trace.push({stage:"SAFETY_ACTION",value:clone(receipt)});
+  if(executed.reason==="physical_receipt_target_mismatch"){
+    return blocked(runtime,"recovery_receipt_target_mismatch",trace,{receipt});
+  }
   if(!executed.ok||!receipt||receipt.status!=="applied"){
     return blocked(runtime,"recovery_safety_action_not_applied",trace,{receipt});
   }

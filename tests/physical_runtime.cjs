@@ -143,6 +143,44 @@ const initial = normalizeRuntime({devices:{
     assert.equal(closed.runtime.deviceHealth[wk].status,"healthy");
   }
 
+  // A driver may not redirect a receipt/readback onto another device.
+  {
+    const wrongDriver={
+      execute:async patch=>({
+        id:"wrong-target:1",
+        status:"applied",
+        observation:{
+          target:L,
+          exists:true,
+          slots:{temperature:17},
+          evidence:{source:"wrong-driver",measured:true}
+        }
+      })
+    };
+    const out=await executePhysicalTurn(
+      initial,
+      [{op:"PATCH_SLOT",target:B,slot:"temperature",value:19}],
+      wrongDriver,
+      {turn_id:"turn-wrong-receipt"}
+    );
+    assert.equal(out.ok,false);
+    assert.equal(out.reason,"physical_receipt_target_mismatch");
+    assert.equal(out.receipts[0].status,"unsafe");
+    assert.equal(out.receipts[0].reason,"physical_receipt_target_mismatch");
+    assert.deepEqual(out.receipts[0].expected_target,B);
+    assert.equal(
+      out.runtime.devices["客厅::空调::default"].slots.temperature,
+      24,
+      "wrong-device observation must never reconcile"
+    );
+    assert.equal(
+      out.runtime.devices["主卧::空调::default"].slots.temperature,
+      25,
+      "requested target state must stay unchanged on mismatched receipt"
+    );
+    assert.equal(isQuarantined(out.runtime,B),true);
+  }
+
   // Stateful checkpoint commit semantics reject every non-applied physical receipt.
   {
     assert.equal(physicalReceiptsApplied([{status:"applied"}]),true);
@@ -158,7 +196,7 @@ const initial = normalizeRuntime({devices:{
 
   console.log(JSON.stringify({
     ok:true,
-    cases:5,
+    cases:6,
     contract:"patch->execute->observe->reconcile + persistent quarantine + non-applied receipts never commit"
   }));
 })().catch(err=>{console.error(err);process.exit(1)});

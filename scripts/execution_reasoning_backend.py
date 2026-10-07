@@ -61,6 +61,21 @@ def logical_target(target: Any) -> bool:
         and all(isinstance(target[k], str) and target[k] for k in ("area", "entity", "instance"))
     )
 
+def action_identity(action: Dict[str, Any]) -> str:
+    if action.get("op") == "REPLACE_TARGET":
+        return canonical({
+            "op": action.get("op"),
+            "from": action.get("from"),
+            "to": action.get("to"),
+            "slot": action.get("slot"),
+        })
+    return canonical({
+        "op": action.get("op"),
+        "target": action.get("target"),
+        "slot": action.get("slot"),
+    })
+
+
 def validate_candidate_action(action: Dict[str, Any]) -> None:
     if not isinstance(action, dict):
         raise ValueError("candidate_action_must_be_object")
@@ -93,6 +108,7 @@ def validate_execution_request(request: Dict[str, Any]) -> None:
     candidates = request.get("candidate_actions")
     if not isinstance(candidates, list):
         raise ValueError("candidate_actions_must_be_list")
+    seen_candidates = set()
     for action in candidates:
         validate_candidate_action(action)
         action_targets = (
@@ -103,6 +119,10 @@ def validate_execution_request(request: Dict[str, Any]) -> None:
         for action_target in action_targets:
             if canonical(action_target) not in resolved:
                 raise ValueError("candidate_action_target_not_resolved")
+        action_id = canonical(action)
+        if action_id in seen_candidates:
+            raise ValueError("duplicate_candidate_action")
+        seen_candidates.add(action_id)
     if not isinstance(request.get("constraints", []), list):
         raise ValueError("execution_constraints_must_be_list")
 
@@ -134,18 +154,33 @@ def validate_execution_proposal(
     reasons = uncertainty.get("reasons")
     if not isinstance(reasons, list) or not all(isinstance(x, str) for x in reasons):
         raise ValueError("execution_uncertainty_reasons_invalid")
+    if proposal["decision"] == "PROPOSE" and not actions:
+        raise ValueError("propose_requires_action")
     if proposal["decision"] != "PROPOSE" and actions:
         raise ValueError("non_propose_decision_must_not_emit_actions")
-    if not isinstance(proposal.get("evidence_refs", []), list):
-        raise ValueError("execution_evidence_refs_must_be_list")
+    evidence_refs = proposal.get("evidence_refs", [])
+    if not isinstance(evidence_refs, list) or not all(
+        isinstance(x, str) for x in evidence_refs
+    ):
+        raise ValueError("execution_evidence_refs_invalid")
     if request is not None:
         validate_execution_request(request)
         if proposal["task_id"] != request["task_id"]:
             raise ValueError("execution_proposal_task_mismatch")
         allowed = {canonical(x) for x in request["candidate_actions"]}
+        seen_actions = set()
+        seen_identities = set()
         for action in actions:
-            if canonical(action) not in allowed:
+            action_id = canonical(action)
+            if action_id not in allowed:
                 raise ValueError("execution_action_not_in_candidate_set")
+            if action_id in seen_actions:
+                raise ValueError("duplicate_proposed_action")
+            seen_actions.add(action_id)
+            identity = action_identity(action)
+            if identity in seen_identities:
+                raise ValueError("conflicting_proposed_action_identity")
+            seen_identities.add(identity)
 
 def advisory_safe_for_authorization(
     proposal: Dict[str, Any],
