@@ -142,6 +142,39 @@ function verifyTrustRegistryLineage(snapshots=[]){
     head_snapshot_digest:snapshots[snapshots.length-1].snapshot_digest
   };
 }
+function latestTrustRegistrySnapshotAt(snapshots=[],evaluated_at){
+  verifyTrustRegistryLineage(snapshots);
+  const when=normalizeInstant(evaluated_at,"provider_trust_evaluated_at");
+  const eligible=snapshots.filter(x=>Date.parse(x.changed_at)<=Date.parse(when));
+  if(!eligible.length){
+    throw new Error("provider_trust_no_snapshot_available_at_evaluation_time");
+  }
+  return eligible
+    .slice()
+    .sort((a,b)=>{
+      const dt=Date.parse(b.changed_at)-Date.parse(a.changed_at);
+      if(dt!==0)return dt;
+      return b.revision-a.revision;
+    })[0];
+}
+
+function verifyTrustRegistrySnapshotFreshAt(snapshot,snapshots=[],evaluated_at){
+  verifyTrustRegistrySnapshot(snapshot);
+  const latest=latestTrustRegistrySnapshotAt(snapshots,evaluated_at);
+  if(snapshot.snapshot_digest!==latest.snapshot_digest){
+    throw new Error("provider_trust_snapshot_stale_at_evaluation_time");
+  }
+  return {
+    valid:true,
+    evaluated_at:normalizeInstant(evaluated_at,"provider_trust_evaluated_at"),
+    revision:latest.revision,
+    registry_digest:latest.registry.registry_digest,
+    snapshot_digest:latest.snapshot_digest,
+    lineage_head_revision:snapshots[snapshots.length-1].revision,
+    lineage_head_snapshot_digest:snapshots[snapshots.length-1].snapshot_digest
+  };
+}
+
 function revokeProvider(previous,providerId,{
   changed_at,
   changed_by,
@@ -212,6 +245,8 @@ module.exports={
   evolveTrustRegistrySnapshot,
   verifyTrustRegistrySnapshot,
   verifyTrustRegistryLineage,
+  latestTrustRegistrySnapshotAt,
+  verifyTrustRegistrySnapshotFreshAt,
   revokeProvider,
   renewProvider,
   snapshotDigest

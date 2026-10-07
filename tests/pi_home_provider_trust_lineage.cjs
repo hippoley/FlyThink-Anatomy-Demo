@@ -6,6 +6,8 @@ const {
   evolveTrustRegistrySnapshot,
   verifyTrustRegistrySnapshot,
   verifyTrustRegistryLineage,
+  latestTrustRegistrySnapshotAt,
+  verifyTrustRegistrySnapshotFreshAt,
   revokeProvider,
   renewProvider
 }=require("../scripts/pi_home_provider_trust_lineage.cjs");
@@ -118,3 +120,44 @@ console.log(JSON.stringify({
   ok:true,
   contract:"provider trust registry changes form a sealed revision lineage with auditable renew/revoke transitions"
 }));
+
+
+const latestBeforeRevoke=latestTrustRegistrySnapshotAt(
+  [v1,v2,v3],
+  "2026-10-14T23:59:59Z"
+);
+assert.equal(latestBeforeRevoke.revision,1);
+assert.equal(latestBeforeRevoke.snapshot_digest,v1.snapshot_digest);
+
+const latestAfterRenewal=latestTrustRegistrySnapshotAt(
+  [v1,v2,v3],
+  "2026-10-20T00:00:00Z"
+);
+assert.equal(latestAfterRenewal.revision,2);
+assert.equal(latestAfterRenewal.snapshot_digest,v2.snapshot_digest);
+
+const freshBeforeRevoke=verifyTrustRegistrySnapshotFreshAt(
+  v2,
+  [v1,v2,v3],
+  "2026-11-01T00:00:00Z"
+);
+assert.equal(freshBeforeRevoke.valid,true);
+assert.equal(freshBeforeRevoke.revision,2);
+assert.equal(freshBeforeRevoke.lineage_head_revision,3);
+
+assert.throws(
+  ()=>verifyTrustRegistrySnapshotFreshAt(
+    v1,
+    [v1,v2,v3],
+    "2026-10-20T00:00:00Z"
+  ),
+  /snapshot_stale_at_evaluation_time/
+);
+
+assert.throws(
+  ()=>latestTrustRegistrySnapshotAt(
+    [v1,v2,v3],
+    "2026-09-01T00:00:00Z"
+  ),
+  /no_snapshot_available/
+);
