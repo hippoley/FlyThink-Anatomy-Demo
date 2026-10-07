@@ -18,7 +18,7 @@ function semanticPatch(p){
   return {op:"PATCH_SLOT",target:{area,entity,instance},slot:p.slot,value:p.value};
 }
 function assertLedger(ledger){
-  if(!ledger||typeof ledger.has!=="function"||typeof ledger.add!=="function")
+  if(!ledger||typeof ledger.reserve!=="function"||typeof ledger.consume!=="function"||typeof ledger.release!=="function")
     throw new Error("authorization_ledger_required");
 }
 function atomicApplyAuthorizedPlan(inputRuntime,plannerResult,currentRegistryDigest,authorizationLedger){
@@ -39,13 +39,17 @@ function atomicApplyAuthorizedPlan(inputRuntime,plannerResult,currentRegistryDig
       const k=targetKey(t);
       if(!before.devices[k])throw new Error("authorized_target_not_mounted:"+k);
     }
-    const out=applyTurn(before,patches.map(semanticPatch));
-    const consumed=authorizationLedger.add(auth.authorization_id,{
-      turn_id:auth.turn_id||null,
-      patch_digest:auth.patch_digest,
-      registry_digest:auth.registry_digest
-    });
-    if(consumed===false)throw new Error("planner_authorization_replayed");
+    let out;
+    try{
+      out=applyTurn(before,patches.map(semanticPatch));
+    }catch(e){
+      authorizationLedger.release(auth.authorization_id,"state_commit_failed");
+      throw e;
+    }
+    const consumed=authorizationLedger.consume(auth.authorization_id,{state_commit:true});
+    if(!consumed){
+      return {ok:false,runtime:before,receipts:[],reason:"authorization_commit_indeterminate"};
+    }
     return {ok:true,runtime:out.runtime,receipts:out.receipts,reason:null};
   }catch(e){
     return {ok:false,runtime:before,receipts:[],reason:String(e.message||e)};
