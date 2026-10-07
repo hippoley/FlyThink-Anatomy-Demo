@@ -23,6 +23,7 @@ on:
       - "scripts/physical_runtime.cjs"
       - "scripts/whole_home_patch_contract.cjs"
       - "scripts/test_execution_trust_boundary.py"
+      - "scripts/test_cross_language_authorization_digest.py"
       - "scripts/test_atomic_physical_set.cjs"
       - "scripts/test_physical_transaction_router.cjs"
       - "scripts/test_production_physical_turn_atomicity.cjs"
@@ -64,7 +65,7 @@ jobs:
           node-version: "20"
       - name: Syntax preflight
         run: |
-          python -m py_compile scripts/authorized_patch_planner.py scripts/device_registry.py scripts/test_execution_trust_boundary.py
+          python -m py_compile scripts/authorized_patch_planner.py scripts/device_registry.py scripts/test_execution_trust_boundary.py scripts/test_cross_language_authorization_digest.py
           node --check scripts/atomic_authorized_commit.cjs
           node --check scripts/authorization_ledger.cjs
           node --check scripts/authorization_reserve_worker.cjs
@@ -84,6 +85,8 @@ jobs:
           node --check scripts/test_production_physical_turn_atomicity.cjs
       - name: Prove planner-to-commit safety invariants
         run: python scripts/test_execution_trust_boundary.py
+      - name: Prove Python-JS authorization digest parity
+        run: python scripts/test_cross_language_authorization_digest.py
       - name: Prove durable authorization boundaries
         run: |
           node scripts/test_authorization_ledger.cjs
