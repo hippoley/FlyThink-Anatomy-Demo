@@ -4,7 +4,8 @@ const assert=require("assert");
 const {
   fuseCandidateEvidence,
   rainIngressScreeningProvider,
-  acousticScreeningProvider
+  acousticScreeningProvider,
+  contamProviderFromP47Evidence
 }=require("../scripts/pi_home_multiphysics_evidence.cjs");
 const {buildProviderTrustRegistry}=require("../scripts/pi_home_provider_trust.cjs");
 
@@ -162,3 +163,47 @@ console.log(JSON.stringify({
   ok:true,
   contract:"multi-physics fusion may screen with untrusted providers but only complete trusted dimension evidence may support promotion"
 }));
+
+
+const p47Provider=contamProviderFromP47Evidence({
+  case_id:"rain-holdout",
+  status:"REAL_CONTAM_EXECUTED",
+  backend:"contamxpy",
+  physics_fidelity:"CONTAM",
+  evidence_level:"real-contam-demo-profile",
+  engine_version:"3.4.1.7-64bit",
+  origin_co2_source:"airtrajectory_prj_initial",
+  profile_trusted_for_promotion:false,
+  branches:[
+    {label:"candidate-1",end_co2_ppm:900,trusted_for_promotion:false},
+    {label:"candidate-2",end_co2_ppm:850,trusted_for_promotion:false},
+    {label:"candidate-3",end_co2_ppm:900,trusted_for_promotion:false}
+  ]
+});
+assert.equal(p47Provider.id,"contam-real-rain-holdout");
+assert.equal(p47Provider.trusted_for_promotion,false);
+assert.equal(p47Provider.dimensions.co2.direction,"min");
+assert.equal(p47Provider.dimensions.co2.scores["candidate-2"],850);
+
+const p47ClaimedTrust=contamProviderFromP47Evidence({
+  case_id:"engineering-candidate",
+  status:"REAL_CONTAM_EXECUTED",
+  evidence_level:"engineering-validated",
+  profile_trusted_for_promotion:true,
+  branches:[
+    {label:"candidate-1",end_co2_ppm:800,trusted_for_promotion:true},
+    {label:"candidate-2",end_co2_ppm:900,trusted_for_promotion:true}
+  ]
+});
+const unresolved=fuseCandidateEvidence({
+  required_dimensions:["co2"],
+  provider_results:[p47ClaimedTrust],
+  learned_candidate_label:"candidate-1"
+});
+assert.equal(unresolved.decision,"SCREENING_ALIGNED");
+assert.equal(unresolved.trusted_coverage_complete,false);
+assert.equal(
+  unresolved.by_dimension.co2.providers[0].trust_resolution.reason,
+  "trust_registry_missing"
+);
+assert.equal(unresolved.trusted_for_generalization_claim,false);
