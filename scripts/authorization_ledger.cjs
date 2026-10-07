@@ -30,7 +30,7 @@ class FileAuthorizationLedger{
     fs.writeFileSync(tmp,JSON.stringify(this.state,null,2)+"\n",{encoding:"utf8",mode:0o600,flag:"wx"});
     fs.renameSync(tmp,this.filePath);
   }
-  _withLock(fn){
+  _ownerAlive(pid){\n    if(!Number.isInteger(pid)||pid<=0)return false;\n    try{process.kill(pid,0);return true;}catch(e){return e.code==="EPERM";}\n  }\n  _recoverDeadOwnerLock(){\n    try{\n      const owner=JSON.parse(fs.readFileSync(this.lockPath,"utf8"));\n      if(this._ownerAlive(owner.pid))return false;\n      fs.unlinkSync(this.lockPath);\n      return true;\n    }catch(e){\n      if(e.code==="ENOENT")return true;\n      return false;\n    }\n  }\n  _withLock(fn){
     fs.mkdirSync(path.dirname(this.filePath),{recursive:true});
     const deadline=Date.now()+this.lockTimeoutMs;
     let fd;
