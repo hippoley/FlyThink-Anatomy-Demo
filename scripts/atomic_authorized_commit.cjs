@@ -31,7 +31,7 @@ function atomicApplyAuthorizedPlan(inputRuntime,plannerResult,currentRegistryDig
     const auth=plannerResult.authorization;
     if(!auth||auth.version!==1||!auth.authorization_id||!auth.patch_digest||!auth.registry_digest)
       throw new Error("planner_authorization_missing");
-    if(authorizationLedger.has(auth.authorization_id))throw new Error("planner_authorization_replayed");
+    const reserved=authorizationLedger.reserve(auth.authorization_id,{turn_id:auth.turn_id||null,patch_digest:auth.patch_digest,registry_digest:auth.registry_digest});\n    if(!reserved)throw new Error("planner_authorization_replayed");
     if(currentRegistryDigest!==auth.registry_digest)throw new Error("planner_authorization_stale_registry");
     const patches=plannerResult.patches||[];
     if(authorizationDigest(patches)!==auth.patch_digest)throw new Error("planner_authorization_digest_mismatch");
