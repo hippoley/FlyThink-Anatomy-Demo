@@ -123,6 +123,7 @@ const lifecycleOk=resolveProviderTrust(
 );
 assert.equal(lifecycleOk.effective_trusted_for_promotion,true);
 assert.equal(lifecycleOk.reason,"registry_attestation_match");
+assert.equal(lifecycleOk.evaluation_time,"2026-10-10T12:00:00.000Z");
 
 const notYet=resolveProviderTrust(
   lifecycleProvider,
@@ -139,6 +140,7 @@ const reviewOverdue=resolveProviderTrust(
 );
 assert.equal(reviewOverdue.effective_trusted_for_promotion,false);
 assert.equal(reviewOverdue.reason,"provider_trust_review_overdue");
+assert.equal(reviewOverdue.evaluation_time,"2026-10-20T00:00:00.000Z");
 
 const expired=resolveProviderTrust(
   lifecycleProvider,
@@ -147,6 +149,7 @@ const expired=resolveProviderTrust(
 );
 assert.equal(expired.effective_trusted_for_promotion,false);
 assert.equal(expired.reason,"provider_trust_expired");
+assert.equal(expired.evaluation_time,"2026-11-01T00:00:00.000Z");
 
 const replayed=applyResolvedTrust(
   lifecycleProvider,
@@ -172,4 +175,23 @@ assert.throws(
     review_due_at:"2026-10-20T00:00:00Z"
   }]),
   /expiry_must_follow/
+);
+
+
+assert.throws(
+  ()=>buildProviderTrustRegistryV2([{
+    provider_id:"review-after-activation",
+    status:"active",
+    scope_id:"x",
+    allowed_dimensions:["co2"],
+    allowed_evidence_levels:["engineering-validated"],
+    calibration_ref:"calibration://x",
+    calibration_digest:"sha256:"+"9".repeat(64),
+    approved_by:"board",
+    not_before:"2026-10-10T00:00:00Z",
+    expires_at:"2026-11-10T00:00:00Z",
+    reviewed_at:"2026-10-11T00:00:00Z",
+    review_due_at:"2026-10-20T00:00:00Z"
+  }]),
+  /review_must_not_follow_activation/
 );
