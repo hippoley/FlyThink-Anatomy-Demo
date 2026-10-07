@@ -57,6 +57,13 @@ if(wavPath&&manifestPath){
   if(String(fixture.expected_text||"")!==String(manifest.expected_text||"")){
     reasons.push("receipt acoustic fixture expected text mismatch");
   }
+  const manifestMaxCer=Number(
+    manifest.acceptance&&manifest.acceptance.max_cer
+  );
+  if(!Number.isFinite(manifestMaxCer)||
+     Number(fixture.max_cer)!==manifestMaxCer){
+    reasons.push("receipt acoustic fixture max CER mismatch");
+  }
 }
 
 const out={...report,valid:reasons.length===0,reasons};
