@@ -138,6 +138,7 @@ class LiveAcousticWindowPilotCliTest(unittest.TestCase):
             )
             self.assertEqual(payload["source_kind"],"human_recording")
             self.assertEqual(payload["expected_text"],"打开主卧窗")
+            self.assertEqual(payload["max_cer"],0.25)
             self.assertTrue(payload["require_human_acceptance"])
             self.assertEqual(payload["wav_sha256"],manifest["wav"]["sha256"])
             self.assertEqual(len(payload["manifest_sha256"]),64)
