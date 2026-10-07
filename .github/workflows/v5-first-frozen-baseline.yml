@@ -1,6 +1,9 @@
 name: v5-first-frozen-baseline
 on:
   workflow_dispatch:
+  push:
+    paths:
+      - .github/workflows/v5-first-frozen-baseline.yml
 jobs:
   baseline:
     runs-on: ubuntu-latest
