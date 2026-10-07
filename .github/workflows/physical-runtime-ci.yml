@@ -10,6 +10,8 @@ on:
       - "scripts/stateful_checkpoint_trajectory.cjs"
       - "scripts/probe_windowpilot_checkpoint_e2e.cjs"
       - "scripts/run_acoustic_windowpilot_e2e.cjs"
+      - "scripts/acoustic_windowpilot_evidence.cjs"
+      - "scripts/verify_acoustic_windowpilot_evidence.cjs"
       - "scripts/run_stateful_checkpoint_v1.cjs"
       - "scripts/run_long_checkpoint_e2e_v2.cjs"
       - "tests/commit_gate.cjs"
@@ -18,6 +20,7 @@ on:
       - "tests/windowpilot_http_driver.cjs"
       - "tests/probe_windowpilot_checkpoint_e2e.cjs"
       - "tests/acoustic_windowpilot_live_probe.cjs"
+      - "tests/acoustic_windowpilot_evidence.cjs"
       - ".github/workflows/physical-runtime-ci.yml"
   workflow_dispatch:
 
@@ -38,6 +41,8 @@ jobs:
           node --check scripts/stateful_checkpoint_trajectory.cjs
           node --check scripts/probe_windowpilot_checkpoint_e2e.cjs
           node --check scripts/run_acoustic_windowpilot_e2e.cjs
+          node --check scripts/acoustic_windowpilot_evidence.cjs
+          node --check scripts/verify_acoustic_windowpilot_evidence.cjs
           node --check scripts/run_stateful_checkpoint_v1.cjs
           node --check scripts/run_long_checkpoint_e2e_v2.cjs
       - name: Verify semantic commit gate
@@ -52,3 +57,5 @@ jobs:
         run: node tests/probe_windowpilot_checkpoint_e2e.cjs
       - name: Verify acoustic WindowPilot live probe safety
         run: node tests/acoustic_windowpilot_live_probe.cjs
+      - name: Verify acoustic WindowPilot evidence receipt
+        run: node tests/acoustic_windowpilot_evidence.cjs
