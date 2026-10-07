@@ -292,7 +292,7 @@ assert.throws(
     trust_snapshot:snapshot,
     trust_lineage:[snapshot]
   }),
-  /lineage_head_/
+  /lineage_anchor_/
 );
 
 
