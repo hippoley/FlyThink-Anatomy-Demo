@@ -13,7 +13,7 @@ cases=[
  ("safe_integer_max",9007199254740991),
 ]
 js=r'''
-const {authorizationDigest}=require("./atomic_authorized_commit.cjs");
+const {authorizationDigest}=require("./scripts/atomic_authorized_commit.cjs");
 const value=JSON.parse(process.argv[1]);
 const patch={target:"room::window::1",model_id:"CWDS-CA01",slot:"position",capability:"SET",value};
 process.stdout.write(authorizationDigest([patch]));
