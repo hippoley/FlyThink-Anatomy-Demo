@@ -63,6 +63,7 @@ async function reviewedSceneWindowFeedsRainSafety(){
   assert.equal(row.authorized_patch_proposal[0].spatialruntime_decision,"commit_safety_override");
   assert.deepEqual(row.physical_authorization.exterior_window_keys,[key(area)]);
   assert.equal(row.physical_authorization.scene_evidence.schema,"homeai_spatialruntime_scene_context_v1");
+  assert.match(row.physical_authorization.scene_evidence.source_commit_sha,/^[0-9a-f]{40}$/);
   assert.equal(row.physical_authorization.scene_evidence.world_snapshot_sha256.length,64);
   assert.equal(row.physical_authorization.scene_evidence.validation_receipt_sha256.length,64);
   assert.equal(row.physical_authorization.scene_evidence.context_sha256.length,64);
