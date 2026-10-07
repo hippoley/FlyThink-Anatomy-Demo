@@ -678,9 +678,76 @@ function passAuthorizer(counter=null,transform=null,authorizationId=null,overrid
     assert.match(out.authorization_error,/receipt_not_allowed/);
   }
 
+
+  // 16. A syntactically valid but non-derived authorization id is rejected.
+  {
+    const action={op:"PATCH_SLOT",target:B,slot:"temperature",value:19};
+    const driver=new MockThingDriver(initial);
+    const out=await runExecutionProposal({
+      runtime:initial,
+      contextual_state:context,
+      request:request([action]),
+      proposal:proposal([action]),
+      driver,
+      physicalAuthorizer:passAuthorizer(null,null,null,{
+        authorization_id:"f".repeat(64)
+      }),
+      authorizationLedger:freshLedger()
+    });
+    assert.equal(out.ok,false);
+    assert.equal(out.status,"BLOCKED");
+    assert.equal(out.reason,"physical_authorization_invalid");
+    assert.match(out.authorization_error,/authorization_id_mismatch/);
+    assert.equal(driver.commands.length,0);
+  }
+
+  // 17. A malformed SpatialRuntime trace hash is rejected before actuation.
+  {
+    const action={op:"PATCH_SLOT",target:B,slot:"temperature",value:19};
+    const driver=new MockThingDriver(initial);
+    const out=await runExecutionProposal({
+      runtime:initial,
+      contextual_state:context,
+      request:request([action]),
+      proposal:proposal([action]),
+      driver,
+      physicalAuthorizer:passAuthorizer(null,null,null,{
+        trace_hash:"not-a-trace-hash"
+      }),
+      authorizationLedger:freshLedger()
+    });
+    assert.equal(out.ok,false);
+    assert.equal(out.reason,"physical_authorization_invalid");
+    assert.match(out.authorization_error,/trace_hash_invalid/);
+    assert.equal(driver.commands.length,0);
+  }
+
+  // 18. An explicitly pinned SpatialRuntime commit cannot be substituted.
+  {
+    const action={op:"PATCH_SLOT",target:B,slot:"temperature",value:19};
+    const driver=new MockThingDriver(initial);
+    const expected="d123ab9a5310cb9ce15d9e82630828a0d32211f4";
+    const out=await runExecutionProposal({
+      runtime:initial,
+      contextual_state:context,
+      request:request([action]),
+      proposal:proposal([action]),
+      driver,
+      physicalAuthorizer:passAuthorizer(null,null,null,{
+        spatialruntime_commit_sha:"e".repeat(40)
+      }),
+      expected_spatialruntime_commit_sha:expected,
+      authorizationLedger:freshLedger()
+    });
+    assert.equal(out.ok,false);
+    assert.equal(out.reason,"physical_authorization_invalid");
+    assert.match(out.authorization_error,/commit_mismatch/);
+    assert.equal(driver.commands.length,0);
+  }
+
   console.log(JSON.stringify({
     ok:true,
-    cases:16,
+    cases:19,
     contract:"contextual execution proposal -> deterministic authorization -> atomic/single physical execution -> readback, with formal recovery"
   }));
 })().catch(e=>{console.error(e);process.exit(1)});
