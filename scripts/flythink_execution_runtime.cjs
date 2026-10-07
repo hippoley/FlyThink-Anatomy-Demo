@@ -133,6 +133,9 @@ async function runExecutionProposal({
     return noExecution("DEFERRED","reasoning_uncertainty_above_threshold");
 
   const requested=clone(proposal.proposed_actions||[]);
+  if(!driver||typeof driver!=="object")
+    return noExecution("BLOCKED","physical_driver_required");
+
   const preflight=evaluateQuarantinePreflight(current,requested);
   if(!preflight.allow){
     return {
