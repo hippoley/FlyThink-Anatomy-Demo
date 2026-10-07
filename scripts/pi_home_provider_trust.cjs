@@ -56,6 +56,12 @@ function normalizeTimeBoundRegistryEntry(entry={}){
   if(Date.parse(review_due_at)<=Date.parse(reviewed_at)){
     throw new Error("provider_trust_review_due_must_follow_reviewed_at");
   }
+  if(Date.parse(reviewed_at)>Date.parse(not_before)){
+    throw new Error("provider_trust_review_must_not_follow_activation");
+  }
+  if(Date.parse(review_due_at)<=Date.parse(not_before)){
+    throw new Error("provider_trust_review_due_must_follow_activation");
+  }
   return {
     ...base,
     not_before,
@@ -126,12 +132,19 @@ function resolveProviderTrust(provider={},registry=null,{at=null}={}){
   if(!entries)return {...base,reason:"trust_registry_missing"};
   const entry=entries[String(provider.id)];
   if(!entry)return {...base,reason:"provider_not_registered"};
+  const lifecycleEvaluationTime=
+    registry&&registry.schema_version==="pi-home-provider-trust-registry-v2"
+      ?resolveEvaluationTime(at)
+      :null;
+  const withTime=payload=>lifecycleEvaluationTime
+    ?{...payload,evaluation_time:lifecycleEvaluationTime}
+    :payload;
   if(entry.status!=="active"){
-    return {...base,reason:"provider_trust_revoked",registry_entry:clone(entry)};
+    return withTime({...base,reason:"provider_trust_revoked",registry_entry:clone(entry)});
   }
 
   if(registry&&registry.schema_version==="pi-home-provider-trust-registry-v2"){
-    const evaluation_time=resolveEvaluationTime(at);
+    const evaluation_time=lifecycleEvaluationTime;
     const now=Date.parse(evaluation_time);
     if(now<Date.parse(entry.not_before)){
       return {...base,reason:"provider_trust_not_yet_valid",evaluation_time,registry_entry:clone(entry)};
@@ -154,40 +167,40 @@ function resolveProviderTrust(provider={},registry=null,{at=null}={}){
       reason:"provider_dimension_out_of_scope",
       out_of_scope_dimensions:disallowed,
       registry_entry:clone(entry)
-    };
+    });
   }
 
   const evidenceLevel=String(provider.evidence_level||"unspecified");
   if(!entry.allowed_evidence_levels.includes(evidenceLevel)){
-    return {
+    return withTime({
       ...base,
       reason:"provider_evidence_level_not_allowed",
       registry_entry:clone(entry)
-    };
+    });
   }
 
   const attestation=provider.trust_attestation||{};
   if(attestation.scope_id!==entry.scope_id){
-    return {...base,reason:"provider_scope_mismatch",registry_entry:clone(entry)};
+    return withTime({...base,reason:"provider_scope_mismatch",registry_entry:clone(entry)});
   }
   if(attestation.calibration_ref!==entry.calibration_ref){
-    return {...base,reason:"provider_calibration_ref_mismatch",registry_entry:clone(entry)};
+    return withTime({...base,reason:"provider_calibration_ref_mismatch",registry_entry:clone(entry)});
   }
   let digest;
   try{digest=normalizeDigest(attestation.calibration_digest)}
   catch(_){
-    return {...base,reason:"provider_calibration_digest_invalid",registry_entry:clone(entry)};
+    return withTime({...base,reason:"provider_calibration_digest_invalid",registry_entry:clone(entry)});
   }
   if(digest!==entry.calibration_digest){
-    return {...base,reason:"provider_calibration_digest_mismatch",registry_entry:clone(entry)};
+    return withTime({...base,reason:"provider_calibration_digest_mismatch",registry_entry:clone(entry)});
   }
 
-  return {
+  return withTime({
     ...base,
     effective_trusted_for_promotion:true,
     reason:"registry_attestation_match",
     registry_entry:clone(entry)
-  };
+  });
 }
 
 function applyResolvedTrust(provider={},registry=null,options={}){
