@@ -65,7 +65,7 @@ def train(g,seed,flat,epochs,dataset):
 
 def main():
  ap=argparse.ArgumentParser();ap.add_argument("--graph",default="artifacts/flywire/connectome.json")
- ap.add_argument("--epochs",type=int,default=120);ap.add_argument("--dataset",default="v3",choices=["v3","v4"])
+ ap.add_argument("--epochs",type=int,default=120);ap.add_argument("--dataset",default="v3",choices=["v3","v4","v5"])
  ap.add_argument("--out",default="artifacts/v3-flat-vs-compositional");a=ap.parse_args()
  g=json.loads(Path(a.graph).read_text());report={"truth":f"{a.dataset}_predicted_cardinality_safe_room_decoding","regimes":{}}
  for name,flat in (("flat_16_target",True),("compositional_room_entity",False)):
