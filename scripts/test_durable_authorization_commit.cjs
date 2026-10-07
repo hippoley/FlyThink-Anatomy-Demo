@@ -16,12 +16,19 @@ const registryDigest="registry-v1";
 const authorizationId="restart-e2e-auth";
 const planner={
  ok:true,patches,
- authorization:{version:1,authorization_id:authorizationId,turn_id:"turn-restart",patch_digest:authorizationDigest(patches),registry_digest:registryDigest}
+ authorization:{version:2,authorization_id:authorizationId,turn_id:"turn-restart",patch_digest:authorizationDigest(patches),registry_digest:registryDigest}
 };
 const dir=fs.mkdtempSync(path.join(os.tmpdir(),"flythink-restart-e2e-"));
 const file=path.join(dir,"authorization-ledger.json");
 
 let ledger=new FileAuthorizationLedger(file);
+const legacy=JSON.parse(JSON.stringify(planner));
+legacy.authorization.version=1;
+let legacyOut=atomicApplyAuthorizedPlan(runtime,legacy,registryDigest,ledger);
+assert.equal(legacyOut.ok,false);
+assert.equal(legacyOut.reason,"planner_authorization_missing");
+assert.equal(ledger.status(authorizationId),"fresh");
+
 let out=atomicApplyAuthorizedPlan(runtime,planner,registryDigest,ledger);
 assert(out.ok);
 assert.equal(out.runtime.devices["客厅::空调::default"].slots.temperature,22);
@@ -43,6 +50,7 @@ assert.equal(out.ok,false);assert.equal(out.reason,"current_registry_digest_requ
 
 console.log(JSON.stringify({
  durable_commit_replay_boundary:"PASS",
+ authorization_version_downgrade_bypass:0,
  durable_consumed_state_after_commit:1,
  durable_consumed_state_after_restart:1,
  replay_after_executor_restart:0,
