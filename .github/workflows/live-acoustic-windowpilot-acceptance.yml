@@ -68,6 +68,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Checkout SpatialRuntime consumer dependency
+        uses: actions/checkout@v4
+        with:
+          repository: hippoley/SpatialRuntime
+          ref: main
+          path: _spatialruntime
+
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -121,10 +128,11 @@ jobs:
           INPUT_PROBE: ${{ inputs.probe_open_pct }}
           INPUT_TOLERANCE: ${{ inputs.tolerance_pct }}
 
-      - name: Install acoustic + checkpoint runtimes
+      - name: Install acoustic + checkpoint runtimes + SpatialRuntime
         run: |
           pip install -r requirements-asr.txt
           pip install --index-url https://download.pytorch.org/whl/cpu torch
+          pip install -e "_spatialruntime"
 
       - name: Download official Chinese streaming ASR model
         run: |
@@ -157,7 +165,7 @@ jobs:
         run: |
           set -euo pipefail
           MODEL=sherpa-onnx-streaming-zipformer-zh-14M-2023-02-23
-          python scripts/live_acoustic_windowpilot.py             --wav "${{ inputs.wav_path }}"             --fixture-manifest "${{ inputs.fixture_manifest_path }}"             --require-human-fixture             --url "${{ inputs.windowpilot_url }}"             --area "${{ inputs.area }}"             --entity "窗"             --instance "${{ inputs.instance }}"             --expected-hardware-identity "${{ inputs.expected_hardware_identity }}"             --probe-open-pct "${{ inputs.probe_open_pct }}"             --tolerance "${{ inputs.tolerance_pct }}"             --timeout-ms "${{ inputs.timeout_ms }}"             --graph artifacts/flywire/connectome.json             --judgement artifacts/context-judgement-v3/model.pt             --semantic artifacts/semantic-patch-v1/model.pt             --tokens "$MODEL/tokens.txt"             --encoder "$MODEL/encoder-epoch-99-avg-1.int8.onnx"             --decoder "$MODEL/decoder-epoch-99-avg-1.onnx"             --joiner "$MODEL/joiner-epoch-99-avg-1.int8.onnx"             > live-acoustic-dry-run.json
+          python scripts/live_acoustic_windowpilot.py             --wav "${{ inputs.wav_path }}"             --fixture-manifest "${{ inputs.fixture_manifest_path }}"             --require-human-fixture             --spatialruntime-authorize             --url "${{ inputs.windowpilot_url }}"             --area "${{ inputs.area }}"             --entity "窗"             --instance "${{ inputs.instance }}"             --expected-hardware-identity "${{ inputs.expected_hardware_identity }}"             --probe-open-pct "${{ inputs.probe_open_pct }}"             --tolerance "${{ inputs.tolerance_pct }}"             --timeout-ms "${{ inputs.timeout_ms }}"             --graph artifacts/flywire/connectome.json             --judgement artifacts/context-judgement-v3/model.pt             --semantic artifacts/semantic-patch-v1/model.pt             --tokens "$MODEL/tokens.txt"             --encoder "$MODEL/encoder-epoch-99-avg-1.int8.onnx"             --decoder "$MODEL/decoder-epoch-99-avg-1.onnx"             --joiner "$MODEL/joiner-epoch-99-avg-1.int8.onnx"             > live-acoustic-dry-run.json
 
           node - <<'NODE'
           const fs=require("fs");
