@@ -1,11 +1,17 @@
 #!/usr/bin/env python3
+import json
+import math
+import struct
 import sys
+import tempfile
 import unittest
+import wave
 from pathlib import Path
 from types import SimpleNamespace
 
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/"scripts"))
 
+from acoustic_fixture_manifest import build_manifest
 from live_acoustic_windowpilot import build_commands
 
 
@@ -34,6 +40,9 @@ def args(**overrides):
         entity="窗",
         instance="default",
         expected_hardware_identity=None,
+        receipt=None,
+        fixture_manifest=None,
+        require_human_fixture=False,
         apply=False,
         probe_open_pct=5.0,
         tolerance=1.0,
@@ -61,9 +70,14 @@ class LiveAcousticWindowPilotCliTest(unittest.TestCase):
         _,node=build_commands(args(
             apply=True,
             expected_hardware_identity="hw-abc",
+            receipt="live-receipt.json",
             probe_open_pct=4.0,
         ))
         self.assertIn("--apply",node)
+        self.assertEqual(
+            node[node.index("--receipt")+1],
+            "live-receipt.json",
+        )
         self.assertEqual(
             node[node.index("--expected-hardware-identity")+1],
             "hw-abc",
@@ -85,6 +99,84 @@ class LiveAcousticWindowPilotCliTest(unittest.TestCase):
             "16000",
         )
 
+    def test_human_fixture_manifest_is_verified_and_forwarded(self):
+        with tempfile.TemporaryDirectory() as d:
+            root=Path(d)
+            wav_path=root/"human.wav"
+            manifest_path=root/"human.json"
+            sample_rate=16000
+            frames=4000
+            with wave.open(str(wav_path),"wb") as wf:
+                wf.setnchannels(1)
+                wf.setsampwidth(2)
+                wf.setframerate(sample_rate)
+                data=bytearray()
+                for i in range(frames):
+                    sample=int(10000*math.sin(2*math.pi*440*i/sample_rate))
+                    data.extend(struct.pack("<h",sample))
+                wf.writeframes(bytes(data))
+            manifest=build_manifest(
+                wav_path,
+                "human_recording",
+                "打开主卧窗",
+                "reviewed microphone recording",
+            )
+            manifest_path.write_text(
+                json.dumps(manifest,ensure_ascii=False),
+                encoding="utf-8",
+            )
+            _,node=build_commands(args(
+                wav=str(wav_path),
+                fixture_manifest=str(manifest_path),
+                require_human_fixture=True,
+                receipt="receipt.json",
+                apply=True,
+                expected_hardware_identity="hw-abc",
+            ))
+            payload=json.loads(
+                node[node.index("--acoustic-fixture-json")+1]
+            )
+            self.assertEqual(payload["source_kind"],"human_recording")
+            self.assertEqual(payload["expected_text"],"打开主卧窗")
+            self.assertEqual(payload["max_cer"],0.25)
+            self.assertTrue(payload["require_human_acceptance"])
+            self.assertEqual(payload["wav_sha256"],manifest["wav"]["sha256"])
+            self.assertEqual(len(payload["manifest_sha256"]),64)
+
+    def test_apply_builder_rejects_missing_receipt(self):
+        with self.assertRaisesRegex(SystemExit,"--apply requires --receipt"):
+            build_commands(args(
+                apply=True,
+                expected_hardware_identity="hw-abc",
+                receipt=None,
+            ))
+
+    def test_apply_builder_rejects_missing_identity(self):
+        with self.assertRaisesRegex(SystemExit,"hardware-identity"):
+            build_commands(args(
+                apply=True,
+                expected_hardware_identity=None,
+                receipt="receipt.json",
+            ))
+
+    def test_tts_manifest_cannot_claim_human_acceptance(self):
+        with tempfile.TemporaryDirectory() as d:
+            root=Path(d)
+            wav_path=root/"tts.wav"
+            manifest_path=root/"tts.json"
+            with wave.open(str(wav_path),"wb") as wf:
+                wf.setnchannels(1); wf.setsampwidth(2); wf.setframerate(16000)
+                wf.writeframes(b"\x00\x00"*1600)
+            manifest=build_manifest(
+                wav_path,"local_tts","打开主卧窗","deterministic TTS"
+            )
+            manifest_path.write_text(json.dumps(manifest),encoding="utf-8")
+            with self.assertRaisesRegex(SystemExit,"source kind"):
+                build_commands(args(
+                    wav=str(wav_path),
+                    fixture_manifest=str(manifest_path),
+                    require_human_fixture=True,
+                ))
 
 if __name__=="__main__":
     unittest.main()
