@@ -8,6 +8,9 @@ const {
   validateDecisionProposal,
   digestDecisionProposal
 }=require("./decision_proposal_contract.cjs");
+const {
+  contextStateIdentity
+}=require("./contextual_edge_slu_adapter.cjs");
 
 const SCHEMA_VERSION="execution-proof-bundle.v1";
 
@@ -24,7 +27,7 @@ function requiredObject(value,name){
   }
 }
 
-function deriveExternalBinding(decisionProposal,internalProposal){
+function deriveExternalBinding(decisionProposal,internalProposal,contextualState=null){
   validateDecisionProposal(decisionProposal);
   requiredObject(internalProposal,"internal_proposal");
   const strategy=internalProposal.strategy||{};
@@ -37,12 +40,25 @@ function deriveExternalBinding(decisionProposal,internalProposal){
     throw new Error("execution_proof_bundle_proposal_id_mismatch");
   if(internalProposal.task_id!==decisionProposal.task_id)
     throw new Error("execution_proof_bundle_task_id_mismatch");
+  if(Number(strategy.context_revision)!==Number(decisionProposal.context_revision))
+    throw new Error("execution_proof_bundle_context_revision_mismatch");
+  if(strategy.context_sha256!==decisionProposal.context_sha256)
+    throw new Error("execution_proof_bundle_context_digest_mismatch");
+  if(contextualState){
+    const contextIdentity=contextStateIdentity(contextualState);
+    if(contextIdentity.context_revision!==decisionProposal.context_revision)
+      throw new Error("execution_proof_bundle_context_revision_mismatch");
+    if(contextIdentity.context_sha256!==decisionProposal.context_sha256)
+      throw new Error("execution_proof_bundle_context_digest_mismatch");
+  }
   if(Number(strategy.world_snapshot_revision)!==Number(decisionProposal.world_snapshot_revision))
     throw new Error("execution_proof_bundle_world_revision_mismatch");
   if(strategy.world_snapshot_sha256!==decisionProposal.world_snapshot_sha256)
     throw new Error("execution_proof_bundle_world_digest_mismatch");
   return {
     decision_proposal_sha256:digest,
+    context_revision:decisionProposal.context_revision,
+    context_sha256:decisionProposal.context_sha256,
     world_snapshot_revision:decisionProposal.world_snapshot_revision,
     world_snapshot_sha256:decisionProposal.world_snapshot_sha256
   };
@@ -63,7 +79,8 @@ function artifactDigests(artifacts){
 function deriveVerification(artifacts){
   const external=deriveExternalBinding(
     artifacts.decision_proposal,
-    artifacts.internal_proposal
+    artifacts.internal_proposal,
+    artifacts.contextual_state
   );
   const execution=verifyExecutionReceipt(
     artifacts.execution_receipt,
