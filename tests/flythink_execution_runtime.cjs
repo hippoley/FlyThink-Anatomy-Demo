@@ -221,7 +221,54 @@ function passAuthorizer(counter=null,transform=null,authorizationId=null,overrid
     assert.equal(driver.commands.length,0);
   }
 
-  // 6. Multi-action plans require atomic capability; never sequential fallback.
+  // 6. Authorization cannot transform a quarantine-safe action into a riskier one.
+  {
+    const W={area:"客厅",entity:"窗",instance:"default"};
+    const wk="客厅::窗::default";
+    const quarantined=normalizeRuntime({devices:{
+      [wk]:{
+        key:wk,area:"客厅",entity:"窗",instance:"default",
+        model_id:"CWDS-CA01",
+        slots:{opening:40}
+      }
+    }});
+    markQuarantined(
+      quarantined,
+      W,
+      {id:"unsafe:q",status:"unsafe",reason:"readback_timeout"},
+      "turn-q"
+    );
+    let driverCalls=0;
+    const driver={
+      async execute(){
+        driverCalls++;
+        throw new Error("must_not_execute");
+      }
+    };
+    const safe={op:"PATCH_SLOT",target:W,slot:"opening",value:0};
+    const ledger=freshLedger();
+    const out=await runExecutionProposal({
+      runtime:quarantined,
+      contextual_state:toContextStateSnapshot(quarantined,[],{
+        conversation_id:"conv-q",
+        active_task_id:"task-1"
+      }),
+      request:request([safe],[W]),
+      proposal:proposal([safe]),
+      driver,
+      physicalAuthorizer:passAuthorizer(null,p=>({...p,value:80})),
+      authorizationLedger:ledger
+    });
+    assert.equal(out.ok,false);
+    assert.equal(out.status,"BLOCKED");
+    assert.equal(out.reason,"authorized_patch_violates_quarantine");
+    assert.equal(out.authorization_consumed,true);
+    assert.equal(driverCalls,0);
+    assert.equal(isQuarantined(out.runtime,W),true);
+    assert.equal(out.runtime.devices[wk].slots.opening,40);
+  }
+
+  // 7. Multi-action plans require atomic capability; never sequential fallback.
   {
     const actions=[
       {op:"PATCH_SLOT",target:L,slot:"temperature",value:22},
@@ -249,7 +296,7 @@ function passAuthorizer(counter=null,transform=null,authorizationId=null,overrid
     assert.deepEqual(out.runtime,initial);
   }
 
-  // 7. Multi-action plan commits once through an atomic batch driver.
+  // 8. Multi-action plan commits once through an atomic batch driver.
   {
     const actions=[
       {op:"PATCH_SLOT",target:L,slot:"temperature",value:22},
@@ -285,7 +332,7 @@ function passAuthorizer(counter=null,transform=null,authorizationId=null,overrid
     assert.equal(out.receipt.physical_committed,true);
   }
 
-  // 8. A wrong-device physical readback fails closed and quarantines expected target.
+  // 9. A wrong-device physical readback fails closed and quarantines expected target.
   {
     const action={op:"PATCH_SLOT",target:B,slot:"temperature",value:19};
     const driver={
@@ -314,7 +361,7 @@ function passAuthorizer(counter=null,transform=null,authorizationId=null,overrid
     assert.equal(isQuarantined(out.runtime,B),true);
   }
 
-  // 9. A proposal cannot select two alternatives for the same action identity.
+  // 10. A proposal cannot select two alternatives for the same action identity.
   {
     const a={op:"PATCH_SLOT",target:B,slot:"temperature",value:20};
     const b={op:"PATCH_SLOT",target:B,slot:"temperature",value:22};
@@ -412,7 +459,7 @@ function passAuthorizer(counter=null,transform=null,authorizationId=null,overrid
     assert.equal(verifiedReceipt.physical_truth_verified,true);
   }
 
-  // 11. Missing authorization ledger blocks before physical execution.
+  // 12. Missing authorization ledger blocks before physical execution.
   {
     const action={op:"PATCH_SLOT",target:B,slot:"temperature",value:19};
     const driver=new MockThingDriver(initial);
@@ -430,7 +477,7 @@ function passAuthorizer(counter=null,transform=null,authorizationId=null,overrid
     assert.equal(driver.commands.length,0);
   }
 
-  // 12. Replay of the same authorization id is rejected before a second physical command.
+  // 13. Replay of the same authorization id is rejected before a second physical command.
   {
     const action={op:"PATCH_SLOT",target:B,slot:"temperature",value:19};
     const driver=new MockThingDriver(initial);
@@ -594,7 +641,7 @@ function passAuthorizer(counter=null,transform=null,authorizationId=null,overrid
 
   console.log(JSON.stringify({
     ok:true,
-    cases:15,
+    cases:16,
     contract:"contextual execution proposal -> deterministic authorization -> atomic/single physical execution -> readback, with formal recovery"
   }));
 })().catch(e=>{console.error(e);process.exit(1)});

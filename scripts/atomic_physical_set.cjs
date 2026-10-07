@@ -4,11 +4,25 @@ const {normalizeRuntime,deviceKey}=require("./whole_home_patch_contract.cjs");
 const {
   materializePatch,
   expectedObservationTarget,
-  reconcileObservation
+  reconcileObservation,
+  markQuarantined
 }=require("./physical_runtime.cjs");
 const {PHYSICAL_CAPABILITIES,requireCapability}=require("./physical_driver_capabilities.cjs");
 
 function clone(v){return v==null?v:JSON.parse(JSON.stringify(v));}
+
+function quarantineAtomicTargets(runtime,physical,reason,turnId=null){
+  for(const patch of physical||[]){
+    const target=expectedObservationTarget(patch);
+    if(!target)continue;
+    markQuarantined(runtime,target,{
+      id:null,
+      status:"unsafe",
+      reason
+    },turnId);
+  }
+  return runtime;
+}
 
 async function executeAtomicPhysicalSet(inputRuntime,patches,driver,options={}){
   const before=normalizeRuntime(inputRuntime);
@@ -32,20 +46,55 @@ async function executeAtomicPhysicalSet(inputRuntime,patches,driver,options={}){
   let commands;
   try{commands=await Promise.resolve(driver.executeAtomicBatch(clone(physical)));}
   catch(e){
-    return {ok:false,runtime:before,receipts:[],reason:"physical_atomic_batch_failed:"+String(e.message||e)};
+    const runtime=quarantineAtomicTargets(
+      before,physical,"physical_atomic_batch_failed",options.turn_id||null
+    );
+    return {
+      ok:false,
+      runtime,
+      receipts:[],
+      reason:"physical_atomic_batch_failed:"+String(e.message||e)
+    };
   }
-  if(!Array.isArray(commands)||commands.length!==physical.length)
-    return {ok:false,runtime:before,receipts:[],reason:"physical_atomic_batch_invalid_receipts"};
-  if(commands.some(c=>!c||c.status!=="applied"||!c.observation))
-    return {ok:false,runtime:before,receipts:[],reason:"physical_atomic_batch_not_committed"};
+  if(!Array.isArray(commands)||commands.length!==physical.length){
+    const runtime=quarantineAtomicTargets(
+      before,physical,"physical_atomic_batch_invalid_receipts",options.turn_id||null
+    );
+    return {ok:false,runtime,receipts:[],reason:"physical_atomic_batch_invalid_receipts"};
+  }
+  if(commands.some(c=>!c||c.status!=="applied"||!c.observation)){
+    const mixed=
+      commands.some(c=>c&&c.status==="applied") &&
+      commands.some(c=>!c||c.status!=="applied");
+    const uncertain=commands.some(c=>
+      c&&["uncertain","unsafe","timeout"].includes(String(c.status||"").toLowerCase())
+    );
+    const runtime=(mixed||uncertain)
+      ?quarantineAtomicTargets(
+          before,
+          physical,
+          mixed
+            ?"physical_atomic_batch_mixed_commit"
+            :"physical_atomic_batch_uncertain",
+          options.turn_id||null
+        )
+      :before;
+    return {ok:false,runtime,receipts:[],reason:"physical_atomic_batch_not_committed"};
+  }
 
   for(let i=0;i<commands.length;i++){
     const expected=expectedObservationTarget(physical[i]);
     const observed=commands[i].observation&&commands[i].observation.target||null;
     if(expected&&(!observed||deviceKey(expected)!==deviceKey(observed))){
+      const runtime=quarantineAtomicTargets(
+        before,
+        physical,
+        "physical_atomic_batch_receipt_target_mismatch",
+        options.turn_id||null
+      );
       return {
         ok:false,
-        runtime:before,
+        runtime,
         receipts:[],
         reason:"physical_atomic_batch_receipt_target_mismatch:"+String(i)
       };
@@ -74,4 +123,4 @@ async function executeAtomicPhysicalSet(inputRuntime,patches,driver,options={}){
   return {ok:true,runtime,receipts,reason:null};
 }
 
-module.exports={executeAtomicPhysicalSet};
+module.exports={executeAtomicPhysicalSet,quarantineAtomicTargets};
