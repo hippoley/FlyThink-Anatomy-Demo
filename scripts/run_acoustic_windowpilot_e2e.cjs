@@ -8,6 +8,8 @@ const {WindowPilotHttpDriver}=require("./windowpilot_http_driver.cjs");
 const {normalizeRuntime}=require("./whole_home_patch_contract.cjs");
 const {reconcileObservation}=require("./physical_runtime.cjs");
 const {createSpatialRuntimeAuthorizer}=require("./spatialruntime_authorizer.cjs");
+const {FlyThinkExecutionRuntime}=require("./flythink_execution_runtime.cjs");
+const {FileAuthorizationLedger}=require("./authorization_ledger.cjs");
 const {
   AsrEventSequenceGuard,
   toStreamingSessionEvent
@@ -146,6 +148,8 @@ async function main(){
   const fixtureJson=arg("--acoustic-fixture-json");
   const acousticFixture=fixtureJson?JSON.parse(fixtureJson):null;
   const useSpatialRuntime=flag("--spatialruntime-authorize");
+  const useFlyThinkExecutionRuntime=flag("--flythink-execution-runtime");
+  const authorizationLedgerPath=arg("--authorization-ledger");
   const worldSnapshotPath=arg("--world-snapshot");
   const worldValidationReceiptPath=arg("--world-validation-receipt");
   const sceneContextPath=arg("--scene-context");
@@ -158,6 +162,12 @@ async function main(){
 
   if(!url)throw new Error("--url is required");
   if(apply&&!receiptPath)throw new Error("--apply requires --receipt");
+  if(useFlyThinkExecutionRuntime&&!useSpatialRuntime){
+    throw new Error("--flythink-execution-runtime requires --spatialruntime-authorize");
+  }
+  if(apply&&useFlyThinkExecutionRuntime&&!authorizationLedgerPath){
+    throw new Error("--flythink-execution-runtime APPLY requires --authorization-ledger");
+  }
 
   const driver=new WindowPilotHttpDriver({
     baseUrl:url,
@@ -200,11 +210,23 @@ async function main(){
       sceneContextPath
     })
     :null;
+  const executionRuntime=useFlyThinkExecutionRuntime
+    ?new FlyThinkExecutionRuntime({
+      runtime:initialRuntime,
+      driver,
+      physicalAuthorizer:spatialRuntimeAuthorizer,
+      authorizationLedger:authorizationLedgerPath
+        ?new FileAuthorizationLedger(authorizationLedgerPath)
+        :null,
+      maxUncertainty:1
+    })
+    :null;
   const session=new StreamingHomeSession({
     initialRuntime,
     predictor:guardedPredictor,
     driver,
-    physicalAuthorizer:spatialRuntimeAuthorizer
+    physicalAuthorizer:spatialRuntimeAuthorizer,
+    executionRuntime
   });
   const guard=new AsrEventSequenceGuard();
   const input=readline.createInterface({input:process.stdin,crlfDelay:Infinity});
@@ -299,7 +321,8 @@ async function main(){
       requireHumanFixture:!!(
         acousticFixture&&acousticFixture.require_human_acceptance===true
       ),
-      requireSpatialRuntimeAuthorization:useSpatialRuntime
+      requireSpatialRuntimeAuthorization:useSpatialRuntime,
+      requireFlyThinkExecutionRuntime:useFlyThinkExecutionRuntime
     });
     fs.writeFileSync(receiptPath,JSON.stringify(evidenceReceipt,null,2)+"\n");
   }
@@ -308,6 +331,7 @@ async function main(){
     truth:"acoustic_windowpilot_live_probe_v1",
     mode:apply?"APPLY":"DRY_RUN",
     spatialruntime_authorization:useSpatialRuntime,
+    flythink_execution_runtime:useFlyThinkExecutionRuntime,
     spatialruntime_scene_context:!!(
       sceneContextPath||(worldSnapshotPath&&worldValidationReceiptPath)
     ),
@@ -342,6 +366,16 @@ async function main(){
   if(apply){
     if(finals!==1||semanticCommands!==1)process.exitCode=2;
     if(!closeoutEvidence)process.exitCode=2;
+    if(useFlyThinkExecutionRuntime){
+      const committed=session.trace.filter(
+        x=>x.asr&&x.asr.is_final&&x.committed
+      );
+      if(
+        committed.length!==1||
+        !committed[0].execution_runtime||
+        !committed[0].execution_runtime.receipt
+      )process.exitCode=2;
+    }
     if(!evidenceValidation||!evidenceValidation.valid)process.exitCode=2;
   }
 }
