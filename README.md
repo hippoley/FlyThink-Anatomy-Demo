@@ -10,6 +10,19 @@ Interactive public build:
 
 https://raw.githack.com/hippoley/FlyThink-Anatomy-Demo/gh-pages/index.html
 
+## Repository boundary
+
+FlyThink is a **consumer/backend**, not the canonical owner of Contextual Edge
+SLU conversation or task state.
+
+Canonical semantic/context ownership lives in `hippoley/NLUSLOT` under
+`contextual-state.v1`. FlyThink integration goes through
+`scripts/contextual_edge_slu_adapter.cjs`; internal runtime structures are not
+a stable cross-repository API.
+
+FlyThink remains responsible for fly-inspired reasoning experiments, physical
+execution/evidence, WindowPilot integration and execution-specific safety.
+
 ## Why this exists
 
 Most NLU demos show a single clean command and a final intent label.
