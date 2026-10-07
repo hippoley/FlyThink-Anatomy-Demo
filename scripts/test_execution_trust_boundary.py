@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Cross-language proof for planner-bound semantic execution authorization."""
-import json,subprocess
+import json,subprocess,tempfile,os
 from device_registry import DeviceRegistry,DeviceBinding
 from authorized_patch_planner import plan
 
