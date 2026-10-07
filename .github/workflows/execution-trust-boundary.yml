@@ -34,12 +34,15 @@ on:
       - "scripts/physical_driver_capabilities.cjs"
       - "scripts/physical_transaction_router.cjs"
       - "scripts/physical_runtime.cjs"
+      - "scripts/flythink_execution_runtime.cjs"
+      - "scripts/execution_reasoning_contract.cjs"
       - "scripts/whole_home_patch_contract.cjs"
       - "scripts/test_execution_trust_boundary.py"
       - "scripts/test_atomic_physical_set.cjs"
       - "scripts/test_authorization_ledger.cjs"
       - "scripts/test_physical_transaction_router.cjs"
       - "scripts/test_production_physical_turn_atomicity.cjs"
+      - "tests/flythink_execution_runtime.cjs"
       - ".github/workflows/execution-trust-boundary.yml"
   workflow_dispatch:
 
