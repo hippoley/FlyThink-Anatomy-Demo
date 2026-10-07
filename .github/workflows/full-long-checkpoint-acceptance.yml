@@ -44,6 +44,8 @@ on:
       - "scripts/pi_home_generalization_counterfactual.cjs"
       - "scripts/pi_home_generalization_claim.cjs"
       - "scripts/pi_home_evidence_adjudicator.cjs"
+      - "tests/pi_home_provider_trust.cjs"
+      - "scripts/pi_home_provider_trust.cjs"
       - "scripts/pi_home_learned_physics_gate.cjs"
       - "scripts/pi_home_learned_candidate_physics.cjs"
       - "tests/pi_home_multiphysics_screening.cjs"
@@ -270,6 +272,7 @@ jobs:
           node tests/pi_home_candidate_rank_policy.cjs
           node tests/pi_home_generalization_counterfactual.cjs
           node tests/pi_home_generalization_claim.cjs
+          node tests/pi_home_provider_trust.cjs
           node tests/pi_home_evidence_adjudicator.cjs
           node tests/pi_home_multiphysics_evidence.cjs
           node tests/pi_home_multiphysics_screening.cjs

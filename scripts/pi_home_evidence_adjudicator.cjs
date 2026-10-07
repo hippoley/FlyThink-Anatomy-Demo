@@ -1,25 +1,34 @@
 "use strict";
 
+const {applyResolvedTrust}=require("./pi_home_provider_trust.cjs");
+
 function uniq(xs){return [...new Set((xs||[]).map(String))].sort()}
 function clone(v){return v==null?v:JSON.parse(JSON.stringify(v))}
 
-function normalizeProvider(provider={}){
+function normalizeProvider(provider={},trust_registry=null){
   if(!provider.id)throw new Error("evidence_provider_id_required");
   const dimensions=uniq(provider.covered_dimensions);
   if(!dimensions.length)throw new Error("evidence_provider_dimensions_required");
+  const trusted=applyResolvedTrust({
+    ...provider,
+    id:String(provider.id),
+    covered_dimensions:dimensions
+  },trust_registry);
   return {
     id:String(provider.id),
     kind:String(provider.kind||"unknown"),
     covered_dimensions:dimensions,
     evidence_level:String(provider.evidence_level||"unspecified"),
-    trusted_for_promotion:provider.trusted_for_promotion===true,
+    claimed_trusted_for_promotion:trusted.claimed_trusted_for_promotion===true,
+    trusted_for_promotion:trusted.trusted_for_promotion===true,
+    trust_resolution:clone(trusted.trust_resolution||null),
     provenance:clone(provider.provenance||null)
   };
 }
 
-function buildEvidenceCoverage({required_dimensions=[],providers=[]}={}){
+function buildEvidenceCoverage({required_dimensions=[],providers=[],trust_registry=null}={}){
   const required=uniq(required_dimensions);
-  const normalized=(providers||[]).map(normalizeProvider);
+  const normalized=(providers||[]).map(x=>normalizeProvider(x,trust_registry));
   const byDimension={};
   for(const dimension of required){
     const covering=normalized.filter(p=>p.covered_dimensions.includes(dimension));
@@ -31,7 +40,9 @@ function buildEvidenceCoverage({required_dimensions=[],providers=[]}={}){
         id:p.id,
         kind:p.kind,
         evidence_level:p.evidence_level,
-        trusted_for_promotion:p.trusted_for_promotion
+        claimed_trusted_for_promotion:p.claimed_trusted_for_promotion,
+        trusted_for_promotion:p.trusted_for_promotion,
+        trust_resolution:clone(p.trust_resolution||null)
       }))
     };
   }
@@ -52,9 +63,10 @@ function adjudicateEvidence({
   required_dimensions=[],
   providers=[],
   raw_target_match=null,
-  physical_candidate_comparison_available=false
+  physical_candidate_comparison_available=false,
+  trust_registry=null
 }={}){
-  const coverage=buildEvidenceCoverage({required_dimensions,providers});
+  const coverage=buildEvidenceCoverage({required_dimensions,providers,trust_registry});
   if(!physical_candidate_comparison_available){
     return {
       schema_version:"pi-home-evidence-adjudication-v1",
