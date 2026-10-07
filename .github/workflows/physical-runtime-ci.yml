@@ -5,6 +5,7 @@ on:
     paths:
       - "scripts/commit_gate.cjs"
       - "scripts/physical_runtime.cjs"
+      - "scripts/recovery_transaction.cjs"
       - "scripts/windowpilot_http_driver.cjs"
       - "scripts/runtime_context_adapter.cjs"
       - "scripts/contextual_edge_slu_adapter.cjs"
@@ -21,6 +22,7 @@ on:
       - "scripts/run_long_checkpoint_e2e_v2.cjs"
       - "tests/commit_gate.cjs"
       - "tests/physical_runtime.cjs"
+      - "tests/recovery_transaction.cjs"
       - "tests/runtime_context_adapter.cjs"
       - "tests/contextual_edge_slu_adapter.cjs"
       - "tests/windowpilot_http_driver.cjs"
@@ -58,6 +60,7 @@ jobs:
         run: |
           node --check scripts/commit_gate.cjs
           node --check scripts/physical_runtime.cjs
+          node --check scripts/recovery_transaction.cjs
           node --check scripts/windowpilot_http_driver.cjs
           node --check scripts/runtime_context_adapter.cjs
           node --check scripts/contextual_edge_slu_adapter.cjs
@@ -74,6 +77,8 @@ jobs:
         run: node tests/commit_gate.cjs
       - name: Verify patch -> execute -> observe -> reconcile
         run: node tests/physical_runtime.cjs
+      - name: Verify formal recovery transaction trust restore
+        run: node tests/recovery_transaction.cjs
       - name: Verify device feedback enters next-turn context
         run: node tests/runtime_context_adapter.cjs
       - name: Verify Contextual Edge SLU repository boundary
