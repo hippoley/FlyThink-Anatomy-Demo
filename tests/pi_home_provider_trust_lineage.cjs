@@ -104,10 +104,15 @@ assert.throws(
   /time_regression/
 );
 
-assert.throws(
-  ()=>verifyTrustRegistryLineage([v1,{...v2,change_id:"trust-change-001"}]),
-  /duplicate_change_id/
-);
+{
+  const duplicateId=JSON.parse(JSON.stringify(v2));
+  duplicateId.change_id="trust-change-001";
+  duplicateId.snapshot_digest=require("../scripts/pi_home_provider_trust_lineage.cjs").snapshotDigest(duplicateId);
+  assert.throws(
+    ()=>verifyTrustRegistryLineage([v1,duplicateId]),
+    /duplicate_change_id/
+  );
+}
 
 console.log(JSON.stringify({
   ok:true,
