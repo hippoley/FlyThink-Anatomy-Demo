@@ -42,7 +42,11 @@ const proposal={
 const authorizationBase={
   schema:"homeai_spatialruntime_authorization_receipt_v1",
   allow:true,
-  registry_digest:"registry-1",
+  patch_digest:digestObject([action]),
+  registry_digest:digestObject({
+    "客厅::窗::default":{model_id:"CWDS-CA01"}
+  }),
+  authorization_id:"a".repeat(64),
   single_use:true,
   authorized_patches:[action]
 };
@@ -101,18 +105,27 @@ function runtimes(){
   const before=normalizeRuntime({devices:{
     "客厅::窗::default":{
       key:"客厅::窗::default",area:"客厅",entity:"窗",instance:"default",
-      slots:{opening:0}
+      model_id:"CWDS-CA01",slots:{opening:0}
     }
   }});
   const after=normalizeRuntime({devices:{
     "客厅::窗::default":{
       key:"客厅::窗::default",area:"客厅",entity:"窗",instance:"default",
-      slots:{opening:5}
+      model_id:"CWDS-CA01",slots:{opening:5}
     }
   }});
   after.revisions.push({op:"PATCH_SLOT",turn_id:"task-1"});
   return {before,after};
 }
+function verifyWithRuntime(receipt,extra={}){
+  const {before,after}=runtimes();
+  return verifyExecutionReceipt(receipt,{
+    before_runtime:before,
+    after_runtime:after,
+    ...extra
+  });
+}
+
 function buildVerified(){
   const {before,after}=runtimes();
   return buildExecutionReceipt({
@@ -164,7 +177,7 @@ function buildVerified(){
     forged.authorization.authorized_actions[0].value=9;
     forged=reseal(forged);
     assert.throws(
-      ()=>verifyExecutionReceipt(forged),
+      ()=>verifyWithRuntime(forged),
       /execution_receipt_authorized_actions_digest_mismatch/
     );
   }
@@ -175,7 +188,7 @@ function buildVerified(){
     forged.physical.evidence[0].observation.evidence.tick=9;
     forged=refreshEvidenceDigest(forged);
     assert.throws(
-      ()=>verifyExecutionReceipt(forged),
+      ()=>verifyWithRuntime(forged),
       /execution_receipt_physical_checks_mismatch/
     );
   }
@@ -186,7 +199,7 @@ function buildVerified(){
     forged.physical.evidence[0].ack.ok=false;
     forged=refreshEvidenceDigest(forged);
     assert.throws(
-      ()=>verifyExecutionReceipt(forged),
+      ()=>verifyWithRuntime(forged),
       /execution_receipt_physical_checks_mismatch/
     );
   }
@@ -197,7 +210,7 @@ function buildVerified(){
     forged.physical.evidence[0].hardware_identity.after="hw-swapped";
     forged=refreshEvidenceDigest(forged);
     assert.throws(
-      ()=>verifyExecutionReceipt(forged),
+      ()=>verifyWithRuntime(forged),
       /execution_receipt_physical_checks_mismatch/
     );
   }
@@ -251,7 +264,10 @@ function buildVerified(){
       status:"EXECUTED",
       physical_committed:true
     });
-    const verified=verifyExecutionReceipt(receipt);
+    const verified=verifyExecutionReceipt(receipt,{
+      before_runtime:before,
+      after_runtime:after
+    });
     assert.equal(verified.valid,true);
     assert.equal(verified.physical_committed,true);
     assert.equal(verified.physical_truth_verified,false);
@@ -320,25 +336,63 @@ function buildVerified(){
     });
     forged=reseal(forged);
     assert.throws(
-      ()=>verifyExecutionReceipt(forged),
+      ()=>verifyWithRuntime(forged),
       /execution_receipt_verification_summary_mismatch/
     );
   }
 
-  // 11. An independently supplied source artifact must match the receipt digest binding.
+  // 11. Missing registry provenance cannot be promoted to verified physical truth.
+  {
+    const weakBase=clone(authorizationBase);
+    weakBase.registry_digest="not-a-digest";
+    const weakAuthorization={
+      ...weakBase,
+      receipt_sha256:digestObject(weakBase)
+    };
+    const {before,after}=runtimes();
+    const receipt=buildExecutionReceipt({
+      contextual_state:contextualState,
+      request,
+      proposal,
+      authorization:weakAuthorization,
+      authorized_actions:[action],
+      physical_receipts:[verifiedPhysicalReceipt()],
+      before_runtime:before,
+      after_runtime:after,
+      status:"EXECUTED",
+      physical_committed:true
+    });
+    assert.equal(receipt.result,"APPLIED_UNVERIFIED");
+    assert.equal(receipt.verification.authorization_registry_digest_verified,false);
+    assert.equal(receipt.verification.physical_truth_verified,false);
+    const verified=verifyExecutionReceipt(receipt);
+    assert.equal(verified.valid,true);
+    assert.equal(verified.physical_truth_verified,false);
+  }
+
+  // 12. Verified registry binding requires the source runtime artifact.
+  {
+    const receipt=buildVerified();
+    assert.throws(
+      ()=>verifyExecutionReceipt(receipt),
+      /execution_receipt_before_runtime_required_for_registry_verification/
+    );
+  }
+
+  // 13. An independently supplied source artifact must match the receipt digest binding.
   {
     const receipt=buildVerified();
     const forgedRequest=clone(request);
     forgedRequest.task_id="task-forged";
     assert.throws(
-      ()=>verifyExecutionReceipt(receipt,{request:forgedRequest}),
+      ()=>verifyWithRuntime(receipt,{request:forgedRequest}),
       /execution_receipt_request_mismatch/
     );
   }
 
   console.log(JSON.stringify({
     ok:true,
-    cases:11,
+    cases:13,
     schema:"execution-receipt.v1",
     contract:"authorized action + physical patch + target + ACK + causal readback + hardware identity are digest-bound and independently checked"
   }));

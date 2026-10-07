@@ -29,6 +29,23 @@ function sha256Object(v){
     .digest("hex");
 }
 function isSha256(v){return /^[0-9a-f]{64}$/.test(String(v||""))}
+function runtimeRegistrySnapshot(runtime){
+  const devices=runtime&&runtime.devices||{};
+  if(!devices||typeof devices!=="object"||Array.isArray(devices)){
+    throw new Error("spatialruntime_registry_devices_invalid");
+  }
+  const out={};
+  for(const key of Object.keys(devices).sort()){
+    const device=devices[key]||{};
+    const modelId=String(device.model_id||"");
+    if(!modelId)throw new Error("spatialruntime_registry_model_id_required:"+key);
+    out[key]={model_id:modelId};
+  }
+  return out;
+}
+function runtimeRegistryDigest(runtime){
+  return sha256Object(runtimeRegistrySnapshot(runtime));
+}
 function patchIdentity(p){
   return {
     op:p&&p.op||null,
@@ -62,6 +79,18 @@ function validateAuthorizationReceipt(receipt,request,requestedPatches){
   if(Number(receipt.source_revision)!==Number(request.source_revision)){
     throw new Error("spatialruntime_authorizer_source_revision_mismatch");
   }
+  if(!isSha256(request.registry_digest)){
+    throw new Error("spatialruntime_authorizer_request_registry_digest_invalid");
+  }
+  if(!isSha256(receipt.registry_digest)||receipt.registry_digest!==request.registry_digest){
+    throw new Error("spatialruntime_authorizer_registry_digest_mismatch");
+  }
+  if(receipt.single_use!==true){
+    throw new Error("spatialruntime_authorizer_single_use_required");
+  }
+  if(typeof receipt.authorization_id!=="string"||!receipt.authorization_id){
+    throw new Error("spatialruntime_authorizer_authorization_id_required");
+  }
   const requestedScene=request&&request.spatial_context&&request.spatial_context.scene_evidence;
   if(requestedScene){
     if(!receipt.scene_evidence||!sameObject(receipt.scene_evidence,requestedScene)){
@@ -83,6 +112,10 @@ function validateAuthorizationReceipt(receipt,request,requestedPatches){
   }
   if(!Array.isArray(receipt.authorized_patches)||receipt.authorized_patches.length!==requestedPatches.length){
     throw new Error("spatialruntime_authorizer_patch_count_mismatch");
+  }
+  if(!isSha256(receipt.patch_digest)||
+     receipt.patch_digest!==sha256Object(receipt.authorized_patches)){
+    throw new Error("spatialruntime_authorizer_patch_digest_mismatch");
   }
   for(let i=0;i<requestedPatches.length;i++){
     const requested=requestedPatches[i];
@@ -183,6 +216,7 @@ function createSpatialRuntimeAuthorizer(options={}){
       source_step:Number.isInteger(source_step)&&source_step>=0?source_step:0,
       source_revision:Number.isInteger(source_revision)&&source_revision>=0?source_revision:0,
       runtime:clone(runtime||{}),
+      registry_digest:runtimeRegistryDigest(runtime||{}),
       patches:requestedPatches,
       spatial_context:spatialContext,
       max_open_ratio_delta:maxOpenRatioDelta
@@ -222,6 +256,8 @@ module.exports={
   sha256Object,
   patchIdentity,
   sameObject,
+  runtimeRegistrySnapshot,
+  runtimeRegistryDigest,
   samePatchIdentity,
   validateAuthorizationReceipt,
   createSpatialRuntimeAuthorizer
