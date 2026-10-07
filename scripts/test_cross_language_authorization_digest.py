@@ -10,6 +10,7 @@ cases=[
  ("large_exp",1e21),
  ("unicode","窗户"),
  ("nested",{"b":1.0,"a":[-0.0,1e-7]}),
+ ("safe_integer_max",9007199254740991),
 ]
 js=r'''
 const {authorizationDigest}=require("./atomic_authorized_commit.cjs");
