@@ -234,6 +234,9 @@ function validateReceipt(receipt,{requireHumanFixture=false,requireSpatialRuntim
         if(auth.allow!==true){
           reasons.push("SpatialRuntime authorization did not allow");
         }
+        if(auth.canonicalization!=="sorted-json-number-normalized-v1"){
+          reasons.push("SpatialRuntime authorization canonicalization mismatch");
+        }
         if(!/^[0-9a-f]{64}$/.test(String(auth.trace_hash||""))){
           reasons.push("SpatialRuntime trace hash missing");
         }
