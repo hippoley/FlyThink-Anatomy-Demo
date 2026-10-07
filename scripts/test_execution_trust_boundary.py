@@ -36,7 +36,7 @@ r=applyTurn(r,[
 ]).runtime;
 const before=JSON.parse(JSON.stringify(r));
 const untouched=JSON.parse(JSON.stringify(r.devices["客厅::灯::default"]));
-const consumed=new Set();
+const ledger=()=>{const s=new Set();return {has:id=>s.has(id),add:id=>{if(s.has(id))return false;s.add(id);return true;}}};\nconst consumed=ledger();
 
 let out=atomicApplyAuthorizedPlan(r,payload,registryDigest,consumed);
 assert(out.ok);
@@ -55,20 +55,20 @@ assert.deepStrictEqual(out.runtime,committed);assert.equal(out.receipts.length,0
 // A valid mounted/capable third device cannot be injected after planning.
 const tampered=JSON.parse(JSON.stringify(payload));
 tampered.patches[1].target="次卧::空调::default";
-out=atomicApplyAuthorizedPlan(before,tampered,registryDigest,new Set());
+out=atomicApplyAuthorizedPlan(before,tampered,registryDigest,ledger());
 assert(!out.ok);assert.equal(out.reason,"planner_authorization_digest_mismatch");
 assert.deepStrictEqual(out.runtime,before);assert.equal(out.receipts.length,0);
 
 for(const field of ["value","model_id","capability"]){
  const x=JSON.parse(JSON.stringify(payload));
  x.patches[0][field]=field==="value"?23:"FORGED";
- out=atomicApplyAuthorizedPlan(before,x,registryDigest,new Set());
+ out=atomicApplyAuthorizedPlan(before,x,registryDigest,ledger());
  assert(!out.ok);assert.equal(out.reason,"planner_authorization_digest_mismatch");
  assert.equal(out.receipts.length,0);
 }
 
 // Authorization cannot survive registry rebind/re-provision.
-out=atomicApplyAuthorizedPlan(before,payload,"registry-after-rebind",new Set());
+out=atomicApplyAuthorizedPlan(before,payload,"registry-after-rebind",ledger());
 assert(!out.ok);assert.equal(out.reason,"planner_authorization_stale_registry");
 assert.deepStrictEqual(out.runtime,before);assert.equal(out.receipts.length,0);
 
