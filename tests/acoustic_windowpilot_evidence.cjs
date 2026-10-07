@@ -1,6 +1,11 @@
 "use strict";
 
 const assert=require("assert");
+const crypto=require("crypto");
+const fs=require("fs");
+const os=require("os");
+const path=require("path");
+const {spawnSync}=require("child_process");
 const {
   buildReceipt,
   finalizeReceipt,
@@ -46,6 +51,7 @@ const fixture={
   source_kind:"human_recording",
   expected_text:"打开主卧窗",
   wav_sha256:"a".repeat(64),
+  manifest_sha256:"b".repeat(64),
   provenance_note:"reviewed microphone recording",
   require_human_acceptance:true
 };
@@ -123,6 +129,85 @@ const valid=buildReceipt({
   const report=validateReceipt(resigned,{requireHumanFixture:true});
   assert.equal(report.valid,false);
   assert.ok(report.reasons.includes("closeout did not restore closed position"));
+}
+
+{
+  const root=fs.mkdtempSync(path.join(os.tmpdir(),"flythink-evidence-"));
+  const wavPath=path.join(root,"human.wav");
+  const manifestPath=path.join(root,"human.json");
+  const receiptPath=path.join(root,"receipt.json");
+  fs.writeFileSync(wavPath,Buffer.from("reviewed-human-wav-bytes-v1"));
+
+  const wavSha=crypto.createHash("sha256").update(fs.readFileSync(wavPath)).digest("hex");
+  const manifest={
+    schema:"flythink.acoustic_fixture.v1",
+    source_kind:"human_recording",
+    expected_text:"打开主卧窗",
+    provenance_note:"reviewed microphone recording",
+    wav:{sha256:wavSha}
+  };
+  fs.writeFileSync(manifestPath,JSON.stringify(manifest,null,2)+"\n");
+  const manifestSha=crypto.createHash("sha256")
+    .update(fs.readFileSync(manifestPath)).digest("hex");
+
+  const fileReceipt=buildReceipt({
+    mode:"APPLY",
+    target,
+    probeOpenPct:5,
+    tolerancePct:1,
+    expectedHardwareIdentity:"hw-1",
+    readiness:{
+      physical_write_ready:true,
+      write_blockers:[],
+      hardware_identity:{identity_sha256:"hw-1"}
+    },
+    beforePositionPct:0,
+    acceptedEvents:[event],
+    trace,
+    driverCommands:[command,{
+      id:"windowpilot:2",status:"applied",requested_position_pct:0,
+      observation:{
+        target,exists:true,slots:{opening:0,power:"OFF"},
+        evidence:{source:"windowpilot:/api/state",position_pct:0,measured:true}
+      }
+    }],
+    closeout:{
+      attempted:true,already_closed:false,
+      before_position_pct:5,after_position_pct:0,receipt:{status:"applied"}
+    },
+    runtime,
+    acousticFixture:{
+      schema:"flythink.acoustic_fixture.v1",
+      source_kind:"human_recording",
+      expected_text:"打开主卧窗",
+      wav_sha256:wavSha,
+      manifest_sha256:manifestSha,
+      provenance_note:"reviewed microphone recording",
+      require_human_acceptance:true
+    }
+  });
+  fs.writeFileSync(receiptPath,JSON.stringify(fileReceipt,null,2)+"\n");
+
+  const verifier=path.join(__dirname,"..","scripts","verify_acoustic_windowpilot_evidence.cjs");
+  const pass=spawnSync(process.execPath,[
+    verifier,
+    "--receipt",receiptPath,
+    "--wav",wavPath,
+    "--fixture-manifest",manifestPath,
+    "--require-human-fixture"
+  ],{encoding:"utf8"});
+  assert.equal(pass.status,0,pass.stdout+"\n"+pass.stderr);
+
+  fs.writeFileSync(wavPath,Buffer.from("replaced-wav-bytes"));
+  const fail=spawnSync(process.execPath,[
+    verifier,
+    "--receipt",receiptPath,
+    "--wav",wavPath,
+    "--fixture-manifest",manifestPath,
+    "--require-human-fixture"
+  ],{encoding:"utf8"});
+  assert.equal(fail.status,2,fail.stdout+"\n"+fail.stderr);
+  assert.match(fail.stdout,/WAV SHA256 mismatch/);
 }
 
 console.log(JSON.stringify({
