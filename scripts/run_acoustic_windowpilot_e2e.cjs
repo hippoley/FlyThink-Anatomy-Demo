@@ -155,7 +155,9 @@ async function main(){
     defaultOpenPct:probeOpenPct,
     maxOpenPct:probeOpenPct,
     tolerancePct,
-    timeoutMs
+    timeoutMs,
+    requireFreshReadback:apply,
+    verifyHardwareIdentityAfterReadback:apply
   });
 
   const readiness=await driver.readiness();

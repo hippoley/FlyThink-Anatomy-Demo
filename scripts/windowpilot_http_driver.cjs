@@ -23,6 +23,9 @@ class WindowPilotHttpDriver {
     this.canonicalPositionSlot=options.canonicalPositionSlot||"opening";
     this.maxPolls=options.maxPolls==null?null:Number(options.maxPolls);
     this.expectedHardwareIdentity=options.expectedHardwareIdentity||null;
+    this.requireFreshReadback=options.requireFreshReadback===true;
+    this.verifyHardwareIdentityAfterReadback=
+      options.verifyHardwareIdentityAfterReadback===true;
     this.stopOnTimeout=options.stopOnTimeout!==false;
     this.requestJson=options.requestJson||null;
     this.commands=[];
@@ -57,6 +60,16 @@ class WindowPilotHttpDriver {
     const pct=Number(value);
     if(!Number.isFinite(pct)||pct<0||pct>100)throw new Error("windowpilot_invalid_position_readback");
     return pct;
+  }
+
+  _tick(state){
+    const tick=Number(state&&state.tick);
+    return Number.isFinite(tick)?tick:null;
+  }
+
+  _identity(readiness){
+    return readiness&&readiness.hardware_identity&&
+      readiness.hardware_identity.identity_sha256||null;
   }
 
   _targetPct(patch){
@@ -140,12 +153,18 @@ class WindowPilotHttpDriver {
     const readiness=await this.readiness();
     const before=await this.state();
     const beforePct=this._pct(before);
+    const beforeTick=this._tick(before);
+    if(this.requireFreshReadback&&beforeTick==null){
+      return this._blocked(
+        patch,before,beforePct,"state_tick_unavailable_before_actuation",readiness
+      );
+    }
 
     if(readiness.physical_write_ready!==true){
       return this._blocked(patch,before,beforePct,"physical_write_not_ready",readiness);
     }
 
-    const identity=readiness&&readiness.hardware_identity&&readiness.hardware_identity.identity_sha256;
+    const identity=this._identity(readiness);
     if(this.expectedHardwareIdentity&&identity!==this.expectedHardwareIdentity){
       return this._blocked(patch,before,beforePct,"hardware_identity_mismatch",readiness);
     }
@@ -193,7 +212,39 @@ class WindowPilotHttpDriver {
       last=await this.state();
       lastPct=this._pct(last);
       polls++;
-      if(Math.abs(lastPct-targetPct)<=this.tolerancePct){
+      const lastTick=this._tick(last);
+      const freshEnough=!this.requireFreshReadback||(
+        beforeTick!=null&&lastTick!=null&&lastTick>beforeTick
+      );
+      if(Math.abs(lastPct-targetPct)<=this.tolerancePct&&freshEnough){
+        let readinessAfter=null;
+        let identityAfter=null;
+        if(this.verifyHardwareIdentityAfterReadback){
+          readinessAfter=await this.readiness();
+          identityAfter=this._identity(readinessAfter);
+          if(
+            identityAfter!==identity||
+            (this.expectedHardwareIdentity&&identityAfter!==this.expectedHardwareIdentity)
+          ){
+            const receipt={
+              id:"windowpilot:"+(this.commands.length+1),
+              status:"uncertain",
+              reason:"hardware_identity_changed_after_actuation",
+              patch:clone(patch),
+              ack:clone(ack),
+              requested_position_pct:targetPct,
+              polls,
+              before_tick:beforeTick,
+              readiness_before:clone(readiness),
+              readiness_after:clone(readinessAfter),
+              hardware_identity_before:identity,
+              hardware_identity_after:identityAfter,
+              observation:this._observation(patch,last,lastPct)
+            };
+            this.commands.push(receipt);
+            return receipt;
+          }
+        }
         const receipt={
           id:"windowpilot:"+(this.commands.length+1),
           status:"applied",
@@ -201,6 +252,11 @@ class WindowPilotHttpDriver {
           ack:clone(ack),
           requested_position_pct:targetPct,
           polls,
+          before_tick:beforeTick,
+          readiness_before:clone(readiness),
+          readiness_after:clone(readinessAfter),
+          hardware_identity_before:identity,
+          hardware_identity_after:identityAfter,
           observation:this._observation(patch,last,lastPct)
         };
         this.commands.push(receipt);
@@ -230,6 +286,9 @@ class WindowPilotHttpDriver {
       ack:clone(ack),
       requested_position_pct:targetPct,
       polls,
+      before_tick:beforeTick,
+      readiness_before:clone(readiness),
+      hardware_identity_before:identity,
       safety_stop:safetyStop,
       observation:this._observation(patch,last,lastPct)
     };
