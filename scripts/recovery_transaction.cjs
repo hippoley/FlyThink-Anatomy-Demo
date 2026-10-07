@@ -92,6 +92,18 @@ async function runRecoveryTransaction(inputRuntime,{
   if(!executed.ok||!receipt||receipt.status!=="applied"){
     return blocked(runtime,"recovery_safety_action_not_applied",trace,{receipt});
   }
+  const receiptTarget=
+    receipt.observation&&receipt.observation.target||null;
+  const receiptPhysicalTarget=
+    receipt.physical_patch&&receipt.physical_patch.target||null;
+  if(
+    !receiptTarget||
+    deviceKey(receiptTarget)!==deviceKey(target)||
+    !receiptPhysicalTarget||
+    deviceKey(receiptPhysicalTarget)!==deviceKey(target)
+  ){
+    return blocked(runtime,"recovery_receipt_target_mismatch",trace,{receipt});
+  }
 
   const stateAfter=await driver.state();
   const afterTick=tickFromState(stateAfter);
