@@ -19,18 +19,68 @@ function normalizeDimensionSpec(spec={}){
   };
 }
 
+function assessProviderCalibration(result={},dimensionNames=[]){
+  const requested=result.trusted_for_promotion===true;
+  const calibration=result.calibration||null;
+  if(!requested){
+    return {
+      requested_trust:false,
+      effective_trust:false,
+      reason:"provider_not_marked_trusted",
+      calibration:clone(calibration)
+    };
+  }
+  if(!calibration||calibration.status!=="validated"){
+    return {
+      requested_trust:true,
+      effective_trust:false,
+      reason:"validated_calibration_required",
+      calibration:clone(calibration)
+    };
+  }
+  if(!calibration.validation_id){
+    return {
+      requested_trust:true,
+      effective_trust:false,
+      reason:"calibration_validation_id_required",
+      calibration:clone(calibration)
+    };
+  }
+  const scope=uniq(calibration.covered_dimensions||[]);
+  const missing=dimensionNames.filter(x=>!scope.includes(x));
+  if(missing.length){
+    return {
+      requested_trust:true,
+      effective_trust:false,
+      reason:"calibration_scope_incomplete",
+      missing_calibration_dimensions:missing,
+      calibration:clone(calibration)
+    };
+  }
+  return {
+    requested_trust:true,
+    effective_trust:true,
+    reason:"validated_calibration_matches_dimensions",
+    calibration:clone(calibration)
+  };
+}
+
 function normalizeEvidenceResult(result={}){
   if(!result.id)throw new Error("evidence_result_id_required");
   const dimensions={};
   for(const [name,spec] of Object.entries(result.dimensions||{})){
     dimensions[String(name)]=normalizeDimensionSpec(spec);
   }
-  if(!Object.keys(dimensions).length)throw new Error("evidence_result_dimensions_required");
+  const dimensionNames=Object.keys(dimensions);
+  if(!dimensionNames.length)throw new Error("evidence_result_dimensions_required");
+  const trust=assessProviderCalibration(result,dimensionNames);
   return {
     id:String(result.id),
     kind:String(result.kind||"unknown"),
     evidence_level:String(result.evidence_level||"unspecified"),
-    trusted_for_promotion:result.trusted_for_promotion===true,
+    requested_trusted_for_promotion:result.trusted_for_promotion===true,
+    trusted_for_promotion:trust.effective_trust===true,
+    trust_assessment:trust,
     provenance:clone(result.provenance||null),
     dimensions
   };
@@ -195,6 +245,44 @@ function rainIngressScreeningProvider(caseDef={}){
   };
 }
 
+function contamProviderFromP47Evidence(caseEvidence={},{
+  calibration=null
+}={}){
+  if(caseEvidence.status!=="REAL_CONTAM_EXECUTED"){
+    throw new Error("real_contam_case_evidence_required");
+  }
+  const branches=caseEvidence.branches||[];
+  if(!branches.length)throw new Error("real_contam_branches_required");
+  const scores={};
+  for(const branch of branches){
+    if(!branch.label)throw new Error("real_contam_branch_label_required");
+    if(!Number.isFinite(Number(branch.end_co2_ppm))){
+      throw new Error("real_contam_branch_co2_required:"+String(branch.label));
+    }
+    scores[String(branch.label)]=Number(branch.end_co2_ppm);
+  }
+  const allTrusted=
+    caseEvidence.profile_trusted_for_promotion===true &&
+    branches.every(x=>x.trusted_for_promotion===true);
+  return {
+    id:"contam-real-"+String(caseEvidence.case_id||"case"),
+    kind:"simulation",
+    evidence_level:String(caseEvidence.evidence_level||"real-contam"),
+    trusted_for_promotion:allTrusted,
+    calibration:clone(calibration),
+    provenance:{
+      backend:caseEvidence.backend||null,
+      physics_fidelity:caseEvidence.physics_fidelity||null,
+      engine_version:caseEvidence.engine_version||null,
+      origin_co2_source:caseEvidence.origin_co2_source||null,
+      raw_case_id:caseEvidence.case_id||null
+    },
+    dimensions:{
+      co2:{direction:"min",scores}
+    }
+  };
+}
+
 function acousticScreeningProvider(caseDef={}){
   const candidates=caseDef&&caseDef.context&&caseDef.context.candidates||[];
   const scores={};
@@ -219,9 +307,11 @@ function acousticScreeningProvider(caseDef={}){
 
 module.exports={
   normalizeEvidenceResult,
+  assessProviderCalibration,
   normalizeDimensionSpec,
   normalizeAcrossCandidates,
   fuseCandidateEvidence,
   rainIngressScreeningProvider,
-  acousticScreeningProvider
+  acousticScreeningProvider,
+  contamProviderFromP47Evidence
 };
