@@ -44,6 +44,12 @@ def args(**overrides):
         fixture_manifest=None,
         require_human_fixture=False,
         apply=False,
+        spatialruntime_authorize=False,
+        flythink_execution_runtime=False,
+        authorization_ledger=None,
+        world_snapshot=None,
+        world_validation_receipt=None,
+        scene_context=None,
         probe_open_pct=5.0,
         tolerance=1.0,
         timeout_ms=5000,
@@ -89,6 +95,45 @@ class LiveAcousticWindowPilotCliTest(unittest.TestCase):
         target=node[node.index("--target-json")+1]
         self.assertIn("主卧",target)
         self.assertIn("窗",target)
+
+    def test_execution_runtime_apply_forwards_durable_ledger(self):
+        _,node=build_commands(args(
+            apply=True,
+            expected_hardware_identity="hw-abc",
+            receipt="live-receipt.json",
+            spatialruntime_authorize=True,
+            flythink_execution_runtime=True,
+            authorization_ledger="auth-ledger.json",
+        ))
+        self.assertIn("--spatialruntime-authorize",node)
+        self.assertIn("--flythink-execution-runtime",node)
+        self.assertEqual(
+            node[node.index("--authorization-ledger")+1],
+            "auth-ledger.json",
+        )
+
+    def test_execution_runtime_requires_spatialruntime_authorization(self):
+        with self.assertRaisesRegex(
+            SystemExit,
+            "--flythink-execution-runtime requires --spatialruntime-authorize",
+        ):
+            build_commands(args(
+                flythink_execution_runtime=True,
+            ))
+
+    def test_execution_runtime_apply_requires_durable_ledger(self):
+        with self.assertRaisesRegex(
+            SystemExit,
+            "--authorization-ledger",
+        ):
+            build_commands(args(
+                apply=True,
+                expected_hardware_identity="hw-abc",
+                receipt="live-receipt.json",
+                spatialruntime_authorize=True,
+                flythink_execution_runtime=True,
+                authorization_ledger=None,
+            ))
 
     def test_pcm_mode_wires_stdin_source(self):
         asr,_=build_commands(args(wav=None,pcm_stdin=True))
