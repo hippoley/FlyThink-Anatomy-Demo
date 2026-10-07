@@ -5,6 +5,8 @@ const path=require("path");
 const {spawnSync}=require("child_process");
 const {
   loadSceneContext,
+  loadPinnedSceneContext,
+  validateSceneContext,
   targetKey
 }=require("./spatialruntime_world_context.cjs");
 
@@ -113,15 +115,25 @@ function createSpatialRuntimeAuthorizer(options={}){
   if(hasScenePath&&!(options.worldSnapshotPath&&options.worldValidationReceiptPath)){
     throw new Error("spatialruntime_scene_world_and_receipt_required");
   }
+  const configuredSceneSources=[
+    options.sceneContext?1:0,
+    options.sceneContextPath?1:0,
+    hasScenePath?1:0
+  ].reduce((a,b)=>a+b,0);
+  if(configuredSceneSources>1){
+    throw new Error("spatialruntime_scene_context_sources_are_mutually_exclusive");
+  }
   const sceneContext=options.sceneContext
-    ?clone(options.sceneContext)
-    :(hasScenePath
-      ?loadSceneContext(
-        options.worldSnapshotPath,
-        options.worldValidationReceiptPath,
-        {windowEntityLabel:options.windowEntityLabel||"窗"}
-      )
-      :null);
+    ?validateSceneContext(options.sceneContext)
+    :(options.sceneContextPath
+      ?loadPinnedSceneContext(options.sceneContextPath)
+      :(hasScenePath
+        ?loadSceneContext(
+          options.worldSnapshotPath,
+          options.worldValidationReceiptPath,
+          {windowEntityLabel:options.windowEntityLabel||"窗"}
+        )
+        :null));
   return async function authorize({runtime,patches,event,context,source_step,source_revision}={}){
     const requestedPatches=clone(patches||[]);
     const hint=(event&&event.context_hint&&event.context_hint.spatialruntime)||{};
