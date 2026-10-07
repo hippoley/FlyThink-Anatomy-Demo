@@ -12,6 +12,18 @@ function deriveContext(runtime,history=[]){
  const successful=ledger.filter(x=>!x.status||x.status==="applied"||x.status==="success");
  const failed=ledger.filter(x=>x.status&&x.status!=="applied"&&x.status!=="success");
  const lastExecution=ledger.length?ledger[ledger.length-1]:null;
+ const health=Object.entries((runtime&&runtime.deviceHealth)||{});
+ const quarantined=health
+  .filter(([,v])=>v&&v.status==="quarantined")
+  .map(([device_key,v])=>({
+   device_key,
+   status:"quarantined",
+   reason:v.reason||null,
+   source_status:v.source_status||null,
+   command_id:v.command_id||null,
+   since_turn_id:v.since_turn_id||null,
+   allowed_actions:["READ","STOP","CLOSE","POWER_OFF","REDUCE_OPENING","RECOVERY"]
+  }));
  const activeGoals=Object.values((runtime&&runtime.tasks)||{})
   .filter(x=>x&&x.kind==="goal_episode"&&x.status==="active")
   .map(x=>({
@@ -38,6 +50,14 @@ function deriveContext(runtime,history=[]){
   }:null,
   active_goals:activeGoals,
   protected_paths:Object.keys((runtime&&runtime.protectedInvariants)||{}),
+  quarantined_devices:quarantined,
+  device_write_policy:Object.fromEntries(quarantined.map(x=>[
+   x.device_key,{
+    mode:"safety_recovery_only",
+    allowed_actions:x.allowed_actions,
+    reason:x.reason
+   }
+  ])),
   device_keys:Object.keys((runtime&&runtime.devices)||{}),
   device_registry:Object.fromEntries(Object.entries((runtime&&runtime.devices)||{}).filter(([,v])=>v&&v.model_id).map(([k,v])=>[k,{model_id:v.model_id}]))
  };
