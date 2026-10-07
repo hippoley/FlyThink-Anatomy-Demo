@@ -228,6 +228,7 @@ function passAuthorizer(counter=null,transform=null,authorizationId=null,overrid
     const quarantined=normalizeRuntime({devices:{
       [wk]:{
         key:wk,area:"客厅",entity:"窗",instance:"default",
+        model_id:"CWDS-CA01",
         slots:{opening:40}
       }
     }});
