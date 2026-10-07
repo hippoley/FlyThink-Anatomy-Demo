@@ -3,10 +3,10 @@
 const assert=require("assert");
 const {
   evaluateCalibrationDataset,
-  registryEntryFromCertificate
+  registryEntryFromCertificate,
+  buildCertifiedProviderTrustRegistry
 }=require("../scripts/pi_home_provider_calibration.cjs");
 const {
-  buildProviderTrustRegistry,
   resolveProviderTrust
 }=require("../scripts/pi_home_provider_trust.cjs");
 
@@ -48,7 +48,10 @@ assert.equal(entry.provider_id,"rain-engineering-v1");
 assert.equal(entry.calibration_digest,cert.calibration_digest);
 assert.equal(entry.calibration_ref,cert.calibration_ref);
 
-const registry=buildProviderTrustRegistry([entry]);
+const registry=buildCertifiedProviderTrustRegistry([
+  {certificate:cert,approved_by:"engineering-review-board"}
+]);
+assert.equal(registry.entries["rain-engineering-v1"].certificate_verified,true);
 const provider={
   id:"rain-engineering-v1",
   covered_dimensions:["rain_ingress"],
