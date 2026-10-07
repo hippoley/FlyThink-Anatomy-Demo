@@ -2,7 +2,10 @@
 
 const crypto=require("crypto");
 
-const {assertContextStateSnapshot}=require("./contextual_edge_slu_adapter.cjs");
+const {
+  assertContextStateSnapshot,
+  contextStateIdentity
+}=require("./contextual_edge_slu_adapter.cjs");
 const {
   REQUEST_VERSION,
   PROPOSAL_VERSION,
@@ -76,6 +79,8 @@ function validateDecisionProposal(proposal){
 
   if(!Number.isInteger(proposal.context_revision)||proposal.context_revision<0)
     throw new Error("decision_proposal_context_revision_invalid");
+  if(!/^[0-9a-f]{64}$/.test(String(proposal.context_sha256||"")))
+    throw new Error("decision_proposal_context_sha256_invalid");
   if(
     !Number.isInteger(proposal.world_snapshot_revision)||
     proposal.world_snapshot_revision<0
@@ -177,11 +182,14 @@ function decisionProposalToExecutionContracts(
   assertContextStateSnapshot(contextualState);
   validateDecisionProposal(decisionProposal);
 
+  const contextIdentity=contextStateIdentity(contextualState);
   const actualContextRevision=contextRevisionOf(contextualState);
   if(actualContextRevision==null)
     throw new Error("contextual_state_revision_required");
   if(actualContextRevision!==decisionProposal.context_revision)
     throw new Error("decision_proposal_context_revision_mismatch");
+  if(contextIdentity.context_sha256!==decisionProposal.context_sha256)
+    throw new Error("decision_proposal_context_sha256_mismatch");
 
   const actions=decisionProposal.proposed_mutations.map(mutationToAction);
   const request={
@@ -210,6 +218,8 @@ function decisionProposalToExecutionContracts(
       source_contract:SCHEMA_VERSION,
       source_decision_proposal_sha256:digestDecisionProposal(decisionProposal),
       intent:decisionProposal.intent,
+      context_revision:decisionProposal.context_revision,
+      context_sha256:decisionProposal.context_sha256,
       world_snapshot_revision:decisionProposal.world_snapshot_revision,
       world_snapshot_sha256:decisionProposal.world_snapshot_sha256
     },
@@ -231,6 +241,8 @@ function decisionProposalToExecutionContracts(
   return {
     external_contract:SCHEMA_VERSION,
     proposal_id:decisionProposal.proposal_id,
+    context_revision:decisionProposal.context_revision,
+    context_sha256:decisionProposal.context_sha256,
     world_snapshot_revision:decisionProposal.world_snapshot_revision,
     world_snapshot_sha256:decisionProposal.world_snapshot_sha256,
     request,
