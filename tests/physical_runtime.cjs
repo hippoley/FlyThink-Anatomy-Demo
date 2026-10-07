@@ -1,6 +1,11 @@
 "use strict";
 const assert = require("assert");
-const {MockThingDriver, executePhysicalTurn} = require("../scripts/physical_runtime.cjs");
+const {
+  MockThingDriver,
+  executePhysicalTurn,
+  isQuarantined,
+  clearQuarantine
+} = require("../scripts/physical_runtime.cjs");
 const {normalizeRuntime} = require("../scripts/whole_home_patch_contract.cjs");
 
 const L = {area:"客厅",entity:"空调",instance:"default"};
@@ -44,5 +49,95 @@ const initial = normalizeRuntime({devices:{
     assert.equal(out.receipts[0].observation.slots.temperature,18);
   }
 
-  console.log(JSON.stringify({ok:true,cases:3,contract:"patch->execute->observe->reconcile"}));
+  // Uncertain execution quarantines the device persistently.
+  {
+    const W={area:"客厅",entity:"窗",instance:"default"};
+    const wk="客厅::窗::default";
+    const windowRuntime=normalizeRuntime({devices:{
+      [wk]:{
+        key:wk,area:"客厅",entity:"窗",instance:"default",
+        model_id:"CWDS-CA01",slots:{opening:0,power:"OFF"}
+      }
+    }});
+    let calls=0;
+    const uncertainDriver={
+      execute:async patch=>{
+        calls++;
+        return {
+          id:"real:1",
+          status:"uncertain",
+          reason:"hardware_identity_changed_after_actuation",
+          observation:{
+            target:patch.target,
+            exists:true,
+            slots:{opening:5,power:"ON"},
+            evidence:{source:"windowpilot:/api/state",measured:true}
+          }
+        };
+      }
+    };
+    const first=await executePhysicalTurn(
+      windowRuntime,
+      [{op:"PATCH_SLOT",target:W,slot:"opening",value:5}],
+      uncertainDriver,
+      {turn_id:"turn-unsafe"}
+    );
+    assert.equal(first.receipts[0].status,"uncertain");
+    assert.equal(isQuarantined(first.runtime,W),true);
+    assert.equal(first.runtime.deviceHealth[wk].reason,"hardware_identity_changed_after_actuation");
+
+    const blocked=await executePhysicalTurn(
+      first.runtime,
+      [{op:"PATCH_SLOT",target:W,slot:"opening",value:20}],
+      uncertainDriver,
+      {turn_id:"turn-blocked"}
+    );
+    assert.equal(blocked.receipts[0].status,"blocked");
+    assert.equal(blocked.receipts[0].reason,"device_quarantined");
+    assert.equal(calls,1,"quarantined opening must not reach physical driver");
+    assert.equal(isQuarantined(blocked.runtime,W),true);
+
+    const recoveryDriver={
+      execute:async patch=>{
+        calls++;
+        return {
+          id:"real:close",
+          status:"applied",
+          observation:{
+            target:patch.target,
+            exists:true,
+            slots:{opening:0,power:"OFF"},
+            evidence:{source:"windowpilot:/api/state",measured:true}
+          }
+        };
+      }
+    };
+    const closed=await executePhysicalTurn(
+      blocked.runtime,
+      [{op:"PATCH_SLOT",target:W,slot:"opening",value:0}],
+      recoveryDriver,
+      {turn_id:"turn-close"}
+    );
+    assert.equal(closed.receipts[0].status,"applied");
+    assert.equal(closed.runtime.devices[wk].slots.opening,0);
+    assert.equal(isQuarantined(closed.runtime,W),true,
+      "safe close must not silently clear quarantine");
+
+    assert.throws(
+      ()=>clearQuarantine(closed.runtime,W,{verified:false}),
+      /quarantine_recovery_proof_required/
+    );
+    clearQuarantine(closed.runtime,W,{
+      verified:true,
+      turn_id:"turn-recovery",
+      readiness_verified:true,
+      hardware_identity_verified:true,
+      physical_readback_verified:true,
+      safe_position_verified:true
+    });
+    assert.equal(isQuarantined(closed.runtime,W),false);
+    assert.equal(closed.runtime.deviceHealth[wk].status,"healthy");
+  }
+
+  console.log(JSON.stringify({ok:true,cases:4,contract:"patch->execute->observe->reconcile + persistent device quarantine on uncertain/unsafe execution"}));
 })().catch(err=>{console.error(err);process.exit(1)});
