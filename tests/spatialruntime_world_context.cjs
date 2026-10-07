@@ -68,6 +68,90 @@ assert.equal(context.exterior_windows[0].opening_id,"opening::G-bed2");
   );
 }
 
+
+
+{
+  const two=JSON.parse(JSON.stringify(world));
+  const roomId="room::bed2";
+  const firstId="window::bed2-south-casement";
+  two.entities[firstId].control_bindings={
+    homeai:{area:"次卧（二）",entity:"窗",instance:"west"}
+  };
+  two.entities["window::bed2-east-casement"]={
+    kind:"window",
+    source_id:"bed2-east-casement",
+    name:"次卧东窗",
+    room:roomId,
+    opening_id:"opening::G-bed2-east",
+    exterior:true,
+    control_bindings:{
+      homeai:{area:"次卧（二）",entity:"窗",instance:"east"}
+    },
+    evidence_status:"explicit_source"
+  };
+  two.entities["opening::G-bed2-east"]={
+    kind:"window_opening",
+    source_id:"G-bed2-east",
+    evidence_status:"explicit_source"
+  };
+  two.relations.push({
+    src:"window::bed2-east-casement",
+    rel:"belongs_to",
+    dst:roomId,
+    confidence:1,
+    status:"explicit_source",
+    evidence:{source:"test"}
+  });
+  const twoReceipt=JSON.parse(JSON.stringify(receipt));
+  twoReceipt.world_snapshot_sha256=sha256Object(two);
+  const receiptBase={...twoReceipt};delete receiptBase.receipt_sha256;
+  twoReceipt.receipt_sha256=sha256Object(receiptBase);
+  const multi=validateSceneArtifacts(two,twoReceipt);
+  assert.deepEqual(
+    multi.exterior_window_keys,
+    ["次卧（二）::窗::east","次卧（二）::窗::west"]
+  );
+  assert.deepEqual(
+    multi.exterior_windows.map(x=>x.target_binding_source),
+    ["explicit_scene","explicit_scene"]
+  );
+}
+
+{
+  const ambiguous=JSON.parse(JSON.stringify(world));
+  delete ambiguous.entities["window::bed2-south-casement"].control_bindings;
+  ambiguous.entities["window::bed2-second"]={
+    kind:"window",
+    source_id:"bed2-second",
+    name:"次卧第二扇窗",
+    room:"room::bed2",
+    opening_id:"opening::G-bed2-second",
+    exterior:true,
+    evidence_status:"explicit_source"
+  };
+  ambiguous.entities["opening::G-bed2-second"]={
+    kind:"window_opening",
+    source_id:"G-bed2-second",
+    evidence_status:"explicit_source"
+  };
+  ambiguous.relations.push({
+    src:"window::bed2-second",
+    rel:"belongs_to",
+    dst:"room::bed2",
+    confidence:1,
+    status:"explicit_source",
+    evidence:{source:"test"}
+  });
+  const ambiguousReceipt=JSON.parse(JSON.stringify(receipt));
+  ambiguousReceipt.world_snapshot_sha256=sha256Object(ambiguous);
+  const receiptBase={...ambiguousReceipt};delete receiptBase.receipt_sha256;
+  ambiguousReceipt.receipt_sha256=sha256Object(receiptBase);
+  assert.throws(
+    ()=>validateSceneArtifacts(ambiguous,ambiguousReceipt),
+    /homeai_target_ambiguous/
+  );
+}
+
 console.log(JSON.stringify({
   ok:true,
   context_sha256:context.context_sha256,

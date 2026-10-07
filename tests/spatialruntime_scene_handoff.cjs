@@ -41,6 +41,7 @@ function buildArtifacts(){
       "window::bed2-south-casement":{
         kind:"window",source_id:"bed2-south-casement",name:"次卧联动窗",
         room:"room::bed2",opening_id:"opening::G-bed2",exterior:true,
+        control_bindings:{homeai:TARGET},
         evidence_status:"explicit_source"
       },
       "opening::G-bed2":{
@@ -100,7 +101,8 @@ function buildArtifacts(){
       opening_id:"opening::G-bed2",
       source_id:"bed2-south-casement",
       target_key:TARGET_KEY,
-      suggested_homeai_target:TARGET
+      suggested_homeai_target:TARGET,
+      target_binding_source:"explicit_scene"
     }],
     consumer_contracts:[
       "spatialruntime_world_snapshot_v1",
@@ -145,6 +147,7 @@ async function validHandoffDrivesSpatialRuntimeSafety(){
   assert.equal(context.spatialruntime_commit_sha,SPATIALRUNTIME_COMMIT);
   assert.equal(context.handoff_evidence.spatialruntime_commit_sha,SPATIALRUNTIME_COMMIT);
   assert.equal(context.handoff_evidence.handoff_sha256,artifacts.handoff.handoff_sha256);
+  assert.equal(context.exterior_windows[0].target_binding_source,"explicit_scene");
 
   const paths=writeArtifacts(artifacts);
   const contextPath=path.join(paths.dir,"context.json");
