@@ -27,6 +27,7 @@ assert.match(y,/--require-human-fixture/);
 
 assert.match(y,/probe_open_pct must be in \(0,5\]/);
 assert.match(y,/tolerance_pct must be in \[0,2\]/);
+assert.match(y,/probe_open_pct must exceed tolerance_pct/);
 assert.match(y,/physical-lab-windowpilot/);
 assert.match(y,/cancel-in-progress:\s*false/);
 
