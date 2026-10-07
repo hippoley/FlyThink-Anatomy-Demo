@@ -56,8 +56,20 @@ function bindSpatialRuntimeAuthorization(receipt,authorizedPatches,physicalRecei
     if(!samePatchIdentity(authorized,physical)){
       throw new Error("spatialruntime_physical_patch_identity_mismatch:"+String(i));
     }
-    if(Number(physical&&physical.value)!==Number(authorized&&authorized.value)){
+    const authorizedValue=Number(authorized&&authorized.value);
+    const physicalValue=Number(physical&&physical.value);
+    if(!Number.isFinite(authorizedValue)||!Number.isFinite(physicalValue)){
+      throw new Error("spatialruntime_physical_patch_value_invalid:"+String(i));
+    }
+    if(physicalValue!==authorizedValue){
       throw new Error("spatialruntime_physical_patch_value_mismatch:"+String(i));
+    }
+    const requestedPosition=row.requested_position_pct==null
+      ?null:Number(row.requested_position_pct);
+    if(requestedPosition!=null&&(
+      !Number.isFinite(requestedPosition)||requestedPosition!==authorizedValue
+    )){
+      throw new Error("spatialruntime_driver_requested_value_mismatch:"+String(i));
     }
     const observation=clone(row&&row.observation||null);
     if(!observation||!samePatchIdentity(
@@ -78,11 +90,17 @@ function bindSpatialRuntimeAuthorization(receipt,authorizedPatches,physicalRecei
       authorization_patch_sha256:sha256Object(authorized),
       physical_patch_sha256:sha256Object(physical),
       observation_sha256:sha256Object(observation),
-      observed_value:observedValue
+      authorized_value:authorizedValue,
+      requested_position_pct:requestedPosition,
+      observed_value:observedValue,
+      convergence_error_pct:Math.abs(observedValue-authorizedValue)
     });
   }
   const body={
     schema:"homeai_spatialruntime_physical_binding_v1",
+    case_id:receipt.case_id,
+    source_step:receipt.source_step,
+    source_revision:receipt.source_revision,
     authorization_receipt_sha256:receipt.receipt_sha256,
     authorization_trace_hash:receipt.trace_hash,
     bindings
