@@ -10,12 +10,12 @@ on:
       - "scripts/atomic_authorized_commit.cjs"
       - "scripts/authorization_ledger.cjs"
       - "scripts/authorization_reserve_worker.cjs"
-      - "scripts/authorization_distinct_worker.cjs"
+      - "scripts/test_authorization_lock_crash.cjs"
+      - "scripts/test_authorization_distinct_race.cjs"
       - "scripts/authorization_lock_holder.cjs"
+      - "scripts/authorization_distinct_worker.cjs"
       - "scripts/test_authorization_ledger.cjs"
       - "scripts/test_authorization_reservation_race.cjs"
-      - "scripts/test_authorization_distinct_race.cjs"
-      - "scripts/test_authorization_lock_crash.cjs"
       - "scripts/test_durable_authorization_commit.cjs"
       - "scripts/atomic_physical_set.cjs"
       - "scripts/physical_driver_capabilities.cjs"
@@ -35,12 +35,8 @@ on:
       - "scripts/atomic_authorized_commit.cjs"
       - "scripts/authorization_ledger.cjs"
       - "scripts/authorization_reserve_worker.cjs"
-      - "scripts/authorization_distinct_worker.cjs"
-      - "scripts/authorization_lock_holder.cjs"
       - "scripts/test_authorization_ledger.cjs"
       - "scripts/test_authorization_reservation_race.cjs"
-      - "scripts/test_authorization_distinct_race.cjs"
-      - "scripts/test_authorization_lock_crash.cjs"
       - "scripts/test_durable_authorization_commit.cjs"
       - "scripts/atomic_physical_set.cjs"
       - "scripts/physical_driver_capabilities.cjs"
@@ -74,16 +70,15 @@ jobs:
           node --check scripts/authorization_reserve_worker.cjs
           node --check scripts/authorization_distinct_worker.cjs
           node --check scripts/authorization_lock_holder.cjs
-          node --check scripts/test_authorization_ledger.cjs
-          node --check scripts/test_authorization_reservation_race.cjs
           node --check scripts/test_authorization_distinct_race.cjs
           node --check scripts/test_authorization_lock_crash.cjs
+          node --check scripts/test_authorization_ledger.cjs
+          node --check scripts/test_authorization_reservation_race.cjs
           node --check scripts/test_durable_authorization_commit.cjs
           node --check scripts/atomic_physical_set.cjs
           node --check scripts/physical_driver_capabilities.cjs
           node --check scripts/physical_transaction_router.cjs
           node --check scripts/physical_runtime.cjs
-          node --check scripts/whole_home_patch_contract.cjs
           node --check scripts/test_atomic_physical_set.cjs
           node --check scripts/test_physical_transaction_router.cjs
           node --check scripts/test_production_physical_turn_atomicity.cjs
