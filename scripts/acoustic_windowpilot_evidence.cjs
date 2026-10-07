@@ -169,7 +169,9 @@ function validateReceipt(receipt,{requireHumanFixture=false}={}){
     }
     if(!Array.isArray(committed.feedback)||committed.feedback.length<1){
       reasons.push("measured device feedback missing");
-    }else if(committed.feedback.some(x=>x&&x.evidence&&x.evidence.measured!==true)){
+    }else if(committed.feedback.some(
+      x=>!x||!x.evidence||x.evidence.measured!==true
+    )){
       reasons.push("device feedback is not measured");
     }
   }
