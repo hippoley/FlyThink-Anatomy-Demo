@@ -42,6 +42,13 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
+      - name: Syntax preflight
+        run: |
+          python -m py_compile scripts/authorized_patch_planner.py scripts/device_registry.py scripts/test_execution_trust_boundary.py
+          node --check scripts/atomic_authorized_commit.cjs
+          node --check scripts/atomic_physical_set.cjs
+          node --check scripts/physical_driver_capabilities.cjs
+          node --check scripts/test_atomic_physical_set.cjs
       - name: Prove planner-to-commit safety invariants
         run: python scripts/test_execution_trust_boundary.py
       - name: Prove multi-target physical SET cannot degrade to sequential writes
