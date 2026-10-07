@@ -39,6 +39,14 @@ const patches=[
  assert(!out.ok);assert.equal(out.reason,"physical_atomic_batch_not_committed");
  assert.deepStrictEqual(out.runtime,initial);assert.equal(out.receipts.length,0);
 
+ const wrongTargets={capabilities(){return ["atomic_multi_target_set","readback"];},executeAtomicBatch(){return [
+   {id:"w:1",status:"applied",observation:{target:B,exists:true,slots:{power:"ON",temperature:22}}},
+   {id:"w:2",status:"applied",observation:{target:L,exists:true,slots:{power:"ON",temperature:22}}}
+ ];}};
+ out=await executeAtomicPhysicalSet(initial,patches,wrongTargets);
+ assert(!out.ok);assert.equal(out.reason,"physical_atomic_batch_receipt_target_mismatch:0");
+ assert.deepStrictEqual(out.runtime,initial);assert.equal(out.receipts.length,0);
+
  const atomic={capabilities(){return ["atomic_multi_target_set","readback"];},executeAtomicBatch(){return [
    {id:"a:1",status:"applied",observation:{target:L,exists:true,slots:{power:"ON",temperature:22}}},
    {id:"a:2",status:"applied",observation:{target:B,exists:true,slots:{power:"ON",temperature:22}}}
@@ -54,6 +62,7 @@ const patches=[
    sequential_fallback:0,
    undeclared_atomic_execution:0,
    unverified_readback_commit:0,
-   partial_runtime_commit:0
+   partial_runtime_commit:0,
+   wrong_target_readback_commit:0
  }));
 })().catch(e=>{console.error(e);process.exit(1);});
