@@ -71,6 +71,39 @@ function clearQuarantine(runtime,target,recoveryProof){
   return runtime.deviceHealth[key];
 }
 
+function evaluateQuarantinePreflight(runtime,patches){
+  const normalized=normalizeRuntime(runtime);
+  const violations=[];
+  for(const proposed of patches||[]){
+    for(const expanded of expandSetPatch(proposed)){
+      if(["CANCEL_PENDING","PROTECT"].includes(expanded.op))continue;
+      let physicalPatch;
+      try{
+        physicalPatch=materializePatch(normalized,expanded);
+      }catch(e){
+        continue;
+      }
+      if(
+        physicalPatch.target &&
+        isQuarantined(normalized,physicalPatch.target) &&
+        !isSafetyReducingPatch(normalized,physicalPatch)
+      ){
+        violations.push({
+          reason:"device_quarantined",
+          device_key:deviceKey(physicalPatch.target),
+          semantic_patch:clone(expanded),
+          physical_patch:clone(physicalPatch)
+        });
+      }
+    }
+  }
+  return {
+    allow:violations.length===0,
+    reason:violations.length?"device_quarantined":null,
+    violations
+  };
+}
+
 function materializePatch(runtime, patch) {
   if (!patch) throw new Error("physical_patch_required");
   if (patch.op === "PATCH_RELATIVE") {
@@ -281,5 +314,6 @@ module.exports = {
   isSafetyReducingPatch,
   markQuarantined,
   clearQuarantine,
+  evaluateQuarantinePreflight,
   executePhysicalTurn
 };
