@@ -507,3 +507,86 @@ jobs:
             pi-home-real-contam-evidence.json
             pi-home-real-contam.log
             pi-home-multiphysics-screening.json
+
+  p48-multiphysics-screening:
+    needs:
+      - p47-learned-artifact
+      - p47-real-contam
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download learned holdout evidence
+        uses: actions/download-artifact@v4
+        with:
+          name: pi-home-p47-learned-input
+          path: artifacts/p47-learned-input
+
+      - name: Download real ContamX evidence
+        uses: actions/download-artifact@v4
+        with:
+          name: pi-home-p47-real-contam-evidence
+          path: artifacts/p47-real-contam
+
+      - name: Fuse P4.7 physics with P4.8 screening providers
+        run: |
+          node scripts/run_pi_home_multiphysics_screening.cjs             --benchmark benchmarks/pi_home_candidate_generalization.json             --learned-eval artifacts/p47-learned-input/pi-home-learned-holdout.json             --real-contam artifacts/p47-real-contam/pi-home-real-contam-evidence.json             --out pi-home-p48-multiphysics-screening.json
+          cat pi-home-p48-multiphysics-screening.json
+
+      - name: P4.8 screening acceptance gate
+        run: |
+          node - <<'NODE'
+          const fs=require("fs");
+          const x=JSON.parse(fs.readFileSync("pi-home-p48-multiphysics-screening.json","utf8"));
+          if(x.schema_version!=="pi-home-multiphysics-screening-run-v1"){
+            throw new Error("unexpected P4.8 screening schema");
+          }
+          if(x.device_execution_authorized!==false){
+            throw new Error("P4.8 screening must never authorize device execution");
+          }
+          if(x.trusted_generalization_cases!==0){
+            throw new Error("screening evidence must not create trusted generalization claims");
+          }
+
+          const byId=Object.fromEntries(x.rows.map(r=>[r.case_id,r]));
+          const quiet=byId["compose-quiet-new-room"];
+          if(!quiet||quiet.fusion.decision!=="NOT_ADJUDICABLE"){
+            throw new Error("quiet case should remain not adjudicable without CO2 candidate coverage");
+          }
+          if(!quiet.fusion.missing_dimensions.includes("co2")){
+            throw new Error("quiet case must report missing CO2 evidence");
+          }
+
+          const rain=byId["topology-rain-new-apt"];
+          if(!rain||!String(rain.fusion.decision).startsWith("SCREENING_")){
+            throw new Error("rain case should produce screening-only multi-physics ranking");
+          }
+          if(rain.fusion.trusted_coverage_complete!==false){
+            throw new Error("rain screening coverage must remain untrusted");
+          }
+          if(rain.fusion.trusted_for_generalization_claim!==false){
+            throw new Error("rain screening must not promote");
+          }
+          if(!rain.providers.some(p=>p.id==="rain-ingress-screening-v1")){
+            throw new Error("rain ingress screening provider missing");
+          }
+          if(!rain.providers.some(p=>String(p.id).startsWith("contam-real-"))){
+            throw new Error("real ContamX provider missing");
+          }
+
+          console.log({
+            p48_multiphysics_screening:"PASS",
+            quiet_decision:quiet.fusion.decision,
+            rain_decision:rain.fusion.decision,
+            rain_winner:rain.fusion.winner&&rain.fusion.winner.label,
+            trusted_generalization_cases:x.trusted_generalization_cases
+          });
+          NODE
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pi-home-p48-multiphysics-screening
+          path: |
+            pi-home-p48-multiphysics-screening.json
