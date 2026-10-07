@@ -91,6 +91,7 @@ jobs:
           tolerance=float(os.environ["INPUT_TOLERANCE"])
           assert 0 < probe <= 5, "probe_open_pct must be in (0,5]"
           assert 0 <= tolerance <= 2, "tolerance_pct must be in [0,2]"
+          assert probe > tolerance, "probe_open_pct must exceed tolerance_pct"
           PY
           python - <<'PY'
           import json, os, pathlib, wave
