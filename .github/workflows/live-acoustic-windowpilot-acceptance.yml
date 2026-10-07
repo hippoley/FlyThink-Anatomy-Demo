@@ -62,6 +62,8 @@ concurrency:
 jobs:
   live-acceptance:
     runs-on: [self-hosted, linux]
+    env:
+      SPATIALRUNTIME_PIN: d123ab9a5310cb9ce15d9e82630828a0d32211f4
     environment: physical-lab
     timeout-minutes: 60
 
@@ -72,8 +74,15 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: hippoley/SpatialRuntime
-          ref: main
+          ref: ${{ env.SPATIALRUNTIME_PIN }}
           path: _spatialruntime
+      - name: Verify pinned SpatialRuntime revision
+        shell: bash
+        run: |
+          set -euo pipefail
+          actual="$(git -C _spatialruntime rev-parse HEAD)"
+          test "$actual" = "$SPATIALRUNTIME_PIN"
+
 
       - uses: actions/setup-python@v5
         with:
