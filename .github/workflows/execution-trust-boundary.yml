@@ -15,6 +15,7 @@ on:
       - "scripts/physical_runtime.cjs"
       - "scripts/flythink_execution_runtime.cjs"
       - "scripts/execution_receipt.cjs"
+      - "scripts/execution_proof_bundle.cjs"
       - "scripts/execution_reasoning_contract.cjs"
       - "scripts/decision_proposal_contract.cjs"
       - "scripts/whole_home_patch_contract.cjs"
@@ -25,9 +26,11 @@ on:
       - "scripts/test_production_physical_turn_atomicity.cjs"
       - "tests/flythink_execution_runtime.cjs"
       - "tests/execution_receipt.cjs"
+      - "tests/execution_proof_bundle.cjs"
       - ".github/workflows/execution-trust-boundary.yml"
       - "benchmarks/execution_reasoning_contract_cases.json"
       - "contracts/decision-proposal.v1.schema.json"
+      - "contracts/execution-proof-bundle.v1.schema.json"
       - "tests/execution_reasoning_contract.cjs"
       - "tests/decision_proposal_contract.cjs"
   pull_request:
@@ -43,6 +46,7 @@ on:
       - "scripts/physical_runtime.cjs"
       - "scripts/flythink_execution_runtime.cjs"
       - "scripts/execution_receipt.cjs"
+      - "scripts/execution_proof_bundle.cjs"
       - "scripts/execution_reasoning_contract.cjs"
       - "scripts/decision_proposal_contract.cjs"
       - "scripts/whole_home_patch_contract.cjs"
@@ -53,9 +57,11 @@ on:
       - "scripts/test_production_physical_turn_atomicity.cjs"
       - "tests/flythink_execution_runtime.cjs"
       - "tests/execution_receipt.cjs"
+      - "tests/execution_proof_bundle.cjs"
       - ".github/workflows/execution-trust-boundary.yml"
       - "benchmarks/execution_reasoning_contract_cases.json"
       - "contracts/decision-proposal.v1.schema.json"
+      - "contracts/execution-proof-bundle.v1.schema.json"
       - "tests/execution_reasoning_contract.cjs"
       - "tests/decision_proposal_contract.cjs"
   workflow_dispatch:
@@ -85,8 +91,10 @@ jobs:
           node --check scripts/decision_proposal_contract.cjs
           node --check scripts/flythink_execution_runtime.cjs
           node --check scripts/execution_receipt.cjs
+          node --check scripts/execution_proof_bundle.cjs
           node --check tests/flythink_execution_runtime.cjs
           node --check tests/execution_receipt.cjs
+          node --check tests/execution_proof_bundle.cjs
           node --check tests/execution_reasoning_contract.cjs
           node --check tests/decision_proposal_contract.cjs
           node --check scripts/test_atomic_physical_set.cjs
@@ -125,3 +133,5 @@ jobs:
         run: node tests/flythink_execution_runtime.cjs
       - name: Prove execution receipt physical truth integrity
         run: node tests/execution_receipt.cjs
+      - name: Prove portable execution proof bundle binding
+        run: node tests/execution_proof_bundle.cjs
