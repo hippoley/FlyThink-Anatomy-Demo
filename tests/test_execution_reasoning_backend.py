@@ -33,3 +33,19 @@ def test_nested_semantic_output_is_rejected():
         assert "$.strategy.frames" in str(exc)
         return
     raise AssertionError("nested semantic frames must not reenter FlyThink")
+
+
+def test_candidate_action_target_must_be_resolved():
+    bad = dict(REQUEST)
+    bad["candidate_actions"] = [{
+        "op": "PATCH_SLOT",
+        "target": {"area": "卧室", "entity": "窗", "instance": "default"},
+        "slot": "opening",
+        "value": 20,
+    }]
+    try:
+        validate_execution_request(bad)
+    except ValueError as exc:
+        assert "candidate_action_target_not_resolved" in str(exc)
+        return
+    raise AssertionError("candidate actions must stay inside resolved targets")
