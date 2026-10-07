@@ -41,6 +41,7 @@ class AcousticFixtureManifestTest(unittest.TestCase):
             report=verify_manifest(wav,manifest,"human_recording")
             self.assertTrue(report["valid"],report["reasons"])
             self.assertEqual(report["source_kind"],"human_recording")
+            self.assertEqual(manifest["acceptance"]["max_cer"],0.25)
 
     def test_replacing_wav_bytes_fails(self):
         with tempfile.TemporaryDirectory() as d:
@@ -66,6 +67,15 @@ class AcousticFixtureManifestTest(unittest.TestCase):
             report=verify_manifest(wav,manifest,"human_recording")
             self.assertFalse(report["valid"])
             self.assertTrue(any("source kind" in x for x in report["reasons"]))
+
+    def test_manifest_rejects_invalid_cer_budget(self):
+        with tempfile.TemporaryDirectory() as d:
+            wav=Path(d)/"human.wav"
+            write_wav(wav)
+            with self.assertRaisesRegex(ValueError,"max_cer"):
+                build_manifest(
+                    wav,"human_recording","打开主卧空调","reviewed mic",1.5
+                )
 
     def test_human_manifest_requires_provenance_note(self):
         with tempfile.TemporaryDirectory() as d:
