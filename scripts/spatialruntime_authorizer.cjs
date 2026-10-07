@@ -62,6 +62,14 @@ function validateAuthorizationReceipt(receipt,request,requestedPatches){
   if(Number(receipt.source_revision)!==Number(request.source_revision)){
     throw new Error("spatialruntime_authorizer_source_revision_mismatch");
   }
+  if(request.spatialruntime_pin!=null){
+    if(!isSha256(request.spatialruntime_pin)){
+      throw new Error("spatialruntime_authorizer_requested_pin_invalid");
+    }
+    if(receipt.spatialruntime_pin!==request.spatialruntime_pin){
+      throw new Error("spatialruntime_authorizer_pin_mismatch");
+    }
+  }
   const requestedScene=request&&request.spatial_context&&request.spatial_context.scene_evidence;
   if(requestedScene){
     if(!receipt.scene_evidence||!sameObject(receipt.scene_evidence,requestedScene)){
@@ -111,6 +119,10 @@ function createSpatialRuntimeAuthorizer(options={}){
   const python=options.python||process.env.PYTHON||"python";
   const script=options.script||path.join(__dirname,"spatialruntime_window_authorizer.py");
   const maxOpenRatioDelta=options.maxOpenRatioDelta==null?0.25:Number(options.maxOpenRatioDelta);
+  const spatialRuntimePin=options.spatialRuntimePin||process.env.SPATIALRUNTIME_PIN||null;
+  if(spatialRuntimePin!=null&&!isSha256(spatialRuntimePin)){
+    throw new Error("spatialruntime_authorizer_pin_invalid");
+  }
   const hasScenePath=!!(options.worldSnapshotPath||options.worldValidationReceiptPath);
   if(hasScenePath&&!(options.worldSnapshotPath&&options.worldValidationReceiptPath)){
     throw new Error("spatialruntime_scene_world_and_receipt_required");
@@ -173,7 +185,8 @@ function createSpatialRuntimeAuthorizer(options={}){
       runtime:clone(runtime||{}),
       patches:requestedPatches,
       spatial_context:spatialContext,
-      max_open_ratio_delta:maxOpenRatioDelta
+      max_open_ratio_delta:maxOpenRatioDelta,
+      spatialruntime_pin:spatialRuntimePin
     };
     const proc=spawnSync(python,[script],{
       input:JSON.stringify(request),
