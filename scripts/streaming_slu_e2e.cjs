@@ -6,7 +6,11 @@ const {
   normalizeRuntime
 }=require("./whole_home_patch_contract.cjs");
 const {deriveContext}=require("./runtime_context_adapter.cjs");
-const {MockThingDriver,executePhysicalTurn}=require("./physical_runtime.cjs");
+const {
+  MockThingDriver,
+  executePhysicalTurn,
+  evaluateQuarantinePreflight
+}=require("./physical_runtime.cjs");
 const {evaluateCommit}=require("./commit_gate.cjs");
 
 function clone(v){return v==null?v:JSON.parse(JSON.stringify(v))}
@@ -106,40 +110,46 @@ class StreamingHomeSession{
     let physicalAuthorization=null;
     let authorizedPatches=clone(patches);
     if(gate.allow){
-      try{
-        if(this.physicalAuthorizer){
-          const authorization=await this.physicalAuthorizer({
-            runtime:clone(this.runtime),
-            patches:clone(patches),
-            event:clone(event),
-            context:clone(context),
-            prediction:clone(prediction),
-            source_step:this.physicalRevision,
-            source_revision:this.physicalRevision
-          });
-          if(!authorization||authorization.allow!==true){
-            throw new Error("physical_authorizer_did_not_allow");
+      const preflight=evaluateQuarantinePreflight(this.runtime,patches);
+      if(!preflight.allow){
+        const keys=preflight.violations.map(x=>x.device_key).join(",");
+        error="semantic_preflight_blocked:device_quarantined:"+keys;
+      }else{
+        try{
+          if(this.physicalAuthorizer){
+            const authorization=await this.physicalAuthorizer({
+              runtime:clone(this.runtime),
+              patches:clone(patches),
+              event:clone(event),
+              context:clone(context),
+              prediction:clone(prediction),
+              source_step:this.physicalRevision,
+              source_revision:this.physicalRevision
+            });
+            if(!authorization||authorization.allow!==true){
+              throw new Error("physical_authorizer_did_not_allow");
+            }
+            if(!Array.isArray(authorization.patches)||authorization.patches.length!==patches.length){
+              throw new Error("physical_authorizer_invalid_patches");
+            }
+            authorizedPatches=clone(authorization.patches);
+            physicalAuthorization=clone(authorization.receipt||authorization);
           }
-          if(!Array.isArray(authorization.patches)||authorization.patches.length!==patches.length){
-            throw new Error("physical_authorizer_invalid_patches");
-          }
-          authorizedPatches=clone(authorization.patches);
-          physicalAuthorization=clone(authorization.receipt||authorization);
+          const applied=await executePhysicalTurn(
+            this.runtime,
+            authorizedPatches,
+            this.driver,
+            {turn_id:event.turn_id||("stream:"+String(this.sequence+1))}
+          );
+          this.runtime=applied.runtime;
+          receipts=applied.receipts||[];
+          committed=receiptsApplied(receipts);
+          if(committed)this.physicalRevision++;
+          if(!committed)error=receiptFailure(receipts)||"physical_commit_has_no_applied_receipt";
+        }catch(e){
+          error=String(e&&e.message||e);
+          if(!physicalAuthorization&&e&&e.receipt)physicalAuthorization=clone(e.receipt);
         }
-        const applied=await executePhysicalTurn(
-          this.runtime,
-          authorizedPatches,
-          this.driver,
-          {turn_id:event.turn_id||("stream:"+String(this.sequence+1))}
-        );
-        this.runtime=applied.runtime;
-        receipts=applied.receipts||[];
-        committed=receiptsApplied(receipts);
-        if(committed)this.physicalRevision++;
-        if(!committed)error=receiptFailure(receipts)||"physical_commit_has_no_applied_receipt";
-      }catch(e){
-        error=String(e&&e.message||e);
-        if(!physicalAuthorization&&e&&e.receipt)physicalAuthorization=clone(e.receipt);
       }
     }
 

@@ -247,6 +247,12 @@ function stateAt(tick,pct,extra={}){
     assert.equal(out.receipts[0].reason,"hardware_identity_changed_after_actuation");
     assert.equal(out.receipts[0].hardware_identity_before,"hw-1");
     assert.equal(out.receipts[0].hardware_identity_after,"hw-swapped");
+    assert.equal(out.receipts[0].before_tick,20);
+    assert.equal(out.receipts[0].driver_receipt.status,"uncertain");
+    assert.equal(
+      out.receipts[0].driver_receipt.reason,
+      "hardware_identity_changed_after_actuation"
+    );
     assert.equal(out.receipts[0].observation.evidence.tick,21);
   }
 

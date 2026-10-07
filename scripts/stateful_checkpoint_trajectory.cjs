@@ -3,7 +3,11 @@ const cp=require("child_process");
 const readline=require("readline");
 const {applyTurn,normalizeRuntime}=require("./whole_home_patch_contract.cjs");
 const {deriveContext}=require("./runtime_context_adapter.cjs");
-const {MockThingDriver,executePhysicalTurn}=require("./physical_runtime.cjs");
+const {
+ MockThingDriver,
+ executePhysicalTurn,
+ evaluateQuarantinePreflight
+}=require("./physical_runtime.cjs");
 const {WindowPilotHttpDriver}=require("./windowpilot_http_driver.cjs");
 const {evaluateCommit}=require("./commit_gate.cjs");
 
@@ -23,6 +27,20 @@ function sameTargets(p,gold){
  const got=p&&p.target?[key(p.target)]:((p&&p.targets)||[]).map(key).sort();
  const exp=(Array.isArray(gold)?gold:[gold]).map(key).sort();
  return JSON.stringify(got)===JSON.stringify(exp);
+}
+function physicalReceiptsApplied(receipts){
+ return Array.isArray(receipts)&&receipts.length>0&&receipts.every(
+  x=>x&&(x.local_only===true||x.status==="applied")
+ );
+}
+function physicalReceiptFailure(receipts){
+ const failed=(receipts||[]).filter(
+  x=>!x||(x.local_only!==true&&x.status!=="applied")
+ );
+ if(!failed.length)return null;
+ return "physical_receipt_not_applied:"+failed.map(
+  x=>x&&x.status||"missing_status"
+ ).join(",");
 }
 
 function createCheckpointClient(args={}){
@@ -119,12 +137,29 @@ async function run(trajectory,args={}){
    if(outcome==="EXECUTE"&&commitGate.allow){
     try{
      if(physical){
-      const a=await executePhysicalTurn(runtime,pred.patches||[],physical,{turn_id:history.length+1});
-      runtime=a.runtime;physicalReceipts=a.receipts;
+      const preflight=evaluateQuarantinePreflight(runtime,pred.patches||[]);
+      if(!preflight.allow){
+       const keys=preflight.violations.map(x=>x.device_key).join(",");
+       applied=[];
+       committed=false;
+       error="semantic_preflight_blocked:device_quarantined:"+keys;
+       outcome="BLOCK";
+      }else{
+       const a=await executePhysicalTurn(runtime,pred.patches||[],physical,{turn_id:history.length+1});
+       runtime=a.runtime;physicalReceipts=a.receipts;
+       committed=physicalReceiptsApplied(physicalReceipts);
+       if(committed){
+        applied=(pred.patches||[]);
+       }else{
+        applied=[];
+        error=physicalReceiptFailure(physicalReceipts)||"physical_commit_has_no_applied_receipt";
+        outcome="INVALID";
+       }
+      }
      }else{
       const a=applyTurn(runtime,pred.patches||[]);runtime=a.runtime;
+      applied=(pred.patches||[]);committed=true;
      }
-     applied=(pred.patches||[]);committed=true;
     }
     catch(e){error=String(e.message);outcome=error.startsWith("protected_invariant_write")?"BLOCK":error.includes("requires_existing_value")?"CLARIFY":"INVALID";if(error.startsWith("untouched_state_mutation"))untouched++;}
    }
@@ -155,4 +190,9 @@ async function run(trajectory,args={}){
   runtime,turns:history
  };
 }
-module.exports={run,createCheckpointClient};
+module.exports={
+ run,
+ createCheckpointClient,
+ physicalReceiptsApplied,
+ physicalReceiptFailure
+};

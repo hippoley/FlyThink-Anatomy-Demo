@@ -10,6 +10,100 @@ function activeDevice(runtime, target) {
   return (runtime.devices || {})[deviceKey(target)] || null;
 }
 
+function deviceHealth(runtime,target){
+  return (runtime.deviceHealth||{})[deviceKey(target)]||null;
+}
+
+function isQuarantined(runtime,target){
+  const health=deviceHealth(runtime,target);
+  return !!health&&health.status==="quarantined";
+}
+
+function isSafetyReducingPatch(runtime,patch){
+  if(!patch||!patch.target)return false;
+  if(patch.op==="CLOSE_DEVICE")return true;
+  if(patch.op!=="PATCH_SLOT")return false;
+  if(patch.slot==="power"){
+    return patch.value==="OFF"||patch.value===false||patch.value===0;
+  }
+  if(["opening","window_open_pct","position","position_pct"].includes(patch.slot)){
+    const device=activeDevice(runtime,patch.target);
+    const slots=device&&device.slots||{};
+    const before=slots.opening ?? slots.window_open_pct ?? slots.position ?? slots.position_pct;
+    const next=Number(patch.value);
+    return Number.isFinite(Number(before))&&Number.isFinite(next)&&next<=Number(before);
+  }
+  return false;
+}
+
+function markQuarantined(runtime,target,command,turnId){
+  const key=deviceKey(target);
+  runtime.deviceHealth[key]={
+    status:"quarantined",
+    reason:command&&command.reason||command&&command.status||"physical_state_uncertain",
+    source_status:command&&command.status||"unknown",
+    command_id:command&&command.id||null,
+    since_turn_id:turnId||null
+  };
+  return runtime.deviceHealth[key];
+}
+
+function clearQuarantine(runtime,target,recoveryProof){
+  const key=deviceKey(target);
+  if(!runtime.deviceHealth[key]||runtime.deviceHealth[key].status!=="quarantined"){
+    throw new Error("device_not_quarantined");
+  }
+  const validProof=
+    recoveryProof&&
+    recoveryProof.verified===true&&
+    recoveryProof.readiness_verified===true&&
+    recoveryProof.hardware_identity_verified===true&&
+    recoveryProof.physical_readback_verified===true&&
+    recoveryProof.safe_position_verified===true;
+  if(!validProof){
+    throw new Error("quarantine_recovery_proof_required");
+  }
+  runtime.deviceHealth[key]={
+    status:"healthy",
+    recovered_at_turn_id:recoveryProof.turn_id||null,
+    recovery:clone(recoveryProof)
+  };
+  return runtime.deviceHealth[key];
+}
+
+function evaluateQuarantinePreflight(runtime,patches){
+  const normalized=normalizeRuntime(runtime);
+  const violations=[];
+  for(const proposed of patches||[]){
+    for(const expanded of expandSetPatch(proposed)){
+      if(["CANCEL_PENDING","PROTECT"].includes(expanded.op))continue;
+      let physicalPatch;
+      try{
+        physicalPatch=materializePatch(normalized,expanded);
+      }catch(e){
+        continue;
+      }
+      if(
+        physicalPatch.target &&
+        isQuarantined(normalized,physicalPatch.target) &&
+        !isSafetyReducingPatch(normalized,physicalPatch)
+      ){
+        violations.push({
+          reason:"device_quarantined",
+          device_key:deviceKey(physicalPatch.target),
+          semantic_patch:clone(expanded),
+          physical_patch:clone(physicalPatch)
+        });
+      }
+    }
+  }
+  return {
+    allow:violations.length===0,
+    reason:violations.length?"device_quarantined":null,
+    violations
+  };
+}
+
 function materializePatch(runtime, patch) {
   if (!patch) throw new Error("physical_patch_required");
   if (patch.op === "PATCH_RELATIVE") {
@@ -127,6 +221,41 @@ async function executePhysicalTurn(inputRuntime, patches, driver, options = {}) 
       }
 
       const physicalPatch = materializePatch(runtime, expanded);
+      const turnId=expanded.turn_id || options.turn_id || null;
+
+      if(
+        physicalPatch.target &&
+        isQuarantined(runtime,physicalPatch.target) &&
+        !isSafetyReducingPatch(runtime,physicalPatch)
+      ){
+        const observation={
+          target:clone(physicalPatch.target),
+          exists:!!activeDevice(runtime,physicalPatch.target),
+          slots:clone(activeDevice(runtime,physicalPatch.target)?.slots||{}),
+          evidence:{source:"runtime:quarantine",measured:false}
+        };
+        const id="quarantine:"+String(runtime.executionLedger.length+1);
+        runtime.executionLedger.push({
+          id,
+          turn_id:turnId,
+          kind:"physical",
+          status:"blocked",
+          reason:"device_quarantined",
+          semantic_patch:clone(expanded),
+          physical_patch:clone(physicalPatch),
+          observation:clone(observation)
+        });
+        receipts.push({
+          patch:clone(expanded),
+          physical_patch:clone(physicalPatch),
+          command_id:id,
+          status:"blocked",
+          reason:"device_quarantined",
+          observation:clone(observation)
+        });
+        continue;
+      }
+
       const command = await Promise.resolve(driver.execute(physicalPatch));
       if (!command || typeof command !== "object") {
         throw new Error("physical_driver_invalid_receipt");
@@ -134,8 +263,13 @@ async function executePhysicalTurn(inputRuntime, patches, driver, options = {}) 
       if (!command.observation) {
         throw new Error("physical_driver_missing_observation");
       }
-      const turnId=expanded.turn_id || options.turn_id || null;
       runtime = reconcileObservation(runtime, command.observation, turnId);
+      if(
+        physicalPatch.target &&
+        ["uncertain","unsafe"].includes(command.status)
+      ){
+        markQuarantined(runtime,physicalPatch.target,command,turnId);
+      }
       const executionRecord={
         id:command.id || "physical:"+String(runtime.executionLedger.length+1),
         turn_id:turnId,
@@ -153,7 +287,18 @@ async function executePhysicalTurn(inputRuntime, patches, driver, options = {}) 
         command_id: executionRecord.id,
         status: executionRecord.status,
         reason: executionRecord.reason,
-        observation: clone(command.observation)
+        observation: clone(command.observation),
+        driver_receipt: clone(command),
+        ack: clone(command.ack||null),
+        polls: command.polls==null?null:command.polls,
+        requested_position_pct:
+          command.requested_position_pct==null?null:command.requested_position_pct,
+        before_tick: command.before_tick==null?null:command.before_tick,
+        hardware_identity_before: command.hardware_identity_before||null,
+        hardware_identity_after: command.hardware_identity_after||null,
+        readiness_before: clone(command.readiness_before||command.readiness||null),
+        readiness_after: clone(command.readiness_after||null),
+        safety_stop: clone(command.safety_stop||null)
       });
     }
   }
@@ -164,5 +309,11 @@ module.exports = {
   MockThingDriver,
   materializePatch,
   reconcileObservation,
+  deviceHealth,
+  isQuarantined,
+  isSafetyReducingPatch,
+  markQuarantined,
+  clearQuarantine,
+  evaluateQuarantinePreflight,
   executePhysicalTurn
 };
