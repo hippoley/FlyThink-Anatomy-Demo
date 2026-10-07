@@ -39,11 +39,16 @@ const proposal={
   evidence_refs:["sensor:co2"],
   reason_code:"HIGH_CO2"
 };
-const authorization={
+const authorizationBase={
   schema:"homeai_spatialruntime_authorization_receipt_v1",
   allow:true,
   registry_digest:"registry-1",
-  single_use:true
+  single_use:true,
+  authorized_patches:[action]
+};
+const authorization={
+  ...authorizationBase,
+  receipt_sha256:digestObject(authorizationBase)
 };
 
 function clone(v){return JSON.parse(JSON.stringify(v))}
@@ -299,7 +304,28 @@ function buildVerified(){
     );
   }
 
-  // 10. An independently supplied source artifact must match the receipt digest binding.
+  // 10. Authorization receipt may self-reseal, but cannot change the exact authorized action.
+  {
+    let forged=buildVerified();
+    forged.authorization.receipt.authorized_patches[0].value=9;
+    const authBase=clone(forged.authorization.receipt);
+    delete authBase.receipt_sha256;
+    forged.authorization.receipt.receipt_sha256=digestObject(authBase);
+    forged.authorization.receipt_sha256=digestObject(forged.authorization.receipt);
+    forged.evidence_digest=digestObject({
+      authorization:forged.authorization,
+      physical:forged.physical,
+      reconcile:forged.reconcile,
+      closeout:forged.closeout
+    });
+    forged=reseal(forged);
+    assert.throws(
+      ()=>verifyExecutionReceipt(forged),
+      /execution_receipt_verification_summary_mismatch/
+    );
+  }
+
+  // 11. An independently supplied source artifact must match the receipt digest binding.
   {
     const receipt=buildVerified();
     const forgedRequest=clone(request);
@@ -312,7 +338,7 @@ function buildVerified(){
 
   console.log(JSON.stringify({
     ok:true,
-    cases:10,
+    cases:11,
     schema:"execution-receipt.v1",
     contract:"authorized action + physical patch + target + ACK + causal readback + hardware identity are digest-bound and independently checked"
   }));
