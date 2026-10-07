@@ -369,6 +369,7 @@ python scripts/acoustic_fixture_manifest.py create \
   --source-kind human_recording \
   --expected-text "打开主卧窗" \
   --provenance-note "reviewed microphone recording" \
+  --max-cer 0.25 \
   --out human-home-command.manifest.json
 
 python scripts/acoustic_fixture_manifest.py verify \
@@ -403,8 +404,12 @@ python scripts/live_acoustic_windowpilot.py \
 
 The receipt freezes ASR revisions/final text, semantic target and patch,
 hardware identity, measured WindowPilot readback, closeout, reconciled runtime,
-the reviewed WAV SHA-256 and the manifest SHA-256. It can be verified later
-without the device being online:
+the reviewed WAV SHA-256 and the manifest SHA-256. Acoustic transcription error
+is reported separately as character error rate (CER) against the frozen spoken
+text; the manifest fixes the maximum accepted CER. A small ASR insertion or
+substitution does not erase an otherwise correct semantic/device result, but it
+remains visible evidence and fails once it exceeds the frozen CER budget. The
+receipt can be verified later without the device being online:
 
 ```bash
 node scripts/verify_acoustic_windowpilot_evidence.cjs \
