@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/hippoley/FlyThink-Anatomy-Demo/contracts/execution-proof-bundle.v1.schema.json",
+  "title": "FlyThink Execution Proof Bundle v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "authority",
+    "artifacts",
+    "manifest",
+    "verification",
+    "bundle_sha256"
+  ],
+  "properties": {
+    "schema_version": {"const": "execution-proof-bundle.v1"},
+    "authority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["execution_truth", "external_proposal", "note"],
+      "properties": {
+        "execution_truth": {"const": "execution-receipt.v1"},
+        "external_proposal": {"const": "decision-proposal.v1"},
+        "note": {"type": "string", "minLength": 1}
+      }
+    },
+    "artifacts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "decision_proposal",
+        "contextual_state",
+        "request",
+        "internal_proposal",
+        "before_runtime",
+        "after_runtime",
+        "execution_receipt"
+      ],
+      "properties": {
+        "decision_proposal": {"type": "object"},
+        "contextual_state": {"type": "object"},
+        "request": {"type": "object"},
+        "internal_proposal": {"type": "object"},
+        "before_runtime": {"type": "object"},
+        "after_runtime": {"type": "object"},
+        "execution_receipt": {"type": "object"}
+      }
+    },
+    "manifest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "decision_proposal_sha256",
+        "contextual_state_sha256",
+        "request_sha256",
+        "internal_proposal_sha256",
+        "before_runtime_sha256",
+        "after_runtime_sha256",
+        "execution_receipt_sha256"
+      ],
+      "properties": {
+        "decision_proposal_sha256": {"$ref": "#/$defs/sha256"},
+        "contextual_state_sha256": {"$ref": "#/$defs/sha256"},
+        "request_sha256": {"$ref": "#/$defs/sha256"},
+        "internal_proposal_sha256": {"$ref": "#/$defs/sha256"},
+        "before_runtime_sha256": {"$ref": "#/$defs/sha256"},
+        "after_runtime_sha256": {"$ref": "#/$defs/sha256"},
+        "execution_receipt_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "verification": {"type": "object"},
+    "bundle_sha256": {"$ref": "#/$defs/sha256"}
+  },
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    }
+  }
+}
