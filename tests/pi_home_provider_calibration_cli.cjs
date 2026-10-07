@@ -108,3 +108,21 @@ const partialLifecycle=spawnSync(process.execPath,[
 ],{encoding:"utf8"});
 assert.notEqual(partialLifecycle.status,0);
 assert.match(partialLifecycle.stderr,/time-bounded trust requires/);
+
+
+const invalidWindowOut=path.join(root,"invalid-window-trust.json");
+const invalidWindow=spawnSync(process.execPath,[
+  runner,
+  "--dataset",measuredFixture,
+  "--out",path.join(root,"invalid-window-report.json"),
+  "--calibration-ref","calibration://rain/invalid-window",
+  "--approved-by","engineering-review-board",
+  "--trust-entry-out",invalidWindowOut,
+  "--not-before","2026-11-01T00:00:00Z",
+  "--expires-at","2026-10-01T00:00:00Z",
+  "--reviewed-at","2026-10-01T00:00:00Z",
+  "--review-due-at","2026-10-20T00:00:00Z"
+],{encoding:"utf8"});
+assert.notEqual(invalidWindow.status,0);
+assert.match(invalidWindow.stderr,/expiry_must_follow/);
+assert.equal(fs.existsSync(invalidWindowOut),false);
