@@ -69,8 +69,8 @@ function freshLedger(){
     has(id){return seen.has(id)}
   };
 }
-function passAuthorizer(counter=null,transform=null,authorizationId=null){
-  return async({patches,runtime})=>{
+function passAuthorizer(counter=null,transform=null,authorizationId=null,override={}){
+  return async({patches,runtime,event,source_step,source_revision})=>{
     if(counter)counter.calls++;
     const out=patches.map(p=>transform?transform(p):p);
     const patchDigest=sha256Object(out);
@@ -87,7 +87,11 @@ function passAuthorizer(counter=null,transform=null,authorizationId=null){
         registry_digest:registryDigest
       }),
       single_use:true,
-      authorized_patches:out
+      case_id:String(event&&event.turn_id||""),
+      source_step:Number(source_step||0),
+      source_revision:Number(source_revision||0),
+      authorized_patches:out,
+      ...override
     };
     return {
       allow:true,
@@ -517,9 +521,80 @@ function passAuthorizer(counter=null,transform=null,authorizationId=null){
     assert.equal(isQuarantined(runtime.snapshot(),W),false);
   }
 
+  // 15. Authorization receipt integrity is mandatory before actuation.
+  {
+    const action={op:"PATCH_SLOT",target:B,slot:"temperature",value:19};
+
+    async function runWithAuthorizer(authorizer){
+      const driver=new MockThingDriver(initial);
+      const out=await runExecutionProposal({
+        runtime:initial,
+        contextual_state:context,
+        request:request([action]),
+        proposal:proposal([action]),
+        driver,
+        physicalAuthorizer:authorizer,
+        authorizationLedger:freshLedger()
+      });
+      assert.equal(out.ok,false);
+      assert.equal(out.status,"BLOCKED");
+      assert.equal(out.reason,"physical_authorization_invalid");
+      assert.equal(driver.commands.length,0);
+      return out;
+    }
+
+    let out=await runWithAuthorizer(
+      passAuthorizer(null,null,null,{
+        registry_digest:"f".repeat(64)
+      })
+    );
+    assert.match(out.authorization_error,/registry_digest_mismatch/);
+
+    out=await runWithAuthorizer(
+      passAuthorizer(null,null,null,{
+        authorized_patches:[{
+          op:"PATCH_SLOT",target:B,slot:"temperature",value:17
+        }]
+      })
+    );
+    assert.match(out.authorization_error,/receipt_patches_mismatch/);
+
+    const tamperedShaAuthorizer=async({patches,runtime,event,source_step,source_revision})=>{
+      const base={
+        schema:"test-authorization-v1",
+        allow:true,
+        patch_digest:sha256Object(patches),
+        registry_digest:runtimeRegistryDigest(runtime),
+        authorization_id:"c".repeat(64),
+        single_use:true,
+        case_id:String(event&&event.turn_id||""),
+        source_step:Number(source_step||0),
+        source_revision:Number(source_revision||0),
+        authorized_patches:patches
+      };
+      return {
+        allow:true,
+        patches,
+        receipt:{...base,receipt_sha256:"d".repeat(64)}
+      };
+    };
+    out=await runWithAuthorizer(tamperedShaAuthorizer);
+    assert.match(out.authorization_error,/receipt_sha256_mismatch/);
+
+    out=await runWithAuthorizer(
+      passAuthorizer(null,null,null,{authorization_id:"not-a-digest"})
+    );
+    assert.match(out.authorization_error,/authorization_id_invalid/);
+
+    out=await runWithAuthorizer(
+      passAuthorizer(null,null,null,{allow:false})
+    );
+    assert.match(out.authorization_error,/receipt_not_allowed/);
+  }
+
   console.log(JSON.stringify({
     ok:true,
-    cases:13,
+    cases:15,
     contract:"contextual execution proposal -> deterministic authorization -> atomic/single physical execution -> readback, with formal recovery"
   }));
 })().catch(e=>{console.error(e);process.exit(1)});
