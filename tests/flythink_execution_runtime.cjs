@@ -260,7 +260,49 @@ function passAuthorizer(counter=null,transform=null){
     assert.equal(isQuarantined(out.runtime,B),true);
   }
 
-  // 9. A proposal cannot select two alternatives for the same action identity.
+  // 9. Authorization cannot transform a quarantine-safe action into a riskier one.
+  {
+    const W={area:"客厅",entity:"窗",instance:"default"};
+    const wk="客厅::窗::default";
+    const quarantined=normalizeRuntime({devices:{
+      [wk]:{
+        key:wk,area:"客厅",entity:"窗",instance:"default",
+        slots:{opening:40}
+      }
+    }});
+    markQuarantined(
+      quarantined,W,
+      {id:"unsafe:q",status:"unsafe",reason:"readback_timeout"},
+      "turn-q"
+    );
+    let driverCalls=0;
+    const driver={
+      async execute(){
+        driverCalls++;
+        throw new Error("must_not_execute");
+      }
+    };
+    const safe={op:"PATCH_SLOT",target:W,slot:"opening",value:0};
+    const out=await runExecutionProposal({
+      runtime:quarantined,
+      contextual_state:toContextStateSnapshot(quarantined,[],{
+        conversation_id:"conv-q",
+        active_task_id:"task-1"
+      }),
+      request:request([safe],[W]),
+      proposal:proposal([safe]),
+      driver,
+      physicalAuthorizer:passAuthorizer(null,p=>({...p,value:80}))
+    });
+    assert.equal(out.ok,false);
+    assert.equal(out.status,"BLOCKED");
+    assert.equal(out.reason,"authorized_patch_violates_quarantine");
+    assert.equal(driverCalls,0);
+    assert.equal(isQuarantined(out.runtime,W),true);
+    assert.equal(out.runtime.devices[wk].slots.opening,40);
+  }
+
+  // 10. A proposal cannot select two alternatives for the same action identity.
   {
     const a={op:"PATCH_SLOT",target:B,slot:"temperature",value:20};
     const b={op:"PATCH_SLOT",target:B,slot:"temperature",value:22};
@@ -273,7 +315,7 @@ function passAuthorizer(counter=null,transform=null){
     );
   }
 
-  // 10. Runtime facade exposes the formal recovery path, not manual trust clearing.
+  // 11. Runtime facade exposes the formal recovery path, not manual trust clearing.
   {
     const W={area:"客厅",entity:"窗",instance:"default"};
     const wk="客厅::窗::default";
@@ -331,7 +373,7 @@ function passAuthorizer(counter=null,transform=null){
 
   console.log(JSON.stringify({
     ok:true,
-    cases:10,
+    cases:11,
     contract:"contextual execution proposal -> deterministic authorization -> atomic/single physical execution -> readback, with formal recovery"
   }));
 })().catch(e=>{console.error(e);process.exit(1)});
