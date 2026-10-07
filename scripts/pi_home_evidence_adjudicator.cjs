@@ -1,6 +1,9 @@
 "use strict";
 
-const {fuseCandidateEvidence}=require("./pi_home_multiphysics_evidence.cjs");
+const {
+  fuseCandidateEvidence,
+  normalizeEvidenceResult
+}=require("./pi_home_multiphysics_evidence.cjs");
 
 function uniq(xs){return [...new Set((xs||[]).map(String))].sort()}
 function clone(v){return v==null?v:JSON.parse(JSON.stringify(v))}
@@ -113,7 +116,8 @@ function adjudicateCandidateEvidence({
     };
   }
 
-  const providers=(provider_results||[]).map(result=>({
+  const normalizedResults=(provider_results||[]).map(normalizeEvidenceResult);
+  const providers=normalizedResults.map(result=>({
     id:result.id,
     kind:result.kind,
     covered_dimensions:Object.keys(result.dimensions||{}),
