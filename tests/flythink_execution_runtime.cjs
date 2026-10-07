@@ -69,8 +69,8 @@ function freshLedger(){
     has(id){return seen.has(id)}
   };
 }
-function passAuthorizer(counter=null,transform=null,authorizationId=null){
-  return async({patches,runtime})=>{
+function passAuthorizer(counter=null,transform=null,authorizationId=null,override={}){
+  return async({patches,runtime,event,source_step,source_revision})=>{
     if(counter)counter.calls++;
     const out=patches.map(p=>transform?transform(p):p);
     const patchDigest=sha256Object(out);
@@ -87,7 +87,11 @@ function passAuthorizer(counter=null,transform=null,authorizationId=null){
         registry_digest:registryDigest
       }),
       single_use:true,
-      authorized_patches:out
+      case_id:String(event&&event.turn_id||""),
+      source_step:Number(source_step||0),
+      source_revision:Number(source_revision||0),
+      authorized_patches:out,
+      ...override
     };
     return {
       allow:true,
@@ -519,7 +523,7 @@ function passAuthorizer(counter=null,transform=null,authorizationId=null){
 
   console.log(JSON.stringify({
     ok:true,
-    cases:13,
+    cases:14,
     contract:"contextual execution proposal -> deterministic authorization -> atomic/single physical execution -> readback, with formal recovery"
   }));
 })().catch(e=>{console.error(e);process.exit(1)});
