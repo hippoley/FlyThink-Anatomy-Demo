@@ -115,6 +115,13 @@ assert.equal(
   "20aa0b07994f9d3b18fcd7c5c3be84db8205eac733cf54f622bf138226d5609a"
 );
 
+const nonFinite=JSON.parse(JSON.stringify(golden));
+nonFinite.world.devices["客厅::窗::default"].slots.opening=Infinity;
+assert.throws(
+  ()=>contextStateDigest(nonFinite),
+  /context_state_non_finite_number/
+);
+
 assert.equal(snapshot.contract_version,CONTRACT_VERSION);
 assert.equal(snapshot.conversation.conversation_id,"conv-1");
 assert.deepEqual(snapshot.conversation.focused_target,target);
