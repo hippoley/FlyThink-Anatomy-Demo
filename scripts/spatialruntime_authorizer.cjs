@@ -12,7 +12,7 @@ function createSpatialRuntimeAuthorizer(options={}){
   const python=options.python||process.env.PYTHON||"python";
   const script=options.script||path.join(__dirname,"spatialruntime_window_authorizer.py");
   const maxOpenRatioDelta=options.maxOpenRatioDelta==null?0.25:Number(options.maxOpenRatioDelta);
-  return async function authorize({runtime,patches,event,context}={}){
+  return async function authorize({runtime,patches,event,context,source_step,source_revision}={}){
     const hint=(event&&event.context_hint&&event.context_hint.spatialruntime)||{};
     const spatialContext={
       rain:hint.rain ?? context?.rain ?? context?.sensors?.rain?.value ?? "dry",
@@ -20,12 +20,11 @@ function createSpatialRuntimeAuthorizer(options={}){
         ?hint.exterior_window_keys
         :(Array.isArray(options.exteriorWindowKeys)?options.exteriorWindowKeys:[])
     };
-    const sequence=Number(options.sequenceProvider?options.sequenceProvider():event?.sequence||0);
     const request={
       schema:REQUEST_SCHEMA,
       case_id:String(event?.turn_id||options.caseId||"homeai-windowpilot"),
-      source_step:Number.isInteger(sequence)&&sequence>=0?sequence:0,
-      source_revision:Number.isInteger(sequence)&&sequence>=0?sequence:0,
+      source_step:Number.isInteger(source_step)&&source_step>=0?source_step:0,
+      source_revision:Number.isInteger(source_revision)&&source_revision>=0?source_revision:0,
       runtime:clone(runtime||{}),
       patches:clone(patches||[]),
       spatial_context:spatialContext,
