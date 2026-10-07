@@ -1,6 +1,7 @@
 "use strict";
 
 const crypto=require("crypto");
+const {normalizeIsoInstant}=require("./pi_home_provider_trust.cjs");
 
 function clone(v){return v==null?v:JSON.parse(JSON.stringify(v))}
 function requireText(value,name){
@@ -229,6 +230,31 @@ function buildTrustRegistryEntryFromCalibration(report={},{
   };
 }
 
+function buildTimeBoundTrustRegistryEntryFromCalibration(report={},{
+  calibration_ref,
+  approved_by,
+  evidence_levels=["engineering-validated"],
+  not_before,
+  expires_at,
+  reviewed_at,
+  review_due_at,
+  lifecycle_metadata=null
+}={}){
+  const base=buildTrustRegistryEntryFromCalibration(report,{
+    calibration_ref,
+    approved_by,
+    evidence_levels
+  });
+  return {
+    ...base,
+    not_before:normalizeIsoInstant(not_before,"provider_trust_not_before"),
+    expires_at:normalizeIsoInstant(expires_at,"provider_trust_expires_at"),
+    reviewed_at:normalizeIsoInstant(reviewed_at,"provider_trust_reviewed_at"),
+    review_due_at:normalizeIsoInstant(review_due_at,"provider_trust_review_due_at"),
+    lifecycle_metadata:clone(lifecycle_metadata)
+  };
+}
+
 function buildTrustAttestationFromCalibration(report={},{
   calibration_ref
 }={}){
@@ -250,5 +276,6 @@ module.exports={
   evaluateProviderCalibration,
   verifyCalibrationReport,
   buildTrustRegistryEntryFromCalibration,
+  buildTimeBoundTrustRegistryEntryFromCalibration,
   buildTrustAttestationFromCalibration
 };
