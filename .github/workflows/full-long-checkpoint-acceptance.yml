@@ -48,6 +48,7 @@ on:
       - "tests/pi_home_provider_trust_lineage.cjs"
       - "tests/pi_home_evidence_decision_receipt.cjs"
       - "tests/pi_home_decision_receipt_ledger.cjs"
+      - "tests/pi_home_journal_anchor_store.cjs"
       - "tests/pi_home_provider_calibration.cjs"
       - "tests/pi_home_provider_calibration_cli.cjs"
       - "benchmarks/pi_home_provider_calibration_screening_fixture.json"
@@ -55,6 +56,7 @@ on:
       - "scripts/pi_home_provider_trust_lineage.cjs"
       - "scripts/pi_home_evidence_decision_receipt.cjs"
       - "scripts/pi_home_decision_receipt_ledger.cjs"
+      - "scripts/pi_home_journal_anchor_store.cjs"
       - "scripts/pi_home_provider_calibration.cjs"
       - "scripts/run_pi_home_provider_calibration.cjs"
       - "scripts/pi_home_learned_physics_gate.cjs"
@@ -287,6 +289,7 @@ jobs:
           node tests/pi_home_provider_trust_lineage.cjs
           node tests/pi_home_evidence_decision_receipt.cjs
           node tests/pi_home_decision_receipt_ledger.cjs
+          node tests/pi_home_journal_anchor_store.cjs
           node tests/pi_home_provider_calibration.cjs
           node tests/pi_home_provider_calibration_cli.cjs
           node tests/pi_home_evidence_adjudicator.cjs
