@@ -109,21 +109,6 @@ function validateAuthorizationReceipt(receipt,request,requestedPatches){
   if(receipt.single_use!==true){
     throw new Error("spatialruntime_authorizer_single_use_required");
   }
-  if(!isSha256(receipt.authorization_id)){
-    throw new Error("spatialruntime_authorizer_authorization_id_invalid");
-  }
-  const expectedAuthorizationId=sha256Object({
-    case_id:receipt.case_id,
-    source_step:receipt.source_step,
-    source_revision:receipt.source_revision,
-    patch_digest:receipt.patch_digest,
-    registry_digest:receipt.registry_digest,
-    spatialruntime_commit_sha:receipt.spatialruntime_commit_sha,
-    trace_hash:receipt.trace_hash
-  });
-  if(receipt.authorization_id!==expectedAuthorizationId){
-    throw new Error("spatialruntime_authorizer_authorization_id_mismatch");
-  }
   const requestedScene=request&&request.spatial_context&&request.spatial_context.scene_evidence;
   if(requestedScene){
     if(!receipt.scene_evidence||!sameObject(receipt.scene_evidence,requestedScene)){
@@ -152,6 +137,21 @@ function validateAuthorizationReceipt(receipt,request,requestedPatches){
   if(!isSha256(receipt.patch_digest)||
      receipt.patch_digest!==sha256Object(receipt.authorized_patches)){
     throw new Error("spatialruntime_authorizer_patch_digest_mismatch");
+  }
+  if(!isSha256(receipt.authorization_id)){
+    throw new Error("spatialruntime_authorizer_authorization_id_invalid");
+  }
+  const expectedAuthorizationId=sha256Object({
+    case_id:receipt.case_id,
+    source_step:receipt.source_step,
+    source_revision:receipt.source_revision,
+    patch_digest:receipt.patch_digest,
+    registry_digest:receipt.registry_digest,
+    spatialruntime_commit_sha:receipt.spatialruntime_commit_sha,
+    trace_hash:receipt.trace_hash
+  });
+  if(receipt.authorization_id!==expectedAuthorizationId){
+    throw new Error("spatialruntime_authorizer_authorization_id_mismatch");
   }
   for(let i=0;i<requestedPatches.length;i++){
     const requested=requestedPatches[i];
