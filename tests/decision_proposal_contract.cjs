@@ -13,7 +13,11 @@ const {
   runDecisionProposal
 }=require("../scripts/flythink_execution_runtime.cjs");
 const {normalizeRuntime}=require("../scripts/whole_home_patch_contract.cjs");
-const {toContextStateSnapshot}=require("../scripts/contextual_edge_slu_adapter.cjs");
+const {
+  CONTEXT_CANONICALIZATION,
+  toContextStateSnapshot,
+  contextStateDigest
+}=require("../scripts/contextual_edge_slu_adapter.cjs");
 
 const TARGET={area:"卧室",entity:"窗",instance:"east"};
 const WORLD_SHA="a".repeat(64);
@@ -30,18 +34,22 @@ function context(){
   }});
   const snapshot=toContextStateSnapshot(runtime,[],{
     conversation_id:"conv-1",
-    active_task_id:"task-1"
+    active_task_id:"task-1",
+    context_revision:7
   });
-  snapshot.context_revision=7;
+  snapshot.context_canonicalization=CONTEXT_CANONICALIZATION;
+  snapshot.context_sha256=contextStateDigest(snapshot);
   return {runtime,snapshot};
 }
 
 function proposal(overrides={}){
+  const {snapshot}=context();
   return {
     schema_version:"decision-proposal.v1",
     proposal_id:"proposal-1",
     task_id:"task-1",
     context_revision:7,
+    context_sha256:snapshot.context_sha256,
     world_snapshot_revision:0,
     world_snapshot_sha256:WORLD_SHA,
     intent:"VENTILATE",
@@ -69,7 +77,9 @@ function proposal(overrides={}){
     ));
     assert.equal(schema.properties.schema_version.const,"decision-proposal.v1");
     assert.equal(schema.additionalProperties,false);
+    assert.ok(schema.required.includes("context_sha256"));
     assert.ok(schema.required.includes("world_snapshot_sha256"));
+    assert.equal(schema.properties.context_sha256.pattern,"^[0-9a-f]{64}$");
     assert.equal(schema.properties.world_snapshot_sha256.pattern,"^[0-9a-f]{64}$");
     assert.deepEqual(schema.$defs.mutation.properties.operator.enum,["SET","ADD"]);
   }
@@ -95,6 +105,8 @@ function proposal(overrides={}){
       adapted.internal_proposal.strategy.source_decision_proposal_sha256,
       digestDecisionProposal(external)
     );
+    assert.equal(adapted.context_sha256,snapshot.context_sha256);
+    assert.equal(adapted.internal_proposal.strategy.context_sha256,snapshot.context_sha256);
     assert.equal(adapted.world_snapshot_sha256,WORLD_SHA);
     assert.equal(adapted.internal_proposal.strategy.world_snapshot_sha256,WORLD_SHA);
   }
@@ -142,7 +154,51 @@ function proposal(overrides={}){
     );
   }
 
-  // 6. Explicit confirmation requirement becomes DEFER with zero actions.
+  // 6. Equal context revision cannot substitute another semantic snapshot.
+  {
+    const {runtime,snapshot}=context();
+    const other=JSON.parse(JSON.stringify(snapshot));
+    other.conversation.conversation_id="substituted";
+    let authorizerCalls=0;
+    let driverCalls=0;
+    await assert.rejects(
+      ()=>runDecisionProposal({
+        runtime,
+        contextual_state:other,
+        decision_proposal:proposal(),
+        world_snapshot_revision:0,
+        world_snapshot_sha256:WORLD_SHA,
+        physicalAuthorizer:async()=>{authorizerCalls++;throw new Error("must not run")},
+        driver:{execute:async()=>{driverCalls++;throw new Error("must not run")}}
+      }),
+      /context_state_sha256_mismatch/
+    );
+    assert.equal(authorizerCalls,0);
+    assert.equal(driverCalls,0);
+  }
+
+  // 7. Proposal context digest mismatch blocks before authorization/driver.
+  {
+    const {runtime,snapshot}=context();
+    let authorizerCalls=0;
+    let driverCalls=0;
+    await assert.rejects(
+      ()=>runDecisionProposal({
+        runtime,
+        contextual_state:snapshot,
+        decision_proposal:proposal({context_sha256:"f".repeat(64)}),
+        world_snapshot_revision:0,
+        world_snapshot_sha256:WORLD_SHA,
+        physicalAuthorizer:async()=>{authorizerCalls++;throw new Error("must not run")},
+        driver:{execute:async()=>{driverCalls++;throw new Error("must not run")}}
+      }),
+      /decision_proposal_context_sha256_mismatch/
+    );
+    assert.equal(authorizerCalls,0);
+    assert.equal(driverCalls,0);
+  }
+
+  // 8. Explicit confirmation requirement becomes DEFER with zero actions.
   {
     const {snapshot}=context();
     const adapted=decisionProposalToExecutionContracts(
@@ -153,7 +209,7 @@ function proposal(overrides={}){
     assert.deepEqual(adapted.internal_proposal.proposed_actions,[]);
   }
 
-  // 7. World revision drift blocks before authorizer/driver.
+  // 9. World revision drift blocks before authorizer/driver.
   {
     const {runtime,snapshot}=context();
     let authorizerCalls=0;
@@ -176,7 +232,7 @@ function proposal(overrides={}){
     assert.equal(out.receipt.proposal_id,"proposal-1");
   }
 
-  // 8. Missing authoritative SpatialRuntime revision blocks before authorization.
+  // 10. Missing authoritative SpatialRuntime revision blocks before authorization.
   {
     const {runtime,snapshot}=context();
     let authorizerCalls=0;
@@ -195,7 +251,7 @@ function proposal(overrides={}){
     assert.equal(driverCalls,0);
   }
 
-  // 9. Confirmation-required proposal never reaches authorizer/driver.
+  // 11. Confirmation-required proposal never reaches authorizer/driver.
   {
     const {runtime,snapshot}=context();
     let authorizerCalls=0;
@@ -216,7 +272,7 @@ function proposal(overrides={}){
     assert.equal(driverCalls,0);
   }
 
-  // 10. Missing authoritative WorldSnapshot identity blocks before authorization.
+  // 12. Missing authoritative WorldSnapshot identity blocks before authorization.
   {
     const {runtime,snapshot}=context();
     let authorizerCalls=0;
@@ -236,7 +292,7 @@ function proposal(overrides={}){
     assert.equal(driverCalls,0);
   }
 
-  // 11. Equal revision cannot substitute a different WorldSnapshot.
+  // 13. Equal revision cannot substitute a different WorldSnapshot.
   {
     const {runtime,snapshot}=context();
     let authorizerCalls=0;
@@ -259,7 +315,7 @@ function proposal(overrides={}){
     assert.equal(driverCalls,0);
   }
 
-  // 12. Malformed proposal WorldSnapshot identity is rejected at contract validation.
+  // 14. Malformed proposal WorldSnapshot identity is rejected at contract validation.
   {
     assert.throws(
       ()=>validateDecisionProposal(proposal({world_snapshot_sha256:"not-a-sha"})),
@@ -267,7 +323,7 @@ function proposal(overrides={}){
     );
   }
 
-  // 13. Relative mutation must carry a finite numeric delta.
+  // 15. Relative mutation must carry a finite numeric delta.
   {
     assert.throws(
       ()=>validateDecisionProposal(proposal({
@@ -284,7 +340,7 @@ function proposal(overrides={}){
 
   console.log(JSON.stringify({
     ok:true,
-    cases:13,
+    cases:15,
     schema:"decision-proposal.v1",
     contract:"external reasoning proposal is untrusted, logical-target-only, context/world-identity-bound, and cannot directly reach physical execution"
   }));
