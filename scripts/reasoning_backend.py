@@ -21,6 +21,8 @@ from dataclasses import dataclass
 from typing import Any, Dict, Optional
 
 
+CONTEXT_STATE_VERSION = "contextual-state.v1"
+
 PROPOSAL_SCHEMA = {
     "type": "object",
     "required": ["operation", "frames", "commit_recommendation"],
@@ -75,6 +77,53 @@ class BackendConfig:
         )
 
 
+def validate_context_state(state: Dict[str, Any]) -> None:
+    if not isinstance(state, dict):
+        raise ValueError("context state must be an object")
+    if state.get("contract_version") != CONTEXT_STATE_VERSION:
+        raise ValueError("unsupported_context_state_contract")
+    for key in ("conversation", "tasks", "world", "execution"):
+        if key not in state:
+            raise ValueError(f"missing_context_state_section:{key}")
+    conversation = state["conversation"]
+    if not isinstance(conversation, dict):
+        raise ValueError("invalid_context_state_conversation")
+    for target in [
+        conversation.get("focused_target"),
+        *(conversation.get("referent_set") or []),
+    ]:
+        if target is None:
+            continue
+        if not isinstance(target, dict) or set(target) != {"area", "entity", "instance"}:
+            raise ValueError("logical_target_contract_violation")
+        if not all(isinstance(target[key], str) and target[key] for key in target):
+            raise ValueError("logical_target_contract_violation")
+
+
+def legacy_state_to_context_state(state: Dict[str, Any]) -> Dict[str, Any]:
+    """Compatibility envelope for old research fixtures, never canonical ownership."""
+    return {
+        "contract_version": CONTEXT_STATE_VERSION,
+        "conversation": {
+            "conversation_id": None,
+            "active_task_id": None,
+            "pending_task_id": None,
+            "focused_target": None,
+            "referent_set": [],
+        },
+        "tasks": [],
+        "world": {
+            "devices": {},
+            "legacy_state": state if isinstance(state, dict) else {},
+        },
+        "execution": {
+            "device_health": {},
+            "pending_ids": [],
+            "last_execution": None,
+        },
+    }
+
+
 class ReasoningBackend:
     def __init__(self, config: BackendConfig):
         self.config = config
@@ -87,6 +136,7 @@ class ReasoningBackend:
         capability_candidates: Any,
         session_events: Optional[Any] = None,
     ) -> Dict[str, Any]:
+        validate_context_state(state)
         payload = {
             "model": self.config.model,
             "temperature": 0,
