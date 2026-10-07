@@ -10,7 +10,8 @@ const {
 const {
   runExecutionProposal,
   FlyThinkExecutionRuntime,
-  verifyExecutionReceipt
+  verifyExecutionReceipt,
+  sha256Object
 }=require("../scripts/flythink_execution_runtime.cjs");
 
 const L={area:"客厅",entity:"空调",instance:"default"};
@@ -60,10 +61,19 @@ function passAuthorizer(counter=null,transform=null){
   return async({patches})=>{
     if(counter)counter.calls++;
     const out=patches.map(p=>transform?transform(p):p);
+    const receiptBase={
+      schema:"test-authorization-v1",
+      allow:true,
+      id:"auth-1",
+      authorized_patches:out
+    };
     return {
       allow:true,
       patches:out,
-      receipt:{schema:"test-authorization-v1",allow:true,id:"auth-1"}
+      receipt:{
+        ...receiptBase,
+        receipt_sha256:sha256Object(receiptBase)
+      }
     };
   };
 }
