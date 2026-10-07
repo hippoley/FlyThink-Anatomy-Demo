@@ -19,18 +19,68 @@ function normalizeDimensionSpec(spec={}){
   };
 }
 
+function assessProviderCalibration(result={},dimensionNames=[]){
+  const requested=result.trusted_for_promotion===true;
+  const calibration=result.calibration||null;
+  if(!requested){
+    return {
+      requested_trust:false,
+      effective_trust:false,
+      reason:"provider_not_marked_trusted",
+      calibration:clone(calibration)
+    };
+  }
+  if(!calibration||calibration.status!=="validated"){
+    return {
+      requested_trust:true,
+      effective_trust:false,
+      reason:"validated_calibration_required",
+      calibration:clone(calibration)
+    };
+  }
+  if(!calibration.validation_id){
+    return {
+      requested_trust:true,
+      effective_trust:false,
+      reason:"calibration_validation_id_required",
+      calibration:clone(calibration)
+    };
+  }
+  const scope=uniq(calibration.covered_dimensions||[]);
+  const missing=dimensionNames.filter(x=>!scope.includes(x));
+  if(missing.length){
+    return {
+      requested_trust:true,
+      effective_trust:false,
+      reason:"calibration_scope_incomplete",
+      missing_calibration_dimensions:missing,
+      calibration:clone(calibration)
+    };
+  }
+  return {
+    requested_trust:true,
+    effective_trust:true,
+    reason:"validated_calibration_matches_dimensions",
+    calibration:clone(calibration)
+  };
+}
+
 function normalizeEvidenceResult(result={}){
   if(!result.id)throw new Error("evidence_result_id_required");
   const dimensions={};
   for(const [name,spec] of Object.entries(result.dimensions||{})){
     dimensions[String(name)]=normalizeDimensionSpec(spec);
   }
-  if(!Object.keys(dimensions).length)throw new Error("evidence_result_dimensions_required");
+  const dimensionNames=Object.keys(dimensions);
+  if(!dimensionNames.length)throw new Error("evidence_result_dimensions_required");
+  const trust=assessProviderCalibration(result,dimensionNames);
   return {
     id:String(result.id),
     kind:String(result.kind||"unknown"),
     evidence_level:String(result.evidence_level||"unspecified"),
-    trusted_for_promotion:result.trusted_for_promotion===true,
+    requested_trusted_for_promotion:result.trusted_for_promotion===true,
+    trusted_for_promotion:trust.effective_trust===true,
+    trust_assessment:trust,
     provenance:clone(result.provenance||null),
     dimensions
   };
@@ -219,6 +269,7 @@ function acousticScreeningProvider(caseDef={}){
 
 module.exports={
   normalizeEvidenceResult,
+  assessProviderCalibration,
   normalizeDimensionSpec,
   normalizeAcrossCandidates,
   fuseCandidateEvidence,
