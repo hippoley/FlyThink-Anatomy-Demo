@@ -18,7 +18,10 @@ const {
 }=require("./physical_runtime.cjs");
 const {executeAtomicPhysicalSet}=require("./atomic_physical_set.cjs");
 const {runRecoveryTransaction}=require("./recovery_transaction.cjs");
-const {runtimeRegistryDigest}=require("./spatialruntime_authorizer.cjs");
+const {
+  runtimeRegistryDigest,
+  validateAuthorizationReceipt
+}=require("./spatialruntime_authorizer.cjs");
 const {
   SCHEMA_VERSION:RECEIPT_VERSION,
   digestObject:sha256Object,
@@ -45,7 +48,9 @@ function validateAuthorizationResult(
     task_id=null,
     source_step=0,
     source_revision=0,
-    runtime=null
+    runtime=null,
+    authorization_context={},
+    expected_spatialruntime_commit_sha=null
   }={}
 ){
   if(!result||typeof result!=="object")
@@ -58,47 +63,47 @@ function validateAuthorizationResult(
     throw new Error("physical_authorization_patch_count_mismatch");
   if(!result.receipt||typeof result.receipt!=="object")
     throw new Error("physical_authorization_receipt_required");
-  const receipt=result.receipt;
-  if(receipt.allow!==true)
-    throw new Error("physical_authorization_receipt_not_allowed");
-  if(receipt.single_use!==true)
-    throw new Error("physical_authorization_single_use_required");
-  if(!isSha256(receipt.authorization_id))
-    throw new Error("physical_authorization_id_invalid");
-  if(!isSha256(receipt.patch_digest)||
-     receipt.patch_digest!==sha256Object(result.patches))
-    throw new Error("physical_authorization_patch_digest_mismatch");
-  if(!isSha256(receipt.registry_digest))
-    throw new Error("physical_authorization_registry_digest_invalid");
   if(!runtime)
     throw new Error("physical_authorization_runtime_required");
-  if(receipt.registry_digest!==runtimeRegistryDigest(runtime))
-    throw new Error("physical_authorization_registry_digest_mismatch");
-  if(!Array.isArray(receipt.authorized_patches)||
-     sha256Object(receipt.authorized_patches)!==sha256Object(result.patches))
-    throw new Error("physical_authorization_receipt_patches_mismatch");
-  if(!isSha256(receipt.receipt_sha256))
-    throw new Error("physical_authorization_receipt_sha256_invalid");
-  const receiptBase=clone(receipt);
-  delete receiptBase.receipt_sha256;
-  if(sha256Object(receiptBase)!==receipt.receipt_sha256)
-    throw new Error("physical_authorization_receipt_sha256_mismatch");
-  if(typeof receipt.case_id!=="string"||receipt.case_id!==String(task_id||""))
-    throw new Error("physical_authorization_case_id_mismatch");
-  if(Number(receipt.source_step)!==Number(source_step))
-    throw new Error("physical_authorization_source_step_mismatch");
-  if(Number(receipt.source_revision)!==Number(source_revision))
-    throw new Error("physical_authorization_source_revision_mismatch");
 
-  for(let i=0;i<requestedActions.length;i++){
-    if(!samePatchIdentity(requestedActions[i],result.patches[i])){
-      throw new Error("physical_authorization_patch_identity_mismatch:"+String(i));
+  const receipt=result.receipt;
+  const registryDigest=runtimeRegistryDigest(runtime);
+  const sceneCommit=
+    authorization_context&&
+    authorization_context.scene_evidence&&
+    authorization_context.scene_evidence.spatialruntime_commit_sha||null;
+  const expectedCommit=
+    expected_spatialruntime_commit_sha!=null
+      ?expected_spatialruntime_commit_sha
+      :(sceneCommit!=null?sceneCommit:(receipt.spatialruntime_commit_sha||null));
+  const validationRequest={
+    case_id:String(task_id||""),
+    source_step:Number(source_step),
+    source_revision:Number(source_revision),
+    spatialruntime_commit_sha:expectedCommit,
+    registry_digest:registryDigest,
+    spatial_context:{
+      scene_evidence:
+        authorization_context&&authorization_context.scene_evidence
+          ?clone(authorization_context.scene_evidence)
+          :null
     }
-  }
+  };
+
+  const validated=validateAuthorizationReceipt(
+    receipt,
+    validationRequest,
+    requestedActions
+  );
+  if(
+    sha256Object(validated.patches)!==sha256Object(result.patches)
+  )throw new Error("physical_authorization_result_patches_mismatch");
+
   return {
     allow:true,
-    patches:clone(result.patches),
-    receipt:clone(result.receipt)
+    patches:clone(validated.patches),
+    receipt:clone(validated.receipt),
+    integrity:clone(validated.integrity||null)
   };
 }
 
@@ -146,6 +151,7 @@ async function runExecutionProposal({
   driver,
   physicalAuthorizer,
   authorization_context={},
+  expected_spatialruntime_commit_sha=null,
   source_step=0,
   source_revision=0,
   max_uncertainty=0.35,
@@ -231,7 +237,9 @@ async function runExecutionProposal({
         task_id:request.task_id,
         source_step,
         source_revision,
-        runtime:current
+        runtime:current,
+        authorization_context,
+        expected_spatialruntime_commit_sha
       }
     );
   }catch(err){
@@ -341,6 +349,7 @@ async function runDecisionProposal({
   driver,
   physicalAuthorizer,
   authorization_context={},
+  expected_spatialruntime_commit_sha=null,
   source_step=0,
   max_uncertainty=0.35,
   authorizationLedger=null
@@ -482,7 +491,8 @@ async function runDecisionProposal({
     source_step,
     source_revision:decision_proposal.world_snapshot_revision,
     max_uncertainty,
-    authorizationLedger
+    authorizationLedger,
+    expected_spatialruntime_commit_sha
   });
 }
 

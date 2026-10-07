@@ -3,7 +3,11 @@
 const assert=require("assert");
 const {normalizeRuntime}=require("../scripts/whole_home_patch_contract.cjs");
 const {toContextStateSnapshot}=require("../scripts/contextual_edge_slu_adapter.cjs");
-const {runtimeRegistryDigest}=require("../scripts/spatialruntime_authorizer.cjs");
+const {
+  RECEIPT_SCHEMA,
+  runtimeRegistryDigest,
+  sha256Object:authorizationSha256Object
+}=require("../scripts/spatialruntime_authorizer.cjs");
 const {MockThingDriver,isQuarantined,markQuarantined}=require("../scripts/physical_runtime.cjs");
 const {
   validateExecutionProposal
@@ -70,37 +74,51 @@ function freshLedger(){
   };
 }
 function passAuthorizer(counter=null,transform=null,authorizationId=null,override={}){
-  return async({patches,runtime,event,source_step,source_revision})=>{
+  return async({patches,runtime,event,source_step,source_revision,context})=>{
     if(counter)counter.calls++;
     const out=patches.map(p=>transform?transform(p):p);
-    const patchDigest=sha256Object(out);
     const registryDigest=runtimeRegistryDigest(runtime);
-    const receiptBase={
-      schema:"test-authorization-v1",
+    const base={
+      schema:RECEIPT_SCHEMA,
+      canonicalization:"sorted-json-number-normalized-v1",
       allow:true,
-      id:"auth-1",
-      patch_digest:patchDigest,
-      registry_digest:registryDigest,
-      authorization_id:authorizationId||sha256Object({
-        fixture:"authorization-v1",
-        patch_digest:patchDigest,
-        registry_digest:registryDigest
-      }),
-      single_use:true,
       case_id:String(event&&event.turn_id||""),
       source_step:Number(source_step||0),
       source_revision:Number(source_revision||0),
+      spatialruntime_commit_sha:null,
+      requested_patch_count:out.length,
       authorized_patches:out,
+      patch_digest:authorizationSha256Object(out),
+      registry_digest:registryDigest,
+      authorization_id:null,
+      single_use:true,
+      blocked:[],
+      rain:"dry",
+      exterior_window_keys:[],
+      scene_evidence:context&&context.scene_evidence?context.scene_evidence:null,
+      trace_status:"completed",
+      trace_hash:"a".repeat(64),
+      safety_graph_fingerprint:"b".repeat(64),
+      safety_forced_entities:[],
+      commit_summary:{ready_to_dispatch:true},
       ...override
     };
-    return {
-      allow:true,
-      patches:out,
-      receipt:{
-        ...receiptBase,
-        receipt_sha256:sha256Object(receiptBase)
-      }
+    if(!Object.prototype.hasOwnProperty.call(override,"authorization_id")){
+      base.authorization_id=authorizationId||authorizationSha256Object({
+        case_id:base.case_id,
+        source_step:base.source_step,
+        source_revision:base.source_revision,
+        patch_digest:base.patch_digest,
+        registry_digest:base.registry_digest,
+        spatialruntime_commit_sha:base.spatialruntime_commit_sha,
+        trace_hash:base.trace_hash
+      });
+    }
+    const receipt={
+      ...base,
+      receipt_sha256:authorizationSha256Object(base)
     };
+    return {allow:true,patches:out,receipt};
   };
 }
 
@@ -482,8 +500,7 @@ function passAuthorizer(counter=null,transform=null,authorizationId=null,overrid
     const action={op:"PATCH_SLOT",target:B,slot:"temperature",value:19};
     const driver=new MockThingDriver(initial);
     const ledger=freshLedger();
-    const authorizationId="b".repeat(64);
-    const authorizer=passAuthorizer(null,null,authorizationId);
+    const authorizer=passAuthorizer();
     const first=await runExecutionProposal({
       runtime:initial,
       contextual_state:context,
@@ -604,20 +621,42 @@ function passAuthorizer(counter=null,transform=null,authorizationId=null,overrid
         }]
       })
     );
-    assert.match(out.authorization_error,/receipt_patches_mismatch/);
+    assert.match(out.authorization_error,/patch_digest_mismatch|result_patches_mismatch/);
 
     const tamperedShaAuthorizer=async({patches,runtime,event,source_step,source_revision})=>{
+      const patchDigest=authorizationSha256Object(patches);
+      const registryDigest=runtimeRegistryDigest(runtime);
       const base={
-        schema:"test-authorization-v1",
+        schema:RECEIPT_SCHEMA,
+        canonicalization:"sorted-json-number-normalized-v1",
         allow:true,
-        patch_digest:sha256Object(patches),
-        registry_digest:runtimeRegistryDigest(runtime),
-        authorization_id:"c".repeat(64),
-        single_use:true,
         case_id:String(event&&event.turn_id||""),
         source_step:Number(source_step||0),
         source_revision:Number(source_revision||0),
-        authorized_patches:patches
+        spatialruntime_commit_sha:null,
+        requested_patch_count:patches.length,
+        authorized_patches:patches,
+        patch_digest:patchDigest,
+        registry_digest:registryDigest,
+        authorization_id:authorizationSha256Object({
+          case_id:String(event&&event.turn_id||""),
+          source_step:Number(source_step||0),
+          source_revision:Number(source_revision||0),
+          patch_digest:patchDigest,
+          registry_digest:registryDigest,
+          spatialruntime_commit_sha:null,
+          trace_hash:"a".repeat(64)
+        }),
+        single_use:true,
+        blocked:[],
+        rain:"dry",
+        exterior_window_keys:[],
+        scene_evidence:null,
+        trace_status:"completed",
+        trace_hash:"a".repeat(64),
+        safety_graph_fingerprint:"b".repeat(64),
+        safety_forced_entities:[],
+        commit_summary:{ready_to_dispatch:true}
       };
       return {
         allow:true,
@@ -639,9 +678,103 @@ function passAuthorizer(counter=null,transform=null,authorizationId=null,overrid
     assert.match(out.authorization_error,/receipt_not_allowed/);
   }
 
+
+  // 16. A syntactically valid but non-derived authorization id is rejected.
+  {
+    const action={op:"PATCH_SLOT",target:B,slot:"temperature",value:19};
+    const driver=new MockThingDriver(initial);
+    const out=await runExecutionProposal({
+      runtime:initial,
+      contextual_state:context,
+      request:request([action]),
+      proposal:proposal([action]),
+      driver,
+      physicalAuthorizer:passAuthorizer(null,null,null,{
+        authorization_id:"f".repeat(64)
+      }),
+      authorizationLedger:freshLedger()
+    });
+    assert.equal(out.ok,false);
+    assert.equal(out.status,"BLOCKED");
+    assert.equal(out.reason,"physical_authorization_invalid");
+    assert.match(out.authorization_error,/authorization_id_mismatch/);
+    assert.equal(driver.commands.length,0);
+  }
+
+  // 17. A malformed SpatialRuntime trace hash is rejected before actuation.
+  {
+    const action={op:"PATCH_SLOT",target:B,slot:"temperature",value:19};
+    const driver=new MockThingDriver(initial);
+    const out=await runExecutionProposal({
+      runtime:initial,
+      contextual_state:context,
+      request:request([action]),
+      proposal:proposal([action]),
+      driver,
+      physicalAuthorizer:passAuthorizer(null,null,null,{
+        trace_hash:"not-a-trace-hash"
+      }),
+      authorizationLedger:freshLedger()
+    });
+    assert.equal(out.ok,false);
+    assert.equal(out.reason,"physical_authorization_invalid");
+    assert.match(out.authorization_error,/trace_hash_invalid/);
+    assert.equal(driver.commands.length,0);
+  }
+
+  // 18. An explicitly pinned SpatialRuntime commit cannot be substituted.
+  {
+    const action={op:"PATCH_SLOT",target:B,slot:"temperature",value:19};
+    const driver=new MockThingDriver(initial);
+    const expected="d123ab9a5310cb9ce15d9e82630828a0d32211f4";
+    const out=await runExecutionProposal({
+      runtime:initial,
+      contextual_state:context,
+      request:request([action]),
+      proposal:proposal([action]),
+      driver,
+      physicalAuthorizer:passAuthorizer(null,null,null,{
+        spatialruntime_commit_sha:"e".repeat(40)
+      }),
+      expected_spatialruntime_commit_sha:expected,
+      authorizationLedger:freshLedger()
+    });
+    assert.equal(out.ok,false);
+    assert.equal(out.reason,"physical_authorization_invalid");
+    assert.match(out.authorization_error,/commit_mismatch/);
+    assert.equal(driver.commands.length,0);
+  }
+
+
+  // 19. Scene evidence implicitly pins the SpatialRuntime commit.
+  {
+    const action={op:"PATCH_SLOT",target:B,slot:"temperature",value:19};
+    const driver=new MockThingDriver(initial);
+    const sceneEvidence={
+      schema:"homeai_spatialruntime_scene_context_v1",
+      spatialruntime_commit_sha:"d123ab9a5310cb9ce15d9e82630828a0d32211f4"
+    };
+    const out=await runExecutionProposal({
+      runtime:initial,
+      contextual_state:context,
+      request:request([action]),
+      proposal:proposal([action]),
+      driver,
+      authorization_context:{scene_evidence:sceneEvidence},
+      physicalAuthorizer:passAuthorizer(null,null,null,{
+        spatialruntime_commit_sha:"e".repeat(40)
+      }),
+      authorizationLedger:freshLedger()
+    });
+    assert.equal(out.ok,false);
+    assert.equal(out.reason,"physical_authorization_invalid");
+    assert.match(out.authorization_error,/commit_mismatch/);
+    assert.equal(driver.commands.length,0);
+  }
+
   console.log(JSON.stringify({
     ok:true,
-    cases:16,
+    cases:20,
     contract:"contextual execution proposal -> deterministic authorization -> atomic/single physical execution -> readback, with formal recovery"
   }));
 })().catch(e=>{console.error(e);process.exit(1)});
