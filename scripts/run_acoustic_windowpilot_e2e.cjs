@@ -63,6 +63,9 @@ function assertLiveProbePreconditions({
   if(!Number.isFinite(tolerancePct)||tolerancePct<0||tolerancePct>2){
     throw new Error("windowpilot_live_probe_tolerance_invalid");
   }
+  if(apply&&probeOpenPct<=tolerancePct){
+    throw new Error("windowpilot_live_probe_must_exceed_tolerance");
+  }
   if(!Number.isFinite(initialPct)||initialPct<0||initialPct>100){
     throw new Error("windowpilot_live_probe_initial_position_invalid");
   }
