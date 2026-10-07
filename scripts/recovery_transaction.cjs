@@ -5,6 +5,7 @@ const {
   clearQuarantine,
   isQuarantined,
   isSafetyReducingPatch,
+  reconcileObservation,
   executeSinglePhysicalPatch
 }=require("./physical_runtime.cjs");
 
@@ -41,6 +42,9 @@ async function runRecoveryTransaction(inputRuntime,{
   if(!target)throw new Error("recovery_target_required");
   if(!driver||typeof driver.readiness!=="function"||typeof driver.state!=="function"){
     throw new Error("recovery_driver_readiness_state_required");
+  }
+  if(driver.target&&deviceKey(driver.target)!==deviceKey(target)){
+    throw new Error("recovery_driver_target_mismatch");
   }
   if(!safe_patch)throw new Error("recovery_safe_patch_required");
   if(!safe_patch.target||deviceKey(safe_patch.target)!==deviceKey(target)){
@@ -115,6 +119,16 @@ async function runRecoveryTransaction(inputRuntime,{
   if(afterPct==null||afterPct>safeLimit){
     return blocked(runtime,"recovery_safe_position_not_verified",trace,{receipt});
   }
+
+  runtime=reconcileObservation(runtime,{
+    target:clone(target),
+    exists:true,
+    slots:{opening:afterPct}
+  },turn_id);
+  trace.push({
+    stage:"FINAL_STATE_RECONCILED",
+    value:{target:clone(target),opening:afterPct,tick:afterTick}
+  });
 
   const readinessAfter=await driver.readiness();
   trace.push({stage:"READINESS_AFTER",value:clone(readinessAfter)});
