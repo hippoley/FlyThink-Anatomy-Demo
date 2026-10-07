@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import math
+import os
 import sys
 from hashlib import sha256
 from typing import Any, Mapping
@@ -71,6 +72,18 @@ def authorize(request: Mapping[str, Any]) -> dict[str, Any]:
         raise ValueError("authorization_case_id_required")
     step = int(request.get("source_step", 0))
     revision = int(request.get("source_revision", step))
+    requested_pin = request.get("spatialruntime_pin")
+    env_pin = os.environ.get("SPATIALRUNTIME_PIN")
+    spatialruntime_pin = env_pin or requested_pin
+    if spatialruntime_pin is not None:
+        spatialruntime_pin = str(spatialruntime_pin)
+        if len(spatialruntime_pin) != 40 or any(
+            ch not in "0123456789abcdef" for ch in spatialruntime_pin.lower()
+        ):
+            raise ValueError("spatialruntime_pin_invalid")
+        spatialruntime_pin = spatialruntime_pin.lower()
+    if env_pin and requested_pin and str(env_pin).lower() != str(requested_pin).lower():
+        raise ValueError("spatialruntime_pin_environment_mismatch")
 
     home_runtime = request.get("runtime")
     if not isinstance(home_runtime, Mapping):
@@ -229,6 +242,7 @@ def authorize(request: Mapping[str, Any]) -> dict[str, Any]:
         "case_id": case_id,
         "source_step": step,
         "source_revision": revision,
+        "spatialruntime_pin": spatialruntime_pin,
         "requested_patch_count": len(patches),
         "authorized_patches": authorized_patches if allow else [],
         "blocked": blocked,
