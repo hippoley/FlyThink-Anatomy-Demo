@@ -58,6 +58,7 @@ function buildArtifacts(){
     facts:{
       source_repo:SOURCE_REPO,
       source_kind:"authored_spatial_scene",
+      source_commit_sha:SOURCE_COMMIT,
       source_fingerprint:sourceFingerprint,
       source_files_sha256:sourceFiles
     }
@@ -68,6 +69,7 @@ function buildArtifacts(){
     case_id:world.case_id,
     spatialruntime_commit_sha:SPATIALRUNTIME_COMMIT,
     world_snapshot_sha256:sha256Object(world),
+    source_commit_sha:SOURCE_COMMIT,
     source_fingerprint:sourceFingerprint,
     source_fingerprint_verified:true,
     source_file_count:1,
@@ -141,6 +143,7 @@ async function validHandoffDrivesSpatialRuntimeSafety(){
     {expectedSourceRepo:SOURCE_REPO,expectedSourceCommit:SOURCE_COMMIT}
   );
   assert.equal(context.handoff_evidence.schema,HANDOFF_SCHEMA);
+  assert.equal(context.source_commit_sha,SOURCE_COMMIT);
   assert.equal(context.handoff_evidence.source_commit_sha,SOURCE_COMMIT);
   assert.equal(context.spatialruntime_commit_sha,SPATIALRUNTIME_COMMIT);
   assert.equal(context.handoff_evidence.spatialruntime_commit_sha,SPATIALRUNTIME_COMMIT);
@@ -208,6 +211,28 @@ function tamperedMappingFailsClosed(){
   );
 }
 
+function worldReceiptCommitMismatchFailsClosed(){
+  const artifacts=buildArtifacts();
+  artifacts.receipt.source_commit_sha="2".repeat(40);
+  const base={...artifacts.receipt};delete base.receipt_sha256;
+  artifacts.receipt.receipt_sha256=sha256Object(base);
+  assert.throws(
+    ()=>validateSceneHandoff(artifacts.world,artifacts.receipt,artifacts.handoff),
+    /source_commit_mismatch/
+  );
+}
+
+function handoffContextCommitMismatchFailsClosed(){
+  const artifacts=buildArtifacts();
+  artifacts.handoff.source_commit_sha="2".repeat(40);
+  const base={...artifacts.handoff};delete base.handoff_sha256;
+  artifacts.handoff.handoff_sha256=sha256Object(base);
+  assert.throws(
+    ()=>validateSceneHandoff(artifacts.world,artifacts.receipt,artifacts.handoff),
+    /handoff_context_commit_mismatch/
+  );
+}
+
 function expectedCommitMismatchFailsClosed(){
   const artifacts=buildArtifacts();
   assert.throws(
@@ -236,6 +261,8 @@ function spatialRuntimeCommitMismatchFailsClosed(){
 (async()=>{
   await validHandoffDrivesSpatialRuntimeSafety();
   tamperedMappingFailsClosed();
+  worldReceiptCommitMismatchFailsClosed();
+  handoffContextCommitMismatchFailsClosed();
   expectedCommitMismatchFailsClosed();
   spatialRuntimeCommitMismatchFailsClosed();
   console.log(JSON.stringify({
