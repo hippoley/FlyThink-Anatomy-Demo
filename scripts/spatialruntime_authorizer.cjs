@@ -99,8 +99,20 @@ function validateAuthorizationReceipt(receipt,request,requestedPatches){
   if(receipt.single_use!==true){
     throw new Error("spatialruntime_authorizer_single_use_required");
   }
-  if(typeof receipt.authorization_id!=="string"||!receipt.authorization_id){
-    throw new Error("spatialruntime_authorizer_authorization_id_required");
+  if(!isSha256(receipt.authorization_id)){
+    throw new Error("spatialruntime_authorizer_authorization_id_invalid");
+  }
+  const expectedAuthorizationId=sha256Object({
+    case_id:receipt.case_id,
+    source_step:receipt.source_step,
+    source_revision:receipt.source_revision,
+    patch_digest:receipt.patch_digest,
+    registry_digest:receipt.registry_digest,
+    spatialruntime_commit_sha:receipt.spatialruntime_commit_sha,
+    trace_hash:receipt.trace_hash
+  });
+  if(receipt.authorization_id!==expectedAuthorizationId){
+    throw new Error("spatialruntime_authorizer_authorization_id_mismatch");
   }
   const requestedScene=request&&request.spatial_context&&request.spatial_context.scene_evidence;
   if(requestedScene){
@@ -156,6 +168,7 @@ function validateAuthorizationReceipt(receipt,request,requestedPatches){
 
 function createSpatialRuntimeAuthorizer(options={}){
   const python=options.python||process.env.PYTHON||"python";
+  const consumedAuthorizationIds=new Set();
   const script=options.script||path.join(__dirname,"spatialruntime_window_authorizer.py");
   const maxOpenRatioDelta=options.maxOpenRatioDelta==null?0.25:Number(options.maxOpenRatioDelta);
   const spatialRuntimeCommitSha=options.spatialRuntimeCommitSha||
@@ -272,7 +285,13 @@ function createSpatialRuntimeAuthorizer(options={}){
       err.receipt=receipt;
       throw err;
     }
-    return validateAuthorizationReceipt(receipt,request,requestedPatches);
+    const validated=validateAuthorizationReceipt(receipt,request,requestedPatches);
+    const authorizationId=validated.receipt.authorization_id;
+    if(consumedAuthorizationIds.has(authorizationId)){
+      throw new Error("spatialruntime_authorizer_authorization_reused");
+    }
+    consumedAuthorizationIds.add(authorizationId);
+    return validated;
   };
 }
 
