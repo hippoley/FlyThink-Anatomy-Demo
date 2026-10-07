@@ -88,29 +88,6 @@ def authorize(request: Mapping[str, Any]) -> dict[str, Any]:
         raise ValueError("authorization_spatial_context_invalid")
     exterior_keys = set(spatial_context.get("exterior_window_keys") or [])
     rain = normalize_rain(spatial_context.get("rain"))
-    scene_evidence = spatial_context.get("scene_evidence")
-    if scene_evidence is not None:
-        if not isinstance(scene_evidence, Mapping):
-            raise ValueError("spatialruntime_scene_evidence_invalid")
-        if scene_evidence.get("schema") != "homeai_spatialruntime_scene_context_v1":
-            raise ValueError("spatialruntime_scene_evidence_schema_invalid")
-        for key in (
-            "world_snapshot_sha256",
-            "validation_receipt_sha256",
-            "source_fingerprint",
-            "relation_graph_fingerprint",
-            "context_sha256",
-        ):
-            value = str(scene_evidence.get(key) or "")
-            if len(value) != 64 or any(ch not in "0123456789abcdef" for ch in value):
-                raise ValueError(f"spatialruntime_scene_evidence_sha_invalid:{key}")
-        declared_keys = set(scene_evidence.get("exterior_window_keys") or [])
-        if declared_keys != exterior_keys:
-            raise ValueError("spatialruntime_scene_exterior_keys_mismatch")
-        context_base = dict(scene_evidence)
-        saved_context_sha = context_base.pop("context_sha256", None)
-        if saved_context_sha != digest(context_base):
-            raise ValueError("spatialruntime_scene_context_sha_mismatch")
 
     runtime_state: dict[str, Any] = {}
     entity_catalog: dict[str, Any] = {}
@@ -234,7 +211,6 @@ def authorize(request: Mapping[str, Any]) -> dict[str, Any]:
         "blocked": blocked,
         "rain": rain,
         "exterior_window_keys": sorted(exterior_keys),
-        "scene_evidence": dict(scene_evidence) if isinstance(scene_evidence, Mapping) else None,
         "trace_status": trace.get("status"),
         "trace_hash": trace.get("trace_hash"),
         "safety_graph_fingerprint": (trace.get("stages") or {}).get("safety", {}).get(
