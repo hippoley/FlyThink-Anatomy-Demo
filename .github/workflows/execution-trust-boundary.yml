@@ -1,0 +1,38 @@
+name: Semantic Execution Trust Boundary
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "scripts/authorized_patch_planner.py"
+      - "scripts/device_registry.py"
+      - "scripts/semantic_capability_map.py"
+      - "scripts/atomic_authorized_commit.cjs"
+      - "scripts/whole_home_patch_contract.cjs"
+      - "scripts/test_execution_trust_boundary.py"
+      - ".github/workflows/execution-trust-boundary.yml"
+  pull_request:
+    paths:
+      - "scripts/authorized_patch_planner.py"
+      - "scripts/device_registry.py"
+      - "scripts/semantic_capability_map.py"
+      - "scripts/atomic_authorized_commit.cjs"
+      - "scripts/whole_home_patch_contract.cjs"
+      - "scripts/test_execution_trust_boundary.py"
+      - ".github/workflows/execution-trust-boundary.yml"
+  workflow_dispatch:
+
+jobs:
+  trust-boundary:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Prove planner-to-commit safety invariants
+        run: python scripts/test_execution_trust_boundary.py
