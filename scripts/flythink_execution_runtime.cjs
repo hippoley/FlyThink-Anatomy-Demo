@@ -258,6 +258,17 @@ async function runExecutionProposal({
     };
   }
 
+  const authorizedPreflight=evaluateQuarantinePreflight(current,authorized);
+  if(!authorizedPreflight.allow){
+    return {
+      ...noExecution("BLOCKED","authorized_patch_violates_quarantine"),
+      authorization:clone(authReceipt),
+      authorized_actions:clone(authorized),
+      authorization_consumed:true,
+      quarantine_preflight:clone(authorizedPreflight)
+    };
+  }
+
   const atomic=authorized.length>1;
   const beforePhysical=normalizeRuntime(current);
   let physical;
