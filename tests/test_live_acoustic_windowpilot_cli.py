@@ -140,6 +140,23 @@ class LiveAcousticWindowPilotCliTest(unittest.TestCase):
             self.assertEqual(payload["expected_text"],"打开主卧窗")
             self.assertTrue(payload["require_human_acceptance"])
             self.assertEqual(payload["wav_sha256"],manifest["wav"]["sha256"])
+            self.assertEqual(len(payload["manifest_sha256"]),64)
+
+    def test_apply_builder_rejects_missing_receipt(self):
+        with self.assertRaisesRegex(SystemExit,"--apply requires --receipt"):
+            build_commands(args(
+                apply=True,
+                expected_hardware_identity="hw-abc",
+                receipt=None,
+            ))
+
+    def test_apply_builder_rejects_missing_identity(self):
+        with self.assertRaisesRegex(SystemExit,"hardware-identity"):
+            build_commands(args(
+                apply=True,
+                expected_hardware_identity=None,
+                receipt="receipt.json",
+            ))
 
     def test_tts_manifest_cannot_claim_human_acceptance(self):
         with tempfile.TemporaryDirectory() as d:
