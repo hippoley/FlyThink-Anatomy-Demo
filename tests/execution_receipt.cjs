@@ -13,6 +13,7 @@ const OTHER={area:"卧室",entity:"窗",instance:"default"};
 const action={op:"PATCH_SLOT",target:W,slot:"opening",value:5};
 const contextualState={
   contract_version:"contextual-state.v1",
+  context_revision:7,
   conversation:{conversation_id:"conv-1",active_task_id:"task-1",pending_task_id:null,focused_target:W,referent_set:[W]},
   tasks:[],
   world:{devices:{
@@ -48,6 +49,9 @@ const authorizationBase={
   }),
   authorization_id:"a".repeat(64),
   single_use:true,
+  case_id:"task-1",
+  source_step:3,
+  source_revision:8,
   authorized_patches:[action]
 };
 const authorization={
@@ -390,9 +394,128 @@ function buildVerified(){
     );
   }
 
+  // 14. Derived provenance fields cannot be rewritten independently of source artifacts.
+  {
+    const {before,after}=runtimes();
+
+    let forged=buildVerified();
+    forged.task_id="task-forged";
+    forged=reseal(forged);
+    assert.throws(
+      ()=>verifyExecutionReceipt(forged,{
+        contextual_state:contextualState,
+        request,
+        proposal,
+        before_runtime:before,
+        after_runtime:after
+      }),
+      /execution_receipt_task_id_mismatch/
+    );
+
+    forged=buildVerified();
+    forged.proposal_id="proposal-forged";
+    forged=reseal(forged);
+    assert.throws(
+      ()=>verifyExecutionReceipt(forged,{
+        contextual_state:contextualState,
+        request,
+        proposal,
+        before_runtime:before,
+        after_runtime:after
+      }),
+      /execution_receipt_proposal_id_mismatch/
+    );
+
+    forged=buildVerified();
+    forged.logical_targets=[OTHER];
+    forged=reseal(forged);
+    assert.throws(
+      ()=>verifyExecutionReceipt(forged,{
+        contextual_state:contextualState,
+        request,
+        proposal,
+        before_runtime:before,
+        after_runtime:after
+      }),
+      /execution_receipt_logical_targets_mismatch/
+    );
+
+    forged=buildVerified();
+    forged.context_revision=999;
+    forged=reseal(forged);
+    assert.throws(
+      ()=>verifyExecutionReceipt(forged,{
+        contextual_state:contextualState,
+        request,
+        proposal,
+        before_runtime:before,
+        after_runtime:after
+      }),
+      /execution_receipt_context_revision_mismatch/
+    );
+
+    forged=buildVerified();
+    forged.world_revision.before=99;
+    forged=reseal(forged);
+    assert.throws(
+      ()=>verifyExecutionReceipt(forged,{
+        contextual_state:contextualState,
+        request,
+        proposal,
+        before_runtime:before,
+        after_runtime:after
+      }),
+      /execution_receipt_world_revision_before_mismatch/
+    );
+
+    forged=buildVerified();
+    forged.world_revision.after=99;
+    forged=reseal(forged);
+    assert.throws(
+      ()=>verifyExecutionReceipt(forged,{
+        contextual_state:contextualState,
+        request,
+        proposal,
+        before_runtime:before,
+        after_runtime:after
+      }),
+      /execution_receipt_world_revision_after_mismatch/
+    );
+  }
+
+  // 15. Authorization provenance is part of verified physical truth.
+  {
+    const {before,after}=runtimes();
+    const badBase={
+      ...authorizationBase,
+      case_id:"other-task"
+    };
+    const badAuthorization={
+      ...badBase,
+      receipt_sha256:digestObject(badBase)
+    };
+    const receipt=buildExecutionReceipt({
+      contextual_state:contextualState,
+      request,
+      proposal,
+      authorization:badAuthorization,
+      authorized_actions:[action],
+      physical_receipts:[verifiedPhysicalReceipt()],
+      before_runtime:before,
+      after_runtime:after,
+      status:"EXECUTED",
+      physical_committed:true,
+      source_step:3,
+      source_revision:8
+    });
+    assert.equal(receipt.verification.authorization_case_id_verified,false);
+    assert.equal(receipt.verification.physical_truth_verified,false);
+    assert.equal(receipt.result,"APPLIED_UNVERIFIED");
+  }
+
   console.log(JSON.stringify({
     ok:true,
-    cases:13,
+    cases:15,
     schema:"execution-receipt.v1",
     contract:"authorized action + physical patch + target + ACK + causal readback + hardware identity are digest-bound and independently checked"
   }));
