@@ -350,6 +350,19 @@ class StreamingHomeSession{
             }else if(committed){
               committed=false;
               error="execution_receipt_missing";
+              for(const authorized of authorizedPatches){
+                if(!authorized||!authorized.target)continue;
+                markQuarantined(
+                  this.runtime,
+                  authorized.target,
+                  {
+                    status:"uncertain",
+                    reason:error,
+                    id:(receipts[0]&&receipts[0].command_id)||null
+                  },
+                  turnId
+                );
+              }
             }
 
             executionRuntimeEvidence={
