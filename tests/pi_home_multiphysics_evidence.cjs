@@ -49,8 +49,41 @@ assert.equal(screening.semantic_physics_aligned,false);
 assert.equal(screening.trusted_coverage_complete,false);
 assert.equal(screening.trusted_for_generalization_claim,false);
 
-const trustedContam={...contam,id:"contam-engineering",trusted_for_promotion:true,evidence_level:"engineering-validated"};
-const trustedRain={...rain,id:"rain-engineering",trusted_for_promotion:true,evidence_level:"engineering-validated"};
+const trustedContam={
+  ...contam,
+  id:"contam-engineering",
+  trusted_for_promotion:true,
+  evidence_level:"engineering-validated",
+  calibration:{
+    status:"validated",
+    validation_id:"contam-cal-v1",
+    covered_dimensions:["co2"]
+  }
+};
+const trustedRain={
+  ...rain,
+  id:"rain-engineering",
+  trusted_for_promotion:true,
+  evidence_level:"engineering-validated",
+  calibration:{
+    status:"validated",
+    validation_id:"rain-cal-v1",
+    covered_dimensions:["rain_ingress"]
+  }
+};
+const uncalibratedTrusted=fuseCandidateEvidence({
+  required_dimensions:["co2","rain_ingress"],
+  provider_results:[
+    {...contam,id:"contam-claims-trust",trusted_for_promotion:true},
+    {...rain,id:"rain-claims-trust",trusted_for_promotion:true}
+  ],
+  dimension_weights:{co2:.6,rain_ingress:.4},
+  learned_candidate_label:"candidate-3"
+});
+assert.equal(uncalibratedTrusted.decision,"SCREENING_ALIGNED");
+assert.equal(uncalibratedTrusted.trusted_coverage_complete,false);
+assert.equal(uncalibratedTrusted.trusted_for_generalization_claim,false);
+
 const trusted=fuseCandidateEvidence({
   required_dimensions:["co2","rain_ingress"],
   provider_results:[trustedContam,trustedRain],
