@@ -4,6 +4,7 @@ import hashlib
 import json
 import uuid
 import math
+import struct
 from semantic_capability_map import validate_value
 
 def parse_key(key):
@@ -30,6 +31,28 @@ def canonical_value(value):
         return {k:canonical_value(v) for k,v in value.items()}
     return value
 
+def canonical_encode(value):
+    value=canonical_value(value)
+    if value is None:
+        return "z"
+    if isinstance(value,bool):
+        return "b1" if value else "b0"
+    if isinstance(value,(int,float)) and not isinstance(value,bool):
+        number=float(value)
+        if number==0:
+            number=0.0
+        return "n"+struct.pack(">d",number).hex()
+    if isinstance(value,str):
+        return "s"+json.dumps(value,ensure_ascii=False,separators=(",",":"))
+    if isinstance(value,list):
+        return "a["+",".join(canonical_encode(v) for v in value)+"]"
+    if isinstance(value,dict):
+        return "o{"+",".join(
+            json.dumps(k,ensure_ascii=False,separators=(",",":"))+":"+canonical_encode(value[k])
+            for k in sorted(value)
+        )+"}"
+    raise ValueError("unsupported_authorization_value")
+
 def canonical_patch(p):
     return {
         "capability":p["capability"],
@@ -40,12 +63,7 @@ def canonical_patch(p):
     }
 
 def authorization_digest(patches):
-    payload=json.dumps(
-        [canonical_patch(p) for p in patches],
-        ensure_ascii=False,
-        sort_keys=True,
-        separators=(",",":"),
-    )
+    payload=canonical_encode([canonical_patch(p) for p in patches])
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 def plan(registry,target_keys,slot,value,turn_id=None):
@@ -82,7 +100,7 @@ def plan(registry,target_keys,slot,value,turn_id=None):
             "reason":"authorized_set_validation_failed",
         }
     authorization={
-        "version":1,
+        "version":2,
         "authorization_id":str(uuid.uuid4()),
         "turn_id":turn_id,
         "patch_digest":authorization_digest(patches),
