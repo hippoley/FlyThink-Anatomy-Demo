@@ -27,6 +27,57 @@ function observationTick(receipt){
   const tick=Number(evidence.tick);
   return Number.isFinite(tick)?tick:null;
 }
+const POSITION_SLOTS=new Set([
+  "opening","window_open_pct","position","position_pct"
+]);
+
+function sameValue(a,b){
+  if(typeof a==="number"&&typeof b==="number"){
+    return Number.isFinite(a)&&Number.isFinite(b)&&Math.abs(a-b)<=1e-9;
+  }
+  return JSON.stringify(a)===JSON.stringify(b);
+}
+
+function observedSlotValue(observation,slot){
+  const slots=observation&&observation.slots||{};
+  if(Object.prototype.hasOwnProperty.call(slots,slot))return slots[slot];
+  if(POSITION_SLOTS.has(slot)){
+    for(const alias of POSITION_SLOTS){
+      if(Object.prototype.hasOwnProperty.call(slots,alias))return slots[alias];
+    }
+  }
+  return undefined;
+}
+
+function effectVerified(physicalPatch,observation){
+  if(!physicalPatch||!observation)return false;
+  if(physicalPatch.op==="PATCH_SLOT"){
+    const observed=observedSlotValue(observation,physicalPatch.slot);
+    if(observed===undefined)return false;
+    const expected=physicalPatch.value;
+    if(POSITION_SLOTS.has(physicalPatch.slot)){
+      const a=Number(observed),b=Number(expected);
+      return Number.isFinite(a)&&Number.isFinite(b)&&Math.abs(a-b)<=1e-9;
+    }
+    return sameValue(observed,expected);
+  }
+  if(physicalPatch.op==="ADD_DEVICE"){
+    if(observation.exists!==true)return false;
+    for(const [slot,value] of Object.entries(physicalPatch.slots||{})){
+      const observed=observedSlotValue(observation,slot);
+      if(observed===undefined||!sameValue(observed,value))return false;
+    }
+    return true;
+  }
+  if(physicalPatch.op==="REMOVE_DEVICE"){
+    return observation.exists===false;
+  }
+  if(physicalPatch.op==="REPLACE_TARGET"){
+    return observation.exists===true;
+  }
+  return false;
+}
+
 function evidenceAckTimes(receipt){
   const evidence=receipt&&receipt.observation&&receipt.observation.evidence||{};
   const ackAt=Number(evidence.ack_at_ms);
@@ -51,6 +102,7 @@ function physicalEvidenceRow(receipt,index){
   const hardwareBefore=receipt&&receipt.hardware_identity_before||null;
   const hardwareAfter=receipt&&receipt.hardware_identity_after||null;
   const measured=observation&&observation.evidence&&observation.evidence.measured===true;
+  const effectMatches=effectVerified(physical,observation);
 
   const targetMatch=
     !!logicalTarget&&
@@ -100,7 +152,8 @@ function physicalEvidenceRow(receipt,index){
       ack_verified:ackVerified,
       fresh_readback_verified:freshReadback,
       hardware_identity_stable:identityStable,
-      measured_readback:measured
+      measured_readback:measured,
+      effect_verified:effectMatches
     }
   };
 }
@@ -225,7 +278,9 @@ function buildExecutionReceipt({
     hardware_identity_verified:
       verifiedRows.length>0&&verifiedRows.every(x=>x.checks.hardware_identity_stable),
     measured_readback_verified:
-      verifiedRows.length>0&&verifiedRows.every(x=>x.checks.measured_readback)
+      verifiedRows.length>0&&verifiedRows.every(x=>x.checks.measured_readback),
+    effect_verified:
+      verifiedRows.length>0&&verifiedRows.every(x=>x.checks.effect_verified)
   };
   verification.physical_truth_verified=
     physical_committed===true&&
@@ -237,7 +292,8 @@ function buildExecutionReceipt({
     verification.ack_verified&&
     verification.fresh_readback_verified&&
     verification.hardware_identity_verified&&
-    verification.measured_readback_verified;
+    verification.measured_readback_verified&&
+    verification.effect_verified;
 
   if(
     physical_committed===true&&
@@ -446,7 +502,9 @@ function verifyExecutionReceipt(receipt={},{
     hardware_identity_verified:
       applied.length>0&&applied.every(x=>x.checks.hardware_identity_stable),
     measured_readback_verified:
-      applied.length>0&&applied.every(x=>x.checks.measured_readback)
+      applied.length>0&&applied.every(x=>x.checks.measured_readback),
+    effect_verified:
+      applied.length>0&&applied.every(x=>x.checks.effect_verified)
   };
   expectedVerification.physical_truth_verified=
     physical.committed===true&&
@@ -458,7 +516,8 @@ function verifyExecutionReceipt(receipt={},{
     expectedVerification.ack_verified&&
     expectedVerification.fresh_readback_verified&&
     expectedVerification.hardware_identity_verified&&
-    expectedVerification.measured_readback_verified;
+    expectedVerification.measured_readback_verified&&
+    expectedVerification.effect_verified;
   if(digestObject(verification)!==digestObject(expectedVerification))
     throw new Error("execution_receipt_verification_summary_mismatch");
 
@@ -493,6 +552,8 @@ module.exports={
   SCHEMA_VERSION,
   digestObject,
   patchTarget,
+  observedSlotValue,
+  effectVerified,
   authorizationReceiptVerification,
   physicalEvidenceRow,
   buildExecutionReceipt,
