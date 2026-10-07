@@ -61,6 +61,21 @@ def logical_target(target: Any) -> bool:
         and all(isinstance(target[k], str) and target[k] for k in ("area", "entity", "instance"))
     )
 
+def action_identity(action: Dict[str, Any]) -> str:
+    if action.get("op") == "REPLACE_TARGET":
+        return canonical({
+            "op": action.get("op"),
+            "from": action.get("from"),
+            "to": action.get("to"),
+            "slot": action.get("slot"),
+        })
+    return canonical({
+        "op": action.get("op"),
+        "target": action.get("target"),
+        "slot": action.get("slot"),
+    })
+
+
 def validate_candidate_action(action: Dict[str, Any]) -> None:
     if not isinstance(action, dict):
         raise ValueError("candidate_action_must_be_object")
@@ -154,6 +169,7 @@ def validate_execution_proposal(
             raise ValueError("execution_proposal_task_mismatch")
         allowed = {canonical(x) for x in request["candidate_actions"]}
         seen_actions = set()
+        seen_identities = set()
         for action in actions:
             action_id = canonical(action)
             if action_id not in allowed:
@@ -161,6 +177,10 @@ def validate_execution_proposal(
             if action_id in seen_actions:
                 raise ValueError("duplicate_proposed_action")
             seen_actions.add(action_id)
+            identity = action_identity(action)
+            if identity in seen_identities:
+                raise ValueError("conflicting_proposed_action_identity")
+            seen_identities.add(identity)
 
 def advisory_safe_for_authorization(
     proposal: Dict[str, Any],
