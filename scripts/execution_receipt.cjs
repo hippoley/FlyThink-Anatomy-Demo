@@ -109,7 +109,8 @@ function physicalEvidenceRow(receipt,index){
 function authorizationReceiptVerification(
   authorization,
   authorizedActions=[],
-  beforeRuntime=null
+  beforeRuntime=null,
+  {task_id=null,source_step=0,source_revision=0}={}
 ){
   if(!authorization||typeof authorization!=="object"){
     return {
@@ -119,6 +120,9 @@ function authorizationReceiptVerification(
       registry_digest_verified:false,
       authorization_id_verified:false,
       single_use_verified:false,
+      case_id_verified:false,
+      source_step_verified:false,
+      source_revision_verified:false,
       runtime_registry_binding_verified:false
     };
   }
@@ -138,6 +142,13 @@ function authorizationReceiptVerification(
   const registryDigestVerified=isDigest(authorization.registry_digest);
   const authorizationIdVerified=isDigest(authorization.authorization_id);
   const singleUseVerified=authorization.single_use===true;
+  const caseIdVerified=
+    typeof authorization.case_id==="string"&&
+    authorization.case_id===String(task_id||"");
+  const sourceStepVerified=
+    Number(authorization.source_step)===Number(source_step);
+  const sourceRevisionVerified=
+    Number(authorization.source_revision)===Number(source_revision);
   let runtimeRegistryBindingVerified=false;
   try{
     runtimeRegistryBindingVerified=
@@ -153,6 +164,9 @@ function authorizationReceiptVerification(
     registry_digest_verified:registryDigestVerified,
     authorization_id_verified:authorizationIdVerified,
     single_use_verified:singleUseVerified,
+    case_id_verified:caseIdVerified,
+    source_step_verified:sourceStepVerified,
+    source_revision_verified:sourceRevisionVerified,
     runtime_registry_binding_verified:runtimeRegistryBindingVerified
   };
 }
@@ -223,7 +237,12 @@ function buildExecutionReceipt({
     authorizationReceiptVerification(
       authorization,
       authorized_actions,
-      before_runtime
+      before_runtime,
+      {
+        task_id:request.task_id,
+        source_step,
+        source_revision
+      }
     );
   const authorizationBindingVerified=
     authorized_actions.length===evidence.length&&
@@ -255,6 +274,12 @@ function buildExecutionReceipt({
       authorizationReceiptChecks.authorization_id_verified,
     authorization_single_use_verified:
       authorizationReceiptChecks.single_use_verified,
+    authorization_case_id_verified:
+      authorizationReceiptChecks.case_id_verified,
+    authorization_source_step_verified:
+      authorizationReceiptChecks.source_step_verified,
+    authorization_source_revision_verified:
+      authorizationReceiptChecks.source_revision_verified,
     authorization_runtime_registry_binding_verified:
       authorizationReceiptChecks.runtime_registry_binding_verified,
     authorization_binding_verified:authorizationBindingVerified,
@@ -278,6 +303,9 @@ function buildExecutionReceipt({
     verification.authorization_registry_digest_verified&&
     verification.authorization_id_verified&&
     verification.authorization_single_use_verified&&
+    verification.authorization_case_id_verified&&
+    verification.authorization_source_step_verified&&
+    verification.authorization_source_revision_verified&&
     verification.authorization_runtime_registry_binding_verified&&
     verification.authorization_binding_verified&&
     verification.logical_target_binding_verified&&
@@ -393,6 +421,28 @@ function verifyExecutionReceipt(receipt={},{
     throw new Error("execution_receipt_request_mismatch");
   if(proposal&&receipt.proposal_sha256!==digestObject(proposal))
     throw new Error("execution_receipt_proposal_mismatch");
+
+  if(request){
+    if(receipt.task_id!==String(request.task_id||""))
+      throw new Error("execution_receipt_task_id_mismatch");
+    if(digestObject(receipt.logical_targets||[])!==
+       digestObject(request.resolved_targets||[]))
+      throw new Error("execution_receipt_logical_targets_mismatch");
+  }
+  if(proposal){
+    if((receipt.proposal_id||null)!==(proposal.proposal_id||null))
+      throw new Error("execution_receipt_proposal_id_mismatch");
+    if(receipt.task_id!==String(proposal.task_id||""))
+      throw new Error("execution_receipt_proposal_task_mismatch");
+  }
+  if(contextual_state){
+    const expectedContextRevision=
+      contextual_state.context_revision ??
+      contextual_state.revision ??
+      null;
+    if(receipt.context_revision!==expectedContextRevision)
+      throw new Error("execution_receipt_context_revision_mismatch");
+  }
   if(
     before_runtime&&
     receipt.reconcile&&
@@ -403,6 +453,21 @@ function verifyExecutionReceipt(receipt={},{
     receipt.reconcile&&
     receipt.reconcile.after_runtime_sha256!==digestObject(after_runtime)
   )throw new Error("execution_receipt_after_runtime_mismatch");
+
+  if(before_runtime){
+    const expectedBeforeRevision=
+      Array.isArray(before_runtime.revisions)?before_runtime.revisions.length:null;
+    if(!receipt.world_revision||
+       receipt.world_revision.before!==expectedBeforeRevision)
+      throw new Error("execution_receipt_world_revision_before_mismatch");
+  }
+  if(after_runtime){
+    const expectedAfterRevision=
+      Array.isArray(after_runtime.revisions)?after_runtime.revisions.length:null;
+    if(!receipt.world_revision||
+       receipt.world_revision.after!==expectedAfterRevision)
+      throw new Error("execution_receipt_world_revision_after_mismatch");
+  }
 
   const auth=receipt.authorization||{};
   if(
@@ -470,7 +535,12 @@ function verifyExecutionReceipt(receipt={},{
     authorizationReceiptVerification(
       auth.receipt,
       authorizedActions,
-      before_runtime
+      before_runtime,
+      {
+        task_id:receipt.task_id,
+        source_step:receipt.source_step,
+        source_revision:receipt.source_revision
+      }
     );
   const authorizationBindingVerified=
     authorizedActions.length===rebuiltRows.length&&
@@ -502,6 +572,12 @@ function verifyExecutionReceipt(receipt={},{
       authorizationReceiptChecks.authorization_id_verified,
     authorization_single_use_verified:
       authorizationReceiptChecks.single_use_verified,
+    authorization_case_id_verified:
+      authorizationReceiptChecks.case_id_verified,
+    authorization_source_step_verified:
+      authorizationReceiptChecks.source_step_verified,
+    authorization_source_revision_verified:
+      authorizationReceiptChecks.source_revision_verified,
     authorization_runtime_registry_binding_verified:
       authorizationReceiptChecks.runtime_registry_binding_verified,
     authorization_binding_verified:authorizationBindingVerified,
@@ -525,6 +601,9 @@ function verifyExecutionReceipt(receipt={},{
     expectedVerification.authorization_registry_digest_verified&&
     expectedVerification.authorization_id_verified&&
     expectedVerification.authorization_single_use_verified&&
+    expectedVerification.authorization_case_id_verified&&
+    expectedVerification.authorization_source_step_verified&&
+    expectedVerification.authorization_source_revision_verified&&
     expectedVerification.authorization_runtime_registry_binding_verified&&
     expectedVerification.authorization_binding_verified&&
     expectedVerification.logical_target_binding_verified&&
