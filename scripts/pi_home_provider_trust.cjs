@@ -1,5 +1,17 @@
 "use strict";
 
+const crypto=require("crypto");
+
+function canonical(v){
+  if(Array.isArray(v))return "["+v.map(canonical).join(",")+"]";
+  if(v&&typeof v==="object"){
+    return "{"+Object.keys(v).sort().map(k=>JSON.stringify(k)+":"+canonical(v[k])).join(",")+"}";
+  }
+  return JSON.stringify(v);
+}
+function sha256(value){
+  return "sha256:"+crypto.createHash("sha256").update(value).digest("hex");
+}
 function uniq(xs){return [...new Set((xs||[]).map(String))].sort()}
 function clone(v){return v==null?v:JSON.parse(JSON.stringify(v))}
 
@@ -72,6 +84,14 @@ function normalizeTimeBoundRegistryEntry(entry={}){
   };
 }
 
+function sealRegistry(schema_version,entries){
+  const core={schema_version,entries};
+  return {
+    ...core,
+    registry_digest:sha256(canonical(core))
+  };
+}
+
 function buildProviderTrustRegistry(entries=[]){
   const out={};
   for(const raw of entries||[]){
@@ -79,10 +99,7 @@ function buildProviderTrustRegistry(entries=[]){
     if(out[entry.provider_id])throw new Error("duplicate_provider_trust_entry:"+entry.provider_id);
     out[entry.provider_id]=entry;
   }
-  return {
-    schema_version:"pi-home-provider-trust-registry-v1",
-    entries:out
-  };
+  return sealRegistry("pi-home-provider-trust-registry-v1",out);
 }
 
 function buildProviderTrustRegistryV2(entries=[]){
@@ -92,9 +109,38 @@ function buildProviderTrustRegistryV2(entries=[]){
     if(out[entry.provider_id])throw new Error("duplicate_provider_trust_entry:"+entry.provider_id);
     out[entry.provider_id]=entry;
   }
+  return sealRegistry("pi-home-provider-trust-registry-v2",out);
+}
+
+function verifyProviderTrustRegistry(registry={}){
+  if(!["pi-home-provider-trust-registry-v1","pi-home-provider-trust-registry-v2"].includes(registry.schema_version)){
+    throw new Error("unsupported_provider_trust_registry");
+  }
+  const declared=String(registry.registry_digest||"");
+  if(!/^sha256:[0-9a-f]{64}$/.test(declared)){
+    return {
+      valid:false,
+      reason:"provider_trust_registry_digest_missing_or_invalid",
+      registry_digest:declared||null
+    };
+  }
+  const core={
+    schema_version:registry.schema_version,
+    entries:registry.entries||{}
+  };
+  const expected=sha256(canonical(core));
+  if(expected!==declared){
+    return {
+      valid:false,
+      reason:"provider_trust_registry_digest_mismatch",
+      registry_digest:declared,
+      expected_registry_digest:expected
+    };
+  }
   return {
-    schema_version:"pi-home-provider-trust-registry-v2",
-    entries:out
+    valid:true,
+    reason:"provider_trust_registry_digest_verified",
+    registry_digest:declared
   };
 }
 
@@ -130,15 +176,38 @@ function resolveProviderTrust(provider={},registry=null,{at=null}={}){
 
   const entries=registryEntries(registry);
   if(!entries)return {...base,reason:"trust_registry_missing"};
+  const registryVerification=verifyProviderTrustRegistry(registry);
+  if(!registryVerification.valid){
+    return {
+      ...base,
+      reason:registryVerification.reason,
+      registry_verification:registryVerification,
+      registry_digest:registryVerification.registry_digest||null
+    };
+  }
   const entry=entries[String(provider.id)];
-  if(!entry)return {...base,reason:"provider_not_registered"};
+  if(!entry){
+    return {
+      ...base,
+      reason:"provider_not_registered",
+      registry_digest:registryVerification.registry_digest,
+      registry_verification:registryVerification
+    };
+  }
   const lifecycleEvaluationTime=
     registry&&registry.schema_version==="pi-home-provider-trust-registry-v2"
       ?resolveEvaluationTime(at)
       :null;
-  const withTime=payload=>lifecycleEvaluationTime
-    ?{...payload,evaluation_time:lifecycleEvaluationTime}
-    :payload;
+  const withRegistry=payload=>({
+    ...payload,
+    registry_digest:registryVerification.registry_digest,
+    registry_verification:registryVerification
+  });
+  const withTime=payload=>withRegistry(
+    lifecycleEvaluationTime
+      ?{...payload,evaluation_time:lifecycleEvaluationTime}
+      :payload
+  );
   if(entry.status!=="active"){
     return withTime({...base,reason:"provider_trust_revoked",registry_entry:clone(entry)});
   }
@@ -214,12 +283,15 @@ function applyResolvedTrust(provider={},registry=null,options={}){
 }
 
 module.exports={
+  canonical,
+  sha256,
   normalizeDigest,
   normalizeIsoInstant,
   normalizeRegistryEntry,
   normalizeTimeBoundRegistryEntry,
   buildProviderTrustRegistry,
   buildProviderTrustRegistryV2,
+  verifyProviderTrustRegistry,
   resolveProviderTrust,
   applyResolvedTrust
 };

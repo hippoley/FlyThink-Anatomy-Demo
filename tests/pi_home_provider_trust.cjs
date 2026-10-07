@@ -4,6 +4,7 @@ const assert=require("assert");
 const {
   buildProviderTrustRegistry,
   buildProviderTrustRegistryV2,
+  verifyProviderTrustRegistry,
   resolveProviderTrust,
   applyResolvedTrust
 }=require("../scripts/pi_home_provider_trust.cjs");
@@ -19,6 +20,9 @@ const registry=buildProviderTrustRegistry([{
   calibration_digest:digest,
   approved_by:"engineering-review-board"
 }]);
+
+assert.match(registry.registry_digest,/^sha256:[0-9a-f]{64}$/);
+assert.equal(verifyProviderTrustRegistry(registry).valid,true);
 
 const provider={
   id:"contam-engineering",
@@ -36,6 +40,8 @@ const ok=resolveProviderTrust(provider,registry);
 assert.equal(ok.claimed_trusted_for_promotion,true);
 assert.equal(ok.effective_trusted_for_promotion,true);
 assert.equal(ok.reason,"registry_attestation_match");
+assert.equal(ok.registry_digest,registry.registry_digest);
+assert.equal(ok.registry_verification.valid,true);
 
 const noRegistry=resolveProviderTrust(provider,null);
 assert.equal(noRegistry.effective_trusted_for_promotion,false);
@@ -195,3 +201,32 @@ assert.throws(
   }]),
   /review_must_not_follow_activation/
 );
+
+
+{
+  const tampered=JSON.parse(JSON.stringify(registry));
+  tampered.entries["contam-engineering"].approved_by="tampered-reviewer";
+  const verification=verifyProviderTrustRegistry(tampered);
+  assert.equal(verification.valid,false);
+  assert.equal(verification.reason,"provider_trust_registry_digest_mismatch");
+
+  const rejected=resolveProviderTrust(provider,tampered);
+  assert.equal(rejected.effective_trusted_for_promotion,false);
+  assert.equal(rejected.reason,"provider_trust_registry_digest_mismatch");
+  assert.equal(rejected.registry_verification.valid,false);
+}
+
+{
+  const unsealed=JSON.parse(JSON.stringify(registry));
+  delete unsealed.registry_digest;
+  const rejected=resolveProviderTrust(provider,unsealed);
+  assert.equal(rejected.effective_trusted_for_promotion,false);
+  assert.equal(rejected.reason,"provider_trust_registry_digest_missing_or_invalid");
+}
+
+{
+  assert.match(lifecycleRegistry.registry_digest,/^sha256:[0-9a-f]{64}$/);
+  const lifecycleVerified=verifyProviderTrustRegistry(lifecycleRegistry);
+  assert.equal(lifecycleVerified.valid,true);
+  assert.equal(lifecycleOk.registry_digest,lifecycleRegistry.registry_digest);
+}
