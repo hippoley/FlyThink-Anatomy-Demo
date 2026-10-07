@@ -4,7 +4,7 @@ const {applyTurn,normalizeRuntime,deviceKey}=require("./whole_home_patch_contrac
 
 function patchTargets(p){if(Array.isArray(p.targets))return p.targets;if(p.target)return [p.target];return [];}
 function targetKey(t){return typeof t==="string"?t:deviceKey(t);}
-function canonicalPatch(p){return {capability:p.capability,model_id:p.model_id,slot:p.slot,target:targetKey(p.target),value:p.value};}
+function canonicalValue(v){\n  if(typeof v==="number"){\n    if(!Number.isFinite(v))throw new Error("non_finite_authorization_value");\n    if(Object.is(v,-0))return 0;\n    if(Number.isInteger(v)&&!Number.isSafeInteger(v))throw new Error("unsafe_authorization_number");\n    return v;\n  }\n  if(Array.isArray(v))return v.map(canonicalValue);\n  if(v&&typeof v==="object")return Object.fromEntries(Object.entries(v).map(([k,x])=>[k,canonicalValue(x)]));\n  return v;\n}\nfunction canonicalPatch(p){return {capability:p.capability,model_id:p.model_id,slot:p.slot,target:targetKey(p.target),value:canonicalValue(p.value)};}
 function stable(value){
   if(Array.isArray(value))return "["+value.map(stable).join(",")+"]";
   if(value&&typeof value==="object")return "{"+Object.keys(value).sort().map(k=>JSON.stringify(k)+":"+stable(value[k])).join(",")+"}";
