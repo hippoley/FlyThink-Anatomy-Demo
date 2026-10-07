@@ -23,6 +23,21 @@ def build_commands(args):
         raise SystemExit("--apply requires --expected-hardware-identity")
     if args.apply and not args.receipt:
         raise SystemExit("--apply requires --receipt")
+    use_execution_runtime=bool(
+        getattr(args,"flythink_execution_runtime",False)
+    )
+    use_spatialruntime=bool(
+        getattr(args,"spatialruntime_authorize",False)
+    )
+    authorization_ledger=getattr(args,"authorization_ledger",None)
+    if use_execution_runtime and not use_spatialruntime:
+        raise SystemExit(
+            "--flythink-execution-runtime requires --spatialruntime-authorize"
+        )
+    if args.apply and use_execution_runtime and not authorization_ledger:
+        raise SystemExit(
+            "--flythink-execution-runtime APPLY requires --authorization-ledger"
+        )
     fixture_payload=None
     if args.fixture_manifest:
         if not args.wav:
@@ -151,6 +166,13 @@ def build_commands(args):
         ]
     if getattr(args, "spatialruntime_authorize", False):
         node.append("--spatialruntime-authorize")
+    if getattr(args, "flythink_execution_runtime", False):
+        node.append("--flythink-execution-runtime")
+    if getattr(args, "authorization_ledger", None):
+        node.extend([
+            "--authorization-ledger",
+            str(args.authorization_ledger),
+        ])
     world_snapshot = getattr(args, "world_snapshot", None)
     world_validation_receipt = getattr(args, "world_validation_receipt", None)
     scene_context = getattr(args, "scene_context", None)
@@ -235,6 +257,15 @@ def parse_args():
         help="require SpatialRuntime authorization before any committed WindowPilot write",
     )
     p.add_argument(
+        "--flythink-execution-runtime",
+        action="store_true",
+        help="delegate committed physical execution to FlyThinkExecutionRuntime",
+    )
+    p.add_argument(
+        "--authorization-ledger",
+        help="durable single-use authorization ledger used by FlyThinkExecutionRuntime",
+    )
+    p.add_argument(
         "--world-snapshot",
         help="validated SpatialRuntime WorldSnapshot JSON for scene-derived safety context",
     )
@@ -290,6 +321,16 @@ def parse_args():
         p.error("--apply requires --expected-hardware-identity")
     if args.apply and not args.receipt:
         p.error("--apply requires --receipt")
+    if args.flythink_execution_runtime and not args.spatialruntime_authorize:
+        p.error("--flythink-execution-runtime requires --spatialruntime-authorize")
+    if (
+        args.apply
+        and args.flythink_execution_runtime
+        and not args.authorization_ledger
+    ):
+        p.error(
+            "--flythink-execution-runtime APPLY requires --authorization-ledger"
+        )
     if args.require_human_fixture and not args.fixture_manifest:
         p.error("--require-human-fixture requires --fixture-manifest")
     if args.fixture_manifest and not args.wav:
