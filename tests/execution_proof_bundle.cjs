@@ -14,11 +14,16 @@ const {
   verifyExecutionProofBundle
 }=require("../scripts/execution_proof_bundle.cjs");
 const {normalizeRuntime}=require("../scripts/whole_home_patch_contract.cjs");
+const {
+  CONTEXT_CANONICALIZATION,
+  contextStateDigest
+}=require("../scripts/contextual_edge_slu_adapter.cjs");
 
 const W={area:"客厅",entity:"窗",instance:"default"};
 const contextualState={
   contract_version:"contextual-state.v1",
   context_revision:7,
+  context_canonicalization:CONTEXT_CANONICALIZATION,
   conversation:{
     conversation_id:"conv-1",
     active_task_id:"task-1",
@@ -34,11 +39,13 @@ const contextualState={
   }},
   execution:{device_health:{},pending_ids:[],last_execution:null}
 };
+contextualState.context_sha256=contextStateDigest(contextualState);
 const decisionProposal={
   schema_version:"decision-proposal.v1",
   proposal_id:"proposal-1",
   task_id:"task-1",
   context_revision:7,
+  context_sha256:contextualState.context_sha256,
   world_snapshot_revision:12,
   world_snapshot_sha256:"b".repeat(64),
   intent:"bounded_window_open",
@@ -178,6 +185,18 @@ function buildBundle(){
     assert.throws(
       ()=>verifyExecutionProofBundle(forged),
       /execution_proof_bundle_decision_proposal_binding_mismatch/
+    );
+  }
+
+  {
+    let forged=buildBundle();
+    forged.artifacts.contextual_state.conversation.conversation_id="substituted";
+    forged.manifest.contextual_state_sha256=
+      digestObject(forged.artifacts.contextual_state);
+    forged=resealBundle(forged);
+    assert.throws(
+      ()=>verifyExecutionProofBundle(forged),
+      /context_state_sha256_mismatch/
     );
   }
 
