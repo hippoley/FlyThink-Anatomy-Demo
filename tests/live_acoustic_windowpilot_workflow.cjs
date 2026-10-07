@@ -30,6 +30,13 @@ assert.match(y,/tolerance_pct must be in \[0,2\]/);
 assert.match(y,/physical-lab-windowpilot/);
 assert.match(y,/cancel-in-progress:\s*false/);
 
+assert.match(y,/id-token:\s*write/);
+assert.match(y,/attestations:\s*write/);
+assert.match(y,/artifact-metadata:\s*write/);
+assert.match(y,/uses:\s*actions\/attest@v4/);
+assert.match(y,/live-acoustic-windowpilot-receipt\.json/);
+assert.match(y,/expected_hardware_identity must be exactly 64 hex characters/);
+
 const artifactBlock=y.slice(y.indexOf("name: live-acoustic-windowpilot-evidence"));
 assert.ok(artifactBlock.length>0,"evidence artifact block missing");
 assert.doesNotMatch(
@@ -45,5 +52,5 @@ assert.doesNotMatch(
 
 console.log(JSON.stringify({
   ok:true,
-  contract:"manual self-hosted human-acoustic WindowPilot acceptance remains fail-closed"
+  contract:"manual self-hosted human-acoustic WindowPilot acceptance remains fail-closed and validated evidence is Sigstore-attested"
 }));
