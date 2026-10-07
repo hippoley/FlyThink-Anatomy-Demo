@@ -10,6 +10,7 @@ on:
       - "scripts/stateful_checkpoint_trajectory.cjs"
       - "scripts/probe_windowpilot_checkpoint_e2e.cjs"
       - "scripts/run_acoustic_windowpilot_e2e.cjs"
+      - "scripts/live_acoustic_windowpilot.py"
       - "scripts/spatialruntime_authorizer.cjs"
       - "scripts/spatialruntime_window_authorizer.py"
       - "scripts/acoustic_windowpilot_evidence.cjs"
