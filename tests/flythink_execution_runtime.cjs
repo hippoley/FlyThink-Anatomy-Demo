@@ -9,7 +9,8 @@ const {
 }=require("../scripts/execution_reasoning_contract.cjs");
 const {
   runExecutionProposal,
-  FlyThinkExecutionRuntime
+  FlyThinkExecutionRuntime,
+  verifyExecutionReceipt
 }=require("../scripts/flythink_execution_runtime.cjs");
 
 const L={area:"客厅",entity:"空调",instance:"default"};
@@ -87,10 +88,16 @@ function passAuthorizer(counter=null,transform=null){
     assert.equal(driver.commands.length,1);
     assert.equal(out.runtime.devices["主卧::空调::default"].slots.temperature,20);
     assert.equal(out.authorized_actions[0].value,20);
+    assert.equal(out.receipt.schema_version,"execution-receipt.v1");
     assert.equal(out.receipt.authorization_granted,true);
     assert.equal(out.receipt.physical_committed,true);
     assert.equal(out.receipt.atomic_batch,false);
+    assert.equal(out.receipt.result,"APPLIED_UNVERIFIED");
+    assert.equal(out.receipt.verification.physical_truth_verified,false);
     assert.match(out.receipt.receipt_sha256,/^[0-9a-f]{64}$/);
+    const verifiedReceipt=verifyExecutionReceipt(out.receipt);
+    assert.equal(verifiedReceipt.valid,true);
+    assert.equal(verifiedReceipt.physical_truth_verified,false);
   }
 
   // 2. DEFER never reaches authorization or the driver.
@@ -273,7 +280,89 @@ function passAuthorizer(counter=null,transform=null){
     );
   }
 
-  // 10. Runtime facade exposes the formal recovery path, not manual trust clearing.
+  // 10. WindowPilot-like causal evidence upgrades the receipt to verified physical truth.
+  {
+    const W={area:"客厅",entity:"窗",instance:"default"};
+    const wk="客厅::窗::default";
+    const windowRuntime=normalizeRuntime({devices:{
+      [wk]:{
+        key:wk,area:"客厅",entity:"窗",instance:"default",
+        slots:{opening:0}
+      }
+    }});
+    const windowContext=toContextStateSnapshot(windowRuntime,[],{
+      conversation_id:"conv-window",
+      active_task_id:"task-window"
+    });
+    const windowAction={op:"PATCH_SLOT",target:W,slot:"opening",value:5};
+    const windowRequest={
+      request_version:"flythink-execution-request.v1",
+      task_id:"task-window",
+      goal:{type:"desired_state",metric:"ventilation"},
+      resolved_targets:[W],
+      constraints:[],
+      candidate_actions:[windowAction]
+    };
+    const windowProposal={
+      schema_version:"flythink-execution-proposal.v1",
+      proposal_id:"proposal-window",
+      task_id:"task-window",
+      decision:"PROPOSE",
+      strategy:{kind:"bounded-open"},
+      proposed_actions:[windowAction],
+      uncertainty:{score:0.1,reasons:[]},
+      evidence_refs:["sensor:co2"],
+      reason_code:"HIGH_CO2"
+    };
+    const driver={
+      async execute(patch){
+        return {
+          id:"windowpilot:verified",
+          status:"applied",
+          patch,
+          ack:{ok:true,command_id:"ack-window"},
+          before_tick:10,
+          requested_position_pct:5,
+          hardware_identity_before:"hw-window-1",
+          hardware_identity_after:"hw-window-1",
+          readiness_before:{physical_write_ready:true},
+          readiness_after:{physical_write_ready:true},
+          observation:{
+            target:W,
+            exists:true,
+            slots:{opening:5},
+            evidence:{
+              source:"windowpilot:/api/state",
+              measured:true,
+              tick:11,
+              ack_at_ms:1000,
+              received_at_ms:1001
+            }
+          }
+        };
+      }
+    };
+    const out=await runExecutionProposal({
+      runtime:windowRuntime,
+      contextual_state:windowContext,
+      request:windowRequest,
+      proposal:windowProposal,
+      driver,
+      physicalAuthorizer:passAuthorizer()
+    });
+    assert.equal(out.ok,true);
+    assert.equal(out.receipt.result,"APPLIED");
+    assert.equal(out.receipt.verification.physical_truth_verified,true);
+    const verifiedReceipt=verifyExecutionReceipt(out.receipt,{
+      contextual_state:windowContext,
+      request:windowRequest,
+      proposal:windowProposal
+    });
+    assert.equal(verifiedReceipt.valid,true);
+    assert.equal(verifiedReceipt.physical_truth_verified,true);
+  }
+
+  // 11. Runtime facade exposes the formal recovery path, not manual trust clearing.
   {
     const W={area:"客厅",entity:"窗",instance:"default"};
     const wk="客厅::窗::default";
@@ -331,7 +420,7 @@ function passAuthorizer(counter=null,transform=null){
 
   console.log(JSON.stringify({
     ok:true,
-    cases:10,
+    cases:11,
     contract:"contextual execution proposal -> deterministic authorization -> atomic/single physical execution -> readback, with formal recovery"
   }));
 })().catch(e=>{console.error(e);process.exit(1)});
