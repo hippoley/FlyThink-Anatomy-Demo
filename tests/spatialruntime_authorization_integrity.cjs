@@ -174,6 +174,52 @@ function receipt(overrides={}){
   );
 }
 
+
+
+{
+  const bad=receipt({canonicalization:"other"});
+  const base={...bad};delete base.receipt_sha256;
+  bad.receipt_sha256=sha256Object(base);
+  assert.throws(
+    ()=>validateAuthorizationReceipt(bad,request(),request().patches),
+    /canonicalization_mismatch/
+  );
+}
+
+{
+  const bad=receipt();
+  bad.authorized_patches=[{...patch(3),slot:"power"}];
+  bad.patch_digest=sha256Object(bad.authorized_patches);
+  const base={...bad};delete base.receipt_sha256;
+  bad.receipt_sha256=sha256Object(base);
+  assert.throws(
+    ()=>validateAuthorizationReceipt(bad,request(),request().patches),
+    /patch_identity_mismatch/
+  );
+}
+
+{
+  const bad=receipt();
+  bad.authorized_patches=[{...patch(3),op:"CLOSE_DEVICE"}];
+  bad.patch_digest=sha256Object(bad.authorized_patches);
+  const base={...bad};delete base.receipt_sha256;
+  bad.receipt_sha256=sha256Object(base);
+  assert.throws(
+    ()=>validateAuthorizationReceipt(bad,request(),request().patches),
+    /patch_identity_mismatch/
+  );
+}
+
+{
+  const bad=receipt({trace_hash:"not-a-sha"});
+  const base={...bad};delete base.receipt_sha256;
+  bad.receipt_sha256=sha256Object(base);
+  assert.throws(
+    ()=>validateAuthorizationReceipt(bad,request(),request().patches),
+    /trace_hash_invalid/
+  );
+}
+
 console.log(JSON.stringify({
   ok:true,
   contract:"SpatialRuntime authorization must bind request identity, revision, exact patch digest, registry digest, single-use intent, trace hash and receipt SHA before dispatch"
