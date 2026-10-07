@@ -105,8 +105,10 @@ function physicalEvidenceRow(receipt,index){
   };
 }
 
-function resultFromStatus(status,physicalCommitted){
-  if(status==="EXECUTED"&&physicalCommitted)return "APPLIED";
+function resultFromStatus(status,physicalCommitted,physicalTruthVerified=false){
+  if(status==="EXECUTED"&&physicalCommitted){
+    return physicalTruthVerified?"APPLIED":"APPLIED_UNVERIFIED";
+  }
   if(status==="DEFERRED")return "DEFERRED";
   if(status==="BLOCKED")return "BLOCKED";
   if(status==="PHYSICAL_NOT_COMMITTED")return "NOT_COMMITTED";
@@ -206,6 +208,15 @@ function buildExecutionReceipt({
     verification.hardware_identity_verified&&
     verification.measured_readback_verified;
 
+  if(
+    physical_committed===true&&
+    verification.authorization_binding_verified!==true
+  )throw new Error("execution_receipt_authorization_binding_mismatch");
+  if(
+    physical_committed===true&&
+    verification.logical_target_binding_verified!==true
+  )throw new Error("execution_receipt_logical_target_binding_mismatch");
+
   const contextRevision=
     contextual_state.context_revision ??
     contextual_state.revision ??
@@ -248,7 +259,11 @@ function buildExecutionReceipt({
       evidence_sha256:digestObject(evidence)
     },
     runtime_status:String(status||"UNKNOWN"),
-    result:resultFromStatus(status,physical_committed===true),
+    result:resultFromStatus(
+      status,
+      physical_committed===true,
+      verification.physical_truth_verified
+    ),
     reason:reason||null,
     reconcile:{
       before_runtime_sha256:before_runtime?digestObject(before_runtime):null,
@@ -267,7 +282,13 @@ function buildExecutionReceipt({
   return receipt;
 }
 
-function verifyExecutionReceipt(receipt={}){
+function verifyExecutionReceipt(receipt={},{
+  contextual_state=null,
+  request=null,
+  proposal=null,
+  before_runtime=null,
+  after_runtime=null
+}={}){
   if(!receipt||receipt.schema_version!==SCHEMA_VERSION)
     throw new Error("execution_receipt_schema_invalid");
   if(!isDigest(receipt.receipt_sha256))
@@ -275,6 +296,31 @@ function verifyExecutionReceipt(receipt={}){
   const expected=digestObject(receiptCore(receipt));
   if(expected!==receipt.receipt_sha256)
     throw new Error("execution_receipt_digest_mismatch");
+
+  for(const [name,value] of [
+    ["context",receipt.context_sha256],
+    ["request",receipt.request_sha256],
+    ["proposal",receipt.proposal_sha256],
+    ["evidence",receipt.evidence_digest]
+  ]){
+    if(!isDigest(value))throw new Error("execution_receipt_"+name+"_digest_invalid");
+  }
+  if(contextual_state&&receipt.context_sha256!==digestObject(contextual_state))
+    throw new Error("execution_receipt_context_mismatch");
+  if(request&&receipt.request_sha256!==digestObject(request))
+    throw new Error("execution_receipt_request_mismatch");
+  if(proposal&&receipt.proposal_sha256!==digestObject(proposal))
+    throw new Error("execution_receipt_proposal_mismatch");
+  if(
+    before_runtime&&
+    receipt.reconcile&&
+    receipt.reconcile.before_runtime_sha256!==digestObject(before_runtime)
+  )throw new Error("execution_receipt_before_runtime_mismatch");
+  if(
+    after_runtime&&
+    receipt.reconcile&&
+    receipt.reconcile.after_runtime_sha256!==digestObject(after_runtime)
+  )throw new Error("execution_receipt_after_runtime_mismatch");
 
   const auth=receipt.authorization||{};
   if(auth.receipt){
@@ -376,7 +422,8 @@ function verifyExecutionReceipt(receipt={}){
 
   const expectedResult=resultFromStatus(
     receipt.runtime_status,
-    physical.committed===true
+    physical.committed===true,
+    expectedVerification.physical_truth_verified
   );
   if(receipt.result!==expectedResult)
     throw new Error("execution_receipt_result_mismatch");
