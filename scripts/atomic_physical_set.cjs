@@ -1,7 +1,11 @@
 "use strict";
 
-const {normalizeRuntime}=require("./whole_home_patch_contract.cjs");
-const {materializePatch,reconcileObservation}=require("./physical_runtime.cjs");
+const {normalizeRuntime,deviceKey}=require("./whole_home_patch_contract.cjs");
+const {
+  materializePatch,
+  expectedObservationTarget,
+  reconcileObservation
+}=require("./physical_runtime.cjs");
 const {PHYSICAL_CAPABILITIES,requireCapability}=require("./physical_driver_capabilities.cjs");
 
 function clone(v){return v==null?v:JSON.parse(JSON.stringify(v));}
@@ -34,6 +38,19 @@ async function executeAtomicPhysicalSet(inputRuntime,patches,driver,options={}){
     return {ok:false,runtime:before,receipts:[],reason:"physical_atomic_batch_invalid_receipts"};
   if(commands.some(c=>!c||c.status!=="applied"||!c.observation))
     return {ok:false,runtime:before,receipts:[],reason:"physical_atomic_batch_not_committed"};
+
+  for(let i=0;i<commands.length;i++){
+    const expected=expectedObservationTarget(physical[i]);
+    const observed=commands[i].observation&&commands[i].observation.target||null;
+    if(expected&&(!observed||deviceKey(expected)!==deviceKey(observed))){
+      return {
+        ok:false,
+        runtime:before,
+        receipts:[],
+        reason:"physical_atomic_batch_receipt_target_mismatch:"+String(i)
+      };
+    }
+  }
 
   let runtime=before;
   const receipts=[];
