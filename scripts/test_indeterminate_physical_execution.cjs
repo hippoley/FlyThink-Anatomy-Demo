@@ -32,36 +32,48 @@ class EffectThenDisconnectDriver{
 
 (async()=>{
   const driver=new EffectThenDisconnectDriver();
-  let threw=false;
-  let errorMessage=null;
-  try{
-    await executePhysicalTurn(initial,[{
-      op:"PATCH_SLOT",
-      target,
-      slot:"opening",
-      value:50,
-      turn_id:"truth-probe-1"
-    }],driver,{turn_id:"truth-probe-1"});
-  }catch(e){
-    threw=true;
-    errorMessage=String(e&&e.message||e);
-  }
+  const out=await executePhysicalTurn(initial,[{
+    op:"PATCH_SLOT",
+    target,
+    slot:"opening",
+    value:50,
+    turn_id:"truth-probe-1"
+  }],driver,{turn_id:"truth-probe-1"});
 
   assert.equal(driver.effects,1,"physical effect must have happened before transport loss");
   assert.equal(driver.world.opening,50,"device world must show the effect");
-  assert.equal(threw,true,"current runtime is expected to surface only the transport exception");
+
+  assert.equal(out.ok,false);
+  assert.equal(out.reason,"physical_outcome_indeterminate_after_dispatch");
+  assert.equal(isQuarantined(out.runtime,target),true);
+
+  const health=out.runtime.deviceHealth["客厅::窗户::default"];
+  assert.equal(health.status,"quarantined");
+  assert.equal(health.source_status,"indeterminate");
+  assert.equal(health.reason,"physical_outcome_indeterminate_after_dispatch");
+
+  assert.equal(out.receipts.length,1);
+  assert.equal(out.receipts[0].status,"indeterminate");
+  assert.equal(out.receipts[0].observation,null);
+  assert.equal(out.receipts[0].transport_error,"transport_lost_after_device_effect");
+
+  const device=out.runtime.devices["客厅::窗户::default"];
   assert.equal(
-    isQuarantined(initial,target),
-    false,
-    "probe documents current gap: runtime has no durable indeterminate/quarantine state after effect-then-error"
+    device.slots.opening,
+    0,
+    "logical runtime must not fabricate the unobserved physical result before reconciliation"
   );
 
+  assert.equal(out.runtime.executionLedger.length,1);
+  assert.equal(out.runtime.executionLedger[0].status,"indeterminate");
+
   console.log(JSON.stringify({
-    indeterminate_physical_execution_gap:"REPRODUCED",
+    indeterminate_physical_execution_boundary:"PASS",
     physical_effects:driver.effects,
     device_opening:driver.world.opening,
-    runtime_quarantined:0,
-    observed_error:errorMessage,
-    safe_automatic_retry:0
+    runtime_quarantined:1,
+    fabricated_logical_commit:0,
+    automatic_retry_authorized:0,
+    reconciliation_required:1
   }));
 })().catch(e=>{console.error(e);process.exit(1);});
