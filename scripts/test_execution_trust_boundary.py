@@ -14,18 +14,20 @@ registry=DeviceRegistry([
  DeviceBinding("客厅","灯","default","LIGHT_GROUP"),
 ])
 authorized=["客厅::空调::default","主卧::空调::default"]
-valid=plan(registry,authorized,"temperature",22,turn_id="turn-42")
+authority_key="test-authority-key"
+valid=plan(registry,authorized,"temperature",22,turn_id="turn-42",authority_key=authority_key)
 assert valid["ok"] and len(valid["patches"])==2
 assert valid["authorization"]["patch_digest"]
 assert valid["authorization"]["registry_digest"]
 assert valid["authorization"]["authorization_id"]
 assert valid["authorization"]["turn_id"]=="turn-42"
-assert not plan(registry,authorized,"temperature",31)["ok"]
-assert not plan(registry,["客厅::空调::default","书房::空调::default"],"temperature",22)["ok"]
+assert not plan(registry,authorized,"temperature",31,authority_key=authority_key)["ok"]
+assert not plan(registry,["客厅::空调::default","书房::空调::default"],"temperature",22,authority_key=authority_key)["ok"]
 
 node=r"""
 const assert=require("assert");
 const payload=JSON.parse(process.argv[2]);
+const authorityKey=process.argv[3];
 const registryDigest=payload.authorization.registry_digest;
 const {normalizeRuntime,applyTurn}=require("./scripts/whole_home_patch_contract.cjs");
 const {atomicApplyAuthorizedPlan}=require("./scripts/atomic_authorized_commit.cjs");
@@ -47,7 +49,7 @@ const ledger=()=>{const s=new Map();return {
 }};
 
 const consumed=ledger();
-let out=atomicApplyAuthorizedPlan(r,payload,registryDigest,consumed);
+let out=atomicApplyAuthorizedPlan(r,payload,registryDigest,consumed,authorityKey);
 assert(out.ok);
 assert.equal(consumed.status(payload.authorization.authorization_id),"consumed");
 assert.equal(out.runtime.devices["客厅::空调::default"].slots.temperature,22);
@@ -56,7 +58,7 @@ assert.equal(out.runtime.devices["次卧::空调::default"].slots.temperature,26
 assert.deepStrictEqual(out.runtime.devices["客厅::灯::default"],untouched);
 
 const committed=out.runtime;
-out=atomicApplyAuthorizedPlan(committed,payload,registryDigest,consumed);
+out=atomicApplyAuthorizedPlan(committed,payload,registryDigest,consumed,authorityKey);
 assert(!out.ok);assert.equal(out.reason,"planner_authorization_replayed");
 assert.deepStrictEqual(out.runtime,committed);assert.equal(out.receipts.length,0);
 
@@ -64,20 +66,21 @@ const forged=JSON.parse(JSON.stringify(payload));
 forged.authorization.authorization_id="forged-auth-"+Date.now();
 forged.authorization.turn_id="forged-turn";
 const forgedLedger=ledger();
-out=atomicApplyAuthorizedPlan(before,forged,registryDigest,forgedLedger);
+out=atomicApplyAuthorizedPlan(before,forged,registryDigest,forgedLedger,authorityKey);
 const forgedAccepted=out.ok===true;
-assert(forgedAccepted,"expected current executor to expose forged-authorization authenticity gap");
-assert.equal(forgedLedger.status(forged.authorization.authorization_id),"consumed");
+assert.equal(forgedAccepted,false);
+assert.equal(out.reason,"planner_authorization_proof_invalid");
+assert.equal(forgedLedger.status(forged.authorization.authorization_id),"fresh");
 
 const tampered=JSON.parse(JSON.stringify(payload));
 tampered.patches[1].target="次卧::空调::default";
 const tamperLedger=ledger();
-out=atomicApplyAuthorizedPlan(before,tampered,registryDigest,tamperLedger);
+out=atomicApplyAuthorizedPlan(before,tampered,registryDigest,tamperLedger,authorityKey);
 assert(!out.ok);assert.equal(out.reason,"planner_authorization_digest_mismatch");
 assert.equal(tamperLedger.status(payload.authorization.authorization_id),"fresh");
 
 const staleLedger=ledger();
-out=atomicApplyAuthorizedPlan(before,payload,"registry-after-rebind",staleLedger);
+out=atomicApplyAuthorizedPlan(before,payload,"registry-after-rebind",staleLedger,authorityKey);
 assert(!out.ok);assert.equal(out.reason,"planner_authorization_stale_registry");
 assert.equal(staleLedger.status(payload.authorization.authorization_id),"fresh");
 
@@ -87,14 +90,14 @@ const indeterminateLedger={
  consume(){return false;},
  release(){this.state="fresh";return true;}
 };
-out=atomicApplyAuthorizedPlan(before,payload,registryDigest,indeterminateLedger);
+out=atomicApplyAuthorizedPlan(before,payload,registryDigest,indeterminateLedger,authorityKey);
 assert(!out.ok);assert.equal(out.reason,"authorization_commit_indeterminate");
 assert.equal(indeterminateLedger.state,"reserved");
 assert.deepStrictEqual(out.runtime,before);assert.equal(out.receipts.length,0);
 
 console.log(JSON.stringify({
  planner_bound_authorization:"PASS",
- forged_authorization_currently_accepted:forgedAccepted?1:0,
+ forged_authorization_bypass:forgedAccepted?1:0,
  mounted_wrong_device_injection:0,
  post_planner_patch_tamper:0,
  stale_registry_authorization:0,
@@ -109,7 +112,7 @@ with tempfile.NamedTemporaryFile("w",suffix=".cjs",dir=".",delete=False,encoding
     script.write(node)
     script_path=script.name
 try:
-    p=subprocess.run(["node",script_path,json.dumps(valid,ensure_ascii=False)],text=True,capture_output=True)
+    p=subprocess.run(["node",script_path,json.dumps(valid,ensure_ascii=False),authority_key],text=True,capture_output=True)
 finally:
     os.unlink(script_path)
 if p.returncode:
