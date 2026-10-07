@@ -9,7 +9,7 @@ on:
       - "scripts/semantic_capability_map.py"
       - "scripts/atomic_authorized_commit.cjs"
       - "scripts/authorization_ledger.cjs"
-      - "scripts/test_authorization_ledger.cjs"
+      - "scripts/test_authorization_ledger.cjs"\n      - "scripts/authorization_reserve_worker.cjs"\n      - "scripts/test_authorization_reservation_race.cjs"
       - "scripts/test_durable_authorization_commit.cjs"
       - "scripts/atomic_physical_set.cjs"
       - "scripts/physical_driver_capabilities.cjs"
@@ -74,7 +74,7 @@ jobs:
           python -m py_compile scripts/authorized_patch_planner.py scripts/device_registry.py scripts/test_execution_trust_boundary.py
           node --check scripts/atomic_authorized_commit.cjs
           node --check scripts/authorization_ledger.cjs
-          node --check scripts/test_authorization_ledger.cjs
+          node --check scripts/test_authorization_ledger.cjs\n          node --check scripts/authorization_reserve_worker.cjs\n          node --check scripts/test_authorization_reservation_race.cjs
           node --check scripts/test_durable_authorization_commit.cjs
           node --check scripts/atomic_physical_set.cjs
           node --check scripts/physical_driver_capabilities.cjs
