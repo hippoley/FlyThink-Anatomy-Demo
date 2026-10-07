@@ -5,7 +5,7 @@ const {
   diffLeaves,
   normalizeRuntime
 }=require("./whole_home_patch_contract.cjs");
-const {deriveContext}=require("./runtime_context_adapter.cjs");
+const {deriveSemanticContext}=require("./contextual_edge_slu_adapter.cjs");
 const {
   MockThingDriver,
   executePhysicalTurn,
@@ -88,7 +88,7 @@ class StreamingHomeSession{
     const before=normalizeRuntime(this.runtime);
     const beforeCommands=this.commandCount();
     const context={
-      ...deriveContext(this.runtime,this.history),
+      ...deriveSemanticContext(this.runtime,this.history),
       ...(event.context_hint||{})
     };
     const prediction=await this.predictor({
