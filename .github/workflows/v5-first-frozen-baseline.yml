@@ -1,0 +1,30 @@
+name: v5-first-frozen-baseline
+on:
+  workflow_dispatch:
+jobs:
+  baseline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Compile frozen V5 baseline
+        run: python -m py_compile scripts/assert_frozen_v5.py scripts/contextual_state_transition_corpus_v5.py scripts/train_v3_flat_vs_compositional.py scripts/layered_dataset.py
+      - name: Assert frozen V5 SHA
+        run: python scripts/assert_frozen_v5.py
+      - name: Validate frozen V5 contract
+        run: python scripts/test_contextual_state_transition_corpus_v5.py
+      - name: Install PyTorch CPU
+        run: pip install --index-url https://download.pytorch.org/whl/cpu torch
+      - name: Prepare verified FlyWire graph
+        run: python scripts/prepare_flywire_graph.py --download --neurons 512 --out artifacts/flywire
+      - name: First frozen V5 baseline
+        run: python scripts/train_v3_flat_vs_compositional.py --dataset v5 --graph artifacts/flywire/connectome.json --epochs 120 --out artifacts/v5-first-baseline
+      - name: Show frozen V5 report
+        run: cat artifacts/v5-first-baseline/report.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: v5-first-frozen-baseline
+          path: artifacts/v5-first-baseline/
