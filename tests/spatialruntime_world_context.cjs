@@ -23,6 +23,8 @@ assert.equal(context.schema,CONTEXT_SCHEMA);
 assert.equal(context.case_id,"interior-kitchen-original");
 assert.equal(context.world_snapshot_sha256,receipt.world_snapshot_sha256);
 assert.equal(context.validation_receipt_sha256,receipt.receipt_sha256);
+assert.equal(context.source_commit_sha,receipt.source_commit_sha);
+assert.equal(context.source_commit_sha,world.facts.source_commit_sha);
 assert.equal(context.source_fingerprint,receipt.source_fingerprint);
 assert.equal(context.spatialruntime_commit_sha,receipt.spatialruntime_commit_sha||null);
 assert.equal(context.context_sha256.length,64);
