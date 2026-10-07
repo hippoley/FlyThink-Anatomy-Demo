@@ -29,6 +29,7 @@ function sha256Object(v){
     .digest("hex");
 }
 function isSha256(v){return /^[0-9a-f]{64}$/.test(String(v||""))}
+function isGitCommit(v){return /^[0-9a-f]{40}$/.test(String(v||""))}
 function runtimeRegistrySnapshot(runtime){
   const devices=runtime&&runtime.devices||{};
   if(!devices||typeof devices!=="object"||Array.isArray(devices)){
@@ -78,6 +79,16 @@ function validateAuthorizationReceipt(receipt,request,requestedPatches){
   }
   if(Number(receipt.source_revision)!==Number(request.source_revision)){
     throw new Error("spatialruntime_authorizer_source_revision_mismatch");
+  }
+  if(request.spatialruntime_commit_sha!=null){
+    if(!isGitCommit(request.spatialruntime_commit_sha)){
+      throw new Error("spatialruntime_authorizer_request_commit_invalid");
+    }
+    if(receipt.spatialruntime_commit_sha!==request.spatialruntime_commit_sha){
+      throw new Error("spatialruntime_authorizer_commit_mismatch");
+    }
+  }else if(receipt.spatialruntime_commit_sha!=null){
+    throw new Error("spatialruntime_authorizer_unrequested_commit");
   }
   if(!isSha256(request.registry_digest)){
     throw new Error("spatialruntime_authorizer_request_registry_digest_invalid");
@@ -147,6 +158,11 @@ function createSpatialRuntimeAuthorizer(options={}){
   const python=options.python||process.env.PYTHON||"python";
   const script=options.script||path.join(__dirname,"spatialruntime_window_authorizer.py");
   const maxOpenRatioDelta=options.maxOpenRatioDelta==null?0.25:Number(options.maxOpenRatioDelta);
+  const spatialRuntimeCommitSha=options.spatialRuntimeCommitSha||
+    process.env.SPATIALRUNTIME_COMMIT_SHA||null;
+  if(spatialRuntimeCommitSha!=null&&!isGitCommit(spatialRuntimeCommitSha)){
+    throw new Error("spatialruntime_authorizer_configured_commit_invalid");
+  }
   const hasScenePath=!!(
     options.worldSnapshotPath||
     options.worldValidationReceiptPath||
@@ -218,6 +234,7 @@ function createSpatialRuntimeAuthorizer(options={}){
       case_id:String(event?.turn_id||options.caseId||"homeai-windowpilot"),
       source_step:Number.isInteger(source_step)&&source_step>=0?source_step:0,
       source_revision:Number.isInteger(source_revision)&&source_revision>=0?source_revision:0,
+      spatialruntime_commit_sha:spatialRuntimeCommitSha,
       runtime:clone(runtime||{}),
       registry_digest:runtimeRegistryDigest(runtime||{}),
       patches:requestedPatches,
