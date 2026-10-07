@@ -35,6 +35,10 @@ on:
         description: "Absolute path to flythink.acoustic_fixture.v1 manifest for the WAV"
         required: true
         type: string
+      scene_context_path:
+        description: "Absolute path to reviewed HomeAI scene context built from an interior-kitchen verified handoff"
+        required: true
+        type: string
       probe_open_pct:
         description: "Bounded live opening probe percentage"
         required: true
@@ -96,6 +100,7 @@ jobs:
           test "${{ inputs.confirm_apply }}" = "APPLY_REAL_HARDWARE"
           test -f "${{ inputs.wav_path }}"
           test -f "${{ inputs.fixture_manifest_path }}"
+          test -f "${{ inputs.scene_context_path }}"
           python - <<'PY'
           import os, re
           hw=os.environ["INPUT_HW"]
@@ -127,9 +132,48 @@ jobs:
               "wav_bytes":wav.stat().st_size,
           })
           PY
+          node - <<'NODE'
+          const {loadPinnedSceneContext,targetKey}=require("./scripts/spatialruntime_world_context.cjs");
+          const context=loadPinnedSceneContext(process.env.INPUT_SCENE_CONTEXT);
+          if(!context.handoff_evidence){
+            throw new Error("live scene context must contain verified handoff evidence");
+          }
+          if(context.handoff_evidence.source_repo!=="hippoley/interior-kitchen-original"){
+            throw new Error("live scene handoff source repo mismatch");
+          }
+          if(!/^[0-9a-f]{40}$/.test(String(context.handoff_evidence.source_commit_sha||""))){
+            throw new Error("live scene handoff source commit missing");
+          }
+          if(context.spatialruntime_commit_sha!==process.env.SPATIALRUNTIME_COMMIT_SHA){
+            throw new Error("live scene SpatialRuntime commit mismatch");
+          }
+          if(
+            context.handoff_evidence.spatialruntime_commit_sha &&
+            context.handoff_evidence.spatialruntime_commit_sha!==process.env.SPATIALRUNTIME_COMMIT_SHA
+          ){
+            throw new Error("live scene handoff SpatialRuntime commit mismatch");
+          }
+          const target={
+            area:process.env.INPUT_AREA,
+            entity:"窗",
+            instance:process.env.INPUT_INSTANCE||"default"
+          };
+          if(!context.exterior_window_keys.includes(targetKey(target))){
+            throw new Error("live physical target is not a reviewed exterior window in scene context");
+          }
+          console.log({
+            context_sha256:context.context_sha256,
+            source_commit_sha:context.handoff_evidence.source_commit_sha,
+            spatialruntime_commit_sha:context.spatialruntime_commit_sha,
+            target:targetKey(target)
+          });
+          NODE
         env:
           INPUT_WAV: ${{ inputs.wav_path }}
           INPUT_MANIFEST: ${{ inputs.fixture_manifest_path }}
+          INPUT_SCENE_CONTEXT: ${{ inputs.scene_context_path }}
+          INPUT_AREA: ${{ inputs.area }}
+          INPUT_INSTANCE: ${{ inputs.instance }}
           INPUT_HW: ${{ inputs.expected_hardware_identity }}
           INPUT_PROBE: ${{ inputs.probe_open_pct }}
           INPUT_TOLERANCE: ${{ inputs.tolerance_pct }}
@@ -171,7 +215,7 @@ jobs:
         run: |
           set -euo pipefail
           MODEL=sherpa-onnx-streaming-zipformer-zh-14M-2023-02-23
-          python scripts/live_acoustic_windowpilot.py             --wav "${{ inputs.wav_path }}"             --fixture-manifest "${{ inputs.fixture_manifest_path }}"             --require-human-fixture             --spatialruntime-authorize             --url "${{ inputs.windowpilot_url }}"             --area "${{ inputs.area }}"             --entity "窗"             --instance "${{ inputs.instance }}"             --expected-hardware-identity "${{ inputs.expected_hardware_identity }}"             --probe-open-pct "${{ inputs.probe_open_pct }}"             --tolerance "${{ inputs.tolerance_pct }}"             --timeout-ms "${{ inputs.timeout_ms }}"             --graph artifacts/flywire/connectome.json             --judgement artifacts/context-judgement-v3/model.pt             --semantic artifacts/semantic-patch-v1/model.pt             --tokens "$MODEL/tokens.txt"             --encoder "$MODEL/encoder-epoch-99-avg-1.int8.onnx"             --decoder "$MODEL/decoder-epoch-99-avg-1.onnx"             --joiner "$MODEL/joiner-epoch-99-avg-1.int8.onnx"             > live-acoustic-dry-run.json
+          python scripts/live_acoustic_windowpilot.py             --wav "${{ inputs.wav_path }}"             --fixture-manifest "${{ inputs.fixture_manifest_path }}"             --require-human-fixture             --spatialruntime-authorize             --scene-context "${{ inputs.scene_context_path }}"             --url "${{ inputs.windowpilot_url }}"             --area "${{ inputs.area }}"             --entity "窗"             --instance "${{ inputs.instance }}"             --expected-hardware-identity "${{ inputs.expected_hardware_identity }}"             --probe-open-pct "${{ inputs.probe_open_pct }}"             --tolerance "${{ inputs.tolerance_pct }}"             --timeout-ms "${{ inputs.timeout_ms }}"             --graph artifacts/flywire/connectome.json             --judgement artifacts/context-judgement-v3/model.pt             --semantic artifacts/semantic-patch-v1/model.pt             --tokens "$MODEL/tokens.txt"             --encoder "$MODEL/encoder-epoch-99-avg-1.int8.onnx"             --decoder "$MODEL/decoder-epoch-99-avg-1.onnx"             --joiner "$MODEL/joiner-epoch-99-avg-1.int8.onnx"             > live-acoustic-dry-run.json
 
           node - <<'NODE'
           const fs=require("fs");
@@ -202,13 +246,13 @@ jobs:
         run: |
           set -euo pipefail
           MODEL=sherpa-onnx-streaming-zipformer-zh-14M-2023-02-23
-          python scripts/live_acoustic_windowpilot.py             --wav "${{ inputs.wav_path }}"             --fixture-manifest "${{ inputs.fixture_manifest_path }}"             --require-human-fixture             --spatialruntime-authorize             --apply             --receipt live-acoustic-windowpilot-receipt.json             --url "${{ inputs.windowpilot_url }}"             --area "${{ inputs.area }}"             --entity "窗"             --instance "${{ inputs.instance }}"             --expected-hardware-identity "${{ inputs.expected_hardware_identity }}"             --probe-open-pct "${{ inputs.probe_open_pct }}"             --tolerance "${{ inputs.tolerance_pct }}"             --timeout-ms "${{ inputs.timeout_ms }}"             --graph artifacts/flywire/connectome.json             --judgement artifacts/context-judgement-v3/model.pt             --semantic artifacts/semantic-patch-v1/model.pt             --tokens "$MODEL/tokens.txt"             --encoder "$MODEL/encoder-epoch-99-avg-1.int8.onnx"             --decoder "$MODEL/decoder-epoch-99-avg-1.onnx"             --joiner "$MODEL/joiner-epoch-99-avg-1.int8.onnx"             > live-acoustic-windowpilot-result.json
+          python scripts/live_acoustic_windowpilot.py             --wav "${{ inputs.wav_path }}"             --fixture-manifest "${{ inputs.fixture_manifest_path }}"             --require-human-fixture             --spatialruntime-authorize             --scene-context "${{ inputs.scene_context_path }}"             --apply             --receipt live-acoustic-windowpilot-receipt.json             --url "${{ inputs.windowpilot_url }}"             --area "${{ inputs.area }}"             --entity "窗"             --instance "${{ inputs.instance }}"             --expected-hardware-identity "${{ inputs.expected_hardware_identity }}"             --probe-open-pct "${{ inputs.probe_open_pct }}"             --tolerance "${{ inputs.tolerance_pct }}"             --timeout-ms "${{ inputs.timeout_ms }}"             --graph artifacts/flywire/connectome.json             --judgement artifacts/context-judgement-v3/model.pt             --semantic artifacts/semantic-patch-v1/model.pt             --tokens "$MODEL/tokens.txt"             --encoder "$MODEL/encoder-epoch-99-avg-1.int8.onnx"             --decoder "$MODEL/decoder-epoch-99-avg-1.onnx"             --joiner "$MODEL/joiner-epoch-99-avg-1.int8.onnx"             > live-acoustic-windowpilot-result.json
 
       - name: Independently verify human acoustic + hardware evidence
         shell: bash
         run: |
           set -euo pipefail
-          node scripts/verify_acoustic_windowpilot_evidence.cjs             --receipt live-acoustic-windowpilot-receipt.json             --wav "${{ inputs.wav_path }}"             --fixture-manifest "${{ inputs.fixture_manifest_path }}"             --require-human-fixture             --require-spatialruntime-authorization             > live-acoustic-windowpilot-verification.json
+          node scripts/verify_acoustic_windowpilot_evidence.cjs             --receipt live-acoustic-windowpilot-receipt.json             --wav "${{ inputs.wav_path }}"             --fixture-manifest "${{ inputs.fixture_manifest_path }}"             --require-human-fixture             --require-spatialruntime-authorization             --require-spatialruntime-scene-evidence             > live-acoustic-windowpilot-verification.json
           cat live-acoustic-windowpilot-verification.json
           node - <<'NODE'
           const fs=require("fs");
