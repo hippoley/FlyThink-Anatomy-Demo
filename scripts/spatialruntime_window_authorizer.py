@@ -41,6 +41,23 @@ def digest(value: Any) -> str:
     return sha256(canonical(value).encode()).hexdigest()
 
 
+def registry_snapshot(devices: Mapping[str, Any]) -> dict[str, Any]:
+    out: dict[str, Any] = {}
+    for key in sorted(devices):
+        device = devices[key]
+        if not isinstance(device, Mapping):
+            raise ValueError(f"authorization_registry_device_invalid:{key}")
+        model_id = str(device.get("model_id") or "")
+        if not model_id:
+            raise ValueError(f"authorization_registry_model_id_required:{key}")
+        out[str(key)] = {"model_id": model_id}
+    return out
+
+
+def registry_digest(devices: Mapping[str, Any]) -> str:
+    return digest(registry_snapshot(devices))
+
+
 def device_key(target: Mapping[str, Any]) -> str:
     return "::".join(
         [
@@ -78,6 +95,10 @@ def authorize(request: Mapping[str, Any]) -> dict[str, Any]:
     devices = home_runtime.get("devices") or {}
     if not isinstance(devices, Mapping):
         raise ValueError("authorization_runtime_devices_invalid")
+    declared_registry_digest = str(request.get("registry_digest") or "")
+    computed_registry_digest = registry_digest(devices)
+    if declared_registry_digest != computed_registry_digest:
+        raise ValueError("authorization_registry_digest_mismatch")
 
     patches = request.get("patches")
     if not isinstance(patches, list) or not patches:
@@ -222,6 +243,16 @@ def authorize(request: Mapping[str, Any]) -> dict[str, Any]:
         and not blocked
         and len(authorized_patches) == len(patches)
     )
+    authorized_for_receipt = authorized_patches if allow else []
+    patch_digest = digest(authorized_for_receipt)
+    authorization_id = digest({
+        "case_id": case_id,
+        "source_step": step,
+        "source_revision": revision,
+        "patch_digest": patch_digest,
+        "registry_digest": computed_registry_digest,
+        "trace_hash": trace.get("trace_hash"),
+    })
     body = {
         "schema": RECEIPT_SCHEMA,
         "canonicalization": "sorted-json-number-normalized-v1",
@@ -230,7 +261,11 @@ def authorize(request: Mapping[str, Any]) -> dict[str, Any]:
         "source_step": step,
         "source_revision": revision,
         "requested_patch_count": len(patches),
-        "authorized_patches": authorized_patches if allow else [],
+        "authorized_patches": authorized_for_receipt,
+        "patch_digest": patch_digest,
+        "registry_digest": computed_registry_digest,
+        "authorization_id": authorization_id,
+        "single_use": True,
         "blocked": blocked,
         "rain": rain,
         "exterior_window_keys": sorted(exterior_keys),
