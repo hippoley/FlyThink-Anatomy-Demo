@@ -36,7 +36,14 @@ r=applyTurn(r,[
 ]).runtime;
 const before=JSON.parse(JSON.stringify(r));
 const untouched=JSON.parse(JSON.stringify(r.devices["客厅::灯::default"]));
-const ledger=()=>{const s=new Set();return {has:id=>s.has(id),add:id=>{if(s.has(id))return false;s.add(id);return true;}}};\nconst consumed=ledger();
+const ledger=()=>{const s=new Map();return {
+ status:id=>s.get(id)||"fresh",
+ has:id=>s.has(id),
+ reserve:id=>{if(s.has(id))return false;s.set(id,"reserved");return true;},
+ consume:id=>{if(s.get(id)!=="reserved")return false;s.set(id,"consumed");return true;},
+ release:id=>{if(s.get(id)!=="reserved")return false;s.delete(id);return true;}
+}};
+const consumed=ledger();
 
 let out=atomicApplyAuthorizedPlan(r,payload,registryDigest,consumed);
 assert(out.ok);
@@ -68,7 +75,7 @@ for(const field of ["value","model_id","capability"]){
 }
 
 // Authorization cannot survive registry rebind/re-provision.
-out=atomicApplyAuthorizedPlan(before,payload,"registry-after-rebind",ledger());
+const staleLedger=ledger();\nout=atomicApplyAuthorizedPlan(before,payload,"registry-after-rebind",staleLedger);
 assert(!out.ok);assert.equal(out.reason,"planner_authorization_stale_registry");
 assert.deepStrictEqual(out.runtime,before);assert.equal(out.receipts.length,0);
 
