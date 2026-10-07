@@ -241,7 +241,45 @@ async function executeSinglePhysicalPatch(inputRuntime, expanded, driver, option
     }],reason:"device_quarantined"};
   }
 
-  const command = await Promise.resolve(driver.execute(physicalPatch));
+  let command;
+  try{
+    command=await Promise.resolve(driver.execute(physicalPatch));
+  }catch(e){
+    const indeterminateCommand={
+      id:null,
+      status:"indeterminate",
+      reason:"physical_outcome_indeterminate_after_dispatch"
+    };
+    if(physicalPatch.target){
+      markQuarantined(runtime,physicalPatch.target,indeterminateCommand,turnId);
+    }
+    const executionRecord={
+      id:"physical-indeterminate:"+String(runtime.executionLedger.length+1),
+      turn_id:turnId,
+      kind:"physical",
+      status:"indeterminate",
+      reason:"physical_outcome_indeterminate_after_dispatch",
+      semantic_patch:clone(expanded),
+      physical_patch:clone(physicalPatch),
+      observation:null,
+      transport_error:String(e&&e.message||e)
+    };
+    runtime.executionLedger.push(executionRecord);
+    return {
+      ok:false,
+      runtime,
+      receipts:[{
+        patch:clone(expanded),
+        physical_patch:clone(physicalPatch),
+        command_id:executionRecord.id,
+        status:"indeterminate",
+        reason:"physical_outcome_indeterminate_after_dispatch",
+        observation:null,
+        transport_error:executionRecord.transport_error
+      }],
+      reason:"physical_outcome_indeterminate_after_dispatch"
+    };
+  }
   if (!command || typeof command !== "object") throw new Error("physical_driver_invalid_receipt");
   if (!command.observation) throw new Error("physical_driver_missing_observation");
 
