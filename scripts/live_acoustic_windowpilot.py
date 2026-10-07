@@ -151,6 +151,15 @@ def build_commands(args):
         ]
     if getattr(args, "spatialruntime_authorize", False):
         node.append("--spatialruntime-authorize")
+    world_snapshot = getattr(args, "world_snapshot", None)
+    world_validation_receipt = getattr(args, "world_validation_receipt", None)
+    if bool(world_snapshot) != bool(world_validation_receipt):
+        raise ValueError(
+            "--world-snapshot and --world-validation-receipt must be provided together"
+        )
+    if world_snapshot:
+        node.extend(["--world-snapshot", str(world_snapshot)])
+        node.extend(["--world-validation-receipt", str(world_validation_receipt)])
     if args.apply:
         node.append("--apply")
     return asr, node
@@ -217,6 +226,14 @@ def parse_args():
         "--spatialruntime-authorize",
         action="store_true",
         help="require SpatialRuntime authorization before any committed WindowPilot write",
+    )
+    p.add_argument(
+        "--world-snapshot",
+        help="validated SpatialRuntime WorldSnapshot JSON for scene-derived safety context",
+    )
+    p.add_argument(
+        "--world-validation-receipt",
+        help="validation receipt matching --world-snapshot",
     )
     p.add_argument("--probe-open-pct", type=float, default=5.0)
     p.add_argument("--tolerance", type=float, default=1.0)
