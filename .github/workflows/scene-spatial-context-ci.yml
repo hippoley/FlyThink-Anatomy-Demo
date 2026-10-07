@@ -190,6 +190,7 @@ jobs:
           assert receipt['source_fingerprint_verified'] is True
           assert context['source_fingerprint']==receipt['source_fingerprint']
           assert context['world_snapshot_sha256']==receipt['world_snapshot_sha256']
+          assert context['world_snapshot_revision']==world['revision']
           assert world['facts']['source_fingerprint']==receipt['source_fingerprint']
           assert handoff['source_commit_sha']==upstream_sha
           assert context['handoff_evidence']['source_commit_sha']==upstream_sha
@@ -199,6 +200,7 @@ jobs:
           print({
               'source_fingerprint': receipt['source_fingerprint'],
               'context_sha256': context['context_sha256'],
+              'world_snapshot_revision': context['world_snapshot_revision'],
               'handoff_sha256': handoff['handoff_sha256'],
               'source_commit_sha': upstream_sha,
               'spatialruntime_commit_sha': context['spatialruntime_commit_sha'],
