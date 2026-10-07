@@ -181,6 +181,9 @@ jobs:
           handoff=json.load(open('/tmp/interior-handoff.json',encoding='utf-8'))
           upstream_sha=open('/tmp/interior-upstream-sha.txt',encoding='utf-8').read().strip()
           assert receipt['source_fingerprint_verified'] is True
+          assert world['facts']['source_commit_sha']==upstream_sha
+          assert receipt['source_commit_sha']==upstream_sha
+          assert context['source_commit_sha']==upstream_sha
           assert context['source_fingerprint']==receipt['source_fingerprint']
           assert context['world_snapshot_sha256']==receipt['world_snapshot_sha256']
           assert world['facts']['source_fingerprint']==receipt['source_fingerprint']
