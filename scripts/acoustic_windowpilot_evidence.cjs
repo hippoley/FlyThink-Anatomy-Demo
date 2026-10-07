@@ -302,13 +302,15 @@ function validateReceipt(receipt,{requireHumanFixture=false,requireSpatialRuntim
               reasons.push("SpatialRuntime bound observation SHA256 missing");
             }
             const authValue=Number(row.authorized_value);
-            const requestedValue=Number(row.requested_position_pct);
+            const requestedValue=row.requested_position_pct==null
+              ?null:Number(row.requested_position_pct);
             const observedValue=Number(row.observed_value);
             const convergenceError=Number(row.convergence_error_pct);
             if(!Number.isFinite(authValue)){
               reasons.push("SpatialRuntime bound authorized value missing");
             }
             if(
+              requestedValue!=null&&
               Number.isFinite(requestedValue)&&Number.isFinite(authValue)&&
               requestedValue!==authValue
             ){
