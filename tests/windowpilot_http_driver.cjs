@@ -250,5 +250,57 @@ function stateAt(tick,pct,extra={}){
     assert.equal(out.receipts[0].observation.evidence.tick,21);
   }
 
-  console.log(JSON.stringify({ok:true,cases:9,contract:"WindowPilot ACK != Reality; applied requires bounded fresh readback, stable hardware identity, and STOP on uncertainty"}));
+  // 10. Failed STOP acknowledgement escalates timeout to unsafe.
+  {
+    let stateReads=0;
+    const driver=new WindowPilotHttpDriver({
+      baseUrl:"http://windowpilot.test",target,pollIntervalMs:0,maxPolls:1,
+      timeoutMs:1000,requireFreshReadback:true,
+      requestJson:async(method,path,payload)=>{
+        if(path==="/api/physical-readiness")return readiness();
+        if(path==="/api/window/open")return {ok:true};
+        if(path==="/api/window/stop")return {ok:false};
+        if(path==="/api/state"){
+          const seq=[stateAt(30,0),stateAt(31,8),stateAt(32,8)];
+          return seq[Math.min(stateReads++,seq.length-1)];
+        }
+        throw new Error("unexpected:"+path);
+      }
+    });
+    const out=await executePhysicalTurn(
+      initial,[{op:"PATCH_SLOT",target,slot:"opening",value:40}],driver
+    );
+    assert.equal(out.receipts[0].status,"unsafe");
+    assert.equal(out.receipts[0].reason,"safety_stop_not_confirmed");
+    assert.equal(out.receipts[0].safety_stop.ack.ok,false);
+  }
+
+  // 11. STOP readback failure is unsafe even when STOP itself ACKs.
+  {
+    let stateReads=0;
+    const driver=new WindowPilotHttpDriver({
+      baseUrl:"http://windowpilot.test",target,pollIntervalMs:0,maxPolls:1,
+      timeoutMs:1000,requireFreshReadback:true,
+      requestJson:async(method,path,payload)=>{
+        if(path==="/api/physical-readiness")return readiness();
+        if(path==="/api/window/open")return {ok:true};
+        if(path==="/api/window/stop")return {ok:true};
+        if(path==="/api/state"){
+          stateReads++;
+          if(stateReads===1)return stateAt(40,0);
+          if(stateReads===2)return stateAt(41,8);
+          throw new Error("post-stop-readback-failed");
+        }
+        throw new Error("unexpected:"+path);
+      }
+    });
+    const out=await executePhysicalTurn(
+      initial,[{op:"PATCH_SLOT",target,slot:"opening",value:40}],driver
+    );
+    assert.equal(out.receipts[0].status,"unsafe");
+    assert.equal(out.receipts[0].reason,"safety_stop_not_confirmed");
+    assert.match(out.receipts[0].safety_stop.readback_error,/post-stop-readback-failed/);
+  }
+
+  console.log(JSON.stringify({ok:true,cases:11,contract:"WindowPilot ACK != Reality; applied requires post-ACK fresh readback from WindowPilot state, stable hardware identity, and confirmed STOP recovery"}));
 })().catch(e=>{console.error(e);process.exit(1)});

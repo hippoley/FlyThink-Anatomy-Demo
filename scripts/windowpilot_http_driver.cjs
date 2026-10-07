@@ -107,7 +107,7 @@ class WindowPilotHttpDriver {
     throw new Error("windowpilot_unsupported_slot:"+String(patch.slot));
   }
 
-  _observation(patch,state,pct){
+  _observation(patch,state,pct,meta={}){
     const slots={[this.canonicalPositionSlot]:pct};
     if(patch.op==="ADD_DEVICE"||patch.slot==="power"){
       slots.power=pct<=this.tolerancePct?"OFF":"ON";
@@ -120,6 +120,8 @@ class WindowPilotHttpDriver {
         source:"windowpilot:/api/state",
         position_pct:pct,
         tick:state&&state.tick!=null?state.tick:null,
+        received_at_ms:meta.receivedAtMs==null?null:meta.receivedAtMs,
+        ack_at_ms:meta.ackAtMs==null?null:meta.ackAtMs,
         measured:true
       }
     };
@@ -190,6 +192,7 @@ class WindowPilotHttpDriver {
     let ack;
     if(targetPct<=this.tolerancePct)ack=await this._request("POST","/api/window/close",{});
     else ack=await this._request("POST","/api/window/open",{target_pct:targetPct});
+    const ackAtMs=Date.now();
 
     if(!ack||ack.ok!==true){
       const current=await this.state();
@@ -200,7 +203,7 @@ class WindowPilotHttpDriver {
         reason:"command_not_acknowledged",
         patch:clone(patch),
         ack:clone(ack),
-        observation:this._observation(patch,current,pct)
+        observation:this._observation(patch,current,pct,{ackAtMs,receivedAtMs:Date.now()})
       };
       this.commands.push(receipt);
       return receipt;
@@ -210,6 +213,7 @@ class WindowPilotHttpDriver {
     let last=before,lastPct=beforePct,polls=0;
     while(Date.now()-started<=this.timeoutMs && (this.maxPolls==null||polls<this.maxPolls)){
       last=await this.state();
+      const receivedAtMs=Date.now();
       lastPct=this._pct(last);
       polls++;
       const lastTick=this._tick(last);
@@ -239,7 +243,7 @@ class WindowPilotHttpDriver {
               readiness_after:clone(readinessAfter),
               hardware_identity_before:identity,
               hardware_identity_after:identityAfter,
-              observation:this._observation(patch,last,lastPct)
+              observation:this._observation(patch,last,lastPct,{ackAtMs,receivedAtMs})
             };
             this.commands.push(receipt);
             return receipt;
@@ -257,7 +261,7 @@ class WindowPilotHttpDriver {
           readiness_after:clone(readinessAfter),
           hardware_identity_before:identity,
           hardware_identity_after:identityAfter,
-          observation:this._observation(patch,last,lastPct)
+          observation:this._observation(patch,last,lastPct,{ackAtMs,receivedAtMs})
         };
         this.commands.push(receipt);
         return receipt;
@@ -273,15 +277,25 @@ class WindowPilotHttpDriver {
         const stopped=await this.state();
         last=stopped;
         lastPct=this._pct(stopped);
+        safetyStop.readback_received_at_ms=Date.now();
       }catch(e){
         safetyStop.readback_error=String(e&&e.message||e);
       }
     }
 
+    const stopUnsafe=
+      this.stopOnTimeout&&(
+        safetyStop.error!=null||
+        safetyStop.readback_error!=null||
+        !safetyStop.ack||
+        safetyStop.ack.ok!==true
+      );
     const receipt={
       id:"windowpilot:"+(this.commands.length+1),
-      status:"timeout",
-      reason:"position_not_observed_within_tolerance",
+      status:stopUnsafe?"unsafe":"timeout",
+      reason:stopUnsafe
+        ?"safety_stop_not_confirmed"
+        :"position_not_observed_within_tolerance",
       patch:clone(patch),
       ack:clone(ack),
       requested_position_pct:targetPct,
@@ -290,7 +304,12 @@ class WindowPilotHttpDriver {
       readiness_before:clone(readiness),
       hardware_identity_before:identity,
       safety_stop:safetyStop,
-      observation:this._observation(patch,last,lastPct)
+      observation:this._observation(
+        patch,last,lastPct,{
+          ackAtMs,
+          receivedAtMs:safetyStop.readback_received_at_ms||Date.now()
+        }
+      )
     };
     this.commands.push(receipt);
     return receipt;

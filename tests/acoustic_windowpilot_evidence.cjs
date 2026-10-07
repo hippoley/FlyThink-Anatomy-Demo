@@ -24,7 +24,14 @@ const feedback={
   target,
   exists:true,
   slots:{opening:5,power:"ON"},
-  evidence:{source:"windowpilot:/api/state",position_pct:5,tick:11,measured:true}
+  evidence:{
+    source:"windowpilot:/api/state",
+    position_pct:5,
+    tick:11,
+    ack_at_ms:1000,
+    received_at_ms:1001,
+    measured:true
+  }
 };
 const command={
   id:"windowpilot:1",
@@ -48,7 +55,14 @@ const closeoutCommand={
   hardware_identity_after:"hw-1",
   observation:{
     target,exists:true,slots:{opening:0,power:"OFF"},
-    evidence:{source:"windowpilot:/api/state",position_pct:0,tick:12,measured:true}
+    evidence:{
+      source:"windowpilot:/api/state",
+      position_pct:0,
+      tick:12,
+      ack_at_ms:1002,
+      received_at_ms:1003,
+      measured:true
+    }
   }
 };
 const trace=[{
@@ -247,6 +261,30 @@ const valid=buildReceipt({
   const report=validateReceipt(resigned,{requireHumanFixture:true});
   assert.equal(report.valid,false);
   assert.ok(report.reasons.includes("semantic post-readback hardware identity mismatch"));
+}
+
+{
+  const bad=JSON.parse(JSON.stringify(valid));
+  bad.physical.driver_commands[0].observation.evidence.received_at_ms=999;
+  delete bad.evidence_sha256;
+  const resigned=finalizeReceipt(bad);
+  const report=validateReceipt(resigned,{requireHumanFixture:true});
+  assert.equal(report.valid,false);
+  assert.ok(report.reasons.includes(
+    "semantic readback was not received after actuator ACK"
+  ));
+}
+
+{
+  const bad=JSON.parse(JSON.stringify(valid));
+  bad.physical.driver_commands[0].observation.evidence.source="cache:windowpilot";
+  delete bad.evidence_sha256;
+  const resigned=finalizeReceipt(bad);
+  const report=validateReceipt(resigned,{requireHumanFixture:true});
+  assert.equal(report.valid,false);
+  assert.ok(report.reasons.includes(
+    "semantic readback source is not WindowPilot state"
+  ));
 }
 
 {
