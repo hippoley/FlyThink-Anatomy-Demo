@@ -336,6 +336,7 @@ async function runDecisionProposal({
   runtime,
   contextual_state,
   decision_proposal,
+  world_snapshot_revision=null,
   driver,
   physicalAuthorizer,
   authorization_context={},
@@ -347,7 +348,34 @@ async function runDecisionProposal({
   validateDecisionProposal(decision_proposal);
 
   const current=normalizeRuntime(runtime||{});
-  const worldRevision=runtimeWorldRevision(current);
+  const worldRevision=Number(world_snapshot_revision);
+  if(!Number.isInteger(worldRevision)||worldRevision<0){
+    const {request,internal_proposal}=decisionProposalToExecutionContracts(
+      contextual_state,
+      decision_proposal
+    );
+    const receipt=buildRuntimeReceipt({
+      contextual_state,
+      request,
+      proposal:internal_proposal,
+      status:"BLOCKED",
+      reason:"spatialruntime_world_revision_required",
+      before_runtime:current,
+      after_runtime:current,
+      source_step,
+      source_revision:0
+    });
+    return {
+      ok:false,
+      status:"BLOCKED",
+      reason:"spatialruntime_world_revision_required",
+      runtime:current,
+      authorization:null,
+      authorized_actions:[],
+      physical_receipts:[],
+      receipt
+    };
+  }
   if(worldRevision!==decision_proposal.world_snapshot_revision){
     const {request,internal_proposal}=decisionProposalToExecutionContracts(
       contextual_state,
@@ -464,7 +492,6 @@ module.exports={
   buildRuntimeReceipt,
   buildExecutionReceipt,
   verifyExecutionReceipt,
-  runtimeWorldRevision,
   runExecutionProposal,
   runDecisionProposal,
   FlyThinkExecutionRuntime
