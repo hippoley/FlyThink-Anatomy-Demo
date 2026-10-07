@@ -5,6 +5,32 @@ const {
   buildEvidenceCoverage,
   adjudicateEvidence
 }=require("../scripts/pi_home_evidence_adjudicator.cjs");
+const {buildProviderTrustRegistry}=require("../scripts/pi_home_provider_trust.cjs");
+
+const contamDigest="sha256:"+"a".repeat(64);
+const rainDigest="sha256:"+"b".repeat(64);
+const trustRegistry=buildProviderTrustRegistry([
+  {
+    provider_id:"contam-engineering",
+    status:"active",
+    scope_id:"home-profile-v1",
+    allowed_dimensions:["co2","airflow"],
+    allowed_evidence_levels:["engineering-validated"],
+    calibration_ref:"calibration://contam/home-v1",
+    calibration_digest:contamDigest,
+    approved_by:"engineering-review-board"
+  },
+  {
+    provider_id:"rain-engineering",
+    status:"active",
+    scope_id:"rain-v1",
+    allowed_dimensions:["rain_ingress"],
+    allowed_evidence_levels:["engineering-validated"],
+    calibration_ref:"calibration://rain/v1",
+    calibration_digest:rainDigest,
+    approved_by:"engineering-review-board"
+  }
+]);
 
 const contam={
   id:"contam-transient",
@@ -28,14 +54,24 @@ const rainEngineering={
   kind:"engineering-model",
   covered_dimensions:["rain_ingress"],
   evidence_level:"engineering-validated",
-  trusted_for_promotion:true
+  trusted_for_promotion:true,
+  trust_attestation:{
+    scope_id:"rain-v1",
+    calibration_ref:"calibration://rain/v1",
+    calibration_digest:rainDigest
+  }
 };
 
 const trustedContam={
   ...contam,
   id:"contam-engineering",
   evidence_level:"engineering-validated",
-  trusted_for_promotion:true
+  trusted_for_promotion:true,
+  trust_attestation:{
+    scope_id:"home-profile-v1",
+    calibration_ref:"calibration://contam/home-v1",
+    calibration_digest:contamDigest
+  }
 };
 
 {
@@ -50,7 +86,8 @@ const trustedContam={
     required_dimensions:["co2","rain_ingress"],
     providers:[contam],
     raw_target_match:false,
-    physical_candidate_comparison_available:true
+    physical_candidate_comparison_available:true,
+    trust_registry:trustRegistry
   });
   assert.equal(out.decision,"NOT_ADJUDICABLE");
   assert.equal(out.semantic_physics_aligned,null);
@@ -76,6 +113,20 @@ const trustedContam={
     providers:[trustedContam,rainEngineering],
     raw_target_match:true,
     physical_candidate_comparison_available:true
+  });
+  assert.equal(out.decision,"ALIGNED");
+  assert.equal(out.coverage.trusted_coverage_complete,false);
+  assert.deepEqual(out.coverage.untrusted_dimensions,["co2","rain_ingress"]);
+  assert.equal(out.trusted_for_generalization_claim,false);
+}
+
+{
+  const out=adjudicateEvidence({
+    required_dimensions:["co2","rain_ingress"],
+    providers:[trustedContam,rainEngineering],
+    raw_target_match:true,
+    physical_candidate_comparison_available:true,
+    trust_registry:trustRegistry
   });
   assert.equal(out.decision,"ALIGNED");
   assert.equal(out.coverage.trusted_coverage_complete,true);
