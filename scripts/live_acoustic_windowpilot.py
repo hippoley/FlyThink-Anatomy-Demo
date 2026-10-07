@@ -149,7 +149,7 @@ def build_commands(args):
                 separators=(",", ":"),
             ),
         ]
-    if args.spatialruntime_authorize:
+    if getattr(args, "spatialruntime_authorize", False):
         node.append("--spatialruntime-authorize")
     if args.apply:
         node.append("--apply")
