@@ -10,7 +10,8 @@ const {deriveSemanticContext}=require("./contextual_edge_slu_adapter.cjs");
 const {
   MockThingDriver,
   executePhysicalTurn,
-  evaluateQuarantinePreflight
+  evaluateQuarantinePreflight,
+  markQuarantined
 }=require("./physical_runtime.cjs");
 const {evaluateCommit}=require("./commit_gate.cjs");
 
@@ -42,7 +43,7 @@ function patchIdentity(p){
 function samePatchIdentity(a,b){
   return JSON.stringify(canonical(patchIdentity(a)))===JSON.stringify(canonical(patchIdentity(b)));
 }
-function bindSpatialRuntimeAuthorization(receipt,authorizedPatches,physicalReceipts){
+function bindSpatialRuntimeAuthorization(receipt,authorizedPatches,physicalReceipts,tolerancePct=1){
   if(!receipt||receipt.schema!=="homeai_spatialruntime_authorization_receipt_v1")return null;
   const rows=(physicalReceipts||[]).filter(x=>x&&x.local_only!==true);
   if(rows.length!==authorizedPatches.length){
@@ -84,6 +85,15 @@ function bindSpatialRuntimeAuthorization(receipt,authorizedPatches,physicalRecei
     if(!Number.isFinite(observedValue)){
       throw new Error("spatialruntime_observation_value_missing:"+String(i));
     }
+    const convergenceError=Math.abs(observedValue-authorizedValue);
+    if(
+      row.status==="applied"&&(
+        !Number.isFinite(Number(tolerancePct))||
+        convergenceError>Number(tolerancePct)
+      )
+    ){
+      throw new Error("spatialruntime_observation_outside_authorized_tolerance:"+String(i));
+    }
     bindings.push({
       command_id:row.command_id||null,
       status:row.status||null,
@@ -93,7 +103,8 @@ function bindSpatialRuntimeAuthorization(receipt,authorizedPatches,physicalRecei
       authorized_value:authorizedValue,
       requested_position_pct:requestedPosition,
       observed_value:observedValue,
-      convergence_error_pct:Math.abs(observedValue-authorizedValue)
+      convergence_error_pct:convergenceError,
+      convergence_tolerance_pct:Number(tolerancePct)
     });
   }
   const body={
@@ -152,12 +163,16 @@ function receiptFailure(receipts){
 }
 
 class StreamingHomeSession{
-  constructor({initialRuntime={},predictor,driver=null,physicalAuthorizer=null}={}){
+  constructor({initialRuntime={},predictor,driver=null,physicalAuthorizer=null,physicalAuthorizationTolerancePct=1}={}){
     if(typeof predictor!=="function")throw new Error("streaming_predictor_required");
     this.runtime=normalizeRuntime(initialRuntime);
     this.predictor=predictor;
     this.driver=driver||new MockThingDriver(this.runtime);
     this.physicalAuthorizer=physicalAuthorizer;
+    this.physicalAuthorizationTolerancePct=Number(physicalAuthorizationTolerancePct);
+    if(!Number.isFinite(this.physicalAuthorizationTolerancePct)||this.physicalAuthorizationTolerancePct<0){
+      throw new Error("physical_authorization_tolerance_invalid");
+    }
     this.history=[];
     this.trace=[];
     this.sequence=0;
@@ -228,23 +243,48 @@ class StreamingHomeSession{
             authorizedPatches=clone(authorization.patches);
             physicalAuthorization=clone(authorization.receipt||authorization);
           }
+          const turnId=event.turn_id||("stream:"+String(this.sequence+1));
           const applied=await executePhysicalTurn(
             this.runtime,
             authorizedPatches,
             this.driver,
-            {turn_id:event.turn_id||("stream:"+String(this.sequence+1))}
+            {turn_id:turnId}
           );
           const candidateReceipts=applied.receipts||[];
-          physicalAuthorizationBinding=bindSpatialRuntimeAuthorization(
-            physicalAuthorization,
-            authorizedPatches,
-            candidateReceipts
-          );
+          // Physical facts must survive even when authorization↔execution binding fails.
           this.runtime=applied.runtime;
           receipts=candidateReceipts;
           committed=receiptsApplied(receipts);
+          if(this.physicalAuthorizer&&receipts.length){
+            try{
+              physicalAuthorizationBinding=bindSpatialRuntimeAuthorization(
+                physicalAuthorization,
+                authorizedPatches,
+                candidateReceipts,
+                this.physicalAuthorizationTolerancePct
+              );
+            }catch(bindingError){
+              committed=false;
+              error="physical_authorization_binding_failed:"+String(
+                bindingError&&bindingError.message||bindingError
+              );
+              for(const authorized of authorizedPatches){
+                if(!authorized||!authorized.target)continue;
+                markQuarantined(
+                  this.runtime,
+                  authorized.target,
+                  {
+                    status:"uncertain",
+                    reason:error,
+                    id:(candidateReceipts[0]&&candidateReceipts[0].command_id)||null
+                  },
+                  turnId
+                );
+              }
+            }
+          }
           if(committed)this.physicalRevision++;
-          if(!committed)error=receiptFailure(receipts)||"physical_commit_has_no_applied_receipt";
+          if(!committed&&!error)error=receiptFailure(receipts)||"physical_commit_has_no_applied_receipt";
         }catch(e){
           error=String(e&&e.message||e);
           if(!physicalAuthorization&&e&&e.receipt)physicalAuthorization=clone(e.receipt);
