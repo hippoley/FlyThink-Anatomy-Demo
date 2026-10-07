@@ -57,6 +57,14 @@ function validateAuthorizationReceipt(receipt,request,requestedPatches){
   if(Number(receipt.source_revision)!==Number(request.source_revision)){
     throw new Error("spatialruntime_authorizer_source_revision_mismatch");
   }
+  const requestedScene=request&&request.spatial_context&&request.spatial_context.scene_evidence;
+  if(requestedScene){
+    if(!receipt.scene_evidence||!sameObject(receipt.scene_evidence,requestedScene)){
+      throw new Error("spatialruntime_authorizer_scene_evidence_mismatch");
+    }
+  }else if(receipt.scene_evidence!=null){
+    throw new Error("spatialruntime_authorizer_unrequested_scene_evidence");
+  }
   if(!isSha256(receipt.trace_hash)){
     throw new Error("spatialruntime_authorizer_trace_hash_invalid");
   }
@@ -140,15 +148,7 @@ function createSpatialRuntimeAuthorizer(options={}){
         :(hintedKeys.length
           ?hintedKeys
           :(Array.isArray(options.exteriorWindowKeys)?options.exteriorWindowKeys:[])),
-      scene_evidence:sceneContext?{
-        schema:sceneContext.schema,
-        case_id:sceneContext.case_id,
-        world_snapshot_sha256:sceneContext.world_snapshot_sha256,
-        validation_receipt_sha256:sceneContext.validation_receipt_sha256,
-        source_fingerprint:sceneContext.source_fingerprint,
-        relation_graph_fingerprint:sceneContext.relation_graph_fingerprint,
-        context_sha256:sceneContext.context_sha256
-      }:null
+      scene_evidence:sceneContext?clone(sceneContext):null
     };
     const request={
       schema:REQUEST_SCHEMA,
