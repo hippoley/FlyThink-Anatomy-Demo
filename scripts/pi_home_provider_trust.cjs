@@ -162,7 +162,7 @@ function resolveProviderTrust(provider={},registry=null,{at=null}={}){
 
   const disallowed=covered.filter(d=>!entry.allowed_dimensions.includes(d));
   if(disallowed.length){
-    return {
+    return withTime({
       ...base,
       reason:"provider_dimension_out_of_scope",
       out_of_scope_dimensions:disallowed,
