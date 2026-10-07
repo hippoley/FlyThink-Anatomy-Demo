@@ -4,11 +4,15 @@ const assert=require("node:assert/strict");
 const {normalizeRuntime}=require("./whole_home_patch_contract.cjs");
 const {executePhysicalTurn,isQuarantined}=require("./physical_runtime.cjs");
 
-const target={room:"客厅",device:"窗户",instance:"default"};
+const target={area:"客厅",entity:"窗户",instance:"default"};
 const initial=normalizeRuntime({
   devices:{
     "客厅::窗户::default":{
-      target,
+      key:"客厅::窗户::default",
+      area:"客厅",
+      entity:"窗户",
+      instance:"default",
+      status:"mounted",
       slots:{opening:0}
     }
   }
@@ -29,6 +33,7 @@ class EffectThenDisconnectDriver{
 (async()=>{
   const driver=new EffectThenDisconnectDriver();
   let threw=false;
+  let errorMessage=null;
   try{
     await executePhysicalTurn(initial,[{
       op:"PATCH_SLOT",
@@ -39,6 +44,7 @@ class EffectThenDisconnectDriver{
     }],driver,{turn_id:"truth-probe-1"});
   }catch(e){
     threw=true;
+    errorMessage=String(e&&e.message||e);
   }
 
   assert.equal(driver.effects,1,"physical effect must have happened before transport loss");
@@ -55,6 +61,7 @@ class EffectThenDisconnectDriver{
     physical_effects:driver.effects,
     device_opening:driver.world.opening,
     runtime_quarantined:0,
+    observed_error:errorMessage,
     safe_automatic_retry:0
   }));
 })().catch(e=>{console.error(e);process.exit(1);});
