@@ -15,7 +15,7 @@ on:
       - "scripts/whole_home_patch_contract.cjs"
       - "scripts/test_execution_trust_boundary.py"
       - "scripts/test_atomic_physical_set.cjs"
-      - "scripts/test_physical_transaction_router.cjs"
+      - "scripts/test_physical_transaction_router.cjs"\n      - "scripts/test_production_physical_turn_atomicity.cjs"
       - ".github/workflows/execution-trust-boundary.yml"
   pull_request:
     paths:
@@ -54,7 +54,7 @@ jobs:
           node --check scripts/physical_driver_capabilities.cjs
           node --check scripts/physical_transaction_router.cjs
           node --check scripts/test_atomic_physical_set.cjs
-          node --check scripts/test_physical_transaction_router.cjs
+          node --check scripts/test_physical_transaction_router.cjs\n          node --check scripts/test_production_physical_turn_atomicity.cjs
       - name: Prove planner-to-commit safety invariants
         run: python scripts/test_execution_trust_boundary.py
       - name: Prove multi-target physical SET cannot degrade to sequential writes
