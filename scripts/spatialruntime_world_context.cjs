@@ -36,6 +36,14 @@ function validateSceneContext(context){
   if(!context||context.schema!==CONTEXT_SCHEMA){
     throw new Error("spatialruntime_scene_context_schema_invalid");
   }
+  if(
+    context.world_snapshot_revision!=null&&(
+      !Number.isInteger(context.world_snapshot_revision)||
+      context.world_snapshot_revision<0
+    )
+  ){
+    throw new Error("spatialruntime_scene_context_world_revision_invalid");
+  }
   for(const key of (
     ["world_snapshot_sha256","validation_receipt_sha256","source_fingerprint","relation_graph_fingerprint","context_sha256"]
   )){
@@ -212,9 +220,13 @@ function validateSceneArtifacts(world,receipt,{windowEntityLabel="窗"}={}){
   }
   explicitExterior.sort((a,b)=>a.key.localeCompare(b.key));
 
+  if(!Number.isInteger(world.revision)||world.revision<0){
+    throw new Error("spatialruntime_scene_world_revision_invalid");
+  }
   const body={
     schema:CONTEXT_SCHEMA,
     case_id:world.case_id,
+    world_snapshot_revision:world.revision,
     world_snapshot_sha256:receipt.world_snapshot_sha256,
     validation_receipt_sha256:receipt.receipt_sha256,
     source_fingerprint:receipt.source_fingerprint,
@@ -335,6 +347,23 @@ function loadSceneContextFromHandoff(worldPath,receiptPath,handoffPath,options={
   return loadSceneContext(worldPath,receiptPath,{...options,handoffPath});
 }
 
+function sceneWorldIdentity(context){
+  const validated=validateSceneContext(context);
+  if(
+    !Number.isInteger(validated.world_snapshot_revision)||
+    validated.world_snapshot_revision<0
+  ){
+    throw new Error("spatialruntime_scene_context_world_revision_required");
+  }
+  if(!isSha256(validated.world_snapshot_sha256)){
+    throw new Error("spatialruntime_scene_context_world_sha256_required");
+  }
+  return {
+    world_snapshot_revision:validated.world_snapshot_revision,
+    world_snapshot_sha256:validated.world_snapshot_sha256
+  };
+}
+
 module.exports={
   WORLD_SCHEMA,
   VALIDATION_SCHEMA,
@@ -348,5 +377,6 @@ module.exports={
   validateSceneArtifacts,
   validateSceneHandoff,
   loadSceneContext,
-  loadSceneContextFromHandoff
+  loadSceneContextFromHandoff,
+  sceneWorldIdentity
 };
