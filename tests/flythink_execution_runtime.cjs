@@ -111,7 +111,7 @@ function passAuthorizer(counter=null,transform=null,authorizationId=null){
       request:request([action]),
       proposal:proposal([action]),
       driver,
-      physicalAuthorizer:passAuthorizer(auth,p=>({...p,value:20}))
+      physicalAuthorizer:passAuthorizer(auth,p=>({...p,value:20})),
       authorizationLedger:freshLedger(),
     });
     assert.equal(out.ok,true);
@@ -143,7 +143,7 @@ function passAuthorizer(counter=null,transform=null,authorizationId=null){
       request:request([action]),
       proposal:proposal([],{decision:"DEFER",uncertainty:0.8}),
       driver,
-      physicalAuthorizer:passAuthorizer(auth)
+      physicalAuthorizer:passAuthorizer(auth),
       authorizationLedger:freshLedger(),
     });
     assert.equal(out.ok,false);
@@ -184,7 +184,7 @@ function passAuthorizer(counter=null,transform=null,authorizationId=null){
       request:request([action]),
       proposal:proposal([action]),
       driver:null,
-      physicalAuthorizer:passAuthorizer(auth)
+      physicalAuthorizer:passAuthorizer(auth),
       authorizationLedger:freshLedger(),
     });
     assert.equal(out.ok,false);
@@ -203,7 +203,7 @@ function passAuthorizer(counter=null,transform=null,authorizationId=null){
       request:request([action]),
       proposal:proposal([action]),
       driver,
-      physicalAuthorizer:passAuthorizer(null,p=>({...p,target:L}))
+      physicalAuthorizer:passAuthorizer(null,p=>({...p,target:L})),
       authorizationLedger:freshLedger(),
     });
     assert.equal(out.ok,false);
@@ -230,7 +230,7 @@ function passAuthorizer(counter=null,transform=null,authorizationId=null){
       request:request(actions,[L,B]),
       proposal:proposal(actions),
       driver,
-      physicalAuthorizer:passAuthorizer()
+      physicalAuthorizer:passAuthorizer(),
       authorizationLedger:freshLedger(),
     });
     assert.equal(out.ok,false);
@@ -265,7 +265,7 @@ function passAuthorizer(counter=null,transform=null,authorizationId=null){
       request:request(actions,[L,B]),
       proposal:proposal(actions),
       driver,
-      physicalAuthorizer:passAuthorizer()
+      physicalAuthorizer:passAuthorizer(),
       authorizationLedger:freshLedger(),
     });
     assert.equal(out.ok,true);
@@ -295,7 +295,7 @@ function passAuthorizer(counter=null,transform=null,authorizationId=null){
       request:request([action]),
       proposal:proposal([action]),
       driver,
-      physicalAuthorizer:passAuthorizer()
+      physicalAuthorizer:passAuthorizer(),
       authorizationLedger:freshLedger(),
     });
     assert.equal(out.ok,false);
@@ -387,7 +387,7 @@ function passAuthorizer(counter=null,transform=null,authorizationId=null){
       request:windowRequest,
       proposal:windowProposal,
       driver,
-      physicalAuthorizer:passAuthorizer()
+      physicalAuthorizer:passAuthorizer(),
       authorizationLedger:freshLedger(),
     });
     assert.equal(out.ok,true);
@@ -478,7 +478,7 @@ function passAuthorizer(counter=null,transform=null,authorizationId=null){
     const runtime=new FlyThinkExecutionRuntime({
       runtime:windowRuntime,
       driver:recoveryDriver,
-      physicalAuthorizer:passAuthorizer()
+      physicalAuthorizer:passAuthorizer(),
       authorizationLedger:freshLedger(),
     });
     const out=await runtime.recover({
