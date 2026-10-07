@@ -210,7 +210,7 @@ function verifyEvidenceDecisionReceipt(receipt={},{
     if(!Array.isArray(trust_lineage)||!trust_lineage.length){
       throw new Error("trusted_adjudication_trust_lineage_required");
     }
-    const lineage=verifyTrustRegistryLineage(trust_lineage);
+    verifyTrustRegistryLineage(trust_lineage);
     const freshness=verifyTrustRegistrySnapshotFreshAt(
       trust_snapshot,
       trust_lineage,
@@ -219,12 +219,21 @@ function verifyEvidenceDecisionReceipt(receipt={},{
     if(!receipt.trust_lineage_head){
       throw new Error("evidence_decision_receipt_lineage_head_required");
     }
-    if(receipt.trust_lineage_head.revision!==lineage.head_revision){
-      throw new Error("evidence_decision_receipt_lineage_head_revision_mismatch");
+    const anchor=trust_lineage.find(
+      x=>x.revision===receipt.trust_lineage_head.revision
+    );
+    if(!anchor){
+      throw new Error("evidence_decision_receipt_lineage_anchor_missing");
     }
-    if(receipt.trust_lineage_head.snapshot_digest!==lineage.head_snapshot_digest){
-      throw new Error("evidence_decision_receipt_lineage_head_digest_mismatch");
+    if(anchor.snapshot_digest!==receipt.trust_lineage_head.snapshot_digest){
+      throw new Error("evidence_decision_receipt_lineage_anchor_digest_mismatch");
     }
+    if(anchor.revision<receipt.trust_snapshot.revision){
+      throw new Error("evidence_decision_receipt_lineage_anchor_before_snapshot");
+    }
+    verifyTrustRegistryLineage(
+      trust_lineage.slice(0,anchor.revision)
+    );
     if(freshness.snapshot_digest!==receipt.trust_snapshot.snapshot_digest){
       throw new Error("evidence_decision_receipt_snapshot_not_fresh_at_evaluation_time");
     }
