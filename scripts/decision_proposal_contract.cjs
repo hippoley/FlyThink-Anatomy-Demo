@@ -80,6 +80,8 @@ function validateDecisionProposal(proposal){
     !Number.isInteger(proposal.world_snapshot_revision)||
     proposal.world_snapshot_revision<0
   )throw new Error("decision_proposal_world_revision_invalid");
+  if(!/^[0-9a-f]{64}$/.test(String(proposal.world_snapshot_sha256||"")))
+    throw new Error("decision_proposal_world_snapshot_sha256_invalid");
 
   if(!Array.isArray(proposal.logical_targets)||!proposal.logical_targets.length)
     throw new Error("decision_proposal_logical_targets_required");
@@ -208,7 +210,8 @@ function decisionProposalToExecutionContracts(
       source_contract:SCHEMA_VERSION,
       source_decision_proposal_sha256:digestDecisionProposal(decisionProposal),
       intent:decisionProposal.intent,
-      world_snapshot_revision:decisionProposal.world_snapshot_revision
+      world_snapshot_revision:decisionProposal.world_snapshot_revision,
+      world_snapshot_sha256:decisionProposal.world_snapshot_sha256
     },
     proposed_actions:decision==="PROPOSE"?clone(actions):[],
     uncertainty:{
@@ -229,6 +232,7 @@ function decisionProposalToExecutionContracts(
     external_contract:SCHEMA_VERSION,
     proposal_id:decisionProposal.proposal_id,
     world_snapshot_revision:decisionProposal.world_snapshot_revision,
+    world_snapshot_sha256:decisionProposal.world_snapshot_sha256,
     request,
     internal_proposal:internalProposal
   };
