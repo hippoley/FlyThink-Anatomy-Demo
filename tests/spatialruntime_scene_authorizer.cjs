@@ -7,9 +7,8 @@ const {
 const {MockThingDriver}=require("../scripts/physical_runtime.cjs");
 const {runStreamingSequence}=require("../scripts/streaming_slu_e2e.cjs");
 
-const worldPath=process.argv[2];
-const receiptPath=process.argv[3];
-if(!worldPath||!receiptPath)throw new Error("usage: node tests/spatialruntime_scene_authorizer.cjs WORLD RECEIPT");
+const sceneContextPath=process.argv[2];
+if(!sceneContextPath)throw new Error("usage: node tests/spatialruntime_scene_authorizer.cjs SCENE_CONTEXT");
 
 function key(area){return [area,"窗","default"].join("::")}
 function target(area){return {area,entity:"窗",instance:"default"}}
@@ -39,8 +38,7 @@ async function reviewedSceneWindowFeedsRainSafety(){
   const initial=runtime(area,0);
   const driver=new MockThingDriver(initial);
   const authorizer=createSpatialRuntimeAuthorizer({
-    worldSnapshotPath:worldPath,
-    worldValidationReceiptPath:receiptPath,
+    sceneContextPath,
     timeoutMs:10000
   });
   const out=await runStreamingSequence([
@@ -79,8 +77,7 @@ async function unreviewedSceneTargetFailsBeforeDriver(){
   const initial=runtime(area,0);
   const driver=new MockThingDriver(initial);
   const authorizer=createSpatialRuntimeAuthorizer({
-    worldSnapshotPath:worldPath,
-    worldValidationReceiptPath:receiptPath,
+    sceneContextPath,
     timeoutMs:10000
   });
   const out=await runStreamingSequence([
@@ -109,8 +106,7 @@ async function manualExteriorHintCannotEscapeSceneReview(){
   const initial=runtime(area,0);
   const driver=new MockThingDriver(initial);
   const authorizer=createSpatialRuntimeAuthorizer({
-    worldSnapshotPath:worldPath,
-    worldValidationReceiptPath:receiptPath,
+    sceneContextPath,
     timeoutMs:10000
   });
   const out=await runStreamingSequence([
