@@ -112,10 +112,13 @@ on:
       - "benchmarks/pi_home_goal_scenarios.json"
       - "tests/commit_gate.cjs"
       - "tests/recovery_transaction.cjs"
+      - "tests/flythink_execution_runtime.cjs"
       - "scripts/stateful_checkpoint_trajectory.cjs"
       - "scripts/whole_home_patch_contract.cjs"
       - "scripts/physical_runtime.cjs"
       - "scripts/recovery_transaction.cjs"
+      - "scripts/flythink_execution_runtime.cjs"
+      - "scripts/execution_reasoning_contract.cjs"
       - "scripts/runtime_context_adapter.cjs"
       - "scripts/commit_gate.cjs"
       - "scripts/checkpoint_jsonl_server.py"
@@ -255,6 +258,7 @@ jobs:
         run: |
           node tests/commit_gate.cjs
           node tests/recovery_transaction.cjs
+          node tests/flythink_execution_runtime.cjs
           node tests/streaming_slu_e2e.cjs
           node tests/home_goal_runtime.cjs
           node tests/desired_state_evaluator.cjs
