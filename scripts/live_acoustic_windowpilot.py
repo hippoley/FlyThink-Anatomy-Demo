@@ -149,6 +149,8 @@ def build_commands(args):
                 separators=(",", ":"),
             ),
         ]
+    if args.spatialruntime_authorize:
+        node.append("--spatialruntime-authorize")
     if args.apply:
         node.append("--apply")
     return asr, node
@@ -211,6 +213,11 @@ def parse_args():
     p.add_argument("--fixture-manifest")
     p.add_argument("--require-human-fixture", action="store_true")
     p.add_argument("--apply", action="store_true")
+    p.add_argument(
+        "--spatialruntime-authorize",
+        action="store_true",
+        help="require SpatialRuntime authorization before any committed WindowPilot write",
+    )
     p.add_argument("--probe-open-pct", type=float, default=5.0)
     p.add_argument("--tolerance", type=float, default=1.0)
     p.add_argument("--timeout-ms", type=int, default=5000)
