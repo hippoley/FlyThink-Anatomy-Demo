@@ -3,6 +3,7 @@
 const assert=require("assert");
 const {
   evaluateProviderCalibration,
+  verifyCalibrationReport,
   buildTrustRegistryEntryFromCalibration,
   buildTrustAttestationFromCalibration
 }=require("../scripts/pi_home_provider_calibration.cjs");
@@ -52,6 +53,21 @@ assert.equal(good.metrics.cases,12);
 assert.equal(good.metrics.top1_accuracy,1);
 assert.equal(good.metrics.pairwise_accuracy,1);
 assert.match(good.report_digest,/^sha256:[0-9a-f]{64}$/);
+assert.equal(verifyCalibrationReport(good).valid,true);
+
+const tampered=JSON.parse(JSON.stringify(good));
+tampered.metrics.top1_accuracy=.123;
+assert.throws(
+  ()=>verifyCalibrationReport(tampered),
+  /digest_mismatch/
+);
+assert.throws(
+  ()=>buildTrustRegistryEntryFromCalibration(tampered,{
+    calibration_ref:"calibration://tampered",
+    approved_by:"engineering-review-board"
+  }),
+  /digest_mismatch/
+);
 
 const calibrationRef="calibration://rain/home-rain-v1";
 const entry=buildTrustRegistryEntryFromCalibration(good,{
