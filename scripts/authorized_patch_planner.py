@@ -26,4 +26,4 @@ def plan(registry,target_keys,slot,value):
    rejected.append({"target":key,"model_id":b.model_id,"slot":slot,"reason":v["reason"]});continue
   patches.append({"target":key,"model_id":b.model_id,"slot":slot,"capability":v["capability"]["codes"][0],"value":value})
  if rejected:return {"ok":False,"patches":[],"authorization":None,"rejected":rejected,"reason":"authorized_set_validation_failed"}
- return {"ok":True,"patches":patches,"authorization":{"version":1,"patch_digest":authorization_digest(patches)},"rejected":[]}
+ return {"ok":True,"patches":patches,"authorization":{"version":1,"patch_digest":authorization_digest(patches),"registry_digest":registry.snapshot_digest()},"rejected":[]}
