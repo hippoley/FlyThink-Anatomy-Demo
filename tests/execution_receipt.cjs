@@ -141,7 +141,14 @@ function buildVerified(){
     assert.equal(receipt.verification.hardware_identity_verified,true);
     assert.equal(receipt.verification.measured_readback_verified,true);
     assert.equal(receipt.verification.physical_truth_verified,true);
-    const verified=verifyExecutionReceipt(receipt);
+    const {before,after}=runtimes();
+    const verified=verifyExecutionReceipt(receipt,{
+      contextual_state:contextualState,
+      request,
+      proposal,
+      before_runtime:before,
+      after_runtime:after
+    });
     assert.equal(verified.valid,true);
     assert.equal(verified.physical_truth_verified,true);
   }
@@ -243,6 +250,7 @@ function buildVerified(){
     assert.equal(verified.valid,true);
     assert.equal(verified.physical_committed,true);
     assert.equal(verified.physical_truth_verified,false);
+    assert.equal(receipt.result,"APPLIED_UNVERIFIED");
     assert.equal(receipt.verification.ack_verified,false);
     assert.equal(receipt.verification.fresh_readback_verified,false);
     assert.equal(receipt.verification.hardware_identity_verified,false);
@@ -274,28 +282,37 @@ function buildVerified(){
     const physical=verifiedPhysicalReceipt();
     physical.patch={...clone(action),value:9};
     const {before,after}=runtimes();
-    const receipt=buildExecutionReceipt({
-      contextual_state:contextualState,
-      request,
-      proposal,
-      authorization,
-      authorized_actions:[action],
-      physical_receipts:[physical],
-      before_runtime:before,
-      after_runtime:after,
-      status:"EXECUTED",
-      physical_committed:true
-    });
-    assert.equal(receipt.verification.authorization_binding_verified,false);
-    assert.equal(receipt.verification.physical_truth_verified,false);
-    const verified=verifyExecutionReceipt(receipt);
-    assert.equal(verified.valid,true);
-    assert.equal(verified.physical_truth_verified,false);
+    assert.throws(
+      ()=>buildExecutionReceipt({
+        contextual_state:contextualState,
+        request,
+        proposal,
+        authorization,
+        authorized_actions:[action],
+        physical_receipts:[physical],
+        before_runtime:before,
+        after_runtime:after,
+        status:"EXECUTED",
+        physical_committed:true
+      }),
+      /execution_receipt_authorization_binding_mismatch/
+    );
+  }
+
+  // 10. An independently supplied source artifact must match the receipt digest binding.
+  {
+    const receipt=buildVerified();
+    const forgedRequest=clone(request);
+    forgedRequest.task_id="task-forged";
+    assert.throws(
+      ()=>verifyExecutionReceipt(receipt,{request:forgedRequest}),
+      /execution_receipt_request_mismatch/
+    );
   }
 
   console.log(JSON.stringify({
     ok:true,
-    cases:9,
+    cases:10,
     schema:"execution-receipt.v1",
     contract:"authorized action + physical patch + target + ACK + causal readback + hardware identity are digest-bound and independently checked"
   }));
