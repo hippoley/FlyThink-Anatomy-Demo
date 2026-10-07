@@ -1,5 +1,8 @@
 name: live-acoustic-windowpilot-acceptance
 
+env:
+  SPATIALRUNTIME_COMMIT_SHA: d123ab9a5310cb9ce15d9e82630828a0d32211f4
+
 on:
   workflow_dispatch:
     inputs:
@@ -76,7 +79,7 @@ jobs:
           path: _spatialruntime
       - name: Verify pinned SpatialRuntime revision
         shell: bash
-        run: test "$(git -C _spatialruntime rev-parse HEAD)" = "d123ab9a5310cb9ce15d9e82630828a0d32211f4"
+        run: test "$(git -C _spatialruntime rev-parse HEAD)" = "$SPATIALRUNTIME_COMMIT_SHA"
 
       - uses: actions/setup-python@v5
         with:
