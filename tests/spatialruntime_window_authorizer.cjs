@@ -44,9 +44,16 @@ async function ordinaryOpeningPassesSpatialRuntime(){
   assert.equal(row.physical_authorization_binding.schema,"homeai_spatialruntime_physical_binding_v1");
   assert.equal(row.physical_authorization_binding.authorization_receipt_sha256,row.physical_authorization.receipt_sha256);
   assert.equal(row.physical_authorization_binding.authorization_trace_hash,row.physical_authorization.trace_hash);
+  assert.equal(row.physical_authorization_binding.case_id,"sr-pass");
+  assert.equal(row.physical_authorization_binding.source_step,0);
+  assert.equal(row.physical_authorization_binding.source_revision,0);
   assert.equal(row.physical_authorization_binding.bindings.length,1);
   assert.equal(row.physical_authorization_binding.bindings[0].status,"applied");
   assert.equal(row.physical_authorization_binding.bindings[0].authorization_patch_sha256,row.physical_authorization_binding.bindings[0].physical_patch_sha256);
+  assert.equal(row.physical_authorization_binding.bindings[0].authorized_value,5);
+  assert.equal(row.physical_authorization_binding.bindings[0].requested_position_pct,5);
+  assert.equal(row.physical_authorization_binding.bindings[0].observed_value,5);
+  assert.equal(row.physical_authorization_binding.bindings[0].convergence_error_pct,0);
   assert.equal(row.physical_authorization_binding.bindings[0].observation_sha256.length,64);
   assert.equal(row.physical_authorization_binding.binding_sha256.length,64);
   assert.equal(out.physical_commands,1);
@@ -77,7 +84,11 @@ async function reviewedExteriorRainForcesCloseBeforeDriver(){
   assert.deepEqual(row.physical_authorization.safety_forced_entities,[key()]);
   assert.equal(row.authorized_patch_proposal[0].value,0);
   assert.equal(row.authorized_patch_proposal[0].spatialruntime_decision,"commit_safety_override");
+  assert.equal(row.physical_authorization_binding.case_id,"sr-rain");
+  assert.equal(row.physical_authorization_binding.bindings[0].authorized_value,0);
+  assert.equal(row.physical_authorization_binding.bindings[0].requested_position_pct,0);
   assert.equal(row.physical_authorization_binding.bindings[0].observed_value,0);
+  assert.equal(row.physical_authorization_binding.bindings[0].convergence_error_pct,0);
   assert.equal(driver.commands.length,1);
   assert.equal(driver.commands[0].patch.value,0);
   assert.equal(out.runtime.devices[key()].slots.opening,0);
