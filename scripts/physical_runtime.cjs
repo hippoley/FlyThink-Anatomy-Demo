@@ -114,55 +114,54 @@ function reconcileObservation(runtime, observation, turnId = null) {
   return next;
 }
 
-async function executePhysicalTurn(inputRuntime, patches, driver, options = {}) {
+async function executeSinglePhysicalPatch(inputRuntime, expanded, driver, options = {}) {
   let runtime = normalizeRuntime(inputRuntime);
-  const receipts = [];
-  for (const proposed of patches || []) {
-    for (const expanded of expandSetPatch(proposed)) {
-      if (["CANCEL_PENDING", "PROTECT"].includes(expanded.op)) {
-        const local = applyPatch(runtime, expanded);
-        runtime = local.runtime;
-        receipts.push({patch: clone(expanded), local_only: true, receipt: local.receipt});
-        continue;
-      }
+  const physicalPatch = materializePatch(runtime, expanded);
+  const command = await Promise.resolve(driver.execute(physicalPatch));
+  if (!command || typeof command !== "object") throw new Error("physical_driver_invalid_receipt");
+  if (!command.observation) throw new Error("physical_driver_missing_observation");
+  const turnId=expanded.turn_id || options.turn_id || null;
+  runtime = reconcileObservation(runtime, command.observation, turnId);
+  const executionRecord={
+    id:command.id || "physical:"+String(runtime.executionLedger.length+1),
+    turn_id:turnId,kind:"physical",status:command.status || "unknown",
+    reason:command.reason || null,semantic_patch:clone(expanded),
+    physical_patch:clone(physicalPatch),observation:clone(command.observation)
+  };
+  runtime.executionLedger.push(executionRecord);
+  return {ok:true,runtime,receipts:[{
+    patch:clone(expanded),physical_patch:physicalPatch,command_id:executionRecord.id,
+    status:executionRecord.status,reason:executionRecord.reason,
+    observation:clone(command.observation)
+  }],reason:null};
+}
 
-      const physicalPatch = materializePatch(runtime, expanded);
-      const command = await Promise.resolve(driver.execute(physicalPatch));
-      if (!command || typeof command !== "object") {
-        throw new Error("physical_driver_invalid_receipt");
+async function executePhysicalTurn(inputRuntime, patches, driver, options = {}) {
+  let runtime=normalizeRuntime(inputRuntime);
+  const receipts=[];
+  const {executePhysicalTransaction}=require("./physical_transaction_router.cjs");
+  for(const proposed of patches || []){
+    const expanded=expandSetPatch(proposed);
+    if(expanded.every(p=>["CANCEL_PENDING","PROTECT"].includes(p.op))){
+      for(const localPatch of expanded){
+        const local=applyPatch(runtime,localPatch);
+        runtime=local.runtime;
+        receipts.push({patch:clone(localPatch),local_only:true,receipt:local.receipt});
       }
-      if (!command.observation) {
-        throw new Error("physical_driver_missing_observation");
-      }
-      const turnId=expanded.turn_id || options.turn_id || null;
-      runtime = reconcileObservation(runtime, command.observation, turnId);
-      const executionRecord={
-        id:command.id || "physical:"+String(runtime.executionLedger.length+1),
-        turn_id:turnId,
-        kind:"physical",
-        status:command.status || "unknown",
-        reason:command.reason || null,
-        semantic_patch:clone(expanded),
-        physical_patch:clone(physicalPatch),
-        observation:clone(command.observation)
-      };
-      runtime.executionLedger.push(executionRecord);
-      receipts.push({
-        patch: clone(expanded),
-        physical_patch: physicalPatch,
-        command_id: executionRecord.id,
-        status: executionRecord.status,
-        reason: executionRecord.reason,
-        observation: clone(command.observation)
-      });
+      continue;
     }
+    const result=await executePhysicalTransaction(runtime,proposed,driver,options,executeSinglePhysicalPatch);
+    if(!result.ok) return {runtime:result.runtime,receipts:result.receipts,ok:false,reason:result.reason};
+    runtime=result.runtime;
+    receipts.push(...result.receipts);
   }
-  return {runtime, receipts};
+  return {runtime,receipts,ok:true,reason:null};
 }
 
 module.exports = {
   MockThingDriver,
   materializePatch,
   reconcileObservation,
+  executeSinglePhysicalPatch,
   executePhysicalTurn
 };
