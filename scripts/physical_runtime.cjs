@@ -278,10 +278,6 @@ async function executePhysicalTurn(inputRuntime, patches, driver, options = {}) 
       }
       continue;
     }
-    const preflight=evaluateQuarantinePreflight(runtime,expanded);
-    if(!preflight.allow){
-      return {runtime,receipts,ok:false,reason:preflight.reason,violations:preflight.violations};
-    }
     const result=await executePhysicalTransaction(runtime,proposed,driver,options,executeSinglePhysicalPatch);
     if(!result.ok) return {runtime:result.runtime,receipts:result.receipts,ok:false,reason:result.reason};
     runtime=result.runtime;
