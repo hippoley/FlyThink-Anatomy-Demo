@@ -5,10 +5,12 @@ const {
   evaluateProviderCalibration,
   verifyCalibrationReport,
   buildTrustRegistryEntryFromCalibration,
+  buildTimeBoundTrustRegistryEntryFromCalibration,
   buildTrustAttestationFromCalibration
 }=require("../scripts/pi_home_provider_calibration.cjs");
 const {
   buildProviderTrustRegistry,
+  buildProviderTrustRegistryV2,
   resolveProviderTrust
 }=require("../scripts/pi_home_provider_trust.cjs");
 
@@ -129,3 +131,40 @@ console.log(JSON.stringify({
   ok:true,
   contract:"only independent measured calibration that passes ranking thresholds can produce an approved trust-registry entry"
 }));
+
+
+const timedEntry=buildTimeBoundTrustRegistryEntryFromCalibration(good,{
+  calibration_ref:"calibration://rain/home-rain-v1/timed",
+  approved_by:"engineering-review-board",
+  not_before:"2026-10-01T00:00:00Z",
+  expires_at:"2026-11-01T00:00:00Z",
+  reviewed_at:"2026-10-01T00:00:00Z",
+  review_due_at:"2026-10-20T00:00:00Z",
+  lifecycle_metadata:{review_cycle:"19d"}
+});
+const timedAttestation=buildTrustAttestationFromCalibration(good,{
+  calibration_ref:"calibration://rain/home-rain-v1/timed"
+});
+const timedRegistry=buildProviderTrustRegistryV2([timedEntry]);
+const timedProvider={
+  id:"rain-engineering-v1",
+  kind:"engineering-model",
+  covered_dimensions:["rain_ingress"],
+  evidence_level:"engineering-validated",
+  trusted_for_promotion:true,
+  trust_attestation:timedAttestation
+};
+const timedOk=resolveProviderTrust(
+  timedProvider,
+  timedRegistry,
+  {at:"2026-10-10T00:00:00Z"}
+);
+assert.equal(timedOk.effective_trusted_for_promotion,true);
+
+const timedExpiredReview=resolveProviderTrust(
+  timedProvider,
+  timedRegistry,
+  {at:"2026-10-20T00:00:00Z"}
+);
+assert.equal(timedExpiredReview.effective_trusted_for_promotion,false);
+assert.equal(timedExpiredReview.reason,"provider_trust_review_overdue");
