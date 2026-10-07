@@ -131,6 +131,13 @@ def authorize(request: Mapping[str, Any]) -> dict[str, Any]:
             value = str(scene_evidence.get(key) or "")
             if len(value) != 64 or any(ch not in "0123456789abcdef" for ch in value):
                 raise ValueError(f"spatialruntime_scene_evidence_sha_invalid:{key}")
+        scene_runtime_commit = scene_evidence.get("spatialruntime_commit_sha")
+        if scene_runtime_commit is not None:
+            scene_runtime_commit = str(scene_runtime_commit).lower()
+            if re.fullmatch(r"[0-9a-f]{40}", scene_runtime_commit) is None:
+                raise ValueError("spatialruntime_scene_evidence_runtime_commit_invalid")
+            if spatialruntime_commit_sha is not None and scene_runtime_commit != spatialruntime_commit_sha:
+                raise ValueError("spatialruntime_scene_evidence_runtime_commit_mismatch")
         declared_keys = set(scene_evidence.get("exterior_window_keys") or [])
         if declared_keys != exterior_keys:
             raise ValueError("spatialruntime_scene_exterior_keys_mismatch")
