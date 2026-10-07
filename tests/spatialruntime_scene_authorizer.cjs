@@ -66,6 +66,12 @@ async function reviewedSceneWindowFeedsRainSafety(){
   assert.equal(row.physical_authorization.scene_evidence.world_snapshot_sha256.length,64);
   assert.equal(row.physical_authorization.scene_evidence.validation_receipt_sha256.length,64);
   assert.equal(row.physical_authorization.scene_evidence.context_sha256.length,64);
+  if(process.env.SPATIALRUNTIME_COMMIT_SHA&&row.physical_authorization.scene_evidence.spatialruntime_commit_sha){
+    assert.equal(
+      row.physical_authorization.scene_evidence.spatialruntime_commit_sha,
+      process.env.SPATIALRUNTIME_COMMIT_SHA
+    );
+  }
   assert.deepEqual(row.physical_authorization.safety_forced_entities,[key(area)]);
   assert.equal(driver.commands.length,1);
   assert.equal(driver.commands[0].patch.value,0);
