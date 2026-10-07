@@ -3,6 +3,7 @@
 const fs=require("fs");
 const path=require("path");
 const crypto=require("crypto");
+const {verifyEvidenceDecisionReceipt}=require("./pi_home_evidence_decision_receipt.cjs");
 
 function canonical(v){
   if(Array.isArray(v))return "["+v.map(canonical).join(",")+"]";
@@ -80,6 +81,25 @@ class DecisionEvidenceJournal{
     fs.appendFileSync(this.file_path,JSON.stringify(record)+"\n","utf8");
     this.records.push(record);
     return JSON.parse(JSON.stringify(record));
+  }
+
+  appendDecisionReceipt(receipt,verificationContext={}){
+    const verification=verifyEvidenceDecisionReceipt(receipt,verificationContext);
+    const record=this.append({
+      type:"EVIDENCE_DECISION_RECEIPT",
+      actor:receipt.actor||"system",
+      refs:{
+        decision_id:receipt.decision_id,
+        receipt_digest:receipt.receipt_digest,
+        registry_digest:receipt.trust_snapshot&&receipt.trust_snapshot.registry_digest||null,
+        snapshot_digest:receipt.trust_snapshot&&receipt.trust_snapshot.snapshot_digest||null
+      },
+      payload:receipt
+    });
+    return {
+      record,
+      verification
+    };
   }
 
   verify(){
