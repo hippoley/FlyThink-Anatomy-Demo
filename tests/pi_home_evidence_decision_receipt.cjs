@@ -294,3 +294,58 @@ assert.throws(
   }),
   /lineage_head_/
 );
+
+
+const preExtensionReceipt=buildEvidenceDecisionReceipt({
+  decision_id:"decision-pre-extension",
+  evaluated_at:"2026-10-10T00:00:00Z",
+  actor:"home-policy-shadow",
+  learned_candidate:learnedCandidate,
+  adjudication,
+  provider_results:providerResults,
+  trust_snapshot:snapshot,
+  trust_lineage:[snapshot]
+});
+assert.equal(preExtensionReceipt.trust_lineage_head.revision,1);
+
+const preExtensionVerifiedLater=verifyEvidenceDecisionReceipt(
+  preExtensionReceipt,
+  {
+    learned_candidate:learnedCandidate,
+    adjudication,
+    provider_results:providerResults,
+    trust_snapshot:snapshot,
+    trust_lineage:[snapshot,revokedSnapshot]
+  }
+);
+assert.equal(preExtensionVerifiedLater.valid,true);
+
+const forgedAnchor=JSON.parse(JSON.stringify(preExtensionReceipt));
+forgedAnchor.trust_lineage_head.snapshot_digest="sha256:"+"f".repeat(64);
+forgedAnchor.receipt_digest=require("../scripts/pi_home_evidence_decision_receipt.cjs")
+  .digestObject((()=>{
+    const x={
+      schema_version:"pi-home-evidence-decision-receipt-v1",
+      decision_id:forgedAnchor.decision_id,
+      evaluated_at:forgedAnchor.evaluated_at,
+      actor:forgedAnchor.actor,
+      learned_candidate_digest:forgedAnchor.learned_candidate_digest,
+      adjudication_digest:forgedAnchor.adjudication_digest,
+      provider_evidence_digests:forgedAnchor.provider_evidence_digests,
+      trust_snapshot:forgedAnchor.trust_snapshot,
+      trust_lineage_head:forgedAnchor.trust_lineage_head,
+      trusted_for_generalization_claim:forgedAnchor.trusted_for_generalization_claim,
+      device_execution_authorized:false
+    };
+    return x;
+  })());
+assert.throws(
+  ()=>verifyEvidenceDecisionReceipt(forgedAnchor,{
+    learned_candidate:learnedCandidate,
+    adjudication,
+    provider_results:providerResults,
+    trust_snapshot:snapshot,
+    trust_lineage:[snapshot,revokedSnapshot]
+  }),
+  /lineage_anchor_digest_mismatch/
+);
