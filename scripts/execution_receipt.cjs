@@ -43,7 +43,8 @@ function physicalEvidenceRow(receipt,index){
   const logicalTarget=patchTarget(semantic);
   const physicalTarget=patchTarget(physical);
   const observationTarget=observation&&observation.target||null;
-  const beforeTick=Number(receipt&&receipt.before_tick);
+  const rawBeforeTick=receipt&&receipt.before_tick;
+  const beforeTick=rawBeforeTick==null?null:Number(rawBeforeTick);
   const afterTick=observationTick(receipt);
   const times=evidenceAckTimes(receipt);
   const ack=clone(receipt&&receipt.ack||null);
@@ -79,7 +80,7 @@ function physicalEvidenceRow(receipt,index){
     physical_patch:physical,
     observation,
     ack,
-    before_tick:Number.isFinite(beforeTick)?beforeTick:null,
+    before_tick:beforeTick!=null&&Number.isFinite(beforeTick)?beforeTick:null,
     after_tick:afterTick,
     requested_position_pct:
       receipt&&receipt.requested_position_pct==null
@@ -164,7 +165,26 @@ function buildExecutionReceipt({
   }
 
   const verifiedRows=evidence.filter(x=>x.status==="applied");
+  const authorizationBindingVerified=
+    authorized_actions.length===evidence.length&&
+    authorized_actions.every((action,index)=>
+      digestObject(action)===digestObject(evidence[index]&&evidence[index].semantic_patch)
+    );
+  const logicalTargetKeys=new Set(
+    (request.resolved_targets||[]).map(target=>{
+      try{return deviceKey(target)}catch(e){return null}
+    }).filter(Boolean)
+  );
+  const logicalTargetBindingVerified=
+    authorized_actions.length>0&&
+    authorized_actions.every(action=>{
+      const target=patchTarget(action);
+      try{return !!target&&logicalTargetKeys.has(deviceKey(target))}
+      catch(e){return false}
+    });
   const verification={
+    authorization_binding_verified:authorizationBindingVerified,
+    logical_target_binding_verified:logicalTargetBindingVerified,
     target_binding_verified:
       verifiedRows.length>0&&verifiedRows.every(x=>x.checks.target_match),
     ack_verified:
@@ -178,6 +198,8 @@ function buildExecutionReceipt({
   };
   verification.physical_truth_verified=
     physical_committed===true&&
+    verification.authorization_binding_verified&&
+    verification.logical_target_binding_verified&&
     verification.target_binding_verified&&
     verification.ack_verified&&
     verification.fresh_readback_verified&&
@@ -225,6 +247,7 @@ function buildExecutionReceipt({
       evidence,
       evidence_sha256:digestObject(evidence)
     },
+    runtime_status:String(status||"UNKNOWN"),
     result:resultFromStatus(status,physical_committed===true),
     reason:reason||null,
     reconcile:{
@@ -307,7 +330,27 @@ function verifyExecutionReceipt(receipt={}){
 
   const verification=receipt.verification||{};
   const applied=rebuiltRows.filter(x=>x.status==="applied");
+  const authorizedActions=auth.authorized_actions||[];
+  const authorizationBindingVerified=
+    authorizedActions.length===rebuiltRows.length&&
+    authorizedActions.every((action,index)=>
+      digestObject(action)===digestObject(rebuiltRows[index]&&rebuiltRows[index].semantic_patch)
+    );
+  const logicalTargetKeys=new Set(
+    (receipt.logical_targets||[]).map(target=>{
+      try{return deviceKey(target)}catch(e){return null}
+    }).filter(Boolean)
+  );
+  const logicalTargetBindingVerified=
+    authorizedActions.length>0&&
+    authorizedActions.every(action=>{
+      const target=patchTarget(action);
+      try{return !!target&&logicalTargetKeys.has(deviceKey(target))}
+      catch(e){return false}
+    });
   const expectedVerification={
+    authorization_binding_verified:authorizationBindingVerified,
+    logical_target_binding_verified:logicalTargetBindingVerified,
     target_binding_verified:
       applied.length>0&&applied.every(x=>x.checks.target_match),
     ack_verified:
@@ -321,6 +364,8 @@ function verifyExecutionReceipt(receipt={}){
   };
   expectedVerification.physical_truth_verified=
     physical.committed===true&&
+    expectedVerification.authorization_binding_verified&&
+    expectedVerification.logical_target_binding_verified&&
     expectedVerification.target_binding_verified&&
     expectedVerification.ack_verified&&
     expectedVerification.fresh_readback_verified&&
@@ -328,6 +373,13 @@ function verifyExecutionReceipt(receipt={}){
     expectedVerification.measured_readback_verified;
   if(digestObject(verification)!==digestObject(expectedVerification))
     throw new Error("execution_receipt_verification_summary_mismatch");
+
+  const expectedResult=resultFromStatus(
+    receipt.runtime_status,
+    physical.committed===true
+  );
+  if(receipt.result!==expectedResult)
+    throw new Error("execution_receipt_result_mismatch");
 
   const expectedEvidenceDigest=digestObject({
     authorization:receipt.authorization,
