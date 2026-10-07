@@ -19,7 +19,6 @@ on:
       - "scripts/execution_reasoning_contract.cjs"
       - "scripts/decision_proposal_contract.cjs"
       - "scripts/contextual_edge_slu_adapter.cjs"
-      - "scripts/contextual_edge_slu_adapter.cjs"
       - "scripts/whole_home_patch_contract.cjs"
       - "scripts/test_execution_trust_boundary.py"
       - "scripts/test_atomic_physical_set.cjs"
@@ -35,7 +34,6 @@ on:
       - "contracts/execution-proof-bundle.v1.schema.json"
       - "tests/execution_reasoning_contract.cjs"
       - "tests/decision_proposal_contract.cjs"
-      - "tests/contextual_edge_slu_adapter.cjs"
       - "tests/contextual_edge_slu_adapter.cjs"
   pull_request:
     paths:
@@ -53,6 +51,7 @@ on:
       - "scripts/execution_proof_bundle.cjs"
       - "scripts/execution_reasoning_contract.cjs"
       - "scripts/decision_proposal_contract.cjs"
+      - "scripts/contextual_edge_slu_adapter.cjs"
       - "scripts/whole_home_patch_contract.cjs"
       - "scripts/test_execution_trust_boundary.py"
       - "scripts/test_atomic_physical_set.cjs"
@@ -68,6 +67,7 @@ on:
       - "contracts/execution-proof-bundle.v1.schema.json"
       - "tests/execution_reasoning_contract.cjs"
       - "tests/decision_proposal_contract.cjs"
+      - "tests/contextual_edge_slu_adapter.cjs"
   workflow_dispatch:
 
 jobs:
