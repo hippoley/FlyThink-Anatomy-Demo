@@ -57,14 +57,35 @@ function proposal(actions,{
     reason_code:"TEST"
   };
 }
-function passAuthorizer(counter=null,transform=null){
+function freshLedger(){
+  const seen=new Set();
+  return {
+    add(id){
+      if(seen.has(id))return false;
+      seen.add(id);
+      return true;
+    },
+    has(id){return seen.has(id)}
+  };
+}
+function passAuthorizer(counter=null,transform=null,authorizationId=null){
   return async({patches})=>{
     if(counter)counter.calls++;
     const out=patches.map(p=>transform?transform(p):p);
+    const patchDigest=sha256Object(out);
+    const registryDigest=sha256Object({fixture:"registry-v1"});
     const receiptBase={
       schema:"test-authorization-v1",
       allow:true,
       id:"auth-1",
+      patch_digest:patchDigest,
+      registry_digest:registryDigest,
+      authorization_id:authorizationId||sha256Object({
+        fixture:"authorization-v1",
+        patch_digest:patchDigest,
+        registry_digest:registryDigest
+      }),
+      single_use:true,
       authorized_patches:out
     };
     return {
@@ -91,6 +112,7 @@ function passAuthorizer(counter=null,transform=null){
       proposal:proposal([action]),
       driver,
       physicalAuthorizer:passAuthorizer(auth,p=>({...p,value:20}))
+      authorizationLedger:freshLedger(),
     });
     assert.equal(out.ok,true);
     assert.equal(out.status,"EXECUTED");
@@ -122,6 +144,7 @@ function passAuthorizer(counter=null,transform=null){
       proposal:proposal([],{decision:"DEFER",uncertainty:0.8}),
       driver,
       physicalAuthorizer:passAuthorizer(auth)
+      authorizationLedger:freshLedger(),
     });
     assert.equal(out.ok,false);
     assert.equal(out.status,"DEFERRED");
@@ -141,6 +164,7 @@ function passAuthorizer(counter=null,transform=null){
       proposal:proposal([action],{uncertainty:0.9}),
       driver,
       physicalAuthorizer:passAuthorizer(auth),
+      authorizationLedger:freshLedger(),
       max_uncertainty:0.35
     });
     assert.equal(out.ok,false);
@@ -161,6 +185,7 @@ function passAuthorizer(counter=null,transform=null){
       proposal:proposal([action]),
       driver:null,
       physicalAuthorizer:passAuthorizer(auth)
+      authorizationLedger:freshLedger(),
     });
     assert.equal(out.ok,false);
     assert.equal(out.status,"BLOCKED");
@@ -179,6 +204,7 @@ function passAuthorizer(counter=null,transform=null){
       proposal:proposal([action]),
       driver,
       physicalAuthorizer:passAuthorizer(null,p=>({...p,target:L}))
+      authorizationLedger:freshLedger(),
     });
     assert.equal(out.ok,false);
     assert.equal(out.status,"BLOCKED");
@@ -205,6 +231,7 @@ function passAuthorizer(counter=null,transform=null){
       proposal:proposal(actions),
       driver,
       physicalAuthorizer:passAuthorizer()
+      authorizationLedger:freshLedger(),
     });
     assert.equal(out.ok,false);
     assert.equal(out.status,"PHYSICAL_NOT_COMMITTED");
@@ -239,6 +266,7 @@ function passAuthorizer(counter=null,transform=null){
       proposal:proposal(actions),
       driver,
       physicalAuthorizer:passAuthorizer()
+      authorizationLedger:freshLedger(),
     });
     assert.equal(out.ok,true);
     assert.equal(out.atomic_batch,true);
@@ -268,6 +296,7 @@ function passAuthorizer(counter=null,transform=null){
       proposal:proposal([action]),
       driver,
       physicalAuthorizer:passAuthorizer()
+      authorizationLedger:freshLedger(),
     });
     assert.equal(out.ok,false);
     assert.equal(out.status,"PHYSICAL_NOT_COMMITTED");
@@ -359,6 +388,7 @@ function passAuthorizer(counter=null,transform=null){
       proposal:windowProposal,
       driver,
       physicalAuthorizer:passAuthorizer()
+      authorizationLedger:freshLedger(),
     });
     assert.equal(out.ok,true);
     assert.equal(out.receipt.result,"APPLIED");
@@ -372,7 +402,41 @@ function passAuthorizer(counter=null,transform=null){
     assert.equal(verifiedReceipt.physical_truth_verified,true);
   }
 
-  // 11. Runtime facade exposes the formal recovery path, not manual trust clearing.
+  // 11. Replay of the same authorization id is rejected before a second physical command.
+  {
+    const action={op:"PATCH_SLOT",target:B,slot:"temperature",value:19};
+    const driver=new MockThingDriver(initial);
+    const ledger=freshLedger();
+    const authorizationId="b".repeat(64);
+    const authorizer=passAuthorizer(null,null,authorizationId);
+    const first=await runExecutionProposal({
+      runtime:initial,
+      contextual_state:context,
+      request:request([action]),
+      proposal:proposal([action]),
+      driver,
+      physicalAuthorizer:authorizer,
+      authorizationLedger:ledger
+    });
+    assert.equal(first.ok,true);
+    assert.equal(driver.commands.length,1);
+
+    const second=await runExecutionProposal({
+      runtime:initial,
+      contextual_state:context,
+      request:request([action]),
+      proposal:proposal([action]),
+      driver,
+      physicalAuthorizer:authorizer,
+      authorizationLedger:ledger
+    });
+    assert.equal(second.ok,false);
+    assert.equal(second.status,"BLOCKED");
+    assert.equal(second.reason,"physical_authorization_replayed");
+    assert.equal(driver.commands.length,1);
+  }
+
+  // 12. Runtime facade exposes the formal recovery path, not manual trust clearing.
   {
     const W={area:"客厅",entity:"窗",instance:"default"};
     const wk="客厅::窗::default";
@@ -415,6 +479,7 @@ function passAuthorizer(counter=null,transform=null){
       runtime:windowRuntime,
       driver:recoveryDriver,
       physicalAuthorizer:passAuthorizer()
+      authorizationLedger:freshLedger(),
     });
     const out=await runtime.recover({
       target:W,
@@ -430,7 +495,7 @@ function passAuthorizer(counter=null,transform=null){
 
   console.log(JSON.stringify({
     ok:true,
-    cases:11,
+    cases:12,
     contract:"contextual execution proposal -> deterministic authorization -> atomic/single physical execution -> readback, with formal recovery"
   }));
 })().catch(e=>{console.error(e);process.exit(1)});
