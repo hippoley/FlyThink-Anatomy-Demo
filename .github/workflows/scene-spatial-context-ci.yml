@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - "scripts/spatialruntime_world_context.cjs"
+      - "scripts/build_spatialruntime_scene_context.cjs"
       - "scripts/spatialruntime_authorizer.cjs"
       - "scripts/spatialruntime_window_authorizer.py"
       - "scripts/streaming_slu_e2e.cjs"
@@ -44,6 +45,7 @@ jobs:
       - name: Check scene consumer syntax
         run: |
           node --check scripts/spatialruntime_world_context.cjs
+          node --check scripts/build_spatialruntime_scene_context.cjs
           node --check scripts/spatialruntime_authorizer.cjs
           python -m py_compile scripts/spatialruntime_window_authorizer.py
 
@@ -57,3 +59,106 @@ jobs:
         run: |
           node tests/spatialruntime_scene_authorizer.cjs \
             tests/fixtures/interior-kitchen.scene-context.json
+
+  live-interior-scene-to-homeai:
+    if: ${{ vars.ENABLE_CROSS_REPO_LIVE == 'true' }}
+    runs-on: ubuntu-latest
+    env:
+      CROSS_REPO_READ_TOKEN: ${{ secrets.CROSS_REPO_READ_TOKEN }}
+    steps:
+      - name: Require private cross-repo read token
+        shell: bash
+        run: |
+          if [ -z "$CROSS_REPO_READ_TOKEN" ]; then
+            echo "ENABLE_CROSS_REPO_LIVE=true but CROSS_REPO_READ_TOKEN is missing" >&2
+            exit 1
+          fi
+          echo "LIVE_PRIVATE_SCENE_CONSUMER_ENABLED"
+
+      - name: Checkout HomeAI consumer
+        uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Checkout SpatialRuntime
+        uses: actions/checkout@v4
+        with:
+          repository: hippoley/SpatialRuntime
+          ref: main
+          path: _spatialruntime
+
+      - name: Install SpatialRuntime
+        run: python -m pip install -e "_spatialruntime"
+
+      - name: Checkout latest authored interior scene
+        uses: actions/checkout@v4
+        with:
+          repository: hippoley/interior-kitchen-original
+          ref: main
+          path: _interior
+          token: ${{ env.CROSS_REPO_READ_TOKEN }}
+
+      - name: Install authored scene dependencies
+        working-directory: _interior
+        run: npm ci
+
+      - name: Export and validate latest authored WorldSnapshot
+        working-directory: _interior
+        run: |
+          node scripts/export-spatialruntime-world.mjs /tmp/interior-world.json
+          python scripts/validate-spatialruntime-world.py \
+            /tmp/interior-world.json \
+            /tmp/interior-validation.json
+
+      - name: Build HomeAI scene context from live upstream artifacts
+        run: |
+          node scripts/build_spatialruntime_scene_context.cjs \
+            /tmp/interior-world.json \
+            /tmp/interior-validation.json \
+            /tmp/interior-homeai-context.json
+
+      - name: Verify live upstream WorldSnapshot contract
+        run: |
+          node tests/spatialruntime_world_context.cjs \
+            /tmp/interior-world.json \
+            /tmp/interior-validation.json
+
+      - name: Verify live authored scene drives HomeAI SpatialRuntime safety
+        run: |
+          node tests/spatialruntime_scene_authorizer.cjs \
+            /tmp/interior-homeai-context.json
+
+      - name: Record live upstream revision
+        shell: bash
+        run: |
+          git -C _interior rev-parse HEAD | tee /tmp/interior-upstream-sha.txt
+          python - <<'PY'
+          import json
+          world=json.load(open('/tmp/interior-world.json',encoding='utf-8'))
+          receipt=json.load(open('/tmp/interior-validation.json',encoding='utf-8'))
+          context=json.load(open('/tmp/interior-homeai-context.json',encoding='utf-8'))
+          assert receipt['source_fingerprint_verified'] is True
+          assert context['source_fingerprint']==receipt['source_fingerprint']
+          assert context['world_snapshot_sha256']==receipt['world_snapshot_sha256']
+          assert world['facts']['source_fingerprint']==receipt['source_fingerprint']
+          print({
+              'source_fingerprint': receipt['source_fingerprint'],
+              'context_sha256': context['context_sha256'],
+              'exterior_window_keys': context['exterior_window_keys'],
+          })
+          PY
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: live-interior-scene-homeai-consumer
+          path: |
+            /tmp/interior-world.json
+            /tmp/interior-validation.json
+            /tmp/interior-homeai-context.json
+            /tmp/interior-upstream-sha.txt
