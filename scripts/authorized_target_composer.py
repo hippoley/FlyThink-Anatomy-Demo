@@ -5,7 +5,7 @@ Neural heads predict room/entity sets and cardinality. This module is the runtim
 boundary: it composes only those factors, intersects them with the mounted device
 registry, and never invents an independent target membership prediction.
 """
-from responsibility_heads import ROOMS,ENTITIES
+from resolver_vocabulary import ROOMS,ENTITIES
 def topk_mask(logits,k):
  k=max(0,min(int(k),len(logits)));idx=sorted(range(len(logits)),key=lambda i:float(logits[i]),reverse=True)[:k]
  return [i in idx for i in range(len(logits))]
