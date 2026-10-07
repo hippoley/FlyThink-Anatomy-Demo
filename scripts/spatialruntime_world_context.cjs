@@ -84,6 +84,9 @@ function validateSceneContext(context){
     if(!row.world_entity_id||!row.room_entity_id){
       throw new Error("spatialruntime_scene_context_entity_binding_missing:"+key);
     }
+    if(row.target_binding_source!=null&&!["explicit_scene","legacy_fallback"].includes(row.target_binding_source)){
+      throw new Error("spatialruntime_scene_context_target_binding_source_invalid:"+key);
+    }
   }
   keys.sort();
   const declared=[...context.exterior_window_keys].map(String).sort();
@@ -162,11 +165,33 @@ function validateSceneArtifacts(world,receipt,{windowEntityLabel="窗"}={}){
     if(!relation||relation.status!=="explicit_source"||Number(relation.confidence)!==1){
       throw new Error("spatialruntime_scene_window_room_relation_unreviewed:"+entityId);
     }
-    const target={
-      area:String(room.name),
-      entity:String(windowEntityLabel),
-      instance:"default"
-    };
+    const authored=meta.control_bindings&&meta.control_bindings.homeai;
+    let target;
+    let targetBindingSource;
+    if(authored!=null){
+      if(!authored||typeof authored!=="object"||Array.isArray(authored)){
+        throw new Error("spatialruntime_scene_homeai_binding_invalid:"+entityId);
+      }
+      target={
+        area:String(authored.area||"").trim(),
+        entity:String(authored.entity||"").trim(),
+        instance:String(authored.instance||"").trim()
+      };
+      if(!target.area||!target.entity||!target.instance){
+        throw new Error("spatialruntime_scene_homeai_binding_incomplete:"+entityId);
+      }
+      if(target.area!==String(room.name)){
+        throw new Error("spatialruntime_scene_homeai_binding_room_mismatch:"+entityId);
+      }
+      targetBindingSource="explicit_scene";
+    }else{
+      target={
+        area:String(room.name),
+        entity:String(windowEntityLabel),
+        instance:"default"
+      };
+      targetBindingSource="legacy_fallback";
+    }
     const key=targetKey(target);
     if(seen.has(key)){
       throw new Error("spatialruntime_scene_homeai_target_ambiguous:"+key);
@@ -178,7 +203,8 @@ function validateSceneArtifacts(world,receipt,{windowEntityLabel="窗"}={}){
       world_entity_id:entityId,
       room_entity_id:roomId,
       opening_id:meta.opening_id||null,
-      source_id:meta.source_id||null
+      source_id:meta.source_id||null,
+      target_binding_source:targetBindingSource
     });
   }
   if(!explicitExterior.length){
@@ -267,6 +293,9 @@ function validateSceneHandoff(world,receipt,handoff,options={}){
     }
     if(!sameObject(row.suggested_homeai_target,expected.target)){
       throw new Error("spatialruntime_scene_handoff_target_mapping_mismatch:"+row.target_key);
+    }
+    if(row.target_binding_source!=null&&row.target_binding_source!==expected.target_binding_source){
+      throw new Error("spatialruntime_scene_handoff_target_binding_source_mismatch:"+row.target_key);
     }
     if(row.world_entity_id!==expected.world_entity_id||
        row.room_entity_id!==expected.room_entity_id||
