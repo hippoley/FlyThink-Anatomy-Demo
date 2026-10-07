@@ -286,7 +286,8 @@ async function main(){
     evidenceValidation=validateReceipt(evidenceReceipt,{
       requireHumanFixture:!!(
         acousticFixture&&acousticFixture.require_human_acceptance===true
-      )
+      ),
+      requireSpatialRuntimeAuthorization:useSpatialRuntime
     });
     fs.writeFileSync(receiptPath,JSON.stringify(evidenceReceipt,null,2)+"\n");
   }
