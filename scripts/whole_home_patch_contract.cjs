@@ -41,6 +41,7 @@ function normalizeRuntime(runtime = {}) {
     devices: clone(runtime.devices || {}),
     tasks: clone(runtime.tasks || {}),
     pending: clone(runtime.pending || {}),
+    deviceHealth: clone(runtime.deviceHealth || {}),
     executionLedger: clone(runtime.executionLedger || []),
     protectedInvariants: clone(runtime.protectedInvariants || {}),
     revisions: clone(runtime.revisions || [])
@@ -124,6 +125,7 @@ function undoExecuted(runtime, patch) {
   runtime.devices = nested.runtime.devices;
   runtime.tasks = nested.runtime.tasks;
   runtime.pending = nested.runtime.pending;
+  runtime.deviceHealth = nested.runtime.deviceHealth;
   runtime.protectedInvariants = nested.runtime.protectedInvariants;
   runtime.revisions = nested.runtime.revisions;
   runtime.executionLedger = nested.runtime.executionLedger;
