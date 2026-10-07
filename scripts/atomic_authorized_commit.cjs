@@ -16,16 +16,28 @@ function canonicalValue(v){
     return Object.fromEntries(Object.entries(v).map(([k,x])=>[k,canonicalValue(x)]));
   return v;
 }
+function f64hex(v){
+  const b=Buffer.allocUnsafe(8);
+  b.writeDoubleBE(v===0?0:v,0);
+  return b.toString("hex");
+}
+function canonicalEncode(value){
+  value=canonicalValue(value);
+  if(value===null)return "z";
+  if(typeof value==="boolean")return value?"b1":"b0";
+  if(typeof value==="number")return "n"+f64hex(value);
+  if(typeof value==="string")return "s"+JSON.stringify(value);
+  if(Array.isArray(value))return "a["+value.map(canonicalEncode).join(",")+"]";
+  if(value&&typeof value==="object")
+    return "o{"+Object.keys(value).sort().map(k=>JSON.stringify(k)+":"+canonicalEncode(value[k])).join(",")+"}";
+  throw new Error("unsupported_authorization_value");
+}
+
 function canonicalPatch(p){
   return {capability:p.capability,model_id:p.model_id,slot:p.slot,target:targetKey(p.target),value:canonicalValue(p.value)};
 }
-function stable(value){
-  if(Array.isArray(value))return "["+value.map(stable).join(",")+"]";
-  if(value&&typeof value==="object")return "{"+Object.keys(value).sort().map(k=>JSON.stringify(k)+":"+stable(value[k])).join(",")+"}";
-  return JSON.stringify(value);
-}
 function authorizationDigest(patches){
-  return crypto.createHash("sha256").update(stable((patches||[]).map(canonicalPatch)),"utf8").digest("hex");
+  return crypto.createHash("sha256").update(canonicalEncode((patches||[]).map(canonicalPatch)),"utf8").digest("hex");
 }
 function semanticPatch(p){
   const [area,entity,instance]=targetKey(p.target).split("::");
@@ -44,7 +56,7 @@ function atomicApplyAuthorizedPlan(inputRuntime,plannerResult,currentRegistryDig
       throw new Error("current_registry_digest_required");
     if(!plannerResult||plannerResult.ok!==true)throw new Error("planner_result_not_authorized");
     const auth=plannerResult.authorization;
-    if(!auth||auth.version!==1||!auth.authorization_id||!auth.patch_digest||!auth.registry_digest)
+    if(!auth||auth.version!==2||!auth.authorization_id||!auth.patch_digest||!auth.registry_digest)
       throw new Error("planner_authorization_missing");
     if(currentRegistryDigest!==auth.registry_digest)throw new Error("planner_authorization_stale_registry");
     const patches=plannerResult.patches||[];
