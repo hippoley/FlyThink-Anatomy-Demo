@@ -5,31 +5,57 @@ const {
   buildEvidenceCoverage,
   adjudicateEvidence
 }=require("../scripts/pi_home_evidence_adjudicator.cjs");
-const {buildProviderTrustRegistry}=require("../scripts/pi_home_provider_trust.cjs");
+const {
+  evaluateCalibrationDataset,
+  buildCertifiedProviderTrustRegistry
+}=require("../scripts/pi_home_provider_calibration.cjs");
 
-const contamDigest="sha256:"+"a".repeat(64);
-const rainDigest="sha256:"+"b".repeat(64);
-const trustRegistry=buildProviderTrustRegistry([
-  {
-    provider_id:"contam-engineering",
-    status:"active",
-    scope_id:"home-profile-v1",
-    allowed_dimensions:["co2","airflow"],
-    allowed_evidence_levels:["engineering-validated"],
-    calibration_ref:"calibration://contam/home-v1",
-    calibration_digest:contamDigest,
-    approved_by:"engineering-review-board"
-  },
-  {
-    provider_id:"rain-engineering",
-    status:"active",
-    scope_id:"rain-v1",
-    allowed_dimensions:["rain_ingress"],
-    allowed_evidence_levels:["engineering-validated"],
-    calibration_ref:"calibration://rain/v1",
-    calibration_digest:rainDigest,
-    approved_by:"engineering-review-board"
+function calibrationSamples(providerId,dimension,count,offset){
+  return Array.from({length:count},(_,i)=>({
+    id:providerId+"-"+dimension+"-"+String(i+1),
+    measurement_ref:"measurement://"+providerId+"/"+dimension+"/"+String(i+1),
+    dimension,
+    predicted:i+offset,
+    observed:i
+  }));
+}
+
+function certificate({provider_id,scope_id,dimensions,evidence_level="engineering-validated"}){
+  const samples=[];
+  const thresholds={};
+  for(const dimension of dimensions){
+    const offset=dimension==="co2"?.05:.01;
+    samples.push(...calibrationSamples(provider_id,dimension,20,offset));
+    thresholds[dimension]={
+      min_samples:20,
+      max_mae:dimension==="co2"?.1:.02,
+      max_rmse:dimension==="co2"?.1:.02,
+      max_abs_error:dimension==="co2"?.1:.02
+    };
   }
+  return evaluateCalibrationDataset({
+    schema_version:"pi-home-provider-calibration-dataset-v1",
+    provider_id,
+    scope_id,
+    evidence_level,
+    source_kind:"measured",
+    samples
+  },{thresholds});
+}
+
+const contamCert=certificate({
+  provider_id:"contam-engineering",
+  scope_id:"home-profile-v1",
+  dimensions:["co2","airflow"]
+});
+const rainCert=certificate({
+  provider_id:"rain-engineering",
+  scope_id:"rain-v1",
+  dimensions:["rain_ingress"]
+});
+const trustRegistry=buildCertifiedProviderTrustRegistry([
+  {certificate:contamCert,approved_by:"engineering-review-board"},
+  {certificate:rainCert,approved_by:"engineering-review-board"}
 ]);
 
 const contam={
@@ -57,8 +83,8 @@ const rainEngineering={
   trusted_for_promotion:true,
   trust_attestation:{
     scope_id:"rain-v1",
-    calibration_ref:"calibration://rain/v1",
-    calibration_digest:rainDigest
+    calibration_ref:rainCert.calibration_ref,
+    calibration_digest:rainCert.calibration_digest
   }
 };
 
@@ -69,8 +95,8 @@ const trustedContam={
   trusted_for_promotion:true,
   trust_attestation:{
     scope_id:"home-profile-v1",
-    calibration_ref:"calibration://contam/home-v1",
-    calibration_digest:contamDigest
+    calibration_ref:contamCert.calibration_ref,
+    calibration_digest:contamCert.calibration_digest
   }
 };
 
