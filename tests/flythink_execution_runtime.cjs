@@ -62,7 +62,12 @@ function passAuthorizer(counter=null,transform=null){
     return {
       allow:true,
       patches:out,
-      receipt:{schema:"test-authorization-v1",allow:true,id:"auth-1"}
+      receipt:{
+        schema:"test-authorization-v1",
+        allow:true,
+        id:"auth-1",
+        authorized_patches:out
+      }
     };
   };
 }
@@ -170,7 +175,42 @@ function passAuthorizer(counter=null,transform=null){
     assert.equal(driver.commands.length,0);
   }
 
-  // 6. Multi-action plans require atomic capability; never sequential fallback.
+  // 6. Authorization receipt must bind the exact final authorized patch values.
+  {
+    const action={op:"PATCH_SLOT",target:B,slot:"temperature",value:19};
+    let driverCalls=0;
+    const driver={
+      async execute(){
+        driverCalls++;
+        throw new Error("must_not_execute");
+      }
+    };
+    const out=await runExecutionProposal({
+      runtime:initial,
+      contextual_state:context,
+      request:request([action]),
+      proposal:proposal([action]),
+      driver,
+      physicalAuthorizer:async({patches})=>({
+        allow:true,
+        patches:[{...patches[0],value:20}],
+        receipt:{
+          schema:"test-authorization-v1",
+          allow:true,
+          id:"auth-stale",
+          // receipt is stale for another patch set
+          authorized_patches:patches
+        }
+      })
+    });
+    assert.equal(out.ok,false);
+    assert.equal(out.status,"BLOCKED");
+    assert.equal(out.reason,"physical_authorization_invalid");
+    assert.match(out.authorization_error,/receipt_patch_mismatch/);
+    assert.equal(driverCalls,0);
+  }
+
+  // 7. Multi-action plans require atomic capability; never sequential fallback.
   {
     const actions=[
       {op:"PATCH_SLOT",target:L,slot:"temperature",value:22},
@@ -197,7 +237,7 @@ function passAuthorizer(counter=null,transform=null){
     assert.deepEqual(out.runtime,initial);
   }
 
-  // 7. Multi-action plan commits once through an atomic batch driver.
+  // 8. Multi-action plan commits once through an atomic batch driver.
   {
     const actions=[
       {op:"PATCH_SLOT",target:L,slot:"temperature",value:22},
@@ -232,7 +272,7 @@ function passAuthorizer(counter=null,transform=null){
     assert.equal(out.receipt.physical_committed,true);
   }
 
-  // 8. A wrong-device physical readback fails closed and quarantines expected target.
+  // 9. A wrong-device physical readback fails closed and quarantines expected target.
   {
     const action={op:"PATCH_SLOT",target:B,slot:"temperature",value:19};
     const driver={
@@ -260,7 +300,7 @@ function passAuthorizer(counter=null,transform=null){
     assert.equal(isQuarantined(out.runtime,B),true);
   }
 
-  // 9. Authorization cannot transform a quarantine-safe action into a riskier one.
+  // 10. Authorization cannot transform a quarantine-safe action into a riskier one.
   {
     const W={area:"客厅",entity:"窗",instance:"default"};
     const wk="客厅::窗::default";
@@ -302,7 +342,7 @@ function passAuthorizer(counter=null,transform=null){
     assert.equal(out.runtime.devices[wk].slots.opening,40);
   }
 
-  // 10. A proposal cannot select two alternatives for the same action identity.
+  // 11. A proposal cannot select two alternatives for the same action identity.
   {
     const a={op:"PATCH_SLOT",target:B,slot:"temperature",value:20};
     const b={op:"PATCH_SLOT",target:B,slot:"temperature",value:22};
@@ -315,7 +355,7 @@ function passAuthorizer(counter=null,transform=null){
     );
   }
 
-  // 11. Runtime facade exposes the formal recovery path, not manual trust clearing.
+  // 12. Runtime facade exposes the formal recovery path, not manual trust clearing.
   {
     const W={area:"客厅",entity:"窗",instance:"default"};
     const wk="客厅::窗::default";
@@ -373,7 +413,7 @@ function passAuthorizer(counter=null,transform=null){
 
   console.log(JSON.stringify({
     ok:true,
-    cases:11,
+    cases:12,
     contract:"contextual execution proposal -> deterministic authorization -> atomic/single physical execution -> readback, with formal recovery"
   }));
 })().catch(e=>{console.error(e);process.exit(1)});
