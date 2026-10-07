@@ -3,6 +3,7 @@
 const assert=require("assert");
 const {normalizeRuntime}=require("../scripts/whole_home_patch_contract.cjs");
 const {toContextStateSnapshot}=require("../scripts/contextual_edge_slu_adapter.cjs");
+const {runtimeRegistryDigest}=require("../scripts/spatialruntime_authorizer.cjs");
 const {MockThingDriver,isQuarantined,markQuarantined}=require("../scripts/physical_runtime.cjs");
 const {
   validateExecutionProposal
@@ -19,11 +20,11 @@ const B={area:"主卧",entity:"空调",instance:"default"};
 const initial=normalizeRuntime({devices:{
   "客厅::空调::default":{
     key:"客厅::空调::default",area:"客厅",entity:"空调",instance:"default",
-    slots:{power:"ON",temperature:24}
+    model_id:"AWGD-ZA01",slots:{power:"ON",temperature:24}
   },
   "主卧::空调::default":{
     key:"主卧::空调::default",area:"主卧",entity:"空调",instance:"default",
-    slots:{power:"ON",temperature:25}
+    model_id:"AWGD-ZA01",slots:{power:"ON",temperature:25}
   }
 }});
 const context=toContextStateSnapshot(initial,[],{
@@ -57,14 +58,35 @@ function proposal(actions,{
     reason_code:"TEST"
   };
 }
-function passAuthorizer(counter=null,transform=null){
-  return async({patches})=>{
+function freshLedger(){
+  const seen=new Set();
+  return {
+    add(id){
+      if(seen.has(id))return false;
+      seen.add(id);
+      return true;
+    },
+    has(id){return seen.has(id)}
+  };
+}
+function passAuthorizer(counter=null,transform=null,authorizationId=null){
+  return async({patches,runtime})=>{
     if(counter)counter.calls++;
     const out=patches.map(p=>transform?transform(p):p);
+    const patchDigest=sha256Object(out);
+    const registryDigest=runtimeRegistryDigest(runtime);
     const receiptBase={
       schema:"test-authorization-v1",
       allow:true,
       id:"auth-1",
+      patch_digest:patchDigest,
+      registry_digest:registryDigest,
+      authorization_id:authorizationId||sha256Object({
+        fixture:"authorization-v1",
+        patch_digest:patchDigest,
+        registry_digest:registryDigest
+      }),
+      single_use:true,
       authorized_patches:out
     };
     return {
@@ -90,7 +112,8 @@ function passAuthorizer(counter=null,transform=null){
       request:request([action]),
       proposal:proposal([action]),
       driver,
-      physicalAuthorizer:passAuthorizer(auth,p=>({...p,value:20}))
+      physicalAuthorizer:passAuthorizer(auth,p=>({...p,value:20})),
+      authorizationLedger:freshLedger(),
     });
     assert.equal(out.ok,true);
     assert.equal(out.status,"EXECUTED");
@@ -105,7 +128,10 @@ function passAuthorizer(counter=null,transform=null){
     assert.equal(out.receipt.result,"APPLIED_UNVERIFIED");
     assert.equal(out.receipt.verification.physical_truth_verified,false);
     assert.match(out.receipt.receipt_sha256,/^[0-9a-f]{64}$/);
-    const verifiedReceipt=verifyExecutionReceipt(out.receipt);
+    const verifiedReceipt=verifyExecutionReceipt(out.receipt,{
+      before_runtime:initial,
+      after_runtime:out.runtime
+    });
     assert.equal(verifiedReceipt.valid,true);
     assert.equal(verifiedReceipt.physical_truth_verified,false);
   }
@@ -121,7 +147,8 @@ function passAuthorizer(counter=null,transform=null){
       request:request([action]),
       proposal:proposal([],{decision:"DEFER",uncertainty:0.8}),
       driver,
-      physicalAuthorizer:passAuthorizer(auth)
+      physicalAuthorizer:passAuthorizer(auth),
+      authorizationLedger:freshLedger(),
     });
     assert.equal(out.ok,false);
     assert.equal(out.status,"DEFERRED");
@@ -141,6 +168,7 @@ function passAuthorizer(counter=null,transform=null){
       proposal:proposal([action],{uncertainty:0.9}),
       driver,
       physicalAuthorizer:passAuthorizer(auth),
+      authorizationLedger:freshLedger(),
       max_uncertainty:0.35
     });
     assert.equal(out.ok,false);
@@ -160,7 +188,8 @@ function passAuthorizer(counter=null,transform=null){
       request:request([action]),
       proposal:proposal([action]),
       driver:null,
-      physicalAuthorizer:passAuthorizer(auth)
+      physicalAuthorizer:passAuthorizer(auth),
+      authorizationLedger:freshLedger(),
     });
     assert.equal(out.ok,false);
     assert.equal(out.status,"BLOCKED");
@@ -178,7 +207,8 @@ function passAuthorizer(counter=null,transform=null){
       request:request([action]),
       proposal:proposal([action]),
       driver,
-      physicalAuthorizer:passAuthorizer(null,p=>({...p,target:L}))
+      physicalAuthorizer:passAuthorizer(null,p=>({...p,target:L})),
+      authorizationLedger:freshLedger(),
     });
     assert.equal(out.ok,false);
     assert.equal(out.status,"BLOCKED");
@@ -204,7 +234,8 @@ function passAuthorizer(counter=null,transform=null){
       request:request(actions,[L,B]),
       proposal:proposal(actions),
       driver,
-      physicalAuthorizer:passAuthorizer()
+      physicalAuthorizer:passAuthorizer(),
+      authorizationLedger:freshLedger(),
     });
     assert.equal(out.ok,false);
     assert.equal(out.status,"PHYSICAL_NOT_COMMITTED");
@@ -238,7 +269,8 @@ function passAuthorizer(counter=null,transform=null){
       request:request(actions,[L,B]),
       proposal:proposal(actions),
       driver,
-      physicalAuthorizer:passAuthorizer()
+      physicalAuthorizer:passAuthorizer(),
+      authorizationLedger:freshLedger(),
     });
     assert.equal(out.ok,true);
     assert.equal(out.atomic_batch,true);
@@ -267,7 +299,8 @@ function passAuthorizer(counter=null,transform=null){
       request:request([action]),
       proposal:proposal([action]),
       driver,
-      physicalAuthorizer:passAuthorizer()
+      physicalAuthorizer:passAuthorizer(),
+      authorizationLedger:freshLedger(),
     });
     assert.equal(out.ok,false);
     assert.equal(out.status,"PHYSICAL_NOT_COMMITTED");
@@ -297,7 +330,7 @@ function passAuthorizer(counter=null,transform=null){
     const windowRuntime=normalizeRuntime({devices:{
       [wk]:{
         key:wk,area:"客厅",entity:"窗",instance:"default",
-        slots:{opening:0}
+        model_id:"CWDS-CA01",slots:{opening:0}
       }
     }});
     const windowContext=toContextStateSnapshot(windowRuntime,[],{
@@ -358,7 +391,8 @@ function passAuthorizer(counter=null,transform=null){
       request:windowRequest,
       proposal:windowProposal,
       driver,
-      physicalAuthorizer:passAuthorizer()
+      physicalAuthorizer:passAuthorizer(),
+      authorizationLedger:freshLedger(),
     });
     assert.equal(out.ok,true);
     assert.equal(out.receipt.result,"APPLIED");
@@ -366,13 +400,67 @@ function passAuthorizer(counter=null,transform=null){
     const verifiedReceipt=verifyExecutionReceipt(out.receipt,{
       contextual_state:windowContext,
       request:windowRequest,
-      proposal:windowProposal
+      proposal:windowProposal,
+      before_runtime:windowRuntime,
+      after_runtime:out.runtime
     });
     assert.equal(verifiedReceipt.valid,true);
     assert.equal(verifiedReceipt.physical_truth_verified,true);
   }
 
-  // 11. Runtime facade exposes the formal recovery path, not manual trust clearing.
+  // 11. Missing authorization ledger blocks before physical execution.
+  {
+    const action={op:"PATCH_SLOT",target:B,slot:"temperature",value:19};
+    const driver=new MockThingDriver(initial);
+    const out=await runExecutionProposal({
+      runtime:initial,
+      contextual_state:context,
+      request:request([action]),
+      proposal:proposal([action]),
+      driver,
+      physicalAuthorizer:passAuthorizer()
+    });
+    assert.equal(out.ok,false);
+    assert.equal(out.status,"BLOCKED");
+    assert.equal(out.reason,"authorization_ledger_required");
+    assert.equal(driver.commands.length,0);
+  }
+
+  // 12. Replay of the same authorization id is rejected before a second physical command.
+  {
+    const action={op:"PATCH_SLOT",target:B,slot:"temperature",value:19};
+    const driver=new MockThingDriver(initial);
+    const ledger=freshLedger();
+    const authorizationId="b".repeat(64);
+    const authorizer=passAuthorizer(null,null,authorizationId);
+    const first=await runExecutionProposal({
+      runtime:initial,
+      contextual_state:context,
+      request:request([action]),
+      proposal:proposal([action]),
+      driver,
+      physicalAuthorizer:authorizer,
+      authorizationLedger:ledger
+    });
+    assert.equal(first.ok,true);
+    assert.equal(driver.commands.length,1);
+
+    const second=await runExecutionProposal({
+      runtime:initial,
+      contextual_state:context,
+      request:request([action]),
+      proposal:proposal([action]),
+      driver,
+      physicalAuthorizer:authorizer,
+      authorizationLedger:ledger
+    });
+    assert.equal(second.ok,false);
+    assert.equal(second.status,"BLOCKED");
+    assert.equal(second.reason,"physical_authorization_replayed");
+    assert.equal(driver.commands.length,1);
+  }
+
+  // 13. Runtime facade exposes the formal recovery path, not manual trust clearing.
   {
     const W={area:"客厅",entity:"窗",instance:"default"};
     const wk="客厅::窗::default";
@@ -414,7 +502,8 @@ function passAuthorizer(counter=null,transform=null){
     const runtime=new FlyThinkExecutionRuntime({
       runtime:windowRuntime,
       driver:recoveryDriver,
-      physicalAuthorizer:passAuthorizer()
+      physicalAuthorizer:passAuthorizer(),
+      authorizationLedger:freshLedger(),
     });
     const out=await runtime.recover({
       target:W,
@@ -430,7 +519,7 @@ function passAuthorizer(counter=null,transform=null){
 
   console.log(JSON.stringify({
     ok:true,
-    cases:11,
+    cases:13,
     contract:"contextual execution proposal -> deterministic authorization -> atomic/single physical execution -> readback, with formal recovery"
   }));
 })().catch(e=>{console.error(e);process.exit(1)});
