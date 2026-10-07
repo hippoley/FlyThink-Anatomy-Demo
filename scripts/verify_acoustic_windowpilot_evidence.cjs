@@ -18,6 +18,7 @@ const wavPath=arg("--wav");
 const manifestPath=arg("--fixture-manifest");
 const requireHuman=flag("--require-human-fixture");
 const requireSpatialRuntime=flag("--require-spatialruntime-authorization");
+const requireSpatialRuntimeScene=flag("--require-spatialruntime-scene-evidence");
 
 if(!receiptPath)throw new Error("--receipt is required");
 if(requireHuman&&(!wavPath||!manifestPath)){
@@ -30,7 +31,8 @@ if((wavPath&&!manifestPath)||(!wavPath&&manifestPath)){
 const receipt=JSON.parse(fs.readFileSync(receiptPath,"utf8"));
 const report=validateReceipt(receipt,{
   requireHumanFixture:requireHuman,
-  requireSpatialRuntimeAuthorization:requireSpatialRuntime
+  requireSpatialRuntimeAuthorization:requireSpatialRuntime,
+  requireSpatialRuntimeSceneEvidence:requireSpatialRuntimeScene
 });
 const reasons=[...report.reasons];
 

@@ -468,6 +468,16 @@ console.log(JSON.stringify({
   });
   assert.equal(report.valid,true,JSON.stringify(report.reasons));
 
+  const missingScene=validateReceipt(receipt,{
+    requireHumanFixture:true,
+    requireSpatialRuntimeAuthorization:true,
+    requireSpatialRuntimeSceneEvidence:true
+  });
+  assert.equal(missingScene.valid,false);
+  assert.ok(missingScene.reasons.includes(
+    "SpatialRuntime authored scene evidence missing"
+  ));
+
 
   const wrongTurn=JSON.parse(JSON.stringify(receipt));
   wrongTurn.semantic.committed_finals[0].turn_id="another-turn";
