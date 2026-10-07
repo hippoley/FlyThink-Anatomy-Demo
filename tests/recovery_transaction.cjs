@@ -168,6 +168,30 @@ function driver({
 
   {
     const runtime=baseRuntime();
+    const wrongReceiptDriver=driver();
+    wrongReceiptDriver.execute=async(patch)=>({
+      id:"recovery-cmd-wrong-target",
+      status:"applied",
+      patch,
+      observation:{
+        target:other,
+        exists:true,
+        slots:{opening:0},
+        evidence:{source:"recovery-test",measured:true,tick:11}
+      }
+    });
+    const out=await runRecoveryTransaction(runtime,{
+      target,
+      driver:wrongReceiptDriver,
+      safe_patch:{op:"PATCH_SLOT",target,slot:"opening",value:0}
+    });
+    assert.equal(out.ok,false);
+    assert.equal(out.reason,"recovery_receipt_target_mismatch");
+    assert.equal(isQuarantined(out.runtime,target),true);
+  }
+
+  {
+    const runtime=baseRuntime();
     const out=await runRecoveryTransaction(runtime,{
       target,
       driver:driver({executeStatus:"uncertain"}),
@@ -193,7 +217,7 @@ function driver({
 
   console.log(JSON.stringify({
     ok:true,
-    cases:8,
+    cases:9,
     contract:"RecoveryTransaction restores trust only after readiness, same-target safety action, fresh readback, stable identity, and verified safe position"
   }));
 })().catch(e=>{console.error(e);process.exit(1)});
