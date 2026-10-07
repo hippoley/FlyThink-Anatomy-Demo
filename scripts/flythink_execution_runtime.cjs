@@ -1,6 +1,5 @@
 "use strict";
 
-const crypto=require("crypto");
 const {normalizeRuntime}=require("./whole_home_patch_contract.cjs");
 const {assertContextStateSnapshot}=require("./contextual_edge_slu_adapter.cjs");
 const {
@@ -15,15 +14,14 @@ const {
 }=require("./physical_runtime.cjs");
 const {executeAtomicPhysicalSet}=require("./atomic_physical_set.cjs");
 const {runRecoveryTransaction}=require("./recovery_transaction.cjs");
-
-const RECEIPT_VERSION="flythink-execution-runtime-receipt.v1";
+const {
+  SCHEMA_VERSION:RECEIPT_VERSION,
+  digestObject:sha256Object,
+  buildExecutionReceipt,
+  verifyExecutionReceipt
+}=require("./execution_receipt.cjs");
 
 function clone(v){return v==null?v:JSON.parse(JSON.stringify(v))}
-function sha256Object(v){
-  return crypto.createHash("sha256")
-    .update(JSON.stringify(canonical(v)))
-    .digest("hex");
-}
 function physicalReceiptsCommitted(receipts){
   return Array.isArray(receipts)&&
     receipts.length>0&&
@@ -64,30 +62,30 @@ function buildRuntimeReceipt({
   status,
   reason=null,
   atomic_batch=false,
-  physical_committed=false
+  physical_committed=false,
+  before_runtime=null,
+  after_runtime=null,
+  source_step=0,
+  source_revision=0,
+  closeout=null
 }={}){
-  const core={
-    schema_version:RECEIPT_VERSION,
-    task_id:request&&request.task_id||null,
+  return buildExecutionReceipt({
+    contextual_state,
+    request,
+    proposal,
+    authorization,
+    authorized_actions,
+    physical_receipts,
+    before_runtime,
+    after_runtime,
     status,
     reason,
-    contextual_state_sha256:sha256Object(contextual_state||null),
-    request_sha256:sha256Object(request||null),
-    proposal_sha256:sha256Object(proposal||null),
-    authorization_granted:!!authorization,
-    authorization_receipt_sha256:authorization
-      ?sha256Object(authorization)
-      :null,
-    authorized_action_count:Array.isArray(authorized_actions)
-      ?authorized_actions.length
-      :0,
-    physical_receipt_ids:(physical_receipts||[])
-      .map(x=>x&&x.command_id||null)
-      .filter(Boolean),
-    physical_committed:physical_committed===true,
-    atomic_batch:atomic_batch===true
-  };
-  return {...core,receipt_sha256:sha256Object(core)};
+    atomic_batch,
+    physical_committed,
+    source_step,
+    source_revision,
+    closeout
+  });
 }
 
 async function runExecutionProposal({
@@ -116,7 +114,15 @@ async function runExecutionProposal({
     authorized_actions:[],
     physical_receipts:[],
     receipt:buildRuntimeReceipt({
-      contextual_state,request,proposal,status,reason
+      contextual_state,
+      request,
+      proposal,
+      status,
+      reason,
+      before_runtime:current,
+      after_runtime:current,
+      source_step,
+      source_revision
     })
   });
 
@@ -180,6 +186,7 @@ async function runExecutionProposal({
 
   const authorized=authorization.patches;
   const atomic=authorized.length>1;
+  const beforePhysical=normalizeRuntime(current);
   let physical;
   if(atomic){
     physical=await executeAtomicPhysicalSet(
@@ -214,7 +221,11 @@ async function runExecutionProposal({
     status,
     reason,
     atomic_batch:atomic,
-    physical_committed:committed
+    physical_committed:committed,
+    before_runtime:beforePhysical,
+    after_runtime:current,
+    source_step,
+    source_revision
   });
 
   return {
@@ -277,6 +288,8 @@ module.exports={
   physicalReceiptsCommitted,
   validateAuthorizationResult,
   buildRuntimeReceipt,
+  buildExecutionReceipt,
+  verifyExecutionReceipt,
   runExecutionProposal,
   FlyThinkExecutionRuntime
 };
