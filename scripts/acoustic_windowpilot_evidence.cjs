@@ -126,11 +126,7 @@ function buildReceipt({
   return finalizeReceipt(payload);
 }
 
-function validateReceipt(receipt,{
-  requireHumanFixture=false,
-  requireSpatialRuntimeAuthorization=false,
-  requireSpatialRuntimeSceneEvidence=false
-}={}){
+function validateReceipt(receipt,{requireHumanFixture=false,requireSpatialRuntimeAuthorization=false}={}){
   const reasons=[];
   if(!receipt||receipt.schema!==SCHEMA)reasons.push("evidence schema mismatch");
   if(receipt&&receipt.mode!=="APPLY")reasons.push("live evidence must be APPLY mode");
@@ -265,46 +261,6 @@ function validateReceipt(receipt,{
           reasons.push("expected exactly one SpatialRuntime-authorized patch");
         }
 
-        if(requireSpatialRuntimeSceneEvidence){
-          const scene=auth.scene_evidence;
-          if(!scene||scene.schema!=="homeai_spatialruntime_scene_context_v1"){
-            reasons.push("SpatialRuntime authored scene evidence missing");
-          }else{
-            if(!/^[0-9a-f]{64}$/.test(String(scene.context_sha256||""))){
-              reasons.push("SpatialRuntime scene context SHA256 missing");
-            }
-            if(!/^[0-9a-f]{40}$/.test(String(scene.spatialruntime_commit_sha||""))){
-              reasons.push("SpatialRuntime scene dependency commit missing");
-            }
-            if(
-              auth.spatialruntime_commit_sha&&
-              scene.spatialruntime_commit_sha!==auth.spatialruntime_commit_sha
-            ){
-              reasons.push("SpatialRuntime scene dependency commit mismatch");
-            }
-            const handoff=scene.handoff_evidence;
-            if(!handoff||handoff.schema!=="interior_scene_downstream_handoff_v1"){
-              reasons.push("SpatialRuntime scene handoff evidence missing");
-            }else{
-              if(!String(handoff.source_repo||"").trim()){
-                reasons.push("SpatialRuntime scene handoff source repo missing");
-              }
-              if(!/^[0-9a-f]{40}$/.test(String(handoff.source_commit_sha||""))){
-                reasons.push("SpatialRuntime scene handoff source commit missing");
-              }
-              if(!/^[0-9a-f]{64}$/.test(String(handoff.handoff_sha256||""))){
-                reasons.push("SpatialRuntime scene handoff SHA256 missing");
-              }
-              if(
-                handoff.spatialruntime_commit_sha&&
-                handoff.spatialruntime_commit_sha!==scene.spatialruntime_commit_sha
-              ){
-                reasons.push("SpatialRuntime scene handoff dependency commit mismatch");
-              }
-            }
-          }
-        }
-
         const binding=committed.physical_authorization_binding;
         if(!binding){
           reasons.push("SpatialRuntime physical binding evidence missing");
@@ -346,15 +302,13 @@ function validateReceipt(receipt,{
               reasons.push("SpatialRuntime bound observation SHA256 missing");
             }
             const authValue=Number(row.authorized_value);
-            const requestedValue=row.requested_position_pct==null
-              ?null:Number(row.requested_position_pct);
+            const requestedValue=Number(row.requested_position_pct);
             const observedValue=Number(row.observed_value);
             const convergenceError=Number(row.convergence_error_pct);
             if(!Number.isFinite(authValue)){
               reasons.push("SpatialRuntime bound authorized value missing");
             }
             if(
-              requestedValue!=null&&
               Number.isFinite(requestedValue)&&Number.isFinite(authValue)&&
               requestedValue!==authValue
             ){
