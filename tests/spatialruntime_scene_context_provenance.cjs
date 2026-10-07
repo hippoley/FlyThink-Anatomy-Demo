@@ -41,6 +41,8 @@ assert.ok(Number.isInteger(provenance.source_workflow_run_id));
 assert.ok(Number.isInteger(provenance.source_artifact_id));
 assert.match(provenance.source_artifact_digest,/^sha256:[0-9a-f]{64}$/);
 assert.equal(provenance.scene_context_sha256,context.context_sha256);
+assert.equal(provenance.source_commit_sha,context.source_commit_sha);
+assert.equal(provenance.source_merge_commit_sha,context.source_commit_sha);
 assert.equal(provenance.world_snapshot_sha256,context.world_snapshot_sha256);
 assert.equal(provenance.validation_receipt_sha256,context.validation_receipt_sha256);
 assert.equal(provenance.source_fingerprint,context.source_fingerprint);
