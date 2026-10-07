@@ -3,6 +3,7 @@
 const crypto=require("crypto");
 const {deviceKey}=require("./whole_home_patch_contract.cjs");
 const {canonical}=require("./execution_reasoning_contract.cjs");
+const {runtimeRegistryDigest}=require("./spatialruntime_authorizer.cjs");
 
 const SCHEMA_VERSION="execution-receipt.v1";
 
@@ -105,7 +106,11 @@ function physicalEvidenceRow(receipt,index){
   };
 }
 
-function authorizationReceiptVerification(authorization,authorizedActions=[]){
+function authorizationReceiptVerification(
+  authorization,
+  authorizedActions=[],
+  beforeRuntime=null
+){
   if(!authorization||typeof authorization!=="object"){
     return {
       receipt_integrity_verified:false,
@@ -113,7 +118,8 @@ function authorizationReceiptVerification(authorization,authorizedActions=[]){
       patch_digest_verified:false,
       registry_digest_verified:false,
       authorization_id_verified:false,
-      single_use_verified:false
+      single_use_verified:false,
+      runtime_registry_binding_verified:false
     };
   }
   let receiptIntegrity=false;
@@ -132,13 +138,22 @@ function authorizationReceiptVerification(authorization,authorizedActions=[]){
   const registryDigestVerified=isDigest(authorization.registry_digest);
   const authorizationIdVerified=isDigest(authorization.authorization_id);
   const singleUseVerified=authorization.single_use===true;
+  let runtimeRegistryBindingVerified=false;
+  try{
+    runtimeRegistryBindingVerified=
+      !!beforeRuntime&&
+      authorization.registry_digest===runtimeRegistryDigest(beforeRuntime);
+  }catch(e){
+    runtimeRegistryBindingVerified=false;
+  }
   return {
     receipt_integrity_verified:receiptIntegrity,
     authorized_patches_verified:authorizedPatchesVerified,
     patch_digest_verified:patchDigestVerified,
     registry_digest_verified:registryDigestVerified,
     authorization_id_verified:authorizationIdVerified,
-    single_use_verified:singleUseVerified
+    single_use_verified:singleUseVerified,
+    runtime_registry_binding_verified:runtimeRegistryBindingVerified
   };
 }
 
@@ -205,7 +220,11 @@ function buildExecutionReceipt({
 
   const verifiedRows=evidence.filter(x=>x.status==="applied");
   const authorizationReceiptChecks=
-    authorizationReceiptVerification(authorization,authorized_actions);
+    authorizationReceiptVerification(
+      authorization,
+      authorized_actions,
+      before_runtime
+    );
   const authorizationBindingVerified=
     authorized_actions.length===evidence.length&&
     authorized_actions.every((action,index)=>
@@ -236,6 +255,8 @@ function buildExecutionReceipt({
       authorizationReceiptChecks.authorization_id_verified,
     authorization_single_use_verified:
       authorizationReceiptChecks.single_use_verified,
+    authorization_runtime_registry_binding_verified:
+      authorizationReceiptChecks.runtime_registry_binding_verified,
     authorization_binding_verified:authorizationBindingVerified,
     logical_target_binding_verified:logicalTargetBindingVerified,
     target_binding_verified:
@@ -257,6 +278,7 @@ function buildExecutionReceipt({
     verification.authorization_registry_digest_verified&&
     verification.authorization_id_verified&&
     verification.authorization_single_use_verified&&
+    verification.authorization_runtime_registry_binding_verified&&
     verification.authorization_binding_verified&&
     verification.logical_target_binding_verified&&
     verification.target_binding_verified&&
@@ -438,7 +460,11 @@ function verifyExecutionReceipt(receipt={},{
   const applied=rebuiltRows.filter(x=>x.status==="applied");
   const authorizedActions=auth.authorized_actions||[];
   const authorizationReceiptChecks=
-    authorizationReceiptVerification(auth.receipt,authorizedActions);
+    authorizationReceiptVerification(
+      auth.receipt,
+      authorizedActions,
+      before_runtime
+    );
   const authorizationBindingVerified=
     authorizedActions.length===rebuiltRows.length&&
     authorizedActions.every((action,index)=>
@@ -469,6 +495,8 @@ function verifyExecutionReceipt(receipt={},{
       authorizationReceiptChecks.authorization_id_verified,
     authorization_single_use_verified:
       authorizationReceiptChecks.single_use_verified,
+    authorization_runtime_registry_binding_verified:
+      authorizationReceiptChecks.runtime_registry_binding_verified,
     authorization_binding_verified:authorizationBindingVerified,
     logical_target_binding_verified:logicalTargetBindingVerified,
     target_binding_verified:
@@ -490,6 +518,7 @@ function verifyExecutionReceipt(receipt={},{
     expectedVerification.authorization_registry_digest_verified&&
     expectedVerification.authorization_id_verified&&
     expectedVerification.authorization_single_use_verified&&
+    expectedVerification.authorization_runtime_registry_binding_verified&&
     expectedVerification.authorization_binding_verified&&
     expectedVerification.logical_target_binding_verified&&
     expectedVerification.target_binding_verified&&
