@@ -1,0 +1,17 @@
+{
+  "evidence_boundary": "Pinned consumer contract fixture generated from a validated private scene workflow artifact; CI does not fetch the private source repository.",
+  "provenance_sha256": "94f16ae33aac7b094a05ad4e5bb0aaca265ecc11ab6d573298db626e73552385",
+  "scene_context_sha256": "12d95315b45d8de57ac839075fd462b4dba8cdc90e55543a7d726e90a848785f",
+  "schema": "homeai_scene_context_fixture_provenance_v1",
+  "source_artifact_digest": "sha256:07e9cab2f16090e63c3457fe1ae1b659311d86beb36e47d12d6781d49300148d",
+  "source_artifact_id": 11459277336,
+  "source_artifact_name": "spatialruntime-world-consumer",
+  "source_fingerprint": "138f863131138156828b23a4847b40a8ae01c21012e2ef9fc243088be1f03eed",
+  "source_merge_commit_sha": "106e38fca1cd5fbeb1b2253c04fbfe894e804e28",
+  "source_pr": 3,
+  "source_pr_head_sha": "a1ebf1c3f6db50ccd9404dafb1c916bbdcedf1c1",
+  "source_repo": "hippoley/interior-kitchen-original",
+  "source_workflow_run_id": 37567466394,
+  "validation_receipt_sha256": "71e6f3aa0c7f99d770ad259fa5fa85e04511784b42b8ab3d91e3d0264ca3d9f6",
+  "world_snapshot_sha256": "873ca65b363f5a700bdda5e51de0973fce792d70a9e25a84fbf2206c3b415979"
+}

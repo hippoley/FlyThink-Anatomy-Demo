@@ -146,6 +146,15 @@ async function main(){
   const fixtureJson=arg("--acoustic-fixture-json");
   const acousticFixture=fixtureJson?JSON.parse(fixtureJson):null;
   const useSpatialRuntime=flag("--spatialruntime-authorize");
+  const worldSnapshotPath=arg("--world-snapshot");
+  const worldValidationReceiptPath=arg("--world-validation-receipt");
+  const sceneContextPath=arg("--scene-context");
+  if((worldSnapshotPath&&!worldValidationReceiptPath)||(!worldSnapshotPath&&worldValidationReceiptPath)){
+    throw new Error("--world-snapshot and --world-validation-receipt must be provided together");
+  }
+  if(sceneContextPath&&(worldSnapshotPath||worldValidationReceiptPath)){
+    throw new Error("--scene-context is mutually exclusive with full WorldSnapshot artifacts");
+  }
 
   if(!url)throw new Error("--url is required");
   if(apply&&!receiptPath)throw new Error("--apply requires --receipt");
@@ -185,7 +194,10 @@ async function main(){
       exteriorWindowKeys:[[
         target.area,target.entity,target.instance||"default"
       ].join("::")],
-      timeoutMs
+      timeoutMs,
+      worldSnapshotPath,
+      worldValidationReceiptPath,
+      sceneContextPath
     })
     :null;
   const session=new StreamingHomeSession({
@@ -296,6 +308,12 @@ async function main(){
     truth:"acoustic_windowpilot_live_probe_v1",
     mode:apply?"APPLY":"DRY_RUN",
     spatialruntime_authorization:useSpatialRuntime,
+    spatialruntime_scene_context:!!(
+      sceneContextPath||(worldSnapshotPath&&worldValidationReceiptPath)
+    ),
+    spatialruntime_scene_context_mode:sceneContextPath
+      ?"pinned-context"
+      :(worldSnapshotPath?"full-world-artifacts":null),
     target,
     probe_open_pct:probeOpenPct,
     tolerance_pct:tolerancePct,
