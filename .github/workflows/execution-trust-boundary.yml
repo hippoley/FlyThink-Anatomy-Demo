@@ -1,0 +1,77 @@
+name: Semantic Execution Trust Boundary
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "scripts/authorized_patch_planner.py"
+      - "scripts/device_registry.py"
+      - "scripts/semantic_capability_map.py"
+      - "scripts/atomic_authorized_commit.cjs"\n      - "scripts/authorization_ledger.cjs"\n      - "scripts/test_authorization_ledger.cjs"\n      - "scripts/test_durable_authorization_commit.cjs"
+      - "scripts/atomic_physical_set.cjs"
+      - "scripts/authorization_ledger.cjs"
+      - "scripts/physical_driver_capabilities.cjs"
+      - "scripts/physical_transaction_router.cjs"
+      - "scripts/physical_runtime.cjs"
+      - "scripts/whole_home_patch_contract.cjs"
+      - "scripts/test_execution_trust_boundary.py"
+      - "scripts/test_atomic_physical_set.cjs"
+      - "scripts/test_authorization_ledger.cjs"
+      - "scripts/test_physical_transaction_router.cjs"
+      - "scripts/test_production_physical_turn_atomicity.cjs"
+      - ".github/workflows/execution-trust-boundary.yml"
+  pull_request:
+    paths:
+      - "scripts/authorized_patch_planner.py"
+      - "scripts/device_registry.py"
+      - "scripts/semantic_capability_map.py"
+      - "scripts/atomic_authorized_commit.cjs"
+      - "scripts/atomic_physical_set.cjs"
+      - "scripts/authorization_ledger.cjs"
+      - "scripts/physical_driver_capabilities.cjs"
+      - "scripts/physical_transaction_router.cjs"
+      - "scripts/physical_runtime.cjs"
+      - "scripts/whole_home_patch_contract.cjs"
+      - "scripts/test_execution_trust_boundary.py"
+      - "scripts/test_atomic_physical_set.cjs"
+      - "scripts/test_authorization_ledger.cjs"
+      - "scripts/test_physical_transaction_router.cjs"
+      - "scripts/test_production_physical_turn_atomicity.cjs"
+      - ".github/workflows/execution-trust-boundary.yml"
+  workflow_dispatch:
+
+jobs:
+  trust-boundary:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Syntax preflight
+        run: |
+          python -m py_compile scripts/authorized_patch_planner.py scripts/device_registry.py scripts/test_execution_trust_boundary.py
+          node --check scripts/atomic_authorized_commit.cjs\n          node --check scripts/authorization_ledger.cjs\n          node --check scripts/test_authorization_ledger.cjs\n          node --check scripts/test_durable_authorization_commit.cjs
+          node --check scripts/atomic_physical_set.cjs
+          node --check scripts/physical_driver_capabilities.cjs
+          node --check scripts/physical_transaction_router.cjs
+          node --check scripts/physical_runtime.cjs
+          node --check scripts/test_atomic_physical_set.cjs
+          node --check scripts/authorization_ledger.cjs
+          node --check scripts/test_authorization_ledger.cjs
+          node --check scripts/test_physical_transaction_router.cjs
+          node --check scripts/test_production_physical_turn_atomicity.cjs
+      - name: Prove planner-to-commit safety invariants
+        run: python scripts/test_execution_trust_boundary.py
+      - name: Prove multi-target physical SET cannot degrade to sequential writes
+        run: node scripts/test_atomic_physical_set.cjs
+      - name: Prove authorization replay stays blocked across process restart
+        run: node scripts/test_authorization_ledger.cjs
+      - name: Prove transaction routing preserves SET atomicity
+        run: node scripts/test_physical_transaction_router.cjs
+      - name: Prove production executor cannot bypass atomic SET routing
+        run: node scripts/test_production_physical_turn_atomicity.cjs
