@@ -20,6 +20,9 @@ assert.match(y,/confirm_apply:/);
 assert.match(y,/APPLY_REAL_HARDWARE/);
 
 assert.match(y,/--require-human-fixture/);
+assert.match(y,/--spatialruntime-authorize/);
+assert.match(y,/repository:\s*hippoley\/SpatialRuntime/);
+assert.match(y,/pip install -e "_spatialruntime"/);
 assert.match(y,/--expected-hardware-identity/);
 assert.match(y,/--apply/);
 assert.match(y,/verify_acoustic_windowpilot_evidence\.cjs/);
