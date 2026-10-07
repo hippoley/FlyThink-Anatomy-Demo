@@ -1,0 +1,255 @@
+{
+  "schema_version": "pi-home-provider-calibration-dataset-v1",
+  "provider_id": "rain-screening-v1",
+  "dimension": "rain_ingress",
+  "scope_id": "synthetic-rain-fixture",
+  "source_kind": "synthetic",
+  "fixture_only": true,
+  "direction": "min",
+  "measurement_provenance": {
+    "dataset_id": "synthetic-rain-calibration-fixture-v1",
+    "collected_by": "unit-test-generator"
+  },
+  "rows": [
+    {
+      "case_id": "synthetic-1",
+      "candidates": [
+        {
+          "label": "candidate-1",
+          "predicted": 0.8,
+          "observed": 0.8
+        },
+        {
+          "label": "candidate-2",
+          "predicted": 0.4,
+          "observed": 0.4
+        },
+        {
+          "label": "candidate-3",
+          "predicted": 0.1,
+          "observed": 0.1
+        }
+      ]
+    },
+    {
+      "case_id": "synthetic-2",
+      "candidates": [
+        {
+          "label": "candidate-1",
+          "predicted": 0.8,
+          "observed": 0.8
+        },
+        {
+          "label": "candidate-2",
+          "predicted": 0.4,
+          "observed": 0.4
+        },
+        {
+          "label": "candidate-3",
+          "predicted": 0.1,
+          "observed": 0.1
+        }
+      ]
+    },
+    {
+      "case_id": "synthetic-3",
+      "candidates": [
+        {
+          "label": "candidate-1",
+          "predicted": 0.8,
+          "observed": 0.8
+        },
+        {
+          "label": "candidate-2",
+          "predicted": 0.4,
+          "observed": 0.4
+        },
+        {
+          "label": "candidate-3",
+          "predicted": 0.1,
+          "observed": 0.1
+        }
+      ]
+    },
+    {
+      "case_id": "synthetic-4",
+      "candidates": [
+        {
+          "label": "candidate-1",
+          "predicted": 0.8,
+          "observed": 0.8
+        },
+        {
+          "label": "candidate-2",
+          "predicted": 0.4,
+          "observed": 0.4
+        },
+        {
+          "label": "candidate-3",
+          "predicted": 0.1,
+          "observed": 0.1
+        }
+      ]
+    },
+    {
+      "case_id": "synthetic-5",
+      "candidates": [
+        {
+          "label": "candidate-1",
+          "predicted": 0.8,
+          "observed": 0.8
+        },
+        {
+          "label": "candidate-2",
+          "predicted": 0.4,
+          "observed": 0.4
+        },
+        {
+          "label": "candidate-3",
+          "predicted": 0.1,
+          "observed": 0.1
+        }
+      ]
+    },
+    {
+      "case_id": "synthetic-6",
+      "candidates": [
+        {
+          "label": "candidate-1",
+          "predicted": 0.8,
+          "observed": 0.8
+        },
+        {
+          "label": "candidate-2",
+          "predicted": 0.4,
+          "observed": 0.4
+        },
+        {
+          "label": "candidate-3",
+          "predicted": 0.1,
+          "observed": 0.1
+        }
+      ]
+    },
+    {
+      "case_id": "synthetic-7",
+      "candidates": [
+        {
+          "label": "candidate-1",
+          "predicted": 0.8,
+          "observed": 0.8
+        },
+        {
+          "label": "candidate-2",
+          "predicted": 0.4,
+          "observed": 0.4
+        },
+        {
+          "label": "candidate-3",
+          "predicted": 0.1,
+          "observed": 0.1
+        }
+      ]
+    },
+    {
+      "case_id": "synthetic-8",
+      "candidates": [
+        {
+          "label": "candidate-1",
+          "predicted": 0.8,
+          "observed": 0.8
+        },
+        {
+          "label": "candidate-2",
+          "predicted": 0.4,
+          "observed": 0.4
+        },
+        {
+          "label": "candidate-3",
+          "predicted": 0.1,
+          "observed": 0.1
+        }
+      ]
+    },
+    {
+      "case_id": "synthetic-9",
+      "candidates": [
+        {
+          "label": "candidate-1",
+          "predicted": 0.8,
+          "observed": 0.8
+        },
+        {
+          "label": "candidate-2",
+          "predicted": 0.4,
+          "observed": 0.4
+        },
+        {
+          "label": "candidate-3",
+          "predicted": 0.1,
+          "observed": 0.1
+        }
+      ]
+    },
+    {
+      "case_id": "synthetic-10",
+      "candidates": [
+        {
+          "label": "candidate-1",
+          "predicted": 0.8,
+          "observed": 0.8
+        },
+        {
+          "label": "candidate-2",
+          "predicted": 0.4,
+          "observed": 0.4
+        },
+        {
+          "label": "candidate-3",
+          "predicted": 0.1,
+          "observed": 0.1
+        }
+      ]
+    },
+    {
+      "case_id": "synthetic-11",
+      "candidates": [
+        {
+          "label": "candidate-1",
+          "predicted": 0.8,
+          "observed": 0.8
+        },
+        {
+          "label": "candidate-2",
+          "predicted": 0.4,
+          "observed": 0.4
+        },
+        {
+          "label": "candidate-3",
+          "predicted": 0.1,
+          "observed": 0.1
+        }
+      ]
+    },
+    {
+      "case_id": "synthetic-12",
+      "candidates": [
+        {
+          "label": "candidate-1",
+          "predicted": 0.8,
+          "observed": 0.8
+        },
+        {
+          "label": "candidate-2",
+          "predicted": 0.4,
+          "observed": 0.4
+        },
+        {
+          "label": "candidate-3",
+          "predicted": 0.1,
+          "observed": 0.1
+        }
+      ]
+    }
+  ]
+}
