@@ -16,6 +16,7 @@ on:
       - "tests/spatialruntime_world_context.cjs"
       - "tests/spatialruntime_scene_authorizer.cjs"
       - "tests/spatialruntime_scene_handoff.cjs"
+      - "tests/live_scene_handoff_workflow.cjs"
       - "tests/spatialruntime_scene_context_provenance.cjs"
       - "tests/fixtures/interior-kitchen.scene-context.json"
       - "tests/fixtures/interior-kitchen.scene-context.provenance.json"
@@ -70,6 +71,9 @@ jobs:
       - name: Verify downstream handoff drives SpatialRuntime authorization
         run: node tests/spatialruntime_scene_handoff.cjs
 
+      - name: Verify live cross-repo workflow binds upstream handoff
+        run: node tests/live_scene_handoff_workflow.cjs
+
   live-interior-scene-to-homeai:
     if: ${{ vars.ENABLE_CROSS_REPO_LIVE == 'true' }}
     runs-on: ubuntu-latest
@@ -103,6 +107,10 @@ jobs:
           ref: d123ab9a5310cb9ce15d9e82630828a0d32211f4
           path: _spatialruntime
 
+      - name: Verify pinned SpatialRuntime revision in live consumer
+        shell: bash
+        run: test "$(git -C _spatialruntime rev-parse HEAD)" = "$SPATIALRUNTIME_COMMIT_SHA"
+
       - name: Install SpatialRuntime
         run: python -m pip install -e "_spatialruntime"
 
@@ -126,12 +134,29 @@ jobs:
             /tmp/interior-world.json \
             /tmp/interior-validation.json
 
-      - name: Build HomeAI scene context from live upstream artifacts
+      - name: Build and validate latest authored scene handoff
+        working-directory: _interior
         run: |
+          python scripts/build-spatialruntime-handoff.py \
+            /tmp/interior-world.json \
+            /tmp/interior-validation.json \
+            /tmp/interior-handoff.json
+          python scripts/validate-spatialruntime-handoff.py \
+            /tmp/interior-world.json \
+            /tmp/interior-validation.json \
+            /tmp/interior-handoff.json
+
+      - name: Build HomeAI scene context from verified upstream handoff
+        shell: bash
+        run: |
+          UPSTREAM_SHA="$(git -C _interior rev-parse HEAD)"
           node scripts/build_spatialruntime_scene_context.cjs \
             /tmp/interior-world.json \
             /tmp/interior-validation.json \
-            /tmp/interior-homeai-context.json
+            --handoff /tmp/interior-handoff.json \
+            --expected-source-repo hippoley/interior-kitchen-original \
+            --expected-source-commit "$UPSTREAM_SHA" \
+            --out /tmp/interior-homeai-context.json
 
       - name: Verify live upstream WorldSnapshot contract
         run: |
@@ -153,13 +178,23 @@ jobs:
           world=json.load(open('/tmp/interior-world.json',encoding='utf-8'))
           receipt=json.load(open('/tmp/interior-validation.json',encoding='utf-8'))
           context=json.load(open('/tmp/interior-homeai-context.json',encoding='utf-8'))
+          handoff=json.load(open('/tmp/interior-handoff.json',encoding='utf-8'))
+          upstream_sha=open('/tmp/interior-upstream-sha.txt',encoding='utf-8').read().strip()
           assert receipt['source_fingerprint_verified'] is True
           assert context['source_fingerprint']==receipt['source_fingerprint']
           assert context['world_snapshot_sha256']==receipt['world_snapshot_sha256']
           assert world['facts']['source_fingerprint']==receipt['source_fingerprint']
+          assert handoff['source_commit_sha']==upstream_sha
+          assert context['handoff_evidence']['source_commit_sha']==upstream_sha
+          assert context['handoff_evidence']['handoff_sha256']==handoff['handoff_sha256']
+          assert context['spatialruntime_commit_sha']==receipt['spatialruntime_commit_sha']
+          assert handoff['spatialruntime_commit_sha']==receipt['spatialruntime_commit_sha']
           print({
               'source_fingerprint': receipt['source_fingerprint'],
               'context_sha256': context['context_sha256'],
+              'handoff_sha256': handoff['handoff_sha256'],
+              'source_commit_sha': upstream_sha,
+              'spatialruntime_commit_sha': context['spatialruntime_commit_sha'],
               'exterior_window_keys': context['exterior_window_keys'],
           })
           PY
