@@ -8,7 +8,7 @@
  * an explicit driver batch primitive. Drivers without that capability fail closed.
  */
 const {normalizeRuntime}=require("./whole_home_patch_contract.cjs");
-const {materializePatch,reconcileObservation}=require("./physical_runtime.cjs");
+const {materializePatch,reconcileObservation}=require("./physical_runtime.cjs");\nconst {PHYSICAL_CAPABILITIES,requireCapability}=require("./physical_driver_capabilities.cjs");
 
 function clone(v){return v==null?v:JSON.parse(JSON.stringify(v));}
 
