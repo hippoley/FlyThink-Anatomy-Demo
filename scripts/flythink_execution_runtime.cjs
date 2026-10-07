@@ -3,6 +3,10 @@
 const {normalizeRuntime}=require("./whole_home_patch_contract.cjs");
 const {assertContextStateSnapshot}=require("./contextual_edge_slu_adapter.cjs");
 const {
+  validateDecisionProposal,
+  decisionProposalToExecutionContracts
+}=require("./decision_proposal_contract.cjs");
+const {
   canonical,
   validateExecutionRequest,
   validateExecutionProposal,
@@ -23,6 +27,9 @@ const {
 }=require("./execution_receipt.cjs");
 
 function clone(v){return v==null?v:JSON.parse(JSON.stringify(v))}
+function runtimeWorldRevision(runtime){
+  return runtime&&Array.isArray(runtime.revisions)?runtime.revisions.length:0;
+}
 function physicalReceiptsCommitted(receipts){
   return Array.isArray(receipts)&&
     receipts.length>0&&
@@ -325,6 +332,99 @@ async function runExecutionProposal({
   };
 }
 
+async function runDecisionProposal({
+  runtime,
+  contextual_state,
+  decision_proposal,
+  world_snapshot_revision=null,
+  driver,
+  physicalAuthorizer,
+  authorization_context={},
+  source_step=0,
+  max_uncertainty=0.35,
+  authorizationLedger=null
+}={}){
+  assertContextStateSnapshot(contextual_state);
+  validateDecisionProposal(decision_proposal);
+
+  const current=normalizeRuntime(runtime||{});
+  const worldRevision=Number(world_snapshot_revision);
+  if(!Number.isInteger(worldRevision)||worldRevision<0){
+    const {request,internal_proposal}=decisionProposalToExecutionContracts(
+      contextual_state,
+      decision_proposal
+    );
+    const receipt=buildRuntimeReceipt({
+      contextual_state,
+      request,
+      proposal:internal_proposal,
+      status:"BLOCKED",
+      reason:"spatialruntime_world_revision_required",
+      before_runtime:current,
+      after_runtime:current,
+      source_step,
+      source_revision:0
+    });
+    return {
+      ok:false,
+      status:"BLOCKED",
+      reason:"spatialruntime_world_revision_required",
+      runtime:current,
+      authorization:null,
+      authorized_actions:[],
+      physical_receipts:[],
+      receipt
+    };
+  }
+  if(worldRevision!==decision_proposal.world_snapshot_revision){
+    const {request,internal_proposal}=decisionProposalToExecutionContracts(
+      contextual_state,
+      decision_proposal
+    );
+    const receipt=buildRuntimeReceipt({
+      contextual_state,
+      request,
+      proposal:internal_proposal,
+      status:"BLOCKED",
+      reason:"decision_proposal_world_revision_mismatch",
+      before_runtime:current,
+      after_runtime:current,
+      source_step,
+      source_revision:worldRevision
+    });
+    return {
+      ok:false,
+      status:"BLOCKED",
+      reason:"decision_proposal_world_revision_mismatch",
+      expected_world_snapshot_revision:worldRevision,
+      supplied_world_snapshot_revision:decision_proposal.world_snapshot_revision,
+      runtime:current,
+      authorization:null,
+      authorized_actions:[],
+      physical_receipts:[],
+      receipt
+    };
+  }
+
+  const {request,internal_proposal}=decisionProposalToExecutionContracts(
+    contextual_state,
+    decision_proposal
+  );
+  return runExecutionProposal({
+    runtime:current,
+    contextual_state,
+    request,
+    proposal:internal_proposal,
+    driver,
+    physicalAuthorizer,
+    authorization_context,
+    source_step,
+    source_revision:decision_proposal.world_snapshot_revision,
+    max_uncertainty,
+    authorizationLedger
+  });
+}
+
 class FlyThinkExecutionRuntime{
   constructor({
     runtime={},
@@ -342,6 +442,21 @@ class FlyThinkExecutionRuntime{
 
   async execute(input={}){
     const out=await runExecutionProposal({
+      ...input,
+      runtime:this.runtime,
+      driver:input.driver||this.driver,
+      physicalAuthorizer:input.physicalAuthorizer||this.physicalAuthorizer,
+      max_uncertainty:input.max_uncertainty==null
+        ?this.maxUncertainty
+        :input.max_uncertainty,
+      authorizationLedger:input.authorizationLedger||this.authorizationLedger
+    });
+    this.runtime=out.runtime;
+    return out;
+  }
+
+  async executeDecisionProposal(input={}){
+    const out=await runDecisionProposal({
       ...input,
       runtime:this.runtime,
       driver:input.driver||this.driver,
@@ -378,5 +493,6 @@ module.exports={
   buildExecutionReceipt,
   verifyExecutionReceipt,
   runExecutionProposal,
+  runDecisionProposal,
   FlyThinkExecutionRuntime
 };
