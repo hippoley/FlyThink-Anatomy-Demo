@@ -21,7 +21,7 @@ function normalizeDimensionSpec(spec={}){
   };
 }
 
-function normalizeEvidenceResult(result={},trust_registry=null){
+function normalizeEvidenceResult(result={},trust_registry=null,{at=null}={}){
   if(!result.id)throw new Error("evidence_result_id_required");
   const dimensions={};
   for(const [name,spec] of Object.entries(result.dimensions||{})){
@@ -32,7 +32,7 @@ function normalizeEvidenceResult(result={},trust_registry=null){
     ...result,
     id:String(result.id),
     covered_dimensions:Object.keys(dimensions)
-  },trust_registry);
+  },trust_registry,{at});
   return {
     id:String(result.id),
     kind:String(result.kind||"unknown"),
@@ -72,10 +72,15 @@ function fuseCandidateEvidence({
   provider_results=[],
   dimension_weights={},
   learned_candidate_label=null,
-  trust_registry=null
+  trust_registry=null,
+  trust_evaluation_time=null
 }={}){
   const required=uniq(required_dimensions);
-  const providers=(provider_results||[]).map(x=>normalizeEvidenceResult(x,trust_registry));
+  const providers=(provider_results||[]).map(x=>normalizeEvidenceResult(
+    x,
+    trust_registry,
+    {at:trust_evaluation_time}
+  ));
   const labels=candidateLabelsFromResults(providers);
   if(!labels.length){
     return {

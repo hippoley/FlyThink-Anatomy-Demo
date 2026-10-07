@@ -5,6 +5,7 @@ const {
   evaluateProviderCalibration,
   verifyCalibrationReport,
   buildTrustRegistryEntryFromCalibration,
+  buildTimeBoundTrustRegistryEntryFromCalibration,
   buildTrustAttestationFromCalibration
 }=require("./pi_home_provider_calibration.cjs");
 
@@ -47,10 +48,28 @@ function main(){
     if(!calibrationRef||!approvedBy||!trustOut){
       throw new Error("trust entry output requires --calibration-ref --approved-by --trust-entry-out");
     }
-    trust_entry=buildTrustRegistryEntryFromCalibration(report,{
-      calibration_ref:calibrationRef,
-      approved_by:approvedBy
-    });
+    const lifecycleArgs={
+      not_before:arg("--not-before"),
+      expires_at:arg("--expires-at"),
+      reviewed_at:arg("--reviewed-at"),
+      review_due_at:arg("--review-due-at")
+    };
+    const lifecycleValues=Object.values(lifecycleArgs);
+    const anyLifecycle=lifecycleValues.some(Boolean);
+    const allLifecycle=lifecycleValues.every(Boolean);
+    if(anyLifecycle&&!allLifecycle){
+      throw new Error("time-bounded trust requires --not-before --expires-at --reviewed-at --review-due-at");
+    }
+    trust_entry=allLifecycle
+      ?buildTimeBoundTrustRegistryEntryFromCalibration(report,{
+          calibration_ref:calibrationRef,
+          approved_by:approvedBy,
+          ...lifecycleArgs
+        })
+      :buildTrustRegistryEntryFromCalibration(report,{
+          calibration_ref:calibrationRef,
+          approved_by:approvedBy
+        });
     trust_attestation=buildTrustAttestationFromCalibration(report,{
       calibration_ref:calibrationRef
     });
@@ -70,7 +89,14 @@ function main(){
     failures:report.failures,
     metrics:report.metrics,
     report_digest:report.report_digest,
-    trust_entry_emitted:trust_entry!==null
+    trust_entry_emitted:trust_entry!==null,
+    trust_entry_time_bounded:!!(
+      trust_entry &&
+      trust_entry.not_before &&
+      trust_entry.expires_at &&
+      trust_entry.reviewed_at &&
+      trust_entry.review_due_at
+    )
   };
   console.log(JSON.stringify(summary));
   if(flag("--require-eligible")&&report.eligible_for_registry!==true){
