@@ -8,6 +8,25 @@ function clone(v){return v==null?v:JSON.parse(JSON.stringify(v))}
 function normalizeText(s){
   return String(s||"").trim().replace(/[\s，。！？、；：,.!?;:]+/g,"");
 }
+function characterErrorRate(expected,actual){
+  const a=Array.from(normalizeText(expected));
+  const b=Array.from(normalizeText(actual));
+  if(a.length===0)return b.length===0?0:null;
+  let prev=Array.from({length:b.length+1},(_,i)=>i);
+  for(let i=1;i<=a.length;i++){
+    const next=[i];
+    for(let j=1;j<=b.length;j++){
+      const cost=a[i-1]===b[j-1]?0:1;
+      next[j]=Math.min(
+        next[j-1]+1,
+        prev[j]+1,
+        prev[j-1]+cost
+      );
+    }
+    prev=next;
+  }
+  return prev[b.length]/a.length;
+}
 function targetKey(t){
   return t&&[t.area,t.entity,t.instance||"default"].join("::");
 }
@@ -154,9 +173,20 @@ function validateReceipt(receipt,{requireHumanFixture=false}={}){
   if(Number(asr.final_segments)!==1)reasons.push("expected exactly one final ASR segment");
   const finalText=Array.isArray(asr.final_texts)&&asr.final_texts[0]||"";
   if(!normalizeText(finalText))reasons.push("final ASR transcript missing");
-  if(fixture&&fixture.expected_text&&
-     normalizeText(finalText)!==normalizeText(fixture.expected_text)){
-    reasons.push("final ASR transcript does not match frozen fixture text");
+  let transcriptCer=null;
+  let maxCer=null;
+  if(fixture&&fixture.expected_text&&normalizeText(finalText)){
+    transcriptCer=characterErrorRate(fixture.expected_text,finalText);
+    if(fixture.max_cer==null){
+      if(requireHumanFixture)reasons.push("human acoustic fixture max CER missing");
+    }else{
+      maxCer=Number(fixture.max_cer);
+      if(!Number.isFinite(maxCer)||maxCer<0||maxCer>1){
+        reasons.push("acoustic fixture max CER invalid");
+      }else if(transcriptCer!=null&&transcriptCer>maxCer){
+        reasons.push("ASR CER exceeds frozen fixture threshold");
+      }
+    }
   }
 
   const semantic=receipt&&receipt.semantic||{};
@@ -232,12 +262,14 @@ function validateReceipt(receipt,{requireHumanFixture=false}={}){
     schema:receipt&&receipt.schema||null,
     evidence_sha256:receipt&&receipt.evidence_sha256||null,
     final_text:finalText||null,
+    transcript_cer:transcriptCer,
+    max_cer:maxCer,
     target:clone(target),
     hardware_identity:observed||null
   };
 }
 
 module.exports={
-  SCHEMA,normalizeText,targetKey,canonical,sha256Object,asrEventsSha,
+  SCHEMA,normalizeText,characterErrorRate,targetKey,canonical,sha256Object,asrEventsSha,
   finalizeReceipt,buildReceipt,validateReceipt
 };
