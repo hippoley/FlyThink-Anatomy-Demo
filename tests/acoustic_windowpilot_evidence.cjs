@@ -24,13 +24,32 @@ const feedback={
   target,
   exists:true,
   slots:{opening:5,power:"ON"},
-  evidence:{source:"windowpilot:/api/state",position_pct:5,measured:true}
+  evidence:{source:"windowpilot:/api/state",position_pct:5,tick:11,measured:true}
 };
 const command={
   id:"windowpilot:1",
   status:"applied",
   requested_position_pct:5,
+  before_tick:10,
+  readiness_before:{physical_write_ready:true,hardware_identity:{identity_sha256:"hw-1"}},
+  readiness_after:{physical_write_ready:true,hardware_identity:{identity_sha256:"hw-1"}},
+  hardware_identity_before:"hw-1",
+  hardware_identity_after:"hw-1",
   observation:feedback
+};
+const closeoutCommand={
+  id:"windowpilot:2",
+  status:"applied",
+  requested_position_pct:0,
+  before_tick:11,
+  readiness_before:{physical_write_ready:true,hardware_identity:{identity_sha256:"hw-1"}},
+  readiness_after:{physical_write_ready:true,hardware_identity:{identity_sha256:"hw-1"}},
+  hardware_identity_before:"hw-1",
+  hardware_identity_after:"hw-1",
+  observation:{
+    target,exists:true,slots:{opening:0,power:"OFF"},
+    evidence:{source:"windowpilot:/api/state",position_pct:0,tick:12,measured:true}
+  }
 };
 const trace=[{
   asr:{kind:"final",text:"打开主卧窗",is_final:true},
@@ -96,19 +115,11 @@ const valid=buildReceipt({
   beforePositionPct:0,
   acceptedEvents:[event],
   trace,
-  driverCommands:[command,{
-    id:"windowpilot:2",
-    status:"applied",
-    requested_position_pct:0,
-    observation:{
-      target,exists:true,slots:{opening:0,power:"OFF"},
-      evidence:{source:"windowpilot:/api/state",position_pct:0,measured:true}
-    }
-  }],
+  driverCommands:[command,closeoutCommand],
   closeout:{
     attempted:true,already_closed:false,
     before_position_pct:5,after_position_pct:0,
-    receipt:{status:"applied"}
+    receipt:closeoutCommand
   },
   runtime,
   acousticFixture:fixture
@@ -219,6 +230,36 @@ const valid=buildReceipt({
 }
 
 {
+  const bad=JSON.parse(JSON.stringify(valid));
+  bad.physical.driver_commands[0].observation.evidence.tick=10;
+  delete bad.evidence_sha256;
+  const resigned=finalizeReceipt(bad);
+  const report=validateReceipt(resigned,{requireHumanFixture:true});
+  assert.equal(report.valid,false);
+  assert.ok(report.reasons.includes("semantic readback tick is not causally newer"));
+}
+
+{
+  const bad=JSON.parse(JSON.stringify(valid));
+  bad.physical.driver_commands[0].hardware_identity_after="hw-swapped";
+  delete bad.evidence_sha256;
+  const resigned=finalizeReceipt(bad);
+  const report=validateReceipt(resigned,{requireHumanFixture:true});
+  assert.equal(report.valid,false);
+  assert.ok(report.reasons.includes("semantic post-readback hardware identity mismatch"));
+}
+
+{
+  const bad=JSON.parse(JSON.stringify(valid));
+  bad.physical.closeout.receipt={...bad.physical.closeout.receipt,polls:999};
+  delete bad.evidence_sha256;
+  const resigned=finalizeReceipt(bad);
+  const report=validateReceipt(resigned,{requireHumanFixture:true});
+  assert.equal(report.valid,false);
+  assert.ok(report.reasons.includes("closeout receipt does not match driver command"));
+}
+
+{
   const root=fs.mkdtempSync(path.join(os.tmpdir(),"flythink-evidence-"));
   const wavPath=path.join(root,"human.wav");
   const manifestPath=path.join(root,"human.json");
@@ -252,16 +293,10 @@ const valid=buildReceipt({
     beforePositionPct:0,
     acceptedEvents:[event],
     trace,
-    driverCommands:[command,{
-      id:"windowpilot:2",status:"applied",requested_position_pct:0,
-      observation:{
-        target,exists:true,slots:{opening:0,power:"OFF"},
-        evidence:{source:"windowpilot:/api/state",position_pct:0,measured:true}
-      }
-    }],
+    driverCommands:[command,closeoutCommand],
     closeout:{
       attempted:true,already_closed:false,
-      before_position_pct:5,after_position_pct:0,receipt:{status:"applied"}
+      before_position_pct:5,after_position_pct:0,receipt:closeoutCommand
     },
     runtime,
     acousticFixture:{
@@ -301,5 +336,5 @@ const valid=buildReceipt({
 
 console.log(JSON.stringify({
   ok:true,
-  contract:"human acoustic flagship evidence requires one observable probe, one measured semantic action, one applied closeout, and no hidden extra motion"
+  contract:"human acoustic flagship evidence requires causal fresh readback, stable hardware identity, one observable semantic action, and one matching applied closeout"
 }));
