@@ -6,6 +6,10 @@ const {
   rainIngressScreeningProvider,
   acousticScreeningProvider
 }=require("../scripts/pi_home_multiphysics_evidence.cjs");
+const {buildProviderTrustRegistry}=require("../scripts/pi_home_provider_trust.cjs");
+
+const contamDigest="sha256:"+"c".repeat(64);
+const rainDigest="sha256:"+"d".repeat(64);
 
 const rainCase={
   context:{
@@ -49,13 +53,67 @@ assert.equal(screening.semantic_physics_aligned,false);
 assert.equal(screening.trusted_coverage_complete,false);
 assert.equal(screening.trusted_for_generalization_claim,false);
 
-const trustedContam={...contam,id:"contam-engineering",trusted_for_promotion:true,evidence_level:"engineering-validated"};
-const trustedRain={...rain,id:"rain-engineering",trusted_for_promotion:true,evidence_level:"engineering-validated"};
-const trusted=fuseCandidateEvidence({
+const trustedContam={
+  ...contam,
+  id:"contam-engineering",
+  trusted_for_promotion:true,
+  evidence_level:"engineering-validated",
+  trust_attestation:{
+    scope_id:"home-profile-v1",
+    calibration_ref:"calibration://contam/home-v1",
+    calibration_digest:contamDigest
+  }
+};
+const trustedRain={
+  ...rain,
+  id:"rain-engineering",
+  trusted_for_promotion:true,
+  evidence_level:"engineering-validated",
+  trust_attestation:{
+    scope_id:"rain-v1",
+    calibration_ref:"calibration://rain/v1",
+    calibration_digest:rainDigest
+  }
+};
+const trustRegistry=buildProviderTrustRegistry([
+  {
+    provider_id:"contam-engineering",
+    status:"active",
+    scope_id:"home-profile-v1",
+    allowed_dimensions:["co2"],
+    allowed_evidence_levels:["engineering-validated"],
+    calibration_ref:"calibration://contam/home-v1",
+    calibration_digest:contamDigest,
+    approved_by:"engineering-review-board"
+  },
+  {
+    provider_id:"rain-engineering",
+    status:"active",
+    scope_id:"rain-v1",
+    allowed_dimensions:["rain_ingress"],
+    allowed_evidence_levels:["engineering-validated"],
+    calibration_ref:"calibration://rain/v1",
+    calibration_digest:rainDigest,
+    approved_by:"engineering-review-board"
+  }
+]);
+const claimedOnly=fuseCandidateEvidence({
   required_dimensions:["co2","rain_ingress"],
   provider_results:[trustedContam,trustedRain],
   dimension_weights:{co2:.6,rain_ingress:.4},
   learned_candidate_label:"candidate-3"
+});
+assert.equal(claimedOnly.decision,"SCREENING_MISALIGNED");
+assert.equal(claimedOnly.winner.label,"candidate-2");
+assert.equal(claimedOnly.trusted_coverage_complete,false);
+assert.equal(claimedOnly.trusted_for_generalization_claim,false);
+
+const trusted=fuseCandidateEvidence({
+  required_dimensions:["co2","rain_ingress"],
+  provider_results:[trustedContam,trustedRain],
+  dimension_weights:{co2:.6,rain_ingress:.4},
+  learned_candidate_label:"candidate-3",
+  trust_registry:trustRegistry
 });
 assert.equal(trusted.decision,"MISALIGNED");
 assert.equal(trusted.winner.label,"candidate-2");
@@ -66,7 +124,8 @@ const trustedAligned=fuseCandidateEvidence({
   required_dimensions:["co2","rain_ingress"],
   provider_results:[trustedContam,trustedRain],
   dimension_weights:{co2:.6,rain_ingress:.4},
-  learned_candidate_label:"candidate-2"
+  learned_candidate_label:"candidate-2",
+  trust_registry:trustRegistry
 });
 assert.equal(trustedAligned.decision,"ALIGNED");
 assert.equal(trustedAligned.winner.label,"candidate-2");
