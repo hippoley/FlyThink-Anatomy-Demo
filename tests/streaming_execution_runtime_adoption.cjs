@@ -161,11 +161,71 @@ const predictor=async()=>({
     final.execution_runtime.receipt.receipt_sha256
   );
 
+  {
+    const changed=normalizeRuntime({
+      ...initial,
+      devices:{
+        ...initial.devices,
+        [key]:{
+          ...initial.devices[key],
+          slots:{opening:5,power:"ON"}
+        }
+      }
+    });
+    const fakeRuntime={
+      async execute(){
+        return {
+          ok:true,
+          status:"EXECUTED",
+          reason:null,
+          runtime:changed,
+          authorization:{allow:true},
+          authorized_actions:[{
+            op:"PATCH_SLOT",
+            target:W,
+            slot:"opening",
+            value:5
+          }],
+          physical_receipts:[{
+            command_id:"missing-receipt-command",
+            status:"applied",
+            observation:{
+              target:W,
+              exists:true,
+              slots:{opening:5,power:"ON"}
+            }
+          }],
+          receipt:null
+        };
+      }
+    };
+    const s=new StreamingHomeSession({
+      initialRuntime:initial,
+      predictor,
+      driver:{commands:[]},
+      executionRuntime:fakeRuntime
+    });
+    const row=await s.process({
+      kind:"final",
+      text:"打开客厅窗",
+      turn_id:"missing-receipt"
+    });
+    assert.equal(row.committed,false);
+    assert.equal(row.error,"execution_receipt_missing");
+    assert.equal(
+      s.runtime.deviceHealth[key].status,
+      "quarantined",
+      "execution receipt missing must quarantine the physically affected target"
+    );
+  }
+
   console.log(JSON.stringify({
     ok:true,
+    cases:2,
     physical_commands:driver.commands.length,
     partial_commands:0,
     execution_receipt:"verified",
-    physical_truth_verified:true
+    physical_truth_verified:true,
+    missing_receipt_quarantine:true
   }));
 })().catch(e=>{console.error(e);process.exit(1)});
