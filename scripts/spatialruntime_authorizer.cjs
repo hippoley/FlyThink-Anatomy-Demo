@@ -111,9 +111,16 @@ function createSpatialRuntimeAuthorizer(options={}){
   const python=options.python||process.env.PYTHON||"python";
   const script=options.script||path.join(__dirname,"spatialruntime_window_authorizer.py");
   const maxOpenRatioDelta=options.maxOpenRatioDelta==null?0.25:Number(options.maxOpenRatioDelta);
-  const hasScenePath=!!(options.worldSnapshotPath||options.worldValidationReceiptPath);
+  const hasScenePath=!!(
+    options.worldSnapshotPath||
+    options.worldValidationReceiptPath||
+    options.worldHandoffPath
+  );
   if(hasScenePath&&!(options.worldSnapshotPath&&options.worldValidationReceiptPath)){
     throw new Error("spatialruntime_scene_world_and_receipt_required");
+  }
+  if(options.worldHandoffPath&&!(options.worldSnapshotPath&&options.worldValidationReceiptPath)){
+    throw new Error("spatialruntime_scene_handoff_requires_world_and_receipt");
   }
   const configuredSceneSources=[
     options.sceneContext?1:0,
@@ -131,7 +138,12 @@ function createSpatialRuntimeAuthorizer(options={}){
         ?loadSceneContext(
           options.worldSnapshotPath,
           options.worldValidationReceiptPath,
-          {windowEntityLabel:options.windowEntityLabel||"窗"}
+          {
+            windowEntityLabel:options.windowEntityLabel||"窗",
+            handoffPath:options.worldHandoffPath||null,
+            expectedSourceRepo:options.expectedSceneSourceRepo||null,
+            expectedSourceCommit:options.expectedSceneSourceCommit||null
+          }
         )
         :null));
   return async function authorize({runtime,patches,event,context,source_step,source_revision}={}){
