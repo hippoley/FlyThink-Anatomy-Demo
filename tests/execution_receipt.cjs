@@ -361,7 +361,16 @@ function buildVerified(){
     assert.equal(verified.physical_truth_verified,false);
   }
 
-  // 12. An independently supplied source artifact must match the receipt digest binding.
+  // 12. Verified registry binding requires the source runtime artifact.
+  {
+    const receipt=buildVerified();
+    assert.throws(
+      ()=>verifyExecutionReceipt(receipt),
+      /execution_receipt_before_runtime_required_for_registry_verification/
+    );
+  }
+
+  // 13. An independently supplied source artifact must match the receipt digest binding.
   {
     const receipt=buildVerified();
     const forgedRequest=clone(request);
@@ -374,7 +383,7 @@ function buildVerified(){
 
   console.log(JSON.stringify({
     ok:true,
-    cases:12,
+    cases:13,
     schema:"execution-receipt.v1",
     contract:"authorized action + physical patch + target + ACK + causal readback + hardware identity are digest-bound and independently checked"
   }));
