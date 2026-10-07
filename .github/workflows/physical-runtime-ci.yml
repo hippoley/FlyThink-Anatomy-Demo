@@ -21,7 +21,9 @@ on:
       - "tests/probe_windowpilot_checkpoint_e2e.cjs"
       - "tests/acoustic_windowpilot_live_probe.cjs"
       - "tests/acoustic_windowpilot_evidence.cjs"
+      - "tests/live_acoustic_windowpilot_workflow.cjs"
       - ".github/workflows/physical-runtime-ci.yml"
+      - ".github/workflows/live-acoustic-windowpilot-acceptance.yml"
   workflow_dispatch:
 
 jobs:
@@ -59,3 +61,5 @@ jobs:
         run: node tests/acoustic_windowpilot_live_probe.cjs
       - name: Verify acoustic WindowPilot evidence receipt
         run: node tests/acoustic_windowpilot_evidence.cjs
+      - name: Verify live acoustic hardware workflow stays manual and fail-closed
+        run: node tests/live_acoustic_windowpilot_workflow.cjs
