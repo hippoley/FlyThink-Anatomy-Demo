@@ -116,6 +116,32 @@ function driver({
 
   {
     const runtime=baseRuntime();
+    const d=driver({afterPct:0});
+    d.execute=async(patch)=>({
+      id:"recovery-cmd-stale-observation",
+      status:"applied",
+      patch,
+      observation:{
+        target,
+        exists:true,
+        slots:{opening:5},
+        evidence:{source:"recovery-test",measured:true,tick:11}
+      }
+    });
+    const out=await runRecoveryTransaction(runtime,{
+      target,
+      driver:d,
+      safe_patch:{op:"PATCH_SLOT",target,slot:"opening",value:0},
+      expected_hardware_identity:"hw-1"
+    });
+    assert.equal(out.ok,true);
+    // final fresh readback must win over the earlier command observation.
+    assert.equal(out.runtime.devices[key].slots.opening,0);
+    assert.equal(out.trace.some(x=>x.stage==="FINAL_STATE_RECONCILED"),true);
+  }
+
+  {
+    const runtime=baseRuntime();
     const out=await runRecoveryTransaction(runtime,{
       target,
       driver:driver({identityAfter:"hw-swapped"}),
@@ -149,6 +175,21 @@ function driver({
         safe_patch:{op:"PATCH_SLOT",target:other,slot:"opening",value:0}
       }),
       /recovery_patch_target_mismatch/
+    );
+    assert.equal(isQuarantined(runtime,target),true);
+  }
+
+  {
+    const runtime=baseRuntime();
+    const wrongDriver=driver();
+    wrongDriver.target=other;
+    await assert.rejects(
+      ()=>runRecoveryTransaction(runtime,{
+        target,
+        driver:wrongDriver,
+        safe_patch:{op:"PATCH_SLOT",target,slot:"opening",value:0}
+      }),
+      /recovery_driver_target_mismatch/
     );
     assert.equal(isQuarantined(runtime,target),true);
   }
@@ -217,7 +258,7 @@ function driver({
 
   console.log(JSON.stringify({
     ok:true,
-    cases:9,
+    cases:11,
     contract:"RecoveryTransaction restores trust only after readiness, same-target safety action, fresh readback, stable identity, and verified safe position"
   }));
 })().catch(e=>{console.error(e);process.exit(1)});
