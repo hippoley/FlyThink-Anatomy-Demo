@@ -5,6 +5,7 @@ const {
   logicalTarget,
   deriveSemanticContext,
   toContextStateSnapshot,
+  contextStateIdentity,
   assertContextStateSnapshot
 }=require("../scripts/contextual_edge_slu_adapter.cjs");
 
@@ -39,6 +40,27 @@ const context=deriveSemanticContext(runtime,history);
 assert.deepEqual(context.focused_target,target);
 
 const snapshot=toContextStateSnapshot(runtime,history,{conversation_id:"conv-1"});
+assert.equal(Object.prototype.hasOwnProperty.call(snapshot,"context_revision"),false);
+assert.throws(
+  ()=>contextStateIdentity(snapshot),
+  /context_state_revision_required/
+);
+
+const versionedSnapshot=toContextStateSnapshot(runtime,history,{
+  conversation_id:"conv-1",
+  context_revision:12
+});
+assert.deepEqual(contextStateIdentity(versionedSnapshot),{
+  contract_version:CONTRACT_VERSION,
+  context_revision:12
+});
+assert.throws(
+  ()=>toContextStateSnapshot(runtime,history,{
+    conversation_id:"conv-1",
+    context_revision:-1
+  }),
+  /context_state_revision_invalid/
+);
 assert.equal(snapshot.contract_version,CONTRACT_VERSION);
 assert.equal(snapshot.conversation.conversation_id,"conv-1");
 assert.deepEqual(snapshot.conversation.focused_target,target);
@@ -58,5 +80,5 @@ assert.equal("entity_id" in snapshot.world.devices["主卧::空调::default"].ta
 
 console.log(JSON.stringify({
   ok:true,
-  contract:"FlyThink consumes Contextual Edge SLU through contextual-state.v1 adapter boundary"
+  contract:"FlyThink may consume externally versioned contextual-state.v1 identity but does not mint context_revision"
 }));
