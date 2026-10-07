@@ -6,7 +6,11 @@ const {
   normalizeRuntime
 }=require("./whole_home_patch_contract.cjs");
 const {deriveContext}=require("./runtime_context_adapter.cjs");
-const {MockThingDriver,executePhysicalTurn}=require("./physical_runtime.cjs");
+const {
+  MockThingDriver,
+  executePhysicalTurn,
+  evaluateQuarantinePreflight
+}=require("./physical_runtime.cjs");
 const {evaluateCommit}=require("./commit_gate.cjs");
 
 function clone(v){return v==null?v:JSON.parse(JSON.stringify(v))}
@@ -102,19 +106,25 @@ class StreamingHomeSession{
     let committed=false;
     let error=null;
     if(gate.allow){
-      try{
-        const applied=await executePhysicalTurn(
-          this.runtime,
-          patches,
-          this.driver,
-          {turn_id:event.turn_id||("stream:"+String(this.sequence+1))}
-        );
-        this.runtime=applied.runtime;
-        receipts=applied.receipts||[];
-        committed=receiptsApplied(receipts);
-        if(!committed)error=receiptFailure(receipts)||"physical_commit_has_no_applied_receipt";
-      }catch(e){
-        error=String(e&&e.message||e);
+      const preflight=evaluateQuarantinePreflight(this.runtime,patches);
+      if(!preflight.allow){
+        const keys=preflight.violations.map(x=>x.device_key).join(",");
+        error="semantic_preflight_blocked:device_quarantined:"+keys;
+      }else{
+        try{
+          const applied=await executePhysicalTurn(
+            this.runtime,
+            patches,
+            this.driver,
+            {turn_id:event.turn_id||("stream:"+String(this.sequence+1))}
+          );
+          this.runtime=applied.runtime;
+          receipts=applied.receipts||[];
+          committed=receiptsApplied(receipts);
+          if(!committed)error=receiptFailure(receipts)||"physical_commit_has_no_applied_receipt";
+        }catch(e){
+          error=String(e&&e.message||e);
+        }
       }
     }
 

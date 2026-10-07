@@ -98,6 +98,77 @@ async function rejectedPhysicalReceiptMustNotBecomeCommit(){
   assert.equal(out.runtime.devices[key("主卧")].slots.temperature,27);
 }
 
+async function quarantinePreflightMustBlockBeforeDriver(){
+  const initial=runtime();
+  initial.deviceHealth={
+    [key("主卧")]:{
+      status:"quarantined",
+      reason:"safety_stop_not_confirmed",
+      source_status:"unsafe",
+      command_id:"cmd-unsafe",
+      since_turn_id:"t0"
+    }
+  };
+
+  const blockedDriver=new MockThingDriver(initial);
+  const blockedPredictor=async()=>({
+    decision:"EXECUTE",
+    confidence:0.99,
+    patches:[patch("主卧",20)]
+  });
+  const blocked=await runStreamingSequence([
+    {turn_id:"t5",kind:"final",text:"主卧空调调到20度"}
+  ],{
+    initialRuntime:initial,
+    predictor:blockedPredictor,
+    driver:blockedDriver
+  });
+
+  assert.equal(blocked.physical_commands,0);
+  assert.equal(blocked.trace[0].committed,false);
+  assert.match(
+    blocked.trace[0].error,
+    /^semantic_preflight_blocked:device_quarantined:主卧::空调::default$/
+  );
+  assert.equal(blocked.history[0].outcome,"INVALID");
+  assert.deepEqual(blocked.history[0].applied_patches,[]);
+  assert.equal(
+    blocked.runtime.devices[key("主卧")].slots.temperature,
+    27
+  );
+
+  const recoveryDriver=new MockThingDriver(initial);
+  const recoveryPredictor=async()=>({
+    decision:"EXECUTE",
+    confidence:0.99,
+    patches:[{
+      op:"PATCH_SLOT",
+      target:target("主卧"),
+      slot:"power",
+      value:"OFF"
+    }]
+  });
+  const recovery=await runStreamingSequence([
+    {turn_id:"t6",kind:"final",text:"把主卧空调关掉"}
+  ],{
+    initialRuntime:initial,
+    predictor:recoveryPredictor,
+    driver:recoveryDriver
+  });
+
+  assert.equal(recovery.physical_commands,1);
+  assert.equal(recovery.trace[0].committed,true);
+  assert.equal(
+    recovery.runtime.devices[key("主卧")].slots.power,
+    "OFF"
+  );
+  assert.equal(
+    recovery.runtime.deviceHealth[key("主卧")].status,
+    "quarantined",
+    "successful safety reduction must not silently clear quarantine"
+  );
+}
+
 async function finalClarifyMustNotExecute(){
   const initial=runtime();
   const driver=new MockThingDriver(initial);
@@ -115,9 +186,10 @@ async function finalClarifyMustNotExecute(){
   await correctionMustNotExecuteStablePrefix();
   await feedbackMustOwnReconciledTruth();
   await rejectedPhysicalReceiptMustNotBecomeCommit();
+  await quarantinePreflightMustBlockBeforeDriver();
   await finalClarifyMustNotExecute();
   console.log(JSON.stringify({
     ok:true,
-    contract:"streaming ASR -> semantic -> target -> patch -> commit -> thing model -> feedback -> reconcile; non-applied physical receipts never count as commit"
+    contract:"streaming ASR -> semantic -> quarantine preflight -> commit -> thing model -> feedback -> reconcile; forbidden quarantined writes make zero driver calls"
   }));
 })().catch(e=>{console.error(e);process.exit(1)});
