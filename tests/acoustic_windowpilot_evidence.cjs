@@ -9,7 +9,8 @@ const {spawnSync}=require("child_process");
 const {
   buildReceipt,
   finalizeReceipt,
-  validateReceipt
+  validateReceipt,
+  sha256Object
 }=require("../scripts/acoustic_windowpilot_evidence.cjs");
 const {
   assertLiveSemanticProposal
@@ -33,8 +34,10 @@ const feedback={
     measured:true
   }
 };
+const semanticPatch={op:"PATCH_SLOT",target,slot:"opening",value:5};
 const command={
   id:"windowpilot:1",
+  patch:semanticPatch,
   status:"applied",
   requested_position_pct:5,
   before_tick:10,
@@ -69,7 +72,7 @@ const trace=[{
   asr:{kind:"final",text:"打开主卧窗",is_final:true},
   committed:true,
   target_resolution:{targets:[target]},
-  patch_proposal:[{op:"PATCH_SLOT",target,slot:"opening",value:5}],
+  patch_proposal:[semanticPatch],
   thing_model:[{binding:{target,model_id:"CWDS-CA01",slot:"opening",op:"PATCH_SLOT"}}],
   feedback:[feedback],
   reconcile:{changed_device_paths:["主卧::窗::default::slots::opening"]},
@@ -385,4 +388,88 @@ console.log(JSON.stringify({
   });
   assert.equal(report.valid,false);
   assert.ok(report.reasons.includes("SpatialRuntime authorization evidence missing"));
+}
+
+
+{
+  const authBase={
+    schema:"homeai_spatialruntime_authorization_receipt_v1",
+    allow:true,
+    case_id:"evidence-turn",
+    source_step:0,
+    source_revision:0,
+    requested_patch_count:1,
+    authorized_patches:[semanticPatch],
+    blocked:[],
+    rain:"dry",
+    exterior_window_keys:[],
+    trace_status:"completed",
+    trace_hash:"c".repeat(64),
+    safety_graph_fingerprint:"d".repeat(64),
+    safety_forced_entities:[],
+    commit_summary:{ready_to_dispatch:true}
+  };
+  const auth={...authBase,receipt_sha256:sha256Object(authBase)};
+  const bindingBase={
+    schema:"homeai_spatialruntime_physical_binding_v1",
+    authorization_receipt_sha256:auth.receipt_sha256,
+    authorization_trace_hash:auth.trace_hash,
+    bindings:[{
+      command_id:"windowpilot:1",
+      status:"applied",
+      authorization_patch_sha256:sha256Object(semanticPatch),
+      physical_patch_sha256:sha256Object(semanticPatch),
+      observation_sha256:sha256Object(feedback),
+      observed_value:5
+    }]
+  };
+  const binding={...bindingBase,binding_sha256:sha256Object(bindingBase)};
+  const traceWithAuthorization=[{
+    ...trace[0],
+    authorized_patch_proposal:[semanticPatch],
+    physical_authorization:auth,
+    physical_authorization_binding:binding
+  }];
+  const receipt=buildReceipt({
+    mode:"APPLY",
+    target,
+    probeOpenPct:5,
+    tolerancePct:1,
+    expectedHardwareIdentity:"hw-1",
+    readiness:{
+      physical_write_ready:true,
+      write_blockers:[],
+      hardware_identity:{identity_sha256:"hw-1"}
+    },
+    beforePositionPct:0,
+    acceptedEvents:[event],
+    trace:traceWithAuthorization,
+    driverCommands:[command,closeoutCommand],
+    closeout:{
+      attempted:true,already_closed:false,
+      before_position_pct:5,after_position_pct:0,
+      receipt:closeoutCommand
+    },
+    runtime,
+    acousticFixture:fixture
+  });
+  const report=validateReceipt(receipt,{
+    requireHumanFixture:true,
+    requireSpatialRuntimeAuthorization:true
+  });
+  assert.equal(report.valid,true,JSON.stringify(report.reasons));
+
+  const tampered=JSON.parse(JSON.stringify(receipt));
+  tampered.semantic.committed_finals[0].physical_authorization_binding
+    .bindings[0].observation_sha256="0".repeat(64);
+  delete tampered.evidence_sha256;
+  const resigned=finalizeReceipt(tampered);
+  const bad=validateReceipt(resigned,{
+    requireHumanFixture:true,
+    requireSpatialRuntimeAuthorization:true
+  });
+  assert.equal(bad.valid,false);
+  assert.ok(bad.reasons.includes(
+    "SpatialRuntime binding observation hash does not match driver readback"
+  ));
 }
