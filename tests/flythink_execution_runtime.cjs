@@ -133,7 +133,25 @@ function passAuthorizer(counter=null,transform=null){
     assert.equal(driver.commands.length,0);
   }
 
-  // 4. Authorizer cannot redirect the proposal to another target.
+  // 4. Missing physical driver fails before authorization.
+  {
+    const action={op:"PATCH_SLOT",target:B,slot:"temperature",value:19};
+    const auth={calls:0};
+    const out=await runExecutionProposal({
+      runtime:initial,
+      contextual_state:context,
+      request:request([action]),
+      proposal:proposal([action]),
+      driver:null,
+      physicalAuthorizer:passAuthorizer(auth)
+    });
+    assert.equal(out.ok,false);
+    assert.equal(out.status,"BLOCKED");
+    assert.equal(out.reason,"physical_driver_required");
+    assert.equal(auth.calls,0);
+  }
+
+  // 5. Authorizer cannot redirect the proposal to another target.
   {
     const action={op:"PATCH_SLOT",target:B,slot:"temperature",value:19};
     const driver=new MockThingDriver(initial);
@@ -152,7 +170,7 @@ function passAuthorizer(counter=null,transform=null){
     assert.equal(driver.commands.length,0);
   }
 
-  // 5. Multi-action plans require atomic capability; never sequential fallback.
+  // 6. Multi-action plans require atomic capability; never sequential fallback.
   {
     const actions=[
       {op:"PATCH_SLOT",target:L,slot:"temperature",value:22},
@@ -179,7 +197,7 @@ function passAuthorizer(counter=null,transform=null){
     assert.deepEqual(out.runtime,initial);
   }
 
-  // 6. Multi-action plan commits once through an atomic batch driver.
+  // 7. Multi-action plan commits once through an atomic batch driver.
   {
     const actions=[
       {op:"PATCH_SLOT",target:L,slot:"temperature",value:22},
@@ -214,7 +232,7 @@ function passAuthorizer(counter=null,transform=null){
     assert.equal(out.receipt.physical_committed,true);
   }
 
-  // 7. A wrong-device physical readback fails closed and quarantines expected target.
+  // 8. A wrong-device physical readback fails closed and quarantines expected target.
   {
     const action={op:"PATCH_SLOT",target:B,slot:"temperature",value:19};
     const driver={
@@ -242,7 +260,7 @@ function passAuthorizer(counter=null,transform=null){
     assert.equal(isQuarantined(out.runtime,B),true);
   }
 
-  // 8. A proposal cannot select two alternatives for the same action identity.
+  // 9. A proposal cannot select two alternatives for the same action identity.
   {
     const a={op:"PATCH_SLOT",target:B,slot:"temperature",value:20};
     const b={op:"PATCH_SLOT",target:B,slot:"temperature",value:22};
@@ -255,7 +273,7 @@ function passAuthorizer(counter=null,transform=null){
     );
   }
 
-  // 9. Runtime facade exposes the formal recovery path, not manual trust clearing.
+  // 10. Runtime facade exposes the formal recovery path, not manual trust clearing.
   {
     const W={area:"客厅",entity:"窗",instance:"default"};
     const wk="客厅::窗::default";
@@ -313,7 +331,7 @@ function passAuthorizer(counter=null,transform=null){
 
   console.log(JSON.stringify({
     ok:true,
-    cases:9,
+    cases:10,
     contract:"contextual execution proposal -> deterministic authorization -> atomic/single physical execution -> readback, with formal recovery"
   }));
 })().catch(e=>{console.error(e);process.exit(1)});
