@@ -12,6 +12,7 @@ on:
       - "scripts/live_acoustic_windowpilot.py"
       - "tests/spatialruntime_world_context.cjs"
       - "tests/spatialruntime_scene_authorizer.cjs"
+      - "tests/spatialruntime_scene_handoff.cjs"
       - "tests/spatialruntime_scene_context_provenance.cjs"
       - "tests/fixtures/interior-kitchen.scene-context.json"
       - "tests/fixtures/interior-kitchen.scene-context.provenance.json"
@@ -59,6 +60,9 @@ jobs:
         run: |
           node tests/spatialruntime_scene_authorizer.cjs \
             tests/fixtures/interior-kitchen.scene-context.json
+
+      - name: Verify downstream handoff drives SpatialRuntime authorization
+        run: node tests/spatialruntime_scene_handoff.cjs
 
   live-interior-scene-to-homeai:
     if: ${{ vars.ENABLE_CROSS_REPO_LIVE == 'true' }}
