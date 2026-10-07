@@ -245,6 +245,44 @@ function rainIngressScreeningProvider(caseDef={}){
   };
 }
 
+function contamProviderFromP47Evidence(caseEvidence={},{
+  calibration=null
+}={}){
+  if(caseEvidence.status!=="REAL_CONTAM_EXECUTED"){
+    throw new Error("real_contam_case_evidence_required");
+  }
+  const branches=caseEvidence.branches||[];
+  if(!branches.length)throw new Error("real_contam_branches_required");
+  const scores={};
+  for(const branch of branches){
+    if(!branch.label)throw new Error("real_contam_branch_label_required");
+    if(!Number.isFinite(Number(branch.end_co2_ppm))){
+      throw new Error("real_contam_branch_co2_required:"+String(branch.label));
+    }
+    scores[String(branch.label)]=Number(branch.end_co2_ppm);
+  }
+  const allTrusted=
+    caseEvidence.profile_trusted_for_promotion===true &&
+    branches.every(x=>x.trusted_for_promotion===true);
+  return {
+    id:"contam-real-"+String(caseEvidence.case_id||"case"),
+    kind:"simulation",
+    evidence_level:String(caseEvidence.evidence_level||"real-contam"),
+    trusted_for_promotion:allTrusted,
+    calibration:clone(calibration),
+    provenance:{
+      backend:caseEvidence.backend||null,
+      physics_fidelity:caseEvidence.physics_fidelity||null,
+      engine_version:caseEvidence.engine_version||null,
+      origin_co2_source:caseEvidence.origin_co2_source||null,
+      raw_case_id:caseEvidence.case_id||null
+    },
+    dimensions:{
+      co2:{direction:"min",scores}
+    }
+  };
+}
+
 function acousticScreeningProvider(caseDef={}){
   const candidates=caseDef&&caseDef.context&&caseDef.context.candidates||[];
   const scores={};
@@ -274,5 +312,6 @@ module.exports={
   normalizeAcrossCandidates,
   fuseCandidateEvidence,
   rainIngressScreeningProvider,
-  acousticScreeningProvider
+  acousticScreeningProvider,
+  contamProviderFromP47Evidence
 };
