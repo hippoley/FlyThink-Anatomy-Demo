@@ -1,0 +1,26 @@
+{
+  "case_id": "interior-kitchen-original",
+  "context_sha256": "12d95315b45d8de57ac839075fd462b4dba8cdc90e55543a7d726e90a848785f",
+  "exterior_window_keys": [
+    "次卧（二）::窗::default"
+  ],
+  "exterior_windows": [
+    {
+      "key": "次卧（二）::窗::default",
+      "opening_id": "opening::G-bed2",
+      "room_entity_id": "room::bed2",
+      "source_id": "bed2-south-casement",
+      "target": {
+        "area": "次卧（二）",
+        "entity": "窗",
+        "instance": "default"
+      },
+      "world_entity_id": "window::bed2-south-casement"
+    }
+  ],
+  "relation_graph_fingerprint": "d32f235c079ddbb9943ece75556fd7a27f8c08e530c318b3880150f92db52f02",
+  "schema": "homeai_spatialruntime_scene_context_v1",
+  "source_fingerprint": "138f863131138156828b23a4847b40a8ae01c21012e2ef9fc243088be1f03eed",
+  "validation_receipt_sha256": "71e6f3aa0c7f99d770ad259fa5fa85e04511784b42b8ab3d91e3d0264ca3d9f6",
+  "world_snapshot_sha256": "873ca65b363f5a700bdda5e51de0973fce792d70a9e25a84fbf2206c3b415979"
+}
