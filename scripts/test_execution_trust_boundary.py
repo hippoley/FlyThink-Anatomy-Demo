@@ -36,8 +36,7 @@ r=applyTurn(r,[
 ]).runtime;
 const before=JSON.parse(JSON.stringify(r));
 const untouched=JSON.parse(JSON.stringify(r.devices["客厅::灯::default"]));
-const ledger=()=>{const s=new Set();return {has:id=>s.has(id),add:id=>{if(s.has(id))return false;s.add(id);return true;}}};
-const consumed=ledger();
+const ledger=()=>{const s=new Set();return {has:id=>s.has(id),add:id=>{if(s.has(id))return false;s.add(id);return true;}}};\nconst consumed=ledger();
 
 let out=atomicApplyAuthorizedPlan(r,payload,registryDigest,consumed);
 assert(out.ok);
