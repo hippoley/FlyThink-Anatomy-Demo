@@ -7,6 +7,10 @@ const {
   clearQuarantine
 } = require("../scripts/physical_runtime.cjs");
 const {normalizeRuntime} = require("../scripts/whole_home_patch_contract.cjs");
+const {
+  physicalReceiptsApplied,
+  physicalReceiptFailure
+} = require("../scripts/stateful_checkpoint_trajectory.cjs");
 
 const L = {area:"客厅",entity:"空调",instance:"default"};
 const B = {area:"主卧",entity:"空调",instance:"default"};
@@ -139,5 +143,22 @@ const initial = normalizeRuntime({devices:{
     assert.equal(closed.runtime.deviceHealth[wk].status,"healthy");
   }
 
-  console.log(JSON.stringify({ok:true,cases:4,contract:"patch->execute->observe->reconcile + persistent device quarantine on uncertain/unsafe execution"}));
+  // Stateful checkpoint commit semantics reject every non-applied physical receipt.
+  {
+    assert.equal(physicalReceiptsApplied([{status:"applied"}]),true);
+    assert.equal(physicalReceiptsApplied([{local_only:true}]),true);
+    assert.equal(physicalReceiptsApplied([{status:"blocked"}]),false);
+    assert.equal(physicalReceiptsApplied([{status:"uncertain"}]),false);
+    assert.equal(physicalReceiptsApplied([{status:"unsafe"}]),false);
+    assert.equal(
+      physicalReceiptFailure([{status:"blocked"},{status:"unsafe"}]),
+      "physical_receipt_not_applied:blocked,unsafe"
+    );
+  }
+
+  console.log(JSON.stringify({
+    ok:true,
+    cases:5,
+    contract:"patch->execute->observe->reconcile + persistent quarantine + non-applied receipts never commit"
+  }));
 })().catch(err=>{console.error(err);process.exit(1)});
