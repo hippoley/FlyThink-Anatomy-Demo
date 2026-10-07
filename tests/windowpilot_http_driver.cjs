@@ -24,6 +24,9 @@ function readiness(overrides={}){
 function state(pct,extra={}){
   return {tick:1,thing_model:{window_open_pct:pct,rain_detected:false,wind_speed_ms:0,...extra}};
 }
+function stateAt(tick,pct,extra={}){
+  return {tick,thing_model:{window_open_pct:pct,rain_detected:false,wind_speed_ms:0,...extra}};
+}
 
 (async()=>{
   // 1. Happy path: ACK is not enough; readback must reach target.
@@ -180,5 +183,72 @@ function state(pct,extra={}){
     assert.equal(calls.filter(x=>x.method==="POST").length,0);
   }
 
-  console.log(JSON.stringify({ok:true,cases:7,contract:"WindowPilot ACK != Reality; bounded readback + pre-actuation open limit + STOP on uncertainty"}));
+  // 8. Fresh-readback mode rejects a target-position replay with a stale tick.
+  {
+    let stateReads=0; const calls=[];
+    const driver=new WindowPilotHttpDriver({
+      baseUrl:"http://windowpilot.test",target,pollIntervalMs:0,maxPolls:2,
+      timeoutMs:1000,requireFreshReadback:true,
+      requestJson:async(method,path,payload)=>{
+        calls.push({method,path,payload});
+        if(path==="/api/physical-readiness")return readiness();
+        if(path==="/api/window/open")return {ok:true};
+        if(path==="/api/window/stop")return {ok:true};
+        if(path==="/api/state"){
+          const seq=[
+            stateAt(10,0),
+            stateAt(10,30),
+            stateAt(10,30),
+            stateAt(10,30)
+          ];
+          return seq[Math.min(stateReads++,seq.length-1)];
+        }
+        throw new Error("unexpected:"+path);
+      }
+    });
+    const out=await executePhysicalTurn(
+      initial,[{op:"PATCH_SLOT",target,slot:"opening",value:30}],driver
+    );
+    assert.equal(out.receipts[0].status,"timeout");
+    assert.equal(out.receipts[0].before_tick,10);
+    assert.equal(out.receipts[0].observation.evidence.tick,10);
+    assert.equal(calls.filter(x=>x.path==="/api/window/stop").length,1);
+  }
+
+  // 9. Post-readback identity drift makes the actuation uncertain, never applied.
+  {
+    let stateReads=0,readinessReads=0;
+    const driver=new WindowPilotHttpDriver({
+      baseUrl:"http://windowpilot.test",target,pollIntervalMs:0,maxPolls:2,
+      expectedHardwareIdentity:"hw-1",
+      requireFreshReadback:true,
+      verifyHardwareIdentityAfterReadback:true,
+      requestJson:async(method,path,payload)=>{
+        if(path==="/api/physical-readiness"){
+          readinessReads++;
+          return readiness({
+            hardware_identity:{
+              identity_sha256:readinessReads===1?"hw-1":"hw-swapped"
+            }
+          });
+        }
+        if(path==="/api/window/open")return {ok:true};
+        if(path==="/api/state"){
+          const seq=[stateAt(20,0),stateAt(21,20)];
+          return seq[Math.min(stateReads++,seq.length-1)];
+        }
+        throw new Error("unexpected:"+path);
+      }
+    });
+    const out=await executePhysicalTurn(
+      initial,[{op:"PATCH_SLOT",target,slot:"opening",value:20}],driver
+    );
+    assert.equal(out.receipts[0].status,"uncertain");
+    assert.equal(out.receipts[0].reason,"hardware_identity_changed_after_actuation");
+    assert.equal(out.receipts[0].hardware_identity_before,"hw-1");
+    assert.equal(out.receipts[0].hardware_identity_after,"hw-swapped");
+    assert.equal(out.receipts[0].observation.evidence.tick,21);
+  }
+
+  console.log(JSON.stringify({ok:true,cases:9,contract:"WindowPilot ACK != Reality; applied requires bounded fresh readback, stable hardware identity, and STOP on uncertainty"}));
 })().catch(e=>{console.error(e);process.exit(1)});
