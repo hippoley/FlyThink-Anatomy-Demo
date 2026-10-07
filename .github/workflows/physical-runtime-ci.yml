@@ -7,9 +7,13 @@ on:
       - "scripts/physical_runtime.cjs"
       - "scripts/windowpilot_http_driver.cjs"
       - "scripts/runtime_context_adapter.cjs"
+      - "scripts/streaming_slu_e2e.cjs"
       - "scripts/stateful_checkpoint_trajectory.cjs"
       - "scripts/probe_windowpilot_checkpoint_e2e.cjs"
       - "scripts/run_acoustic_windowpilot_e2e.cjs"
+      - "scripts/live_acoustic_windowpilot.py"
+      - "scripts/spatialruntime_authorizer.cjs"
+      - "scripts/spatialruntime_window_authorizer.py"
       - "scripts/acoustic_windowpilot_evidence.cjs"
       - "scripts/verify_acoustic_windowpilot_evidence.cjs"
       - "scripts/run_stateful_checkpoint_v1.cjs"
@@ -21,6 +25,8 @@ on:
       - "tests/probe_windowpilot_checkpoint_e2e.cjs"
       - "tests/acoustic_windowpilot_live_probe.cjs"
       - "tests/acoustic_windowpilot_evidence.cjs"
+      - "tests/physical_authorizer.cjs"
+      - "tests/spatialruntime_window_authorizer.cjs"
       - "tests/live_acoustic_windowpilot_workflow.cjs"
       - ".github/workflows/physical-runtime-ci.yml"
       - ".github/workflows/live-acoustic-windowpilot-acceptance.yml"
@@ -34,6 +40,17 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Checkout SpatialRuntime consumer dependency
+        uses: actions/checkout@v4
+        with:
+          repository: hippoley/SpatialRuntime
+          ref: main
+          path: _spatialruntime
+      - name: Install SpatialRuntime
+        run: python -m pip install -e "_spatialruntime"
       - name: Check physical runtime JavaScript syntax
         run: |
           node --check scripts/commit_gate.cjs
@@ -43,6 +60,8 @@ jobs:
           node --check scripts/stateful_checkpoint_trajectory.cjs
           node --check scripts/probe_windowpilot_checkpoint_e2e.cjs
           node --check scripts/run_acoustic_windowpilot_e2e.cjs
+          node --check scripts/spatialruntime_authorizer.cjs
+          python -m py_compile scripts/spatialruntime_window_authorizer.py
           node --check scripts/acoustic_windowpilot_evidence.cjs
           node --check scripts/verify_acoustic_windowpilot_evidence.cjs
           node --check scripts/run_stateful_checkpoint_v1.cjs
@@ -61,5 +80,9 @@ jobs:
         run: node tests/acoustic_windowpilot_live_probe.cjs
       - name: Verify acoustic WindowPilot evidence receipt
         run: node tests/acoustic_windowpilot_evidence.cjs
+      - name: Verify physical authorizer ordering and fail-closed behavior
+        run: node tests/physical_authorizer.cjs
+      - name: Verify HomeAI consumes SpatialRuntime before WindowPilot dispatch
+        run: node tests/spatialruntime_window_authorizer.cjs
       - name: Verify live acoustic hardware workflow stays manual and fail-closed
         run: node tests/live_acoustic_windowpilot_workflow.cjs

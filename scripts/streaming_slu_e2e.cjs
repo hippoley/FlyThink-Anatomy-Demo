@@ -60,14 +60,16 @@ function receiptFailure(receipts){
 }
 
 class StreamingHomeSession{
-  constructor({initialRuntime={},predictor,driver=null}={}){
+  constructor({initialRuntime={},predictor,driver=null,physicalAuthorizer=null}={}){
     if(typeof predictor!=="function")throw new Error("streaming_predictor_required");
     this.runtime=normalizeRuntime(initialRuntime);
     this.predictor=predictor;
     this.driver=driver||new MockThingDriver(this.runtime);
+    this.physicalAuthorizer=physicalAuthorizer;
     this.history=[];
     this.trace=[];
     this.sequence=0;
+    this.physicalRevision=0;
   }
 
   commandCount(){
@@ -105,6 +107,8 @@ class StreamingHomeSession{
     let receipts=[];
     let committed=false;
     let error=null;
+    let physicalAuthorization=null;
+    let authorizedPatches=clone(patches);
     if(gate.allow){
       const preflight=evaluateQuarantinePreflight(this.runtime,patches);
       if(!preflight.allow){
@@ -112,18 +116,39 @@ class StreamingHomeSession{
         error="semantic_preflight_blocked:device_quarantined:"+keys;
       }else{
         try{
+          if(this.physicalAuthorizer){
+            const authorization=await this.physicalAuthorizer({
+              runtime:clone(this.runtime),
+              patches:clone(patches),
+              event:clone(event),
+              context:clone(context),
+              prediction:clone(prediction),
+              source_step:this.physicalRevision,
+              source_revision:this.physicalRevision
+            });
+            if(!authorization||authorization.allow!==true){
+              throw new Error("physical_authorizer_did_not_allow");
+            }
+            if(!Array.isArray(authorization.patches)||authorization.patches.length!==patches.length){
+              throw new Error("physical_authorizer_invalid_patches");
+            }
+            authorizedPatches=clone(authorization.patches);
+            physicalAuthorization=clone(authorization.receipt||authorization);
+          }
           const applied=await executePhysicalTurn(
             this.runtime,
-            patches,
+            authorizedPatches,
             this.driver,
             {turn_id:event.turn_id||("stream:"+String(this.sequence+1))}
           );
           this.runtime=applied.runtime;
           receipts=applied.receipts||[];
           committed=receiptsApplied(receipts);
+          if(committed)this.physicalRevision++;
           if(!committed)error=receiptFailure(receipts)||"physical_commit_has_no_applied_receipt";
         }catch(e){
           error=String(e&&e.message||e);
+          if(!physicalAuthorization&&e&&e.receipt)physicalAuthorization=clone(e.receipt);
         }
       }
     }
@@ -152,6 +177,7 @@ class StreamingHomeSession{
 
     const row={
       sequence:++this.sequence,
+      physical_revision:this.physicalRevision,
       turn_id:event.turn_id||null,
       asr:{
         kind,
@@ -167,6 +193,8 @@ class StreamingHomeSession{
         targets:targetsOf(patches)
       },
       patch_proposal:clone(patches),
+      physical_authorization:clone(physicalAuthorization),
+      authorized_patch_proposal:clone(authorizedPatches),
       commit_gate:clone(gate),
       thing_model:thingModel,
       feedback,
@@ -188,7 +216,9 @@ class StreamingHomeSession{
         outcome:error?"INVALID":(prediction&&prediction.decision||null),
         predicted:prediction&&prediction.decision||null,
         committed,
-        applied_patches:committed?clone(patches):[],
+        semantic_patches:clone(patches),
+        applied_patches:committed?clone(authorizedPatches):[],
+        physical_authorization:clone(physicalAuthorization),
         physical_receipts:clone(receipts),
         commit_gate:clone(gate),
         error,

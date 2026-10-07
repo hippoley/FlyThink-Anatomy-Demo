@@ -7,6 +7,7 @@ const {StreamingHomeSession}=require("./streaming_slu_e2e.cjs");
 const {WindowPilotHttpDriver}=require("./windowpilot_http_driver.cjs");
 const {normalizeRuntime}=require("./whole_home_patch_contract.cjs");
 const {reconcileObservation}=require("./physical_runtime.cjs");
+const {createSpatialRuntimeAuthorizer}=require("./spatialruntime_authorizer.cjs");
 const {
   AsrEventSequenceGuard,
   toStreamingSessionEvent
@@ -144,6 +145,7 @@ async function main(){
   const receiptPath=arg("--receipt");
   const fixtureJson=arg("--acoustic-fixture-json");
   const acousticFixture=fixtureJson?JSON.parse(fixtureJson):null;
+  const useSpatialRuntime=flag("--spatialruntime-authorize");
 
   if(!url)throw new Error("--url is required");
   if(apply&&!receiptPath)throw new Error("--apply requires --receipt");
@@ -178,10 +180,19 @@ async function main(){
     const prediction=await client.predict(request);
     return assertLiveSemanticProposal(prediction,apply);
   };
+  const spatialRuntimeAuthorizer=useSpatialRuntime
+    ?createSpatialRuntimeAuthorizer({
+      exteriorWindowKeys:[[
+        target.area,target.entity,target.instance||"default"
+      ].join("::")],
+      timeoutMs
+    })
+    :null;
   const session=new StreamingHomeSession({
     initialRuntime,
     predictor:guardedPredictor,
-    driver
+    driver,
+    physicalAuthorizer:spatialRuntimeAuthorizer
   });
   const guard=new AsrEventSequenceGuard();
   const input=readline.createInterface({input:process.stdin,crlfDelay:Infinity});
@@ -275,7 +286,8 @@ async function main(){
     evidenceValidation=validateReceipt(evidenceReceipt,{
       requireHumanFixture:!!(
         acousticFixture&&acousticFixture.require_human_acceptance===true
-      )
+      ),
+      requireSpatialRuntimeAuthorization:useSpatialRuntime
     });
     fs.writeFileSync(receiptPath,JSON.stringify(evidenceReceipt,null,2)+"\n");
   }
@@ -283,6 +295,7 @@ async function main(){
   const out={
     truth:"acoustic_windowpilot_live_probe_v1",
     mode:apply?"APPLY":"DRY_RUN",
+    spatialruntime_authorization:useSpatialRuntime,
     target,
     probe_open_pct:probeOpenPct,
     tolerance_pct:tolerancePct,

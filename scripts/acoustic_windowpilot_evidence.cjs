@@ -106,6 +106,8 @@ function buildReceipt({
         text:x.asr.text,
         targets:clone(x.target_resolution&&x.target_resolution.targets||[]),
         patches:clone(x.patch_proposal||[]),
+        authorized_patches:clone(x.authorized_patch_proposal||x.patch_proposal||[]),
+        physical_authorization:clone(x.physical_authorization||null),
         thing_model:clone(x.thing_model||[]),
         feedback:clone(x.feedback||[]),
         reconcile:clone(x.reconcile||null)
@@ -121,7 +123,7 @@ function buildReceipt({
   return finalizeReceipt(payload);
 }
 
-function validateReceipt(receipt,{requireHumanFixture=false}={}){
+function validateReceipt(receipt,{requireHumanFixture=false,requireSpatialRuntimeAuthorization=false}={}){
   const reasons=[];
   if(!receipt||receipt.schema!==SCHEMA)reasons.push("evidence schema mismatch");
   if(receipt&&receipt.mode!=="APPLY")reasons.push("live evidence must be APPLY mode");
@@ -219,6 +221,32 @@ function validateReceipt(receipt,{requireHumanFixture=false}={}){
     )){
       reasons.push("device feedback is not measured");
     }
+
+    if(requireSpatialRuntimeAuthorization){
+      const auth=committed.physical_authorization;
+      if(!auth){
+        reasons.push("SpatialRuntime authorization evidence missing");
+      }else{
+        if(auth.schema!=="homeai_spatialruntime_authorization_receipt_v1"){
+          reasons.push("SpatialRuntime authorization schema mismatch");
+        }
+        if(auth.allow!==true){
+          reasons.push("SpatialRuntime authorization did not allow");
+        }
+        if(!/^[0-9a-f]{64}$/.test(String(auth.trace_hash||""))){
+          reasons.push("SpatialRuntime trace hash missing");
+        }
+        const saved=auth.receipt_sha256;
+        const authBase=clone(auth);delete authBase.receipt_sha256;
+        if(!saved||saved!==sha256Object(authBase)){
+          reasons.push("SpatialRuntime authorization receipt SHA256 mismatch");
+        }
+        const authorized=committed.authorized_patches||[];
+        if(!Array.isArray(authorized)||authorized.length!==1){
+          reasons.push("expected exactly one SpatialRuntime-authorized patch");
+        }
+      }
+    }
   }
 
   const physical=receipt&&receipt.physical||{};
@@ -268,6 +296,13 @@ function validateReceipt(receipt,{requireHumanFixture=false}={}){
     const requested=Number(semanticCommand.requested_position_pct);
     if(!Number.isFinite(requested)||requested<=0||requested>5){
       reasons.push("semantic command position outside bounded probe");
+    }
+    if(requireSpatialRuntimeAuthorization&&committed){
+      const authorized=committed.authorized_patches||[];
+      const authorizedPct=Number(authorized[0]&&authorized[0].value);
+      if(!Number.isFinite(authorizedPct)||authorizedPct!==requested){
+        reasons.push("physical command does not match SpatialRuntime-authorized patch");
+      }
     }
     const measured=Number(semanticCommand.observation&&semanticCommand.observation.evidence&&
       semanticCommand.observation.evidence.position_pct);
