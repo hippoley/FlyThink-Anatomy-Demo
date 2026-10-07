@@ -92,6 +92,18 @@ function receipt(overrides={}){
 }
 
 {
+  const req={...request(),spatialruntime_pin:"1".repeat(40)};
+  const good=receipt({spatialruntime_pin:"1".repeat(40)});
+  const out=validateAuthorizationReceipt(good,req,req.patches);
+  assert.equal(out.allow,true);
+  const bad=receipt({spatialruntime_pin:"2".repeat(40)});
+  assert.throws(
+    ()=>validateAuthorizationReceipt(bad,req,req.patches),
+    /pin_mismatch/
+  );
+}
+
+{
   const bad=receipt({source_revision:9});
   const base={...bad};delete base.receipt_sha256;
   bad.receipt_sha256=sha256Object(base);
