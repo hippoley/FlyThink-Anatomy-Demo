@@ -14,14 +14,24 @@ const patches=[
 ];
 
 (async()=>{
- // Sequential-only drivers are not allowed to masquerade as atomic physical SET.
  let calls=0;
  let out=await executeAtomicPhysicalSet(initial,patches,{execute(){calls++;}});
  assert(!out.ok);assert.equal(out.reason,"physical_capability_not_declared:atomic_multi_target_set");
  assert.equal(calls,0);assert.deepStrictEqual(out.runtime,initial);assert.equal(out.receipts.length,0);
 
- // Batch rejection returns no committed runtime/receipts.
- const rejecting={executeAtomicBatch(){return [
+ const spoofed={executeAtomicBatch(){throw new Error("must_not_run");}};
+ out=await executeAtomicPhysicalSet(initial,patches,spoofed);
+ assert(!out.ok);assert.equal(out.reason,"physical_capability_not_declared:atomic_multi_target_set");
+
+ const noReadback={capabilities(){return ["atomic_multi_target_set"];},executeAtomicBatch(){throw new Error("must_not_run");}};
+ out=await executeAtomicPhysicalSet(initial,patches,noReadback);
+ assert(!out.ok);assert.equal(out.reason,"physical_capability_not_declared:readback");
+
+ const lying={capabilities(){return ["atomic_multi_target_set","readback"];}};
+ out=await executeAtomicPhysicalSet(initial,patches,lying);
+ assert(!out.ok);assert.equal(out.reason,"physical_atomic_batch_missing_implementation");
+
+ const rejecting={capabilities(){return ["atomic_multi_target_set","readback"];},executeAtomicBatch(){return [
    {id:"b:1",status:"applied",observation:{target:L,exists:true,slots:{power:"ON",temperature:22}}},
    {id:"b:2",status:"rejected",observation:{target:B,exists:true,slots:{power:"ON",temperature:25}}}
  ];}};
@@ -29,7 +39,6 @@ const patches=[
  assert(!out.ok);assert.equal(out.reason,"physical_atomic_batch_not_committed");
  assert.deepStrictEqual(out.runtime,initial);assert.equal(out.receipts.length,0);
 
- // A driver that can guarantee batch commit yields reconciled readback for all targets.
  const atomic={capabilities(){return ["atomic_multi_target_set","readback"];},executeAtomicBatch(){return [
    {id:"a:1",status:"applied",observation:{target:L,exists:true,slots:{power:"ON",temperature:22}}},
    {id:"a:2",status:"applied",observation:{target:B,exists:true,slots:{power:"ON",temperature:22}}}
@@ -40,5 +49,11 @@ const patches=[
  assert.equal(out.runtime.devices["客厅::空调::default"].slots.temperature,22);
  assert.equal(out.runtime.devices["主卧::空调::default"].slots.temperature,22);
  assert.equal(out.runtime.executionLedger.length,2);
- console.log(JSON.stringify({physical_atomic_set_boundary:"PASS",sequential_fallback:0,partial_runtime_commit:0}));
+ console.log(JSON.stringify({
+   physical_atomic_set_boundary:"PASS",
+   sequential_fallback:0,
+   undeclared_atomic_execution:0,
+   unverified_readback_commit:0,
+   partial_runtime_commit:0
+ }));
 })().catch(e=>{console.error(e);process.exit(1);});
