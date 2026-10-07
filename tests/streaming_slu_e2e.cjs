@@ -44,6 +44,7 @@ async function correctionMustNotExecuteStablePrefix(){
   assert.equal(out.trace[1].commit_gate.deferred,true);
   assert.equal(out.trace[1].physical_command_count_after,0);
   assert.equal(out.trace[2].commit_gate.allow,true);
+  assert.equal(out.trace[2].committed,true);
   assert.equal(out.physical_commands,1);
   assert.equal(out.runtime.devices[key("客厅")].slots.temperature,22);
   assert.equal(out.runtime.devices[key("主卧")].slots.temperature,24);
@@ -68,10 +69,33 @@ async function feedbackMustOwnReconciledTruth(){
   ],{initialRuntime:initial,predictor,driver});
 
   assert.equal(out.physical_commands,1);
+  assert.equal(out.trace[0].committed,true);
   assert.equal(out.trace[0].patch_proposal[0].value,24);
   assert.equal(out.trace[0].feedback[0].slots.temperature,25);
   assert.equal(out.runtime.devices[key("主卧")].slots.temperature,25);
   assert.ok(out.trace[0].reconcile.changed_device_paths.some(x=>x.includes("temperature")));
+}
+
+async function rejectedPhysicalReceiptMustNotBecomeCommit(){
+  const initial=runtime();
+  const driver=new MockThingDriver(initial,{
+    reject:()=>true
+  });
+  const predictor=async()=>({
+    decision:"EXECUTE",confidence:0.99,patches:[patch("主卧",24)]
+  });
+  const out=await runStreamingSequence([
+    {turn_id:"t4",kind:"final",text:"主卧空调调到24度"}
+  ],{initialRuntime:initial,predictor,driver});
+
+  assert.equal(out.trace[0].commit_gate.allow,true);
+  assert.equal(out.trace[0].thing_model[0].status,"rejected");
+  assert.equal(out.trace[0].committed,false);
+  assert.equal(out.trace[0].error,"physical_receipt_not_applied:rejected");
+  assert.equal(out.history[0].outcome,"INVALID");
+  assert.equal(out.history[0].committed,false);
+  assert.deepEqual(out.history[0].applied_patches,[]);
+  assert.equal(out.runtime.devices[key("主卧")].slots.temperature,27);
 }
 
 async function finalClarifyMustNotExecute(){
@@ -90,9 +114,10 @@ async function finalClarifyMustNotExecute(){
 (async()=>{
   await correctionMustNotExecuteStablePrefix();
   await feedbackMustOwnReconciledTruth();
+  await rejectedPhysicalReceiptMustNotBecomeCommit();
   await finalClarifyMustNotExecute();
   console.log(JSON.stringify({
     ok:true,
-    contract:"streaming ASR -> semantic -> target -> patch -> commit -> thing model -> feedback -> reconcile"
+    contract:"streaming ASR -> semantic -> target -> patch -> commit -> thing model -> feedback -> reconcile; non-applied physical receipts never count as commit"
   }));
 })().catch(e=>{console.error(e);process.exit(1)});
