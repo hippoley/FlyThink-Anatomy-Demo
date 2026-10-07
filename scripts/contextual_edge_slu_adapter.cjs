@@ -7,15 +7,41 @@
  * FlyThink may expose its internal execution/world state through this adapter,
  * but callers must not depend on FlyThink's private runtime shape directly.
  */
+const crypto=require("crypto");
 const {deriveContext}=require("./runtime_context_adapter.cjs");
 const {deviceKey}=require("./whole_home_patch_contract.cjs");
 
 const CONTRACT_VERSION="contextual-state.v1";
+const CONTEXT_CANONICALIZATION="sorted-json-number-normalized-v1";
 const SAFE_RECOVERY_ACTIONS=[
   "READ","STOP","CLOSE","POWER_OFF","REDUCE_OPENING","RECOVERY"
 ];
 
 function clone(x){return x==null?x:JSON.parse(JSON.stringify(x));}
+function canonicalContextValue(value){
+  if(Array.isArray(value))return value.map(canonicalContextValue);
+  if(value&&typeof value==="object"){
+    const out={};
+    for(const key of Object.keys(value).sort()){
+      out[key]=canonicalContextValue(value[key]);
+    }
+    return out;
+  }
+  if(typeof value==="number"&&!Number.isFinite(value)){
+    throw new Error("context_state_non_finite_number");
+  }
+  return value;
+}
+function contextStateDigest(snapshot){
+  if(!snapshot||typeof snapshot!=="object"||Array.isArray(snapshot)){
+    throw new Error("context_state_not_object");
+  }
+  const body=clone(snapshot);
+  delete body.context_sha256;
+  return crypto.createHash("sha256")
+    .update(JSON.stringify(canonicalContextValue(body)))
+    .digest("hex");
+}
 
 function logicalTarget(target){
   if(!target||!target.area||!target.entity) return null;
@@ -99,9 +125,21 @@ function contextStateIdentity(snapshot){
   ){
     throw new Error("context_state_revision_required");
   }
+  if(snapshot.context_canonicalization!==CONTEXT_CANONICALIZATION){
+    throw new Error("context_state_canonicalization_required");
+  }
+  if(!/^[0-9a-f]{64}$/.test(String(snapshot.context_sha256||""))){
+    throw new Error("context_state_sha256_required");
+  }
+  const expected=contextStateDigest(snapshot);
+  if(expected!==snapshot.context_sha256){
+    throw new Error("context_state_sha256_mismatch");
+  }
   return {
     contract_version:snapshot.contract_version,
-    context_revision:snapshot.context_revision
+    context_revision:snapshot.context_revision,
+    context_canonicalization:snapshot.context_canonicalization,
+    context_sha256:snapshot.context_sha256
   };
 }
 
@@ -127,10 +165,12 @@ function assertContextStateSnapshot(snapshot){
 
 module.exports={
   CONTRACT_VERSION,
+  CONTEXT_CANONICALIZATION,
   SAFE_RECOVERY_ACTIONS,
   logicalTarget,
   deriveSemanticContext,
   toContextStateSnapshot,
+  contextStateDigest,
   contextStateIdentity,
   assertContextStateSnapshot,
   deviceKey
