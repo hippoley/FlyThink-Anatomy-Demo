@@ -45,7 +45,12 @@ on:
       - "scripts/pi_home_generalization_claim.cjs"
       - "scripts/pi_home_evidence_adjudicator.cjs"
       - "tests/pi_home_provider_trust.cjs"
+      - "tests/pi_home_provider_calibration.cjs"
+      - "tests/pi_home_provider_calibration_cli.cjs"
+      - "benchmarks/pi_home_provider_calibration_screening_fixture.json"
       - "scripts/pi_home_provider_trust.cjs"
+      - "scripts/pi_home_provider_calibration.cjs"
+      - "scripts/run_pi_home_provider_calibration.cjs"
       - "scripts/pi_home_learned_physics_gate.cjs"
       - "scripts/pi_home_learned_candidate_physics.cjs"
       - "tests/pi_home_multiphysics_screening.cjs"
@@ -273,9 +278,29 @@ jobs:
           node tests/pi_home_generalization_counterfactual.cjs
           node tests/pi_home_generalization_claim.cjs
           node tests/pi_home_provider_trust.cjs
+          node tests/pi_home_provider_calibration.cjs
+          node tests/pi_home_provider_calibration_cli.cjs
           node tests/pi_home_evidence_adjudicator.cjs
           node tests/pi_home_multiphysics_evidence.cjs
           node tests/pi_home_multiphysics_screening.cjs
+          node scripts/run_pi_home_provider_calibration.cjs --dataset benchmarks/pi_home_provider_calibration_screening_fixture.json --out pi-home-provider-calibration-report.json > pi-home-provider-calibration-summary.json
+          cat pi-home-provider-calibration-summary.json
+          node - <<'NODE'
+          const fs=require("fs");
+          const x=JSON.parse(fs.readFileSync("pi-home-provider-calibration-report.json","utf8"));
+          if(x.eligible_for_registry!==false)throw new Error("synthetic calibration unexpectedly eligible");
+          if(!x.failures.includes("measured_non_fixture_source_required")){
+            throw new Error("synthetic calibration source gate missing");
+          }
+          if(x.metrics.top1_accuracy!==1||x.metrics.pairwise_accuracy!==1){
+            throw new Error("synthetic calibration fixture should be intentionally perfect");
+          }
+          console.log({
+            provider_calibration_fixture:"PASS",
+            eligible_for_registry:x.eligible_for_registry,
+            report_digest:x.report_digest
+          });
+          NODE
           node tests/pi_home_learned_physics_gate.cjs
           node tests/pi_home_learned_candidate_physics.cjs
           node tests/pi_home_generalization_eval.cjs
@@ -377,6 +402,8 @@ jobs:
             pi-home-policy-replay.json
             pi-home-generalization.json
             pi-home-candidate-generalization.json
+            pi-home-provider-calibration-report.json
+            pi-home-provider-calibration-summary.json
 
   p47-learned-artifact:
     runs-on: ubuntu-latest
