@@ -462,10 +462,18 @@ jobs:
           screening=json.load(open("pi-home-multiphysics-screening.json",encoding="utf-8"))
           assert screening["schema_version"]=="pi-home-multiphysics-screening-run-v1"
           assert screening["trusted_generalization_cases"]==0
+          assert screening["device_execution_authorized"] is False
           screening_by_id={row["case_id"]:row for row in screening["rows"]}
-          assert screening_by_id["compose-quiet-new-room"]["fusion"]["decision"]=="NOT_ADJUDICABLE"
-          assert screening_by_id["topology-rain-new-apt"]["fusion"]["decision"].startswith("SCREENING_")
-          assert screening_by_id["topology-rain-new-apt"]["fusion"]["trusted_for_generalization_claim"] is False
+          quiet_screening=screening_by_id["compose-quiet-new-room"]
+          rain_screening=screening_by_id["topology-rain-new-apt"]
+          assert quiet_screening["fusion"]["decision"]=="NOT_ADJUDICABLE"
+          assert rain_screening["fusion"]["decision"].startswith("SCREENING_")
+          assert rain_screening["fusion"]["trusted_for_generalization_claim"] is False
+          assert any(p["id"]=="rain-ingress-screening-v1" for p in rain_screening["providers"])
+          assert any(p["id"].startswith("contam-real-") for p in rain_screening["providers"])
+          co2_providers=rain_screening["fusion"]["by_dimension"]["co2"]["providers"]
+          assert co2_providers
+          assert all(p["trusted_for_promotion"] is False for p in co2_providers)
           assert payload["contaminant_simulation_mode"]=="transient"
           assert payload["simulation_time_step_s"]==60
 
@@ -510,3 +518,4 @@ jobs:
             pi-home-real-contam-evidence.json
             pi-home-real-contam.log
             pi-home-multiphysics-screening.json
+
