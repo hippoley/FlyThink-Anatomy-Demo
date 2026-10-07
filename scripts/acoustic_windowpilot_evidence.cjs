@@ -131,9 +131,18 @@ function validateReceipt(receipt,{requireHumanFixture=false}={}){
 
   const fixture=receipt&&receipt.acoustic_fixture;
   if(requireHumanFixture){
-    if(!fixture)reasons.push("human acoustic fixture evidence missing");
-    else if(fixture.source_kind!=="human_recording"){
-      reasons.push("acoustic fixture is not a human recording");
+    if(!fixture){
+      reasons.push("human acoustic fixture evidence missing");
+    }else{
+      if(fixture.source_kind!=="human_recording"){
+        reasons.push("acoustic fixture is not a human recording");
+      }
+      if(!/^[0-9a-f]{64}$/.test(String(fixture.wav_sha256||""))){
+        reasons.push("human acoustic fixture WAV SHA256 missing");
+      }
+      if(!/^[0-9a-f]{64}$/.test(String(fixture.manifest_sha256||""))){
+        reasons.push("human acoustic fixture manifest SHA256 missing");
+      }
     }
   }
 
