@@ -178,28 +178,46 @@ function evaluateProviderCalibration(dataset={},{
   };
 }
 
+function verifyCalibrationReport(report={}){
+  if(report.schema_version!=="pi-home-provider-calibration-report-v1"){
+    throw new Error("provider_calibration_report_required");
+  }
+  const declared=String(report.report_digest||"");
+  if(!/^sha256:[0-9a-f]{64}$/.test(declared)){
+    throw new Error("provider_calibration_report_digest_invalid");
+  }
+  const core=clone(report);
+  delete core.report_digest;
+  const expected=canonicalDigest(core);
+  if(expected!==declared){
+    throw new Error("provider_calibration_report_digest_mismatch");
+  }
+  return {
+    valid:true,
+    report_digest:declared,
+    dataset_fingerprint:report.dataset_fingerprint||null
+  };
+}
+
 function buildTrustRegistryEntryFromCalibration(report={},{
   calibration_ref,
   approved_by,
   evidence_levels=["engineering-validated"]
 }={}){
-  if(report.schema_version!=="pi-home-provider-calibration-report-v1"){
-    throw new Error("provider_calibration_report_required");
-  }
+  verifyCalibrationReport(report);
   if(report.eligible_for_registry!==true){
     throw new Error("provider_calibration_not_eligible");
   }
   const ref=requireText(calibration_ref,"calibration_ref");
   const approver=requireText(approved_by,"provider_trust_approved_by");
-  if(!/^sha256:[0-9a-f]{64}$/.test(String(report.report_digest||""))){
-    throw new Error("provider_calibration_report_digest_invalid");
-  }
+  const levels=(evidence_levels||[]).map(String).filter(Boolean);
+  if(!levels.length)throw new Error("provider_trust_evidence_levels_required");
   return {
     provider_id:requireText(report.provider_id,"provider_id"),
     status:"active",
     scope_id:requireText(report.scope_id,"provider_trust_scope_id"),
     allowed_dimensions:[requireText(report.dimension,"provider_dimension")],
-    allowed_evidence_levels:(evidence_levels||[]).map(String),
+    allowed_evidence_levels:levels,
     calibration_ref:ref,
     calibration_digest:report.report_digest,
     approved_by:approver,
@@ -214,9 +232,7 @@ function buildTrustRegistryEntryFromCalibration(report={},{
 function buildTrustAttestationFromCalibration(report={},{
   calibration_ref
 }={}){
-  if(report.schema_version!=="pi-home-provider-calibration-report-v1"){
-    throw new Error("provider_calibration_report_required");
-  }
+  verifyCalibrationReport(report);
   if(report.eligible_for_registry!==true){
     throw new Error("provider_calibration_not_eligible");
   }
@@ -232,6 +248,7 @@ module.exports={
   canonicalDigest,
   normalizeCalibrationDataset,
   evaluateProviderCalibration,
+  verifyCalibrationReport,
   buildTrustRegistryEntryFromCalibration,
   buildTrustAttestationFromCalibration
 };
