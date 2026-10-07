@@ -25,7 +25,7 @@ runtime=applyTurn(runtime,[
 
  let batchCalls=0;
  const atomic={
-  capabilities:[PHYSICAL_CAPABILITIES.ATOMIC_MULTI_TARGET_SET,PHYSICAL_CAPABILITIES.READBACK],
+  capabilities(){return [PHYSICAL_CAPABILITIES.ATOMIC_MULTI_TARGET_SET,PHYSICAL_CAPABILITIES.READBACK];},
   executeAtomicBatch(patches){
    batchCalls++;
    assert.equal(patches.length,2);
