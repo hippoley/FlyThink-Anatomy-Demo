@@ -258,6 +258,9 @@ function buildExecutionReceipt({
       evidence,
       evidence_sha256:digestObject(evidence)
     },
+    authorization_granted:!!authorization,
+    physical_committed:physical_committed===true,
+    atomic_batch:atomic_batch===true,
     runtime_status:String(status||"UNKNOWN"),
     result:resultFromStatus(
       status,
