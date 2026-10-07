@@ -46,11 +46,13 @@ on:
       - "scripts/pi_home_evidence_adjudicator.cjs"
       - "tests/pi_home_provider_trust.cjs"
       - "tests/pi_home_provider_trust_lineage.cjs"
+      - "tests/pi_home_evidence_decision_receipt.cjs"
       - "tests/pi_home_provider_calibration.cjs"
       - "tests/pi_home_provider_calibration_cli.cjs"
       - "benchmarks/pi_home_provider_calibration_screening_fixture.json"
       - "scripts/pi_home_provider_trust.cjs"
       - "scripts/pi_home_provider_trust_lineage.cjs"
+      - "scripts/pi_home_evidence_decision_receipt.cjs"
       - "scripts/pi_home_provider_calibration.cjs"
       - "scripts/run_pi_home_provider_calibration.cjs"
       - "scripts/pi_home_learned_physics_gate.cjs"
@@ -281,6 +283,7 @@ jobs:
           node tests/pi_home_generalization_claim.cjs
           node tests/pi_home_provider_trust.cjs
           node tests/pi_home_provider_trust_lineage.cjs
+          node tests/pi_home_evidence_decision_receipt.cjs
           node tests/pi_home_provider_calibration.cjs
           node tests/pi_home_provider_calibration_cli.cjs
           node tests/pi_home_evidence_adjudicator.cjs
