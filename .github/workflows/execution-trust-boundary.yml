@@ -14,6 +14,7 @@ on:
       - "scripts/physical_transaction_router.cjs"
       - "scripts/physical_runtime.cjs"
       - "scripts/flythink_execution_runtime.cjs"
+      - "scripts/execution_receipt.cjs"
       - "scripts/execution_reasoning_contract.cjs"
       - "scripts/whole_home_patch_contract.cjs"
       - "scripts/test_execution_trust_boundary.py"
@@ -22,6 +23,7 @@ on:
       - "scripts/test_physical_transaction_router.cjs"
       - "scripts/test_production_physical_turn_atomicity.cjs"
       - "tests/flythink_execution_runtime.cjs"
+      - "tests/execution_receipt.cjs"
       - ".github/workflows/execution-trust-boundary.yml"
       - "benchmarks/execution_reasoning_contract_cases.json"
       - "tests/execution_reasoning_contract.cjs"
@@ -37,6 +39,7 @@ on:
       - "scripts/physical_transaction_router.cjs"
       - "scripts/physical_runtime.cjs"
       - "scripts/flythink_execution_runtime.cjs"
+      - "scripts/execution_receipt.cjs"
       - "scripts/execution_reasoning_contract.cjs"
       - "scripts/whole_home_patch_contract.cjs"
       - "scripts/test_execution_trust_boundary.py"
@@ -45,6 +48,7 @@ on:
       - "scripts/test_physical_transaction_router.cjs"
       - "scripts/test_production_physical_turn_atomicity.cjs"
       - "tests/flythink_execution_runtime.cjs"
+      - "tests/execution_receipt.cjs"
       - ".github/workflows/execution-trust-boundary.yml"
       - "benchmarks/execution_reasoning_contract_cases.json"
       - "tests/execution_reasoning_contract.cjs"
@@ -73,7 +77,9 @@ jobs:
           node --check scripts/physical_runtime.cjs
           node --check scripts/execution_reasoning_contract.cjs
           node --check scripts/flythink_execution_runtime.cjs
+          node --check scripts/execution_receipt.cjs
           node --check tests/flythink_execution_runtime.cjs
+          node --check tests/execution_receipt.cjs
           node --check tests/execution_reasoning_contract.cjs
           node --check scripts/test_atomic_physical_set.cjs
           node --check scripts/test_authorization_ledger.cjs
@@ -107,3 +113,5 @@ jobs:
         run: node tests/execution_reasoning_contract.cjs
       - name: Prove reasoning authorization execution runtime boundary
         run: node tests/flythink_execution_runtime.cjs
+      - name: Prove execution receipt physical truth integrity
+        run: node tests/execution_receipt.cjs
