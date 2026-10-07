@@ -117,6 +117,15 @@ function runtimes(){
   after.revisions.push({op:"PATCH_SLOT",turn_id:"task-1"});
   return {before,after};
 }
+function verifyWithRuntime(receipt,extra={}){
+  const {before,after}=runtimes();
+  return verifyExecutionReceipt(receipt,{
+    before_runtime:before,
+    after_runtime:after,
+    ...extra
+  });
+}
+
 function buildVerified(){
   const {before,after}=runtimes();
   return buildExecutionReceipt({
@@ -168,7 +177,7 @@ function buildVerified(){
     forged.authorization.authorized_actions[0].value=9;
     forged=reseal(forged);
     assert.throws(
-      ()=>verifyExecutionReceipt(forged),
+      ()=>verifyWithRuntime(forged),
       /execution_receipt_authorized_actions_digest_mismatch/
     );
   }
@@ -179,7 +188,7 @@ function buildVerified(){
     forged.physical.evidence[0].observation.evidence.tick=9;
     forged=refreshEvidenceDigest(forged);
     assert.throws(
-      ()=>verifyExecutionReceipt(forged),
+      ()=>verifyWithRuntime(forged),
       /execution_receipt_physical_checks_mismatch/
     );
   }
@@ -190,7 +199,7 @@ function buildVerified(){
     forged.physical.evidence[0].ack.ok=false;
     forged=refreshEvidenceDigest(forged);
     assert.throws(
-      ()=>verifyExecutionReceipt(forged),
+      ()=>verifyWithRuntime(forged),
       /execution_receipt_physical_checks_mismatch/
     );
   }
@@ -201,7 +210,7 @@ function buildVerified(){
     forged.physical.evidence[0].hardware_identity.after="hw-swapped";
     forged=refreshEvidenceDigest(forged);
     assert.throws(
-      ()=>verifyExecutionReceipt(forged),
+      ()=>verifyWithRuntime(forged),
       /execution_receipt_physical_checks_mismatch/
     );
   }
@@ -327,7 +336,7 @@ function buildVerified(){
     });
     forged=reseal(forged);
     assert.throws(
-      ()=>verifyExecutionReceipt(forged),
+      ()=>verifyWithRuntime(forged),
       /execution_receipt_verification_summary_mismatch/
     );
   }
@@ -376,7 +385,7 @@ function buildVerified(){
     const forgedRequest=clone(request);
     forgedRequest.task_id="task-forged";
     assert.throws(
-      ()=>verifyExecutionReceipt(receipt,{request:forgedRequest}),
+      ()=>verifyWithRuntime(receipt,{request:forgedRequest}),
       /execution_receipt_request_mismatch/
     );
   }
