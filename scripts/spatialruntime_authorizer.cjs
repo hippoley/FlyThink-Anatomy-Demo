@@ -198,6 +198,13 @@ function createSpatialRuntimeAuthorizer(options={}){
           }
         )
         :null));
+  if(
+    sceneContext&&sceneContext.spatialruntime_commit_sha!=null&&
+    spatialRuntimeCommitSha!=null&&
+    sceneContext.spatialruntime_commit_sha!==spatialRuntimeCommitSha
+  ){
+    throw new Error("spatialruntime_scene_runtime_commit_mismatch");
+  }
   return async function authorize({runtime,patches,event,context,source_step,source_revision}={}){
     const requestedPatches=clone(patches||[]);
     const hint=(event&&event.context_hint&&event.context_hint.spatialruntime)||{};
