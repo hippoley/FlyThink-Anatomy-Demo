@@ -186,7 +186,14 @@ function resolveProviderTrust(provider={},registry=null,{at=null}={}){
     };
   }
   const entry=entries[String(provider.id)];
-  if(!entry)return {...base,reason:"provider_not_registered"};
+  if(!entry){
+    return {
+      ...base,
+      reason:"provider_not_registered",
+      registry_digest:registryVerification.registry_digest,
+      registry_verification:registryVerification
+    };
+  }
   const lifecycleEvaluationTime=
     registry&&registry.schema_version==="pi-home-provider-trust-registry-v2"
       ?resolveEvaluationTime(at)
