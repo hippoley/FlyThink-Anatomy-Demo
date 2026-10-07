@@ -5,6 +5,7 @@ const fs=require("fs");
 
 const WORLD_SCHEMA="spatialruntime_world_snapshot_v1";
 const VALIDATION_SCHEMA="interior_scene_spatialruntime_consumer_v1";
+const HANDOFF_SCHEMA="interior_scene_downstream_handoff_v1";
 const CONTEXT_SCHEMA="homeai_spatialruntime_scene_context_v1";
 
 function clone(v){return v==null?v:JSON.parse(JSON.stringify(v))}
@@ -23,6 +24,7 @@ function sha256Object(v){
     .digest("hex");
 }
 function isSha256(v){return /^[0-9a-f]{64}$/.test(String(v||""))}
+function isGitCommit(v){return /^[0-9a-f]{40}$/.test(String(v||""))}
 function sameObject(a,b){
   return JSON.stringify(canonical(a))===JSON.stringify(canonical(b));
 }
@@ -39,6 +41,23 @@ function validateSceneContext(context){
   )){
     if(!isSha256(context[key])){
       throw new Error("spatialruntime_scene_context_sha_invalid:"+key);
+    }
+  }
+  if(context.handoff_evidence!=null){
+    const handoff=context.handoff_evidence;
+    if(!handoff||handoff.schema!==HANDOFF_SCHEMA){
+      throw new Error("spatialruntime_scene_context_handoff_schema_invalid");
+    }
+    if(!String(handoff.source_repo||"").trim()){
+      throw new Error("spatialruntime_scene_context_handoff_source_repo_missing");
+    }
+    if(!isGitCommit(handoff.source_commit_sha)){
+      throw new Error("spatialruntime_scene_context_handoff_commit_invalid");
+    }
+    for(const key of ["handoff_sha256","explicit_exterior_windows_sha256"]){
+      if(!isSha256(handoff[key])){
+        throw new Error("spatialruntime_scene_context_handoff_sha_invalid:"+key);
+      }
     }
   }
   if(!Array.isArray(context.exterior_windows)||!Array.isArray(context.exterior_window_keys)){
@@ -177,18 +196,112 @@ function validateSceneArtifacts(world,receipt,{windowEntityLabel="窗"}={}){
   return validateSceneContext({...body,context_sha256:sha256Object(body)});
 }
 
+function validateSceneHandoff(world,receipt,handoff,options={}){
+  const context=validateSceneArtifacts(world,receipt,options);
+  if(!handoff||handoff.schema!==HANDOFF_SCHEMA){
+    throw new Error("spatialruntime_scene_handoff_schema_invalid");
+  }
+  const handoffBase=clone(handoff);
+  const saved=handoffBase.handoff_sha256;
+  delete handoffBase.handoff_sha256;
+  if(!isSha256(saved)||saved!==sha256Object(handoffBase)){
+    throw new Error("spatialruntime_scene_handoff_sha256_mismatch");
+  }
+  if(!isGitCommit(handoff.source_commit_sha)){
+    throw new Error("spatialruntime_scene_handoff_commit_invalid");
+  }
+  if(options.expectedSourceRepo&&handoff.source_repo!==options.expectedSourceRepo){
+    throw new Error("spatialruntime_scene_handoff_source_repo_mismatch");
+  }
+  if(options.expectedSourceCommit&&handoff.source_commit_sha!==options.expectedSourceCommit){
+    throw new Error("spatialruntime_scene_handoff_source_commit_mismatch");
+  }
+  if(handoff.case_id!==context.case_id){
+    throw new Error("spatialruntime_scene_handoff_case_id_mismatch");
+  }
+  if(handoff.world_snapshot_sha256!==context.world_snapshot_sha256){
+    throw new Error("spatialruntime_scene_handoff_world_sha256_mismatch");
+  }
+  if(handoff.validation_receipt_sha256!==context.validation_receipt_sha256){
+    throw new Error("spatialruntime_scene_handoff_receipt_sha256_mismatch");
+  }
+  if(handoff.source_fingerprint!==context.source_fingerprint){
+    throw new Error("spatialruntime_scene_handoff_source_fingerprint_mismatch");
+  }
+  if(handoff.relation_graph_fingerprint!==context.relation_graph_fingerprint){
+    throw new Error("spatialruntime_scene_handoff_relation_graph_mismatch");
+  }
+  if(!sameObject(handoff.source_files_sha256,receipt.source_files_sha256)){
+    throw new Error("spatialruntime_scene_handoff_source_files_mismatch");
+  }
+  const contracts=Array.isArray(handoff.consumer_contracts)?handoff.consumer_contracts:[];
+  if(!contracts.includes(CONTEXT_SCHEMA)){
+    throw new Error("spatialruntime_scene_handoff_consumer_contract_missing");
+  }
+
+  const handoffRows=Array.isArray(handoff.explicit_exterior_windows)
+    ?handoff.explicit_exterior_windows:[];
+  if(handoffRows.length!==context.exterior_windows.length){
+    throw new Error("spatialruntime_scene_handoff_window_count_mismatch");
+  }
+  const byKey=new Map(context.exterior_windows.map(row=>[row.key,row]));
+  const seen=new Set();
+  for(const row of handoffRows){
+    if(!row||!row.target_key||!row.suggested_homeai_target){
+      throw new Error("spatialruntime_scene_handoff_window_mapping_invalid");
+    }
+    if(seen.has(row.target_key)){
+      throw new Error("spatialruntime_scene_handoff_window_ambiguous:"+row.target_key);
+    }
+    seen.add(row.target_key);
+    const expected=byKey.get(row.target_key);
+    if(!expected){
+      throw new Error("spatialruntime_scene_handoff_target_not_in_context:"+row.target_key);
+    }
+    if(!sameObject(row.suggested_homeai_target,expected.target)){
+      throw new Error("spatialruntime_scene_handoff_target_mapping_mismatch:"+row.target_key);
+    }
+    if(row.world_entity_id!==expected.world_entity_id||
+       row.room_entity_id!==expected.room_entity_id||
+       (row.opening_id||null)!==(expected.opening_id||null)){
+      throw new Error("spatialruntime_scene_handoff_entity_binding_mismatch:"+row.target_key);
+    }
+  }
+
+  const body=clone(context);
+  delete body.context_sha256;
+  body.handoff_evidence={
+    schema:HANDOFF_SCHEMA,
+    source_repo:handoff.source_repo,
+    source_commit_sha:handoff.source_commit_sha,
+    handoff_sha256:handoff.handoff_sha256,
+    explicit_exterior_windows_sha256:sha256Object(handoffRows)
+  };
+  return validateSceneContext({...body,context_sha256:sha256Object(body)});
+}
+
 function loadSceneContext(worldPath,receiptPath,options={}){
   if(!worldPath||!receiptPath){
     throw new Error("spatialruntime_scene_world_and_receipt_required");
   }
   const world=JSON.parse(fs.readFileSync(worldPath,"utf8"));
   const receipt=JSON.parse(fs.readFileSync(receiptPath,"utf8"));
+  if(options.handoffPath){
+    const handoff=JSON.parse(fs.readFileSync(options.handoffPath,"utf8"));
+    return validateSceneHandoff(world,receipt,handoff,options);
+  }
   return validateSceneArtifacts(world,receipt,options);
+}
+
+function loadSceneContextFromHandoff(worldPath,receiptPath,handoffPath,options={}){
+  if(!handoffPath)throw new Error("spatialruntime_scene_handoff_path_required");
+  return loadSceneContext(worldPath,receiptPath,{...options,handoffPath});
 }
 
 module.exports={
   WORLD_SCHEMA,
   VALIDATION_SCHEMA,
+  HANDOFF_SCHEMA,
   CONTEXT_SCHEMA,
   canonical,
   sha256Object,
@@ -196,5 +309,7 @@ module.exports={
   validateSceneContext,
   loadPinnedSceneContext,
   validateSceneArtifacts,
-  loadSceneContext
+  validateSceneHandoff,
+  loadSceneContext,
+  loadSceneContextFromHandoff
 };

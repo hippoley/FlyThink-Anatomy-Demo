@@ -6,18 +6,56 @@ const {
   loadSceneContext
 }=require("./spatialruntime_world_context.cjs");
 
-function main(argv=process.argv.slice(2)){
-  const [worldPath,receiptPath,outPath]=argv;
+function parseArgs(argv){
+  const args=[...argv];
+  const worldPath=args.shift();
+  const receiptPath=args.shift();
   if(!worldPath||!receiptPath){
     throw new Error(
-      "usage: node scripts/build_spatialruntime_scene_context.cjs WORLD RECEIPT [OUT]"
+      "usage: node scripts/build_spatialruntime_scene_context.cjs WORLD RECEIPT [OUT] [--handoff HANDOFF] [--expected-source-repo REPO] [--expected-source-commit SHA] [--out OUT]"
     );
   }
-  const context=loadSceneContext(worldPath,receiptPath);
+
+  let outPath=null;
+  let handoffPath=null;
+  let expectedSourceRepo=null;
+  let expectedSourceCommit=null;
+
+  // Preserve the original three-positional-argument form.
+  if(args[0]&&!String(args[0]).startsWith("--")){
+    outPath=args.shift();
+  }
+  while(args.length){
+    const flag=args.shift();
+    const value=args.shift();
+    if(!value)throw new Error("missing value for "+String(flag));
+    if(flag==="--handoff")handoffPath=value;
+    else if(flag==="--expected-source-repo")expectedSourceRepo=value;
+    else if(flag==="--expected-source-commit")expectedSourceCommit=value;
+    else if(flag==="--out")outPath=value;
+    else throw new Error("unknown argument: "+String(flag));
+  }
+  return {
+    worldPath,receiptPath,outPath,handoffPath,
+    expectedSourceRepo,expectedSourceCommit
+  };
+}
+
+function main(argv=process.argv.slice(2)){
+  const args=parseArgs(argv);
+  const context=loadSceneContext(
+    args.worldPath,
+    args.receiptPath,
+    {
+      handoffPath:args.handoffPath,
+      expectedSourceRepo:args.expectedSourceRepo,
+      expectedSourceCommit:args.expectedSourceCommit
+    }
+  );
   const rendered=JSON.stringify(context,null,2)+"\n";
-  if(outPath){
-    fs.mkdirSync(path.dirname(path.resolve(outPath)),{recursive:true});
-    fs.writeFileSync(outPath,rendered,"utf8");
+  if(args.outPath){
+    fs.mkdirSync(path.dirname(path.resolve(args.outPath)),{recursive:true});
+    fs.writeFileSync(args.outPath,rendered,"utf8");
   }else{
     process.stdout.write(rendered);
   }
@@ -26,7 +64,8 @@ function main(argv=process.argv.slice(2)){
     case_id:context.case_id,
     context_sha256:context.context_sha256,
     exterior_window_keys:context.exterior_window_keys,
-    output:outPath||null
+    handoff_evidence:context.handoff_evidence||null,
+    output:args.outPath||null
   })+"\n");
   return context;
 }
@@ -39,4 +78,4 @@ if(require.main===module){
   }
 }
 
-module.exports={main};
+module.exports={parseArgs,main};
