@@ -140,6 +140,20 @@ jobs:
           })
           PY
 
+      - name: Freeze spoken home-command acoustic manifest
+        run: |
+          python scripts/acoustic_fixture_manifest.py create \
+            --wav spoken-home-command.wav \
+            --source-kind local_tts \
+            --expected-text "打开主卧空调" \
+            --provenance-note "deterministic sherpa local TTS fixture" \
+            --max-cer 0.25 \
+            --out spoken-home-command.manifest.json
+          python scripts/acoustic_fixture_manifest.py verify \
+            --wav spoken-home-command.wav \
+            --manifest spoken-home-command.manifest.json \
+            --require-source-kind local_tts
+
       - name: Decode spoken home command through streaming ASR
         run: |
           MODEL=sherpa-onnx-streaming-zipformer-zh-14M-2023-02-23
@@ -166,6 +180,21 @@ jobs:
               "final_texts":[x["text"] for x in finals],
           })
           PY
+          node - <<'NODE'
+          const fs=require("fs");
+          const {characterErrorRate}=require("./scripts/acoustic_windowpilot_evidence.cjs");
+          const rows=fs.readFileSync("spoken-home-command-events.jsonl","utf8")
+            .split(/\r?\n/).filter(Boolean).map(JSON.parse);
+          const finals=rows.filter(x=>x.kind==="final");
+          if(finals.length!==1)throw new Error("expected one spoken-home final");
+          const expected="打开主卧空调";
+          const actual=finals[0].text;
+          const cer=characterErrorRate(expected,actual);
+          if(cer==null||cer>0.25){
+            throw new Error("spoken-home acoustic CER exceeds 0.25: "+cer);
+          }
+          console.log({expected,actual,cer,max_cer:0.25});
+          NODE
 
       - name: Install semantic checkpoint runtime
         run: pip install --index-url https://download.pytorch.org/whl/cpu torch
@@ -275,5 +304,6 @@ jobs:
             acoustic-slu-e2e.json
             spoken-home-command.wav
             spoken-home-command-fixture.json
+            spoken-home-command.manifest.json
             spoken-home-command-events.jsonl
             spoken-home-command-e2e.json
