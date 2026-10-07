@@ -2,7 +2,7 @@
 const cp=require("child_process");
 const readline=require("readline");
 const {applyTurn,normalizeRuntime}=require("./whole_home_patch_contract.cjs");
-const {deriveContext}=require("./runtime_context_adapter.cjs");
+const {deriveSemanticContext}=require("./contextual_edge_slu_adapter.cjs");
 const {
  MockThingDriver,
  executePhysicalTurn,
@@ -125,7 +125,7 @@ async function run(trajectory,args={}){
 
  try{
   for(const turn of trajectory.turns){
-   const derived=deriveContext(runtime,history);const context={...derived,...(turn.context_hint||{})};
+   const derived=deriveSemanticContext(runtime,history);const context={...derived,...(turn.context_hint||{})};
    const pred=await predict({text:turn.text,context,background:{...context,...(turn.background||{})}});
    let outcome=pred.decision,error=null,applied=[],physicalReceipts=[],committed=false;
    const commitGate=evaluateCommit({

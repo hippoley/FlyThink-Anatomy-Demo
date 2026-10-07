@@ -11,6 +11,7 @@ on:
       - "scripts/commit_gate.cjs"
       - "scripts/physical_runtime.cjs"
       - "scripts/runtime_context_adapter.cjs"
+      - "scripts/contextual_edge_slu_adapter.cjs"
       - "scripts/windowpilot_http_driver.cjs"
       - "scripts/checkpoint_jsonl_server.py"
       - "scripts/checkpoint_runtime.py"
@@ -23,6 +24,7 @@ on:
       - "tests/commit_gate.cjs"
       - "tests/physical_runtime.cjs"
       - "tests/runtime_context_adapter.cjs"
+      - "tests/contextual_edge_slu_adapter.cjs"
       - "tests/windowpilot_http_driver.cjs"
       - "tests/test_lexical_operation_evidence.py"
       - "tests/test_target_aware_slot_cues.py"
@@ -78,6 +80,7 @@ jobs:
           node tests/commit_gate.cjs
           node tests/physical_runtime.cjs
           node tests/runtime_context_adapter.cjs
+          node tests/contextual_edge_slu_adapter.cjs
           node tests/windowpilot_http_driver.cjs
       - name: Frozen natural-language checkpoint probe
         run: python scripts/run_real_checkpoint_e2e_v1.py --graph artifacts/flywire/connectome.json --judgement artifacts/context-judgement-v3/model.pt --semantic artifacts/semantic-patch-v1/model.pt | tee /tmp/e2e.json

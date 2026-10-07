@@ -7,6 +7,7 @@ on:
       - "scripts/physical_runtime.cjs"
       - "scripts/windowpilot_http_driver.cjs"
       - "scripts/runtime_context_adapter.cjs"
+      - "scripts/contextual_edge_slu_adapter.cjs"
       - "scripts/streaming_slu_e2e.cjs"
       - "scripts/stateful_checkpoint_trajectory.cjs"
       - "scripts/probe_windowpilot_checkpoint_e2e.cjs"
@@ -21,6 +22,7 @@ on:
       - "tests/commit_gate.cjs"
       - "tests/physical_runtime.cjs"
       - "tests/runtime_context_adapter.cjs"
+      - "tests/contextual_edge_slu_adapter.cjs"
       - "tests/windowpilot_http_driver.cjs"
       - "tests/probe_windowpilot_checkpoint_e2e.cjs"
       - "tests/acoustic_windowpilot_live_probe.cjs"
@@ -57,6 +59,7 @@ jobs:
           node --check scripts/physical_runtime.cjs
           node --check scripts/windowpilot_http_driver.cjs
           node --check scripts/runtime_context_adapter.cjs
+          node --check scripts/contextual_edge_slu_adapter.cjs
           node --check scripts/stateful_checkpoint_trajectory.cjs
           node --check scripts/probe_windowpilot_checkpoint_e2e.cjs
           node --check scripts/run_acoustic_windowpilot_e2e.cjs
@@ -72,6 +75,8 @@ jobs:
         run: node tests/physical_runtime.cjs
       - name: Verify device feedback enters next-turn context
         run: node tests/runtime_context_adapter.cjs
+      - name: Verify Contextual Edge SLU repository boundary
+        run: node tests/contextual_edge_slu_adapter.cjs
       - name: Verify WindowPilot HTTP write/readback contract
         run: node tests/windowpilot_http_driver.cjs
       - name: Verify live apply identity gate
