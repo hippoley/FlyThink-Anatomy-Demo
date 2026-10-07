@@ -140,6 +140,7 @@ async function main(){
     target,
     expectedHardwareIdentity,
     defaultOpenPct:probeOpenPct,
+    maxOpenPct:probeOpenPct,
     tolerancePct,
     timeoutMs
   });
