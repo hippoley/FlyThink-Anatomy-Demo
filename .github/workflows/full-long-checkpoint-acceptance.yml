@@ -111,9 +111,11 @@ on:
       - "benchmarks/pi_home_offline_replay.json"
       - "benchmarks/pi_home_goal_scenarios.json"
       - "tests/commit_gate.cjs"
+      - "tests/recovery_transaction.cjs"
       - "scripts/stateful_checkpoint_trajectory.cjs"
       - "scripts/whole_home_patch_contract.cjs"
       - "scripts/physical_runtime.cjs"
+      - "scripts/recovery_transaction.cjs"
       - "scripts/runtime_context_adapter.cjs"
       - "scripts/commit_gate.cjs"
       - "scripts/checkpoint_jsonl_server.py"
@@ -252,6 +254,7 @@ jobs:
       - name: P0 streaming safety contract
         run: |
           node tests/commit_gate.cjs
+          node tests/recovery_transaction.cjs
           node tests/streaming_slu_e2e.cjs
           node tests/home_goal_runtime.cjs
           node tests/desired_state_evaluator.cjs
