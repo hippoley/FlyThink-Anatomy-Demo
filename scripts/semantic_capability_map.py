@@ -24,7 +24,7 @@ def validate_value(model_id,slot,value):
  c=semantic_capability(model_id,slot)
  if not c:return {"ok":False,"reason":"unsupported_semantic_slot"}
  if c["type"]=="number":
-  if not isinstance(value,(int,float)):return {"ok":False,"reason":"numeric_value_required"}
+  if isinstance(value,bool) or not isinstance(value,(int,float)):return {"ok":False,"reason":"numeric_value_required"}
   if value<c.get("min",value) or value>c.get("max",value):return {"ok":False,"reason":"value_out_of_range","min":c.get("min"),"max":c.get("max")}
  return {"ok":True,"capability":c}
 
