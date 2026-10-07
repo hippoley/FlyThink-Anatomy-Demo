@@ -68,10 +68,14 @@ function validateAuthorizationResult(
 
   const receipt=result.receipt;
   const registryDigest=runtimeRegistryDigest(runtime);
+  const sceneCommit=
+    authorization_context&&
+    authorization_context.scene_evidence&&
+    authorization_context.scene_evidence.spatialruntime_commit_sha||null;
   const expectedCommit=
-    expected_spatialruntime_commit_sha==null
-      ?(receipt.spatialruntime_commit_sha||null)
-      :expected_spatialruntime_commit_sha;
+    expected_spatialruntime_commit_sha!=null
+      ?expected_spatialruntime_commit_sha
+      :(sceneCommit!=null?sceneCommit:(receipt.spatialruntime_commit_sha||null));
   const validationRequest={
     case_id:String(task_id||""),
     source_step:Number(source_step),
