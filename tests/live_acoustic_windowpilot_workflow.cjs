@@ -20,6 +20,7 @@ assert.match(y,/confirm_apply:/);
 assert.match(y,/APPLY_REAL_HARDWARE/);
 
 assert.match(y,/--require-human-fixture/);
+assert.match(y,/scene_context_path:/);
 assert.match(y,/--spatialruntime-authorize/);
 assert.match(y,/repository:\s*hippoley\/SpatialRuntime/);
 assert.match(y,/pip install -e "_spatialruntime"/);
@@ -39,9 +40,12 @@ const dryBlock=y.slice(dryStart,applyStart);
 const applyBlock=y.slice(applyStart,verifyStart);
 const verifyBlock=y.slice(verifyStart,attestStart);
 assert.match(dryBlock,/--spatialruntime-authorize/);
+assert.match(dryBlock,/--scene-context/);
 assert.match(applyBlock,/--spatialruntime-authorize/);
+assert.match(applyBlock,/--scene-context/);
 assert.match(applyBlock,/--apply/);
 assert.match(verifyBlock,/--require-spatialruntime-authorization/);
+assert.match(verifyBlock,/--require-spatialruntime-scene-evidence/);
 
 assert.match(y,/probe_open_pct must be in \(0,5\]/);
 assert.match(y,/tolerance_pct must be in \[0,2\]/);
@@ -55,6 +59,8 @@ assert.match(y,/artifact-metadata:\s*write/);
 assert.match(y,/uses:\s*actions\/attest@v4/);
 assert.match(y,/live-acoustic-windowpilot-receipt\.json/);
 assert.match(y,/expected_hardware_identity must be exactly 64 hex characters/);
+assert.match(y,/live scene context must contain verified handoff evidence/);
+assert.match(y,/live physical target is not a reviewed exterior window in scene context/);
 
 const artifactBlock=y.slice(y.indexOf("name: live-acoustic-windowpilot-evidence"));
 assert.ok(artifactBlock.length>0,"evidence artifact block missing");
