@@ -13,9 +13,40 @@ import subprocess
 import sys
 from pathlib import Path
 
+from acoustic_fixture_manifest import verify_manifest
+
 
 def build_commands(args):
     root = Path(__file__).resolve().parents[1]
+    fixture_payload=None
+    if args.fixture_manifest:
+        if not args.wav:
+            raise SystemExit("--fixture-manifest requires --wav")
+        manifest=json.loads(
+            Path(args.fixture_manifest).read_text(encoding="utf-8")
+        )
+        report=verify_manifest(
+            Path(args.wav),
+            manifest,
+            "human_recording" if args.require_human_fixture else None,
+        )
+        if not report["valid"]:
+            raise SystemExit(
+                "acoustic fixture verification failed: "
+                + "; ".join(report["reasons"])
+            )
+        fixture_payload={
+            "schema":manifest.get("schema"),
+            "source_kind":manifest.get("source_kind"),
+            "expected_text":manifest.get("expected_text"),
+            "wav_sha256":report.get("wav_sha256"),
+            "provenance_note":manifest.get("provenance_note"),
+            "require_human_acceptance":bool(args.require_human_fixture),
+        }
+    elif args.require_human_fixture:
+        raise SystemExit(
+            "--require-human-fixture requires --fixture-manifest"
+        )
     asr = [
         sys.executable,
         str(root / "scripts" / "sherpa_streaming_asr.py"),
@@ -98,6 +129,17 @@ def build_commands(args):
             "--expected-hardware-identity",
             args.expected_hardware_identity,
         ]
+    if args.receipt:
+        node += ["--receipt", args.receipt]
+    if fixture_payload is not None:
+        node += [
+            "--acoustic-fixture-json",
+            json.dumps(
+                fixture_payload,
+                ensure_ascii=False,
+                separators=(",", ":"),
+            ),
+        ]
     if args.apply:
         node.append("--apply")
     return asr, node
@@ -156,6 +198,9 @@ def parse_args():
     p.add_argument("--entity", default="窗")
     p.add_argument("--instance", default="default")
     p.add_argument("--expected-hardware-identity")
+    p.add_argument("--receipt")
+    p.add_argument("--fixture-manifest")
+    p.add_argument("--require-human-fixture", action="store_true")
     p.add_argument("--apply", action="store_true")
     p.add_argument("--probe-open-pct", type=float, default=5.0)
     p.add_argument("--tolerance", type=float, default=1.0)
@@ -199,6 +244,12 @@ def parse_args():
         p.error("--paraformer-decoder is required")
     if args.apply and not args.expected_hardware_identity:
         p.error("--apply requires --expected-hardware-identity")
+    if args.apply and not args.receipt:
+        p.error("--apply requires --receipt")
+    if args.require_human_fixture and not args.fixture_manifest:
+        p.error("--require-human-fixture requires --fixture-manifest")
+    if args.fixture_manifest and not args.wav:
+        p.error("--fixture-manifest requires --wav")
     return args
 
 
