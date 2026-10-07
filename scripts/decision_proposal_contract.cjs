@@ -1,5 +1,7 @@
 "use strict";
 
+const crypto=require("crypto");
+
 const {assertContextStateSnapshot}=require("./contextual_edge_slu_adapter.cjs");
 const {
   REQUEST_VERSION,
@@ -34,6 +36,11 @@ const FORBIDDEN_RAW_SEMANTIC_KEYS=new Set([
 ]);
 
 function clone(v){return v==null?v:JSON.parse(JSON.stringify(v))}
+function digestDecisionProposal(v){
+  return crypto.createHash("sha256")
+    .update(JSON.stringify(JSON.parse(canonicalString(v))))
+    .digest("hex");
+}
 
 function forbiddenPaths(value,path="$",out=[]){
   if(Array.isArray(value)){
@@ -199,6 +206,7 @@ function decisionProposalToExecutionContracts(
     decision,
     strategy:{
       source_contract:SCHEMA_VERSION,
+      source_decision_proposal_sha256:digestDecisionProposal(decisionProposal),
       intent:decisionProposal.intent,
       world_snapshot_revision:decisionProposal.world_snapshot_revision
     },
@@ -235,5 +243,6 @@ module.exports={
   validateDecisionProposal,
   mutationToAction,
   contextRevisionOf,
+  digestDecisionProposal,
   decisionProposalToExecutionContracts
 };
