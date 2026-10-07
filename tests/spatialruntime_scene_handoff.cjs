@@ -142,6 +142,7 @@ async function validHandoffDrivesSpatialRuntimeSafety(){
     artifacts.handoff,
     {expectedSourceRepo:SOURCE_REPO,expectedSourceCommit:SOURCE_COMMIT}
   );
+  assert.equal(context.world_snapshot_revision,artifacts.world.revision);
   assert.equal(context.handoff_evidence.schema,HANDOFF_SCHEMA);
   assert.equal(context.handoff_evidence.source_commit_sha,SOURCE_COMMIT);
   assert.equal(context.spatialruntime_commit_sha,SPATIALRUNTIME_COMMIT);
@@ -159,6 +160,7 @@ async function validHandoffDrivesSpatialRuntimeSafety(){
     "--expected-source-commit",SOURCE_COMMIT,
     "--out",contextPath
   ]);
+  assert.equal(built.world_snapshot_revision,artifacts.world.revision);
   assert.equal(built.handoff_evidence.source_commit_sha,SOURCE_COMMIT);
   const rendered=JSON.parse(fs.readFileSync(contextPath,"utf8"));
   assert.equal(rendered.context_sha256,built.context_sha256);

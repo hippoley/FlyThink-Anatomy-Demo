@@ -16,6 +16,7 @@ on:
       - "tests/spatialruntime_world_context.cjs"
       - "tests/spatialruntime_scene_authorizer.cjs"
       - "tests/spatialruntime_scene_handoff.cjs"
+      - "tests/spatialruntime_scene_world_identity.cjs"
       - "tests/live_scene_handoff_workflow.cjs"
       - "tests/spatialruntime_scene_context_provenance.cjs"
       - "tests/fixtures/interior-kitchen.scene-context.json"
@@ -71,6 +72,9 @@ jobs:
         run: |
           node tests/spatialruntime_scene_authorizer.cjs \
             tests/fixtures/interior-kitchen.scene-context.json
+
+      - name: Verify scene context carries canonical world identity when available
+        run: node tests/spatialruntime_scene_world_identity.cjs
 
       - name: Verify downstream handoff drives SpatialRuntime authorization
         run: node tests/spatialruntime_scene_handoff.cjs
@@ -190,6 +194,7 @@ jobs:
           assert receipt['source_fingerprint_verified'] is True
           assert context['source_fingerprint']==receipt['source_fingerprint']
           assert context['world_snapshot_sha256']==receipt['world_snapshot_sha256']
+          assert context['world_snapshot_revision']==world['revision']
           assert world['facts']['source_fingerprint']==receipt['source_fingerprint']
           assert handoff['source_commit_sha']==upstream_sha
           assert context['handoff_evidence']['source_commit_sha']==upstream_sha
@@ -199,6 +204,7 @@ jobs:
           print({
               'source_fingerprint': receipt['source_fingerprint'],
               'context_sha256': context['context_sha256'],
+              'world_snapshot_revision': context['world_snapshot_revision'],
               'handoff_sha256': handoff['handoff_sha256'],
               'source_commit_sha': upstream_sha,
               'spatialruntime_commit_sha': context['spatialruntime_commit_sha'],
