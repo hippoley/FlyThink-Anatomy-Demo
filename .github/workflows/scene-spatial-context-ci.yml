@@ -20,6 +20,8 @@ on:
 jobs:
   scene-to-homeai:
     runs-on: ubuntu-latest
+    env:
+      SPATIALRUNTIME_PIN: d123ab9a5310cb9ce15d9e82630828a0d32211f4
     steps:
       - uses: actions/checkout@v4
 
@@ -35,8 +37,15 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: hippoley/SpatialRuntime
-          ref: main
+          ref: ${{ env.SPATIALRUNTIME_PIN }}
           path: _spatialruntime
+      - name: Verify pinned SpatialRuntime revision
+        shell: bash
+        run: |
+          set -euo pipefail
+          actual="$(git -C _spatialruntime rev-parse HEAD)"
+          test "$actual" = "$SPATIALRUNTIME_PIN"
+
 
       - name: Install SpatialRuntime
         run: python -m pip install -e "_spatialruntime"
