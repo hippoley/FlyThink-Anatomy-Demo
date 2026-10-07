@@ -13,6 +13,9 @@ const {
 const {
   createSpatialRuntimeAuthorizer
 }=require("../scripts/spatialruntime_authorizer.cjs");
+const {
+  main:buildSceneContext
+}=require("../scripts/build_spatialruntime_scene_context.cjs");
 const {MockThingDriver}=require("../scripts/physical_runtime.cjs");
 const {runStreamingSequence}=require("../scripts/streaming_slu_e2e.cjs");
 
@@ -139,6 +142,20 @@ async function validHandoffDrivesSpatialRuntimeSafety(){
   assert.equal(context.handoff_evidence.handoff_sha256,artifacts.handoff.handoff_sha256);
 
   const paths=writeArtifacts(artifacts);
+  const contextPath=path.join(paths.dir,"context.json");
+  const built=buildSceneContext([
+    paths.worldPath,
+    paths.receiptPath,
+    "--handoff",paths.handoffPath,
+    "--expected-source-repo",SOURCE_REPO,
+    "--expected-source-commit",SOURCE_COMMIT,
+    "--out",contextPath
+  ]);
+  assert.equal(built.handoff_evidence.source_commit_sha,SOURCE_COMMIT);
+  const rendered=JSON.parse(fs.readFileSync(contextPath,"utf8"));
+  assert.equal(rendered.context_sha256,built.context_sha256);
+  assert.equal(rendered.handoff_evidence.handoff_sha256,artifacts.handoff.handoff_sha256);
+
   const authorizer=createSpatialRuntimeAuthorizer({
     worldSnapshotPath:paths.worldPath,
     worldValidationReceiptPath:paths.receiptPath,
