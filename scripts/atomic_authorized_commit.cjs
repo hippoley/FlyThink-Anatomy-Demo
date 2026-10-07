@@ -23,6 +23,7 @@ function assertLedger(ledger){
 }
 function atomicApplyAuthorizedPlan(inputRuntime,plannerResult,currentRegistryDigest,authorizationLedger){
   const before=normalizeRuntime(inputRuntime);
+  let reservedId=null;
   try{
     assertLedger(authorizationLedger);
     if(typeof currentRegistryDigest!=="string"||!currentRegistryDigest)
@@ -31,7 +32,6 @@ function atomicApplyAuthorizedPlan(inputRuntime,plannerResult,currentRegistryDig
     const auth=plannerResult.authorization;
     if(!auth||auth.version!==1||!auth.authorization_id||!auth.patch_digest||!auth.registry_digest)
       throw new Error("planner_authorization_missing");
-    if(authorizationLedger.has(auth.authorization_id))throw new Error("planner_authorization_replayed");
     if(currentRegistryDigest!==auth.registry_digest)throw new Error("planner_authorization_stale_registry");
     const patches=plannerResult.patches||[];
     if(authorizationDigest(patches)!==auth.patch_digest)throw new Error("planner_authorization_digest_mismatch");
@@ -39,17 +39,28 @@ function atomicApplyAuthorizedPlan(inputRuntime,plannerResult,currentRegistryDig
       const k=targetKey(t);
       if(!before.devices[k])throw new Error("authorized_target_not_mounted:"+k);
     }
+
+    const reserved=authorizationLedger.reserve(auth.authorization_id,{
+      turn_id:auth.turn_id||null,
+      patch_digest:auth.patch_digest,
+      registry_digest:auth.registry_digest
+    });
+    if(!reserved)throw new Error("planner_authorization_replayed");
+    reservedId=auth.authorization_id;
+
     let out;
     try{
       out=applyTurn(before,patches.map(semanticPatch));
     }catch(e){
-      authorizationLedger.release(auth.authorization_id,"state_commit_failed");
+      authorizationLedger.release(reservedId,"state_commit_failed");
+      reservedId=null;
       throw e;
     }
-    const consumed=authorizationLedger.consume(auth.authorization_id,{state_commit:true});
-    if(!consumed){
+
+    const consumed=authorizationLedger.consume(reservedId,{state_commit:true});
+    if(!consumed)
       return {ok:false,runtime:before,receipts:[],reason:"authorization_commit_indeterminate"};
-    }
+    reservedId=null;
     return {ok:true,runtime:out.runtime,receipts:out.receipts,reason:null};
   }catch(e){
     return {ok:false,runtime:before,receipts:[],reason:String(e.message||e)};
