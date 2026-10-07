@@ -16,6 +16,7 @@ const {normalizeRuntime}=require("../scripts/whole_home_patch_contract.cjs");
 const {toContextStateSnapshot}=require("../scripts/contextual_edge_slu_adapter.cjs");
 
 const TARGET={area:"卧室",entity:"窗",instance:"east"};
+const WORLD_SHA="a".repeat(64);
 
 function context(){
   const runtime=normalizeRuntime({devices:{
@@ -42,6 +43,7 @@ function proposal(overrides={}){
     task_id:"task-1",
     context_revision:7,
     world_snapshot_revision:0,
+    world_snapshot_sha256:WORLD_SHA,
     intent:"VENTILATE",
     logical_targets:[TARGET],
     proposed_mutations:[{
@@ -67,6 +69,8 @@ function proposal(overrides={}){
     ));
     assert.equal(schema.properties.schema_version.const,"decision-proposal.v1");
     assert.equal(schema.additionalProperties,false);
+    assert.ok(schema.required.includes("world_snapshot_sha256"));
+    assert.equal(schema.properties.world_snapshot_sha256.pattern,"^[0-9a-f]{64}$");
     assert.deepEqual(schema.$defs.mutation.properties.operator.enum,["SET","ADD"]);
   }
 
@@ -91,6 +95,8 @@ function proposal(overrides={}){
       adapted.internal_proposal.strategy.source_decision_proposal_sha256,
       digestDecisionProposal(external)
     );
+    assert.equal(adapted.world_snapshot_sha256,WORLD_SHA);
+    assert.equal(adapted.internal_proposal.strategy.world_snapshot_sha256,WORLD_SHA);
   }
 
   // 3. Raw/physical identity is forbidden at the public proposal boundary.
@@ -157,6 +163,7 @@ function proposal(overrides={}){
       contextual_state:snapshot,
       decision_proposal:proposal({world_snapshot_revision:0}),
       world_snapshot_revision:1,
+      world_snapshot_sha256:WORLD_SHA,
       physicalAuthorizer:async()=>{authorizerCalls++;throw new Error("must not run")},
       driver:{execute:async()=>{driverCalls++;throw new Error("must not run")}}
     });
@@ -198,6 +205,7 @@ function proposal(overrides={}){
       contextual_state:snapshot,
       decision_proposal:proposal({requires_confirmation:true}),
       world_snapshot_revision:0,
+      world_snapshot_sha256:WORLD_SHA,
       physicalAuthorizer:async()=>{authorizerCalls++;throw new Error("must not run")},
       driver:{execute:async()=>{driverCalls++;throw new Error("must not run")}}
     });
@@ -208,7 +216,58 @@ function proposal(overrides={}){
     assert.equal(driverCalls,0);
   }
 
-  // 10. Relative mutation must carry a finite numeric delta.
+  // 10. Missing authoritative WorldSnapshot identity blocks before authorization.
+  {
+    const {runtime,snapshot}=context();
+    let authorizerCalls=0;
+    let driverCalls=0;
+    const out=await runDecisionProposal({
+      runtime,
+      contextual_state:snapshot,
+      decision_proposal:proposal(),
+      world_snapshot_revision:0,
+      physicalAuthorizer:async()=>{authorizerCalls++;throw new Error("must not run")},
+      driver:{execute:async()=>{driverCalls++;throw new Error("must not run")}}
+    });
+    assert.equal(out.ok,false);
+    assert.equal(out.status,"BLOCKED");
+    assert.equal(out.reason,"spatialruntime_world_snapshot_sha256_required");
+    assert.equal(authorizerCalls,0);
+    assert.equal(driverCalls,0);
+  }
+
+  // 11. Equal revision cannot substitute a different WorldSnapshot.
+  {
+    const {runtime,snapshot}=context();
+    let authorizerCalls=0;
+    let driverCalls=0;
+    const out=await runDecisionProposal({
+      runtime,
+      contextual_state:snapshot,
+      decision_proposal:proposal(),
+      world_snapshot_revision:0,
+      world_snapshot_sha256:"b".repeat(64),
+      physicalAuthorizer:async()=>{authorizerCalls++;throw new Error("must not run")},
+      driver:{execute:async()=>{driverCalls++;throw new Error("must not run")}}
+    });
+    assert.equal(out.ok,false);
+    assert.equal(out.status,"BLOCKED");
+    assert.equal(out.reason,"decision_proposal_world_snapshot_sha256_mismatch");
+    assert.equal(out.expected_world_snapshot_sha256,"b".repeat(64));
+    assert.equal(out.supplied_world_snapshot_sha256,WORLD_SHA);
+    assert.equal(authorizerCalls,0);
+    assert.equal(driverCalls,0);
+  }
+
+  // 12. Malformed proposal WorldSnapshot identity is rejected at contract validation.
+  {
+    assert.throws(
+      ()=>validateDecisionProposal(proposal({world_snapshot_sha256:"not-a-sha"})),
+      /world_snapshot_sha256_invalid/
+    );
+  }
+
+  // 13. Relative mutation must carry a finite numeric delta.
   {
     assert.throws(
       ()=>validateDecisionProposal(proposal({
@@ -225,8 +284,8 @@ function proposal(overrides={}){
 
   console.log(JSON.stringify({
     ok:true,
-    cases:10,
+    cases:13,
     schema:"decision-proposal.v1",
-    contract:"external reasoning proposal is untrusted, logical-target-only, revision-bound, and cannot directly reach physical execution"
+    contract:"external reasoning proposal is untrusted, logical-target-only, context/world-identity-bound, and cannot directly reach physical execution"
   }));
 })().catch(err=>{console.error(err);process.exit(1)});
