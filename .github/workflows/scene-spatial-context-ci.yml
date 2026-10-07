@@ -22,6 +22,10 @@ on:
       - "tests/fixtures/interior-kitchen.scene-context.provenance.json"
       - ".github/workflows/scene-spatial-context-ci.yml"
   workflow_dispatch:
+  repository_dispatch:
+    types: [interior-spatialruntime-handoff-updated]
+  schedule:
+    - cron: "17 3 * * *"
 
 jobs:
   scene-to-homeai:
@@ -75,19 +79,19 @@ jobs:
         run: node tests/live_scene_handoff_workflow.cjs
 
   live-interior-scene-to-homeai:
-    if: ${{ vars.ENABLE_CROSS_REPO_LIVE == 'true' }}
+    if: ${{ github.event_name == 'repository_dispatch' || github.event_name == 'schedule' || vars.ENABLE_CROSS_REPO_LIVE == 'true' }}
     runs-on: ubuntu-latest
     env:
       CROSS_REPO_READ_TOKEN: ${{ secrets.CROSS_REPO_READ_TOKEN }}
     steps:
-      - name: Require private cross-repo read token
+      - name: Report cross-repo access mode
         shell: bash
         run: |
-          if [ -z "$CROSS_REPO_READ_TOKEN" ]; then
-            echo "ENABLE_CROSS_REPO_LIVE=true but CROSS_REPO_READ_TOKEN is missing" >&2
-            exit 1
+          if [ -n "$CROSS_REPO_READ_TOKEN" ]; then
+            echo "LIVE_SCENE_CONSUMER_ACCESS=token"
+          else
+            echo "LIVE_SCENE_CONSUMER_ACCESS=public-repository"
           fi
-          echo "LIVE_PRIVATE_SCENE_CONSUMER_ENABLED"
 
       - name: Checkout HomeAI consumer
         uses: actions/checkout@v4
@@ -120,7 +124,7 @@ jobs:
           repository: hippoley/interior-kitchen-original
           ref: main
           path: _interior
-          token: ${{ env.CROSS_REPO_READ_TOKEN }}
+          token: ${{ secrets.CROSS_REPO_READ_TOKEN || github.token }}
 
       - name: Install authored scene dependencies
         working-directory: _interior
