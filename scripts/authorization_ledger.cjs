@@ -6,6 +6,7 @@ function sleepMs(ms){
   const end=Date.now()+ms;
   while(Date.now()<end){}
 }
+
 class FileAuthorizationLedger{
   constructor(filePath,{lockTimeoutMs=5000,lockRetryMs=5}={}){
     if(!filePath)throw new Error("authorization_ledger_path_required");
@@ -30,7 +31,23 @@ class FileAuthorizationLedger{
     fs.writeFileSync(tmp,JSON.stringify(this.state,null,2)+"\n",{encoding:"utf8",mode:0o600,flag:"wx"});
     fs.renameSync(tmp,this.filePath);
   }
-  _ownerAlive(pid){\n    if(!Number.isInteger(pid)||pid<=0)return false;\n    try{process.kill(pid,0);return true;}catch(e){return e.code==="EPERM";}\n  }\n  _recoverDeadOwnerLock(){\n    try{\n      const owner=JSON.parse(fs.readFileSync(this.lockPath,"utf8"));\n      if(this._ownerAlive(owner.pid))return false;\n      fs.unlinkSync(this.lockPath);\n      return true;\n    }catch(e){\n      if(e.code==="ENOENT")return true;\n      return false;\n    }\n  }\n  _withLock(fn){
+  _ownerAlive(pid){
+    if(!Number.isInteger(pid)||pid<=0)return false;
+    try{process.kill(pid,0);return true;}
+    catch(e){return e.code==="EPERM";}
+  }
+  _recoverDeadOwnerLock(){
+    try{
+      const owner=JSON.parse(fs.readFileSync(this.lockPath,"utf8"));
+      if(this._ownerAlive(owner.pid))return false;
+      fs.unlinkSync(this.lockPath);
+      return true;
+    }catch(e){
+      if(e.code==="ENOENT")return true;
+      return false;
+    }
+  }
+  _withLock(fn){
     fs.mkdirSync(path.dirname(this.filePath),{recursive:true});
     const deadline=Date.now()+this.lockTimeoutMs;
     let fd;
@@ -41,6 +58,7 @@ class FileAuthorizationLedger{
         break;
       }catch(e){
         if(e.code!=="EEXIST")throw e;
+        if(this._recoverDeadOwnerLock())continue;
         if(Date.now()>=deadline)throw new Error("authorization_ledger_lock_timeout");
         sleepMs(this.lockRetryMs);
       }
@@ -49,8 +67,10 @@ class FileAuthorizationLedger{
       this._refresh();
       return fn();
     }finally{
-      try{fs.closeSync(fd);}finally{
-        try{fs.unlinkSync(this.lockPath);}catch(e){if(e.code!=="ENOENT")throw e;}
+      try{fs.closeSync(fd);}
+      finally{
+        try{fs.unlinkSync(this.lockPath);}
+        catch(e){if(e.code!=="ENOENT")throw e;}
       }
     }
   }
