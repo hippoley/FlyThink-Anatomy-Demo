@@ -61,6 +61,16 @@ function samePatchIdentity(a,b){
   return sameObject(patchIdentity(a),patchIdentity(b));
 }
 
+function consumeAuthorizationId(consumedAuthorizationIds,authorizationId){
+  if(!(consumedAuthorizationIds instanceof Set)){
+    throw new Error("spatialruntime_authorizer_consumption_store_invalid");
+  }
+  if(consumedAuthorizationIds.has(authorizationId)){
+    throw new Error("spatialruntime_authorizer_authorization_reused");
+  }
+  consumedAuthorizationIds.add(authorizationId);
+}
+
 function validateAuthorizationReceipt(receipt,request,requestedPatches){
   if(!receipt||receipt.schema!==RECEIPT_SCHEMA){
     throw new Error("spatialruntime_authorizer_invalid_receipt");
@@ -287,10 +297,7 @@ function createSpatialRuntimeAuthorizer(options={}){
     }
     const validated=validateAuthorizationReceipt(receipt,request,requestedPatches);
     const authorizationId=validated.receipt.authorization_id;
-    if(consumedAuthorizationIds.has(authorizationId)){
-      throw new Error("spatialruntime_authorizer_authorization_reused");
-    }
-    consumedAuthorizationIds.add(authorizationId);
+    consumeAuthorizationId(consumedAuthorizationIds,authorizationId);
     return validated;
   };
 }
@@ -305,6 +312,7 @@ module.exports={
   runtimeRegistrySnapshot,
   runtimeRegistryDigest,
   samePatchIdentity,
+  consumeAuthorizationId,
   validateAuthorizationReceipt,
   createSpatialRuntimeAuthorizer
 };
