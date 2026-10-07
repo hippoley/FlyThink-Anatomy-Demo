@@ -66,7 +66,21 @@ jobs:
           node --check scripts/test_physical_transaction_router.cjs
           node --check scripts/test_production_physical_turn_atomicity.cjs
       - name: Prove planner-to-commit safety invariants
-        run: python scripts/test_execution_trust_boundary.py
+        id: planner_commit
+        shell: bash
+        run: |
+          set +e
+          python scripts/test_execution_trust_boundary.py > planner-commit.log 2>&1
+          status=$?
+          cat planner-commit.log
+          exit $status
+      - name: Upload planner-to-commit failure log
+        if: failure() && steps.planner_commit.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: planner-to-commit-failure
+          path: planner-commit.log
+          if-no-files-found: error
       - name: Prove durable authorization replay rejection
         run: node scripts/test_authorization_ledger.cjs
       - name: Prove multi-target physical SET cannot degrade to sequential writes
