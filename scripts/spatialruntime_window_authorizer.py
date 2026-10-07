@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import json
 import math
-import re
 import sys
 from hashlib import sha256
 from typing import Any, Mapping
@@ -42,23 +41,6 @@ def digest(value: Any) -> str:
     return sha256(canonical(value).encode()).hexdigest()
 
 
-def registry_snapshot(devices: Mapping[str, Any]) -> dict[str, Any]:
-    out: dict[str, Any] = {}
-    for key in sorted(devices):
-        device = devices[key]
-        if not isinstance(device, Mapping):
-            raise ValueError(f"authorization_registry_device_invalid:{key}")
-        model_id = str(device.get("model_id") or "")
-        if not model_id:
-            raise ValueError(f"authorization_registry_model_id_required:{key}")
-        out[str(key)] = {"model_id": model_id}
-    return out
-
-
-def registry_digest(devices: Mapping[str, Any]) -> str:
-    return digest(registry_snapshot(devices))
-
-
 def device_key(target: Mapping[str, Any]) -> str:
     return "::".join(
         [
@@ -89,11 +71,6 @@ def authorize(request: Mapping[str, Any]) -> dict[str, Any]:
         raise ValueError("authorization_case_id_required")
     step = int(request.get("source_step", 0))
     revision = int(request.get("source_revision", step))
-    spatialruntime_commit_sha = request.get("spatialruntime_commit_sha")
-    if spatialruntime_commit_sha is not None:
-        spatialruntime_commit_sha = str(spatialruntime_commit_sha).lower()
-        if re.fullmatch(r"[0-9a-f]{40}", spatialruntime_commit_sha) is None:
-            raise ValueError("authorization_spatialruntime_commit_invalid")
 
     home_runtime = request.get("runtime")
     if not isinstance(home_runtime, Mapping):
@@ -101,10 +78,6 @@ def authorize(request: Mapping[str, Any]) -> dict[str, Any]:
     devices = home_runtime.get("devices") or {}
     if not isinstance(devices, Mapping):
         raise ValueError("authorization_runtime_devices_invalid")
-    declared_registry_digest = str(request.get("registry_digest") or "")
-    computed_registry_digest = registry_digest(devices)
-    if declared_registry_digest != computed_registry_digest:
-        raise ValueError("authorization_registry_digest_mismatch")
 
     patches = request.get("patches")
     if not isinstance(patches, list) or not patches:
@@ -115,36 +88,6 @@ def authorize(request: Mapping[str, Any]) -> dict[str, Any]:
         raise ValueError("authorization_spatial_context_invalid")
     exterior_keys = set(spatial_context.get("exterior_window_keys") or [])
     rain = normalize_rain(spatial_context.get("rain"))
-    scene_evidence = spatial_context.get("scene_evidence")
-    if scene_evidence is not None:
-        if not isinstance(scene_evidence, Mapping):
-            raise ValueError("spatialruntime_scene_evidence_invalid")
-        if scene_evidence.get("schema") != "homeai_spatialruntime_scene_context_v1":
-            raise ValueError("spatialruntime_scene_evidence_schema_invalid")
-        for key in (
-            "world_snapshot_sha256",
-            "validation_receipt_sha256",
-            "source_fingerprint",
-            "relation_graph_fingerprint",
-            "context_sha256",
-        ):
-            value = str(scene_evidence.get(key) or "")
-            if len(value) != 64 or any(ch not in "0123456789abcdef" for ch in value):
-                raise ValueError(f"spatialruntime_scene_evidence_sha_invalid:{key}")
-        scene_runtime_commit = scene_evidence.get("spatialruntime_commit_sha")
-        if scene_runtime_commit is not None:
-            scene_runtime_commit = str(scene_runtime_commit).lower()
-            if re.fullmatch(r"[0-9a-f]{40}", scene_runtime_commit) is None:
-                raise ValueError("spatialruntime_scene_evidence_runtime_commit_invalid")
-            if spatialruntime_commit_sha is not None and scene_runtime_commit != spatialruntime_commit_sha:
-                raise ValueError("spatialruntime_scene_evidence_runtime_commit_mismatch")
-        declared_keys = set(scene_evidence.get("exterior_window_keys") or [])
-        if declared_keys != exterior_keys:
-            raise ValueError("spatialruntime_scene_exterior_keys_mismatch")
-        context_base = dict(scene_evidence)
-        saved_context_sha = context_base.pop("context_sha256", None)
-        if saved_context_sha != digest(context_base):
-            raise ValueError("spatialruntime_scene_context_sha_mismatch")
 
     runtime_state: dict[str, Any] = {}
     entity_catalog: dict[str, Any] = {}
@@ -256,17 +199,6 @@ def authorize(request: Mapping[str, Any]) -> dict[str, Any]:
         and not blocked
         and len(authorized_patches) == len(patches)
     )
-    authorized_for_receipt = authorized_patches if allow else []
-    patch_digest = digest(authorized_for_receipt)
-    authorization_id = digest({
-        "case_id": case_id,
-        "source_step": step,
-        "source_revision": revision,
-        "patch_digest": patch_digest,
-        "registry_digest": computed_registry_digest,
-        "spatialruntime_commit_sha": spatialruntime_commit_sha,
-        "trace_hash": trace.get("trace_hash"),
-    })
     body = {
         "schema": RECEIPT_SCHEMA,
         "canonicalization": "sorted-json-number-normalized-v1",
@@ -274,17 +206,11 @@ def authorize(request: Mapping[str, Any]) -> dict[str, Any]:
         "case_id": case_id,
         "source_step": step,
         "source_revision": revision,
-        "spatialruntime_commit_sha": spatialruntime_commit_sha,
         "requested_patch_count": len(patches),
-        "authorized_patches": authorized_for_receipt,
-        "patch_digest": patch_digest,
-        "registry_digest": computed_registry_digest,
-        "authorization_id": authorization_id,
-        "single_use": True,
+        "authorized_patches": authorized_patches if allow else [],
         "blocked": blocked,
         "rain": rain,
         "exterior_window_keys": sorted(exterior_keys),
-        "scene_evidence": dict(scene_evidence) if isinstance(scene_evidence, Mapping) else None,
         "trace_status": trace.get("status"),
         "trace_hash": trace.get("trace_hash"),
         "safety_graph_fingerprint": (trace.get("stages") or {}).get("safety", {}).get(
