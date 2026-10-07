@@ -15,7 +15,8 @@ on:
       - "scripts/whole_home_patch_contract.cjs"
       - "scripts/test_execution_trust_boundary.py"
       - "scripts/test_atomic_physical_set.cjs"
-      - "scripts/test_physical_transaction_router.cjs"\n      - "scripts/test_production_physical_turn_atomicity.cjs"
+      - "scripts/test_physical_transaction_router.cjs"
+      - "scripts/test_production_physical_turn_atomicity.cjs"
       - ".github/workflows/execution-trust-boundary.yml"
   pull_request:
     paths:
@@ -31,6 +32,7 @@ on:
       - "scripts/test_execution_trust_boundary.py"
       - "scripts/test_atomic_physical_set.cjs"
       - "scripts/test_physical_transaction_router.cjs"
+      - "scripts/test_production_physical_turn_atomicity.cjs"
       - ".github/workflows/execution-trust-boundary.yml"
   workflow_dispatch:
 
@@ -53,11 +55,15 @@ jobs:
           node --check scripts/atomic_physical_set.cjs
           node --check scripts/physical_driver_capabilities.cjs
           node --check scripts/physical_transaction_router.cjs
+          node --check scripts/physical_runtime.cjs
           node --check scripts/test_atomic_physical_set.cjs
-          node --check scripts/test_physical_transaction_router.cjs\n          node --check scripts/test_production_physical_turn_atomicity.cjs
+          node --check scripts/test_physical_transaction_router.cjs
+          node --check scripts/test_production_physical_turn_atomicity.cjs
       - name: Prove planner-to-commit safety invariants
         run: python scripts/test_execution_trust_boundary.py
       - name: Prove multi-target physical SET cannot degrade to sequential writes
         run: node scripts/test_atomic_physical_set.cjs
-      - name: Prove production transaction routing preserves SET atomicity
+      - name: Prove transaction routing preserves SET atomicity
         run: node scripts/test_physical_transaction_router.cjs
+      - name: Prove production executor cannot bypass atomic SET routing
+        run: node scripts/test_production_physical_turn_atomicity.cjs
