@@ -51,7 +51,9 @@ def build():
  for split in ("train","dev","test"):
   for ei,entity in enumerate(ENTITIES):
    for ri,room in enumerate(ROOMS):
-    t=TEMPLATES[(ei+ri)%len(TEMPLATES)]
+    base=TEMPLATES[(ei+ri)%len(TEMPLATES)]
+    prefix={"train":"","dev":"请","test":"麻烦"}[split]
+    t=prefix+base
     out.append(_make(f"v5-{split}-one-{entity}-{room}",split,(room,),entity,t))
  return {"truth":"v5_prefrozen_causal_resolver_20261006","examples":out}
 def split_group(group):
