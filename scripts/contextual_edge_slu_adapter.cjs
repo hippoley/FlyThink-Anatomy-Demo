@@ -36,7 +36,7 @@ function contextStateDigest(snapshot){
   if(!snapshot||typeof snapshot!=="object"||Array.isArray(snapshot)){
     throw new Error("context_state_not_object");
   }
-  const body=clone(snapshot);
+  const body={...snapshot};
   delete body.context_sha256;
   return crypto.createHash("sha256")
     .update(JSON.stringify(canonicalContextValue(body)))
