@@ -66,6 +66,22 @@ const provider={
 const trust=resolveProviderTrust(provider,registry);
 assert.equal(trust.effective_trusted_for_promotion,true);
 
+const tamperedCert=JSON.parse(JSON.stringify(cert));
+tamperedCert.by_dimension.rain_ingress.metrics.mae=0;
+const tamperedEntry=registryEntryFromCertificate(tamperedCert,{approved_by:"engineering-review-board"});
+const tamperedRegistry=require("../scripts/pi_home_provider_trust.cjs").buildProviderTrustRegistry(
+  [tamperedEntry],
+  {certificates:[tamperedCert]}
+);
+assert.equal(tamperedRegistry.entries["rain-engineering-v1"].certificate_verified,false);
+assert.equal(
+  tamperedRegistry.entries["rain-engineering-v1"].certificate_reason,
+  "calibration_certificate_digest_mismatch"
+);
+const tamperedTrust=resolveProviderTrust(provider,tamperedRegistry);
+assert.equal(tamperedTrust.effective_trusted_for_promotion,false);
+assert.equal(tamperedTrust.reason,"provider_calibration_certificate_unverified");
+
 const fixture=evaluateCalibrationDataset({
   ...measured,
   source_kind:"test-fixture"
