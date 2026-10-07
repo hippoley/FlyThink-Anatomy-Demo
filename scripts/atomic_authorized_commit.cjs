@@ -25,12 +25,14 @@ function semanticPatch(p){
  const [area,entity,instance]=targetKey(p.target).split("::");
  return {op:"PATCH_SLOT",target:{area,entity,instance},slot:p.slot,value:p.value};
 }
-function atomicApplyAuthorizedPlan(inputRuntime,plannerResult){
+function atomicApplyAuthorizedPlan(inputRuntime,plannerResult,currentRegistryDigest=null){
  const before=normalizeRuntime(inputRuntime);
  try{
   if(!plannerResult||plannerResult.ok!==true)throw new Error("planner_result_not_authorized");
   const auth=plannerResult.authorization;
-  if(!auth||auth.version!==1||!auth.patch_digest)throw new Error("planner_authorization_missing");
+  if(!auth||auth.version!==1||!auth.patch_digest||!auth.registry_digest)throw new Error("planner_authorization_missing");
+  if(currentRegistryDigest!==null&&currentRegistryDigest!==auth.registry_digest)
+   throw new Error("planner_authorization_stale_registry");
   const patches=plannerResult.patches||[];
   if(authorizationDigest(patches)!==auth.patch_digest)throw new Error("planner_authorization_digest_mismatch");
   for(const p of patches){
