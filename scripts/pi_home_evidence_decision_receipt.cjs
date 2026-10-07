@@ -49,6 +49,26 @@ function adjudicationTrustedRegistryDigests(adjudication={}){
   }
   return [...out].sort();
 }
+function adjudicationTrustedEvaluationTimes(adjudication={}){
+  const out=new Set();
+  const byDimension=adjudication.by_dimension||{};
+  for(const dimension of Object.values(byDimension)){
+    for(const provider of dimension.providers||[]){
+      if(provider.trusted_for_promotion!==true)continue;
+      const value=provider.trust_resolution&&provider.trust_resolution.evaluation_time;
+      if(value)out.add(normalizeInstant(value,"trusted_provider_evaluation_time"));
+    }
+  }
+  const coverageProviders=
+    adjudication.coverage&&adjudication.coverage.providers||[];
+  for(const provider of coverageProviders){
+    if(provider.trusted_for_promotion!==true)continue;
+    const value=provider.trust_resolution&&provider.trust_resolution.evaluation_time;
+    if(value)out.add(normalizeInstant(value,"trusted_provider_evaluation_time"));
+  }
+  return [...out].sort();
+}
+
 function receiptCore(receipt){
   return {
     schema_version:"pi-home-evidence-decision-receipt-v1",
@@ -79,7 +99,9 @@ function buildEvidenceDecisionReceipt({
   if(learned_candidate==null)throw new Error("learned_candidate_required");
   if(!adjudication||typeof adjudication!=="object")throw new Error("adjudication_required");
   const verified=verifyTrustRegistrySnapshot(trust_snapshot);
+  const normalizedEvaluatedAt=normalizeInstant(evaluated_at,"decision_evaluated_at");
   const trustedDigests=adjudicationTrustedRegistryDigests(adjudication);
+  const trustedTimes=adjudicationTrustedEvaluationTimes(adjudication);
   if(trustedDigests.length>1){
     throw new Error("multiple_trusted_registry_snapshots_in_adjudication");
   }
@@ -90,11 +112,17 @@ function buildEvidenceDecisionReceipt({
   if(trustedClaim&&trustedDigests.length!==1){
     throw new Error("trusted_adjudication_registry_digest_required");
   }
+  if(trustedClaim&&trustedTimes.length!==1){
+    throw new Error("trusted_adjudication_evaluation_time_required");
+  }
+  if(trustedTimes.length===1&&trustedTimes[0]!==normalizedEvaluatedAt){
+    throw new Error("trusted_adjudication_evaluation_time_mismatch");
+  }
 
   const receipt={
     schema_version:"pi-home-evidence-decision-receipt-v1",
     decision_id:requireText(decision_id,"decision_id"),
-    evaluated_at:normalizeInstant(evaluated_at,"decision_evaluated_at"),
+    evaluated_at:normalizedEvaluatedAt,
     actor:requireText(actor,"decision_actor"),
     learned_candidate_digest:digestObject(learned_candidate),
     adjudication_digest:digestObject(adjudication),
@@ -144,11 +172,18 @@ function verifyEvidenceDecisionReceipt(receipt={},{
     throw new Error("evidence_decision_receipt_provider_evidence_mismatch");
   }
   const trustedDigests=adjudicationTrustedRegistryDigests(adjudication);
+  const trustedTimes=adjudicationTrustedEvaluationTimes(adjudication);
   if(trustedDigests.length>1){
     throw new Error("multiple_trusted_registry_snapshots_in_adjudication");
   }
   if(trustedDigests.length===1&&trustedDigests[0]!==verified.registry_digest){
     throw new Error("adjudication_trust_snapshot_mismatch");
+  }
+  if(receipt.trusted_for_generalization_claim===true&&trustedTimes.length!==1){
+    throw new Error("trusted_adjudication_evaluation_time_required");
+  }
+  if(trustedTimes.length===1&&trustedTimes[0]!==receipt.evaluated_at){
+    throw new Error("trusted_adjudication_evaluation_time_mismatch");
   }
   if(receipt.trusted_for_generalization_claim!==(
     adjudication.trusted_for_generalization_claim===true
@@ -171,6 +206,7 @@ module.exports={
   digestObject,
   providerEvidenceDigests,
   adjudicationTrustedRegistryDigests,
+  adjudicationTrustedEvaluationTimes,
   buildEvidenceDecisionReceipt,
   verifyEvidenceDecisionReceipt
 };
