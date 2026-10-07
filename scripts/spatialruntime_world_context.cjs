@@ -30,6 +30,58 @@ function targetKey(target){
   return [target.area,target.entity,target.instance||"default"].join("::");
 }
 
+function validateSceneContext(context){
+  if(!context||context.schema!==CONTEXT_SCHEMA){
+    throw new Error("spatialruntime_scene_context_schema_invalid");
+  }
+  for(const key of (
+    ["world_snapshot_sha256","validation_receipt_sha256","source_fingerprint","relation_graph_fingerprint","context_sha256"]
+  )){
+    if(!isSha256(context[key])){
+      throw new Error("spatialruntime_scene_context_sha_invalid:"+key);
+    }
+  }
+  if(!Array.isArray(context.exterior_windows)||!Array.isArray(context.exterior_window_keys)){
+    throw new Error("spatialruntime_scene_context_windows_invalid");
+  }
+  const keys=[];
+  const seen=new Set();
+  for(const row of context.exterior_windows){
+    if(!row||!row.target){
+      throw new Error("spatialruntime_scene_context_window_target_missing");
+    }
+    const key=targetKey(row.target);
+    if(row.key!==key){
+      throw new Error("spatialruntime_scene_context_window_key_mismatch:"+String(row.key));
+    }
+    if(seen.has(key)){
+      throw new Error("spatialruntime_scene_context_window_ambiguous:"+key);
+    }
+    seen.add(key);
+    keys.push(key);
+    if(!row.world_entity_id||!row.room_entity_id){
+      throw new Error("spatialruntime_scene_context_entity_binding_missing:"+key);
+    }
+  }
+  keys.sort();
+  const declared=[...context.exterior_window_keys].map(String).sort();
+  if(!sameObject(keys,declared)){
+    throw new Error("spatialruntime_scene_context_exterior_keys_mismatch");
+  }
+  const base=clone(context);
+  const saved=base.context_sha256;
+  delete base.context_sha256;
+  if(saved!==sha256Object(base)){
+    throw new Error("spatialruntime_scene_context_sha_mismatch");
+  }
+  return clone(context);
+}
+
+function loadPinnedSceneContext(contextPath){
+  if(!contextPath)throw new Error("spatialruntime_scene_context_path_required");
+  return validateSceneContext(JSON.parse(fs.readFileSync(contextPath,"utf8")));
+}
+
 function validateSceneArtifacts(world,receipt,{windowEntityLabel="窗"}={}){
   if(!world||world.schema!==WORLD_SCHEMA){
     throw new Error("spatialruntime_scene_world_schema_invalid");
@@ -122,7 +174,7 @@ function validateSceneArtifacts(world,receipt,{windowEntityLabel="窗"}={}){
     exterior_windows:explicitExterior,
     exterior_window_keys:explicitExterior.map(x=>x.key)
   };
-  return {...body,context_sha256:sha256Object(body)};
+  return validateSceneContext({...body,context_sha256:sha256Object(body)});
 }
 
 function loadSceneContext(worldPath,receiptPath,options={}){
@@ -141,6 +193,8 @@ module.exports={
   canonical,
   sha256Object,
   targetKey,
+  validateSceneContext,
+  loadPinnedSceneContext,
   validateSceneArtifacts,
   loadSceneContext
 };
