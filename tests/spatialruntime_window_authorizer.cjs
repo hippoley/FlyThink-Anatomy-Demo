@@ -51,7 +51,7 @@ async function ordinaryOpeningPassesSpatialRuntime(){
   assert.equal(row.physical_authorization_binding.bindings[0].status,"applied");
   assert.equal(row.physical_authorization_binding.bindings[0].authorization_patch_sha256,row.physical_authorization_binding.bindings[0].physical_patch_sha256);
   assert.equal(row.physical_authorization_binding.bindings[0].authorized_value,5);
-  assert.equal(row.physical_authorization_binding.bindings[0].requested_position_pct,5);
+  assert.equal(row.physical_authorization_binding.bindings[0].requested_position_pct,null);
   assert.equal(row.physical_authorization_binding.bindings[0].observed_value,5);
   assert.equal(row.physical_authorization_binding.bindings[0].convergence_error_pct,0);
   assert.equal(row.physical_authorization_binding.bindings[0].observation_sha256.length,64);
@@ -86,7 +86,7 @@ async function reviewedExteriorRainForcesCloseBeforeDriver(){
   assert.equal(row.authorized_patch_proposal[0].spatialruntime_decision,"commit_safety_override");
   assert.equal(row.physical_authorization_binding.case_id,"sr-rain");
   assert.equal(row.physical_authorization_binding.bindings[0].authorized_value,0);
-  assert.equal(row.physical_authorization_binding.bindings[0].requested_position_pct,0);
+  assert.equal(row.physical_authorization_binding.bindings[0].requested_position_pct,null);
   assert.equal(row.physical_authorization_binding.bindings[0].observed_value,0);
   assert.equal(row.physical_authorization_binding.bindings[0].convergence_error_pct,0);
   assert.equal(driver.commands.length,1);
