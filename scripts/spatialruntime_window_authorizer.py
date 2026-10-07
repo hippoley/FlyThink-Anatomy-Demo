@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import math
+import re
 import sys
 from hashlib import sha256
 from typing import Any, Mapping
@@ -88,6 +89,11 @@ def authorize(request: Mapping[str, Any]) -> dict[str, Any]:
         raise ValueError("authorization_case_id_required")
     step = int(request.get("source_step", 0))
     revision = int(request.get("source_revision", step))
+    spatialruntime_commit_sha = request.get("spatialruntime_commit_sha")
+    if spatialruntime_commit_sha is not None:
+        spatialruntime_commit_sha = str(spatialruntime_commit_sha).lower()
+        if re.fullmatch(r"[0-9a-f]{40}", spatialruntime_commit_sha) is None:
+            raise ValueError("authorization_spatialruntime_commit_invalid")
 
     home_runtime = request.get("runtime")
     if not isinstance(home_runtime, Mapping):
@@ -251,6 +257,7 @@ def authorize(request: Mapping[str, Any]) -> dict[str, Any]:
         "source_revision": revision,
         "patch_digest": patch_digest,
         "registry_digest": computed_registry_digest,
+        "spatialruntime_commit_sha": spatialruntime_commit_sha,
         "trace_hash": trace.get("trace_hash"),
     })
     body = {
@@ -260,6 +267,7 @@ def authorize(request: Mapping[str, Any]) -> dict[str, Any]:
         "case_id": case_id,
         "source_step": step,
         "source_revision": revision,
+        "spatialruntime_commit_sha": spatialruntime_commit_sha,
         "requested_patch_count": len(patches),
         "authorized_patches": authorized_for_receipt,
         "patch_digest": patch_digest,
