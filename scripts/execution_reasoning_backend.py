@@ -1,1 +1,248 @@
-#!/usr/bin/env python3\n"""Execution-only reasoning contract for FlyThink.\n\nNLUSLOT owns language understanding and contextual state. FlyThink consumes\ncontextual-state.v1 plus an already-resolved execution request and may only\nselect from explicit candidate actions. It never executes devices.\n"""\nfrom __future__ import annotations\n\nimport json\nimport urllib.request\nfrom dataclasses import dataclass\nfrom typing import Any, Dict, Optional\n\nfrom reasoning_backend import BackendConfig, validate_context_state\n\nREQUEST_VERSION = "flythink-execution-request.v1"\nPROPOSAL_VERSION = "flythink-execution-proposal.v1"\nFORBIDDEN_SEMANTIC_KEYS = {\n    "utterance", "text", "transcript", "frames", "focus", "ambiguity",\n    "semantic_operation",\n}\nALLOWED_ACTION_OPS = {\n    "PATCH_SLOT", "PATCH_RELATIVE", "CLOSE_DEVICE",\n    "ADD_DEVICE", "REMOVE_DEVICE", "REPLACE_TARGET",\n}\n\nSYSTEM_PROMPT = """You are an execution-reasoning backend for FlyThink.\nLanguage understanding, reference resolution, dialogue state, and task state\nhave already been produced by NLUSLOT. Do not reinterpret user speech.\nSelect only from request.candidate_actions. Never execute a device.\nReturn JSON with schema_version, task_id, decision, strategy, proposed_actions,\nuncertainty, evidence_refs, and reason_code. Authorization remains external.\n"""\n\ndef canonical(value: Any) -> str:\n    return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"))\n\ndef logical_target(target: Any) -> bool:\n    return (\n        isinstance(target, dict)\n        and set(target.keys()) == {"area", "entity", "instance"}\n        and all(isinstance(target[k], str) and target[k] for k in ("area", "entity", "instance"))\n    )\n\ndef validate_candidate_action(action: Dict[str, Any]) -> None:\n    if not isinstance(action, dict):\n        raise ValueError("candidate_action_must_be_object")\n    if action.get("op") not in ALLOWED_ACTION_OPS:\n        raise ValueError("candidate_action_op_invalid")\n    leaked = sorted(FORBIDDEN_SEMANTIC_KEYS.intersection(action.keys()))\n    if leaked:\n        raise ValueError("semantic_input_forbidden:" + ",".join(leaked))\n    if action["op"] == "REPLACE_TARGET":\n        if not logical_target(action.get("from")) or not logical_target(action.get("to")):\n            raise ValueError("logical_target_contract_violation")\n    elif not logical_target(action.get("target")):\n        raise ValueError("logical_target_contract_violation")\n\ndef validate_execution_request(request: Dict[str, Any]) -> None:\n    if not isinstance(request, dict):\n        raise ValueError("execution_request_must_be_object")\n    if request.get("request_version") != REQUEST_VERSION:\n        raise ValueError("unsupported_execution_request_contract")\n    leaked = sorted(FORBIDDEN_SEMANTIC_KEYS.intersection(request.keys()))\n    if leaked:\n        raise ValueError("semantic_input_forbidden:" + ",".join(leaked))\n    if not isinstance(request.get("task_id"), str) or not request["task_id"]:\n        raise ValueError("execution_task_id_required")\n    if not isinstance(request.get("goal"), dict):\n        raise ValueError("execution_goal_must_be_structured_object")\n    targets = request.get("resolved_targets")\n    if not isinstance(targets, list):\n        raise ValueError("resolved_targets_must_be_list")\n    for target in targets:\n        if not logical_target(target):\n            raise ValueError("logical_target_contract_violation")\n    candidates = request.get("candidate_actions")\n    if not isinstance(candidates, list):\n        raise ValueError("candidate_actions_must_be_list")\n    for action in candidates:\n        validate_candidate_action(action)\n    if not isinstance(request.get("constraints", []), list):\n        raise ValueError("execution_constraints_must_be_list")\n\ndef validate_execution_proposal(proposal: Dict[str, Any], *, request: Optional[Dict[str, Any]] = None) -> None:\n    if not isinstance(proposal, dict):\n        raise ValueError("execution_proposal_must_be_object")\n    if proposal.get("schema_version") != PROPOSAL_VERSION:\n        raise ValueError("unsupported_execution_proposal_contract")\n    leaked = sorted(FORBIDDEN_SEMANTIC_KEYS.intersection(proposal.keys()))\n    if leaked:\n        raise ValueError("semantic_output_forbidden:" + ",".join(leaked))\n    if proposal.get("decision") not in {"PROPOSE", "DEFER", "BLOCK"}:\n        raise ValueError("execution_decision_invalid")\n    if not isinstance(proposal.get("task_id"), str) or not proposal["task_id"]:\n        raise ValueError("execution_proposal_task_id_required")\n    actions = proposal.get("proposed_actions")\n    if not isinstance(actions, list):\n        raise ValueError("proposed_actions_must_be_list")\n    for action in actions:\n        validate_candidate_action(action)\n    uncertainty = proposal.get("uncertainty")\n    if not isinstance(uncertainty, dict):\n        raise ValueError("execution_uncertainty_required")\n    score = uncertainty.get("score")\n    if not isinstance(score, (int, float)) or not 0 <= score <= 1:\n        raise ValueError("execution_uncertainty_score_invalid")\n    reasons = uncertainty.get("reasons")\n    if not isinstance(reasons, list) or not all(isinstance(x, str) for x in reasons):\n        raise ValueError("execution_uncertainty_reasons_invalid")\n    if proposal["decision"] != "PROPOSE" and actions:\n        raise ValueError("non_propose_decision_must_not_emit_actions")\n    if not isinstance(proposal.get("evidence_refs", []), list):\n        raise ValueError("execution_evidence_refs_must_be_list")\n    if request is not None:\n        validate_execution_request(request)\n        if proposal["task_id"] != request["task_id"]:\n            raise ValueError("execution_proposal_task_mismatch")\n        allowed = {canonical(x) for x in request["candidate_actions"]}\n        for action in actions:\n            if canonical(action) not in allowed:\n                raise ValueError("execution_action_not_in_candidate_set")\n\ndef advisory_safe_for_authorization(proposal: Dict[str, Any], *, request: Dict[str, Any], max_uncertainty: float = 0.35) -> bool:\n    validate_execution_proposal(proposal, request=request)\n    return (proposal["decision"] == "PROPOSE" and bool(proposal["proposed_actions"])\n            and proposal["uncertainty"]["score"] <= max_uncertainty)\n\nclass ExecutionReasoningBackend:\n    def propose(self, *, contextual_state: Dict[str, Any], request: Dict[str, Any]) -> Dict[str, Any]:\n        raise NotImplementedError\n\n@dataclass\nclass OpenAICompatibleExecutionBackend(ExecutionReasoningBackend):\n    config: BackendConfig\n\n    def propose(self, *, contextual_state: Dict[str, Any], request: Dict[str, Any]) -> Dict[str, Any]:\n        validate_context_state(contextual_state)\n        validate_execution_request(request)\n        payload = {\n            "model": self.config.model,\n            "temperature": 0,\n            "messages": [\n                {"role": "system", "content": SYSTEM_PROMPT},\n                {"role": "user", "content": json.dumps({\n                    "contextual_state": contextual_state, "request": request\n                }, ensure_ascii=False)},\n            ],\n        }\n        headers = {"Content-Type": "application/json"}\n        if self.config.api_key:\n            headers["Authorization"] = f"Bearer {self.config.api_key}"\n        req = urllib.request.Request(\n            f"{self.config.base_url}/chat/completions",\n            data=json.dumps(payload).encode("utf-8"),\n            headers=headers, method="POST",\n        )\n        with urllib.request.urlopen(req, timeout=self.config.timeout_seconds) as resp:\n            raw = json.loads(resp.read().decode("utf-8"))\n        text = raw["choices"][0]["message"]["content"].strip()\n        if text.startswith("```"):\n            lines = text.splitlines()[1:]\n            if lines and lines[-1].strip().startswith("```"):\n                lines = lines[:-1]\n            text = "\n".join(lines).strip()\n        proposal = json.loads(text)\n        validate_execution_proposal(proposal, request=request)\n        return proposal\n\nclass RuleExecutionBackend(ExecutionReasoningBackend):\n    """Deterministic baseline for backend A/B tests."""\n    def __init__(self, selector=None):\n        self.selector = selector or (lambda request: list(request["candidate_actions"][:1]))\n\n    def propose(self, *, contextual_state: Dict[str, Any], request: Dict[str, Any]) -> Dict[str, Any]:\n        validate_context_state(contextual_state)\n        validate_execution_request(request)\n        actions = list(self.selector(request) or [])\n        proposal = {\n            "schema_version": PROPOSAL_VERSION,\n            "task_id": request["task_id"],\n            "decision": "PROPOSE" if actions else "DEFER",\n            "strategy": {"backend": "rule-baseline"} if actions else None,\n            "proposed_actions": actions,\n            "uncertainty": {"score": 0.0 if actions else 1.0,\n                            "reasons": [] if actions else ["NO_CANDIDATE_SELECTED"]},\n            "evidence_refs": [],\n            "reason_code": "RULE_CANDIDATE_SELECTED" if actions else "NO_CANDIDATE_SELECTED",\n        }\n        validate_execution_proposal(proposal, request=request)\n        return proposal\n
+#!/usr/bin/env python3
+"""Execution-only reasoning contract for FlyThink.
+
+Canonical language/context ownership is upstream. FlyThink consumes
+contextual-state.v1 plus an already-resolved execution request and may only
+select from explicit candidate actions. It never executes devices.
+"""
+from __future__ import annotations
+
+import json
+import urllib.request
+from dataclasses import dataclass
+from typing import Any, Dict, Optional
+
+from reasoning_backend import BackendConfig, validate_context_state
+
+REQUEST_VERSION = "flythink-execution-request.v1"
+PROPOSAL_VERSION = "flythink-execution-proposal.v1"
+FORBIDDEN_SEMANTIC_KEYS = {
+    "utterance", "text", "transcript", "frames", "focus", "ambiguity",
+    "semantic_operation",
+}
+ALLOWED_ACTION_OPS = {
+    "PATCH_SLOT", "PATCH_RELATIVE", "CLOSE_DEVICE",
+    "ADD_DEVICE", "REMOVE_DEVICE", "REPLACE_TARGET",
+}
+
+SYSTEM_PROMPT = """You are an execution-reasoning backend for FlyThink.
+Language understanding, reference resolution, dialogue state, and task state
+have already been produced upstream. Do not reinterpret user speech.
+Select only from request.candidate_actions. Never execute a device.
+Return JSON with schema_version, task_id, decision, strategy, proposed_actions,
+uncertainty, evidence_refs, and reason_code. Authorization remains external.
+"""
+
+def canonical(value: Any) -> str:
+    return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+
+def forbidden_semantic_paths(value: Any, path: str = "$") -> list[str]:
+    found: list[str] = []
+    if isinstance(value, dict):
+        for key, child in value.items():
+            child_path = f"{path}.{key}"
+            if key in FORBIDDEN_SEMANTIC_KEYS:
+                found.append(child_path)
+            found.extend(forbidden_semantic_paths(child, child_path))
+    elif isinstance(value, list):
+        for index, child in enumerate(value):
+            found.extend(forbidden_semantic_paths(child, f"{path}[{index}]"))
+    return found
+
+def reject_semantic_leak(value: Any, label: str) -> None:
+    leaked = forbidden_semantic_paths(value)
+    if leaked:
+        raise ValueError(label + ":" + ",".join(leaked))
+
+def logical_target(target: Any) -> bool:
+    return (
+        isinstance(target, dict)
+        and set(target.keys()) == {"area", "entity", "instance"}
+        and all(isinstance(target[k], str) and target[k] for k in ("area", "entity", "instance"))
+    )
+
+def validate_candidate_action(action: Dict[str, Any]) -> None:
+    if not isinstance(action, dict):
+        raise ValueError("candidate_action_must_be_object")
+    if action.get("op") not in ALLOWED_ACTION_OPS:
+        raise ValueError("candidate_action_op_invalid")
+    reject_semantic_leak(action, "semantic_input_forbidden")
+    if action["op"] == "REPLACE_TARGET":
+        if not logical_target(action.get("from")) or not logical_target(action.get("to")):
+            raise ValueError("logical_target_contract_violation")
+    elif not logical_target(action.get("target")):
+        raise ValueError("logical_target_contract_violation")
+
+def validate_execution_request(request: Dict[str, Any]) -> None:
+    if not isinstance(request, dict):
+        raise ValueError("execution_request_must_be_object")
+    if request.get("request_version") != REQUEST_VERSION:
+        raise ValueError("unsupported_execution_request_contract")
+    reject_semantic_leak(request, "semantic_input_forbidden")
+    if not isinstance(request.get("task_id"), str) or not request["task_id"]:
+        raise ValueError("execution_task_id_required")
+    if not isinstance(request.get("goal"), dict):
+        raise ValueError("execution_goal_must_be_structured_object")
+    targets = request.get("resolved_targets")
+    if not isinstance(targets, list):
+        raise ValueError("resolved_targets_must_be_list")
+    for target in targets:
+        if not logical_target(target):
+            raise ValueError("logical_target_contract_violation")
+    resolved = {canonical(target) for target in targets}
+    candidates = request.get("candidate_actions")
+    if not isinstance(candidates, list):
+        raise ValueError("candidate_actions_must_be_list")
+    for action in candidates:
+        validate_candidate_action(action)
+        action_targets = (
+            [action["from"], action["to"]]
+            if action["op"] == "REPLACE_TARGET"
+            else [action["target"]]
+        )
+        for action_target in action_targets:
+            if canonical(action_target) not in resolved:
+                raise ValueError("candidate_action_target_not_resolved")
+    if not isinstance(request.get("constraints", []), list):
+        raise ValueError("execution_constraints_must_be_list")
+
+def validate_execution_proposal(
+    proposal: Dict[str, Any],
+    *,
+    request: Optional[Dict[str, Any]] = None,
+) -> None:
+    if not isinstance(proposal, dict):
+        raise ValueError("execution_proposal_must_be_object")
+    if proposal.get("schema_version") != PROPOSAL_VERSION:
+        raise ValueError("unsupported_execution_proposal_contract")
+    reject_semantic_leak(proposal, "semantic_output_forbidden")
+    if proposal.get("decision") not in {"PROPOSE", "DEFER", "BLOCK"}:
+        raise ValueError("execution_decision_invalid")
+    if not isinstance(proposal.get("task_id"), str) or not proposal["task_id"]:
+        raise ValueError("execution_proposal_task_id_required")
+    actions = proposal.get("proposed_actions")
+    if not isinstance(actions, list):
+        raise ValueError("proposed_actions_must_be_list")
+    for action in actions:
+        validate_candidate_action(action)
+    uncertainty = proposal.get("uncertainty")
+    if not isinstance(uncertainty, dict):
+        raise ValueError("execution_uncertainty_required")
+    score = uncertainty.get("score")
+    if not isinstance(score, (int, float)) or not 0 <= score <= 1:
+        raise ValueError("execution_uncertainty_score_invalid")
+    reasons = uncertainty.get("reasons")
+    if not isinstance(reasons, list) or not all(isinstance(x, str) for x in reasons):
+        raise ValueError("execution_uncertainty_reasons_invalid")
+    if proposal["decision"] != "PROPOSE" and actions:
+        raise ValueError("non_propose_decision_must_not_emit_actions")
+    if not isinstance(proposal.get("evidence_refs", []), list):
+        raise ValueError("execution_evidence_refs_must_be_list")
+    if request is not None:
+        validate_execution_request(request)
+        if proposal["task_id"] != request["task_id"]:
+            raise ValueError("execution_proposal_task_mismatch")
+        allowed = {canonical(x) for x in request["candidate_actions"]}
+        for action in actions:
+            if canonical(action) not in allowed:
+                raise ValueError("execution_action_not_in_candidate_set")
+
+def advisory_safe_for_authorization(
+    proposal: Dict[str, Any],
+    *,
+    request: Dict[str, Any],
+    max_uncertainty: float = 0.35,
+) -> bool:
+    """Advisory only; deterministic FlyThink authorization remains authoritative."""
+    validate_execution_proposal(proposal, request=request)
+    return (
+        proposal["decision"] == "PROPOSE"
+        and bool(proposal["proposed_actions"])
+        and proposal["uncertainty"]["score"] <= max_uncertainty
+    )
+
+class ExecutionReasoningBackend:
+    def propose(
+        self,
+        *,
+        contextual_state: Dict[str, Any],
+        request: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        raise NotImplementedError
+
+@dataclass
+class OpenAICompatibleExecutionBackend(ExecutionReasoningBackend):
+    config: BackendConfig
+
+    def propose(
+        self,
+        *,
+        contextual_state: Dict[str, Any],
+        request: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        validate_context_state(contextual_state)
+        validate_execution_request(request)
+        payload = {
+            "model": self.config.model,
+            "temperature": 0,
+            "messages": [
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": json.dumps({
+                    "contextual_state": contextual_state,
+                    "request": request,
+                }, ensure_ascii=False)},
+            ],
+        }
+        headers = {"Content-Type": "application/json"}
+        if self.config.api_key:
+            headers["Authorization"] = f"Bearer {self.config.api_key}"
+        req = urllib.request.Request(
+            f"{self.config.base_url}/chat/completions",
+            data=json.dumps(payload).encode("utf-8"),
+            headers=headers,
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=self.config.timeout_seconds) as resp:
+            raw = json.loads(resp.read().decode("utf-8"))
+        text = raw["choices"][0]["message"]["content"].strip()
+        if text.startswith("```"):
+            lines = text.splitlines()[1:]
+            if lines and lines[-1].strip().startswith("```"):
+                lines = lines[:-1]
+            text = chr(10).join(lines).strip()
+        proposal = json.loads(text)
+        validate_execution_proposal(proposal, request=request)
+        return proposal
+
+class RuleExecutionBackend(ExecutionReasoningBackend):
+    """Deterministic baseline for backend A/B tests."""
+
+    def __init__(self, selector=None):
+        self.selector = selector or (lambda request: list(request["candidate_actions"][:1]))
+
+    def propose(
+        self,
+        *,
+        contextual_state: Dict[str, Any],
+        request: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        validate_context_state(contextual_state)
+        validate_execution_request(request)
+        actions = list(self.selector(request) or [])
+        proposal = {
+            "schema_version": PROPOSAL_VERSION,
+            "task_id": request["task_id"],
+            "decision": "PROPOSE" if actions else "DEFER",
+            "strategy": {"backend": "rule-baseline"} if actions else None,
+            "proposed_actions": actions,
+            "uncertainty": {
+                "score": 0.0 if actions else 1.0,
+                "reasons": [] if actions else ["NO_CANDIDATE_SELECTED"],
+            },
+            "evidence_refs": [],
+            "reason_code": (
+                "RULE_CANDIDATE_SELECTED" if actions else "NO_CANDIDATE_SELECTED"
+            ),
+        }
+        validate_execution_proposal(proposal, request=request)
+        return proposal
