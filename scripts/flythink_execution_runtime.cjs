@@ -28,6 +28,8 @@ function physicalReceiptsCommitted(receipts){
     receipts.every(r=>r&&r.status==="applied");
 }
 
+function isSha256(v){return /^[0-9a-f]{64}$/.test(String(v||""))}
+
 function validateAuthorizationResult(result,requestedActions){
   if(!result||typeof result!=="object")
     throw new Error("physical_authorization_result_required");
@@ -39,6 +41,16 @@ function validateAuthorizationResult(result,requestedActions){
     throw new Error("physical_authorization_patch_count_mismatch");
   if(!result.receipt||typeof result.receipt!=="object")
     throw new Error("physical_authorization_receipt_required");
+  const receipt=result.receipt;
+  if(receipt.single_use!==true)
+    throw new Error("physical_authorization_single_use_required");
+  if(typeof receipt.authorization_id!=="string"||!receipt.authorization_id)
+    throw new Error("physical_authorization_id_required");
+  if(!isSha256(receipt.patch_digest)||
+     receipt.patch_digest!==sha256Object(result.patches))
+    throw new Error("physical_authorization_patch_digest_mismatch");
+  if(!isSha256(receipt.registry_digest))
+    throw new Error("physical_authorization_registry_digest_invalid");
 
   for(let i=0;i<requestedActions.length;i++){
     if(!samePatchIdentity(requestedActions[i],result.patches[i])){
@@ -98,7 +110,8 @@ async function runExecutionProposal({
   authorization_context={},
   source_step=0,
   source_revision=0,
-  max_uncertainty=0.35
+  max_uncertainty=0.35,
+  authorizationLedger=null
 }={}){
   assertContextStateSnapshot(contextual_state);
   validateExecutionRequest(request);
@@ -185,6 +198,26 @@ async function runExecutionProposal({
   }
 
   const authorized=authorization.patches;
+  const authReceipt=authorization.receipt;
+  if(!authorizationLedger||typeof authorizationLedger.add!=="function"){
+    return {
+      ...noExecution("BLOCKED","authorization_ledger_required"),
+      authorization_receipt:clone(authReceipt)
+    };
+  }
+  const consumed=authorizationLedger.add(authReceipt.authorization_id,{
+    task_id:request.task_id,
+    receipt_sha256:authReceipt.receipt_sha256||null,
+    patch_digest:authReceipt.patch_digest,
+    registry_digest:authReceipt.registry_digest
+  });
+  if(consumed===false){
+    return {
+      ...noExecution("BLOCKED","physical_authorization_replayed"),
+      authorization_receipt:clone(authReceipt)
+    };
+  }
+
   const atomic=authorized.length>1;
   const beforePhysical=normalizeRuntime(current);
   let physical;
@@ -246,12 +279,14 @@ class FlyThinkExecutionRuntime{
     runtime={},
     driver,
     physicalAuthorizer,
-    maxUncertainty=0.35
+    maxUncertainty=0.35,
+    authorizationLedger=null
   }={}){
     this.runtime=normalizeRuntime(runtime);
     this.driver=driver;
     this.physicalAuthorizer=physicalAuthorizer;
     this.maxUncertainty=maxUncertainty;
+    this.authorizationLedger=authorizationLedger;
   }
 
   async execute(input={}){
@@ -262,7 +297,8 @@ class FlyThinkExecutionRuntime{
       physicalAuthorizer:input.physicalAuthorizer||this.physicalAuthorizer,
       max_uncertainty:input.max_uncertainty==null
         ?this.maxUncertainty
-        :input.max_uncertainty
+        :input.max_uncertainty,
+      authorizationLedger:input.authorizationLedger||this.authorizationLedger
     });
     this.runtime=out.runtime;
     return out;
