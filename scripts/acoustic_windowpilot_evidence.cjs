@@ -103,6 +103,8 @@ function buildReceipt({
         ),0),
       committed_final_count:committed.length,
       committed_finals:committed.map(x=>({
+        turn_id:x.turn_id||null,
+        physical_revision:x.physical_revision==null?null:Number(x.physical_revision),
         text:x.asr.text,
         targets:clone(x.target_resolution&&x.target_resolution.targets||[]),
         patches:clone(x.patch_proposal||[]),
@@ -237,6 +239,15 @@ function validateReceipt(receipt,{requireHumanFixture=false,requireSpatialRuntim
         if(auth.canonicalization!=="sorted-json-number-normalized-v1"){
           reasons.push("SpatialRuntime authorization canonicalization mismatch");
         }
+        if(committed.turn_id&&auth.case_id!==committed.turn_id){
+          reasons.push("SpatialRuntime authorization case/turn mismatch");
+        }
+        if(
+          committed.physical_revision!=null&&
+          Number(auth.source_revision)+1!==Number(committed.physical_revision)
+        ){
+          reasons.push("SpatialRuntime authorization revision does not precede committed physical revision");
+        }
         if(!/^[0-9a-f]{64}$/.test(String(auth.trace_hash||""))){
           reasons.push("SpatialRuntime trace hash missing");
         }
@@ -263,6 +274,15 @@ function validateReceipt(receipt,{requireHumanFixture=false,requireSpatialRuntim
           if(binding.authorization_trace_hash!==auth.trace_hash){
             reasons.push("SpatialRuntime binding trace hash mismatch");
           }
+          if(binding.case_id!==auth.case_id){
+            reasons.push("SpatialRuntime physical binding case mismatch");
+          }
+          if(Number(binding.source_step)!==Number(auth.source_step)){
+            reasons.push("SpatialRuntime physical binding source step mismatch");
+          }
+          if(Number(binding.source_revision)!==Number(auth.source_revision)){
+            reasons.push("SpatialRuntime physical binding source revision mismatch");
+          }
           const savedBinding=binding.binding_sha256;
           const bindingBase=clone(binding);delete bindingBase.binding_sha256;
           if(!savedBinding||savedBinding!==sha256Object(bindingBase)){
@@ -280,6 +300,28 @@ function validateReceipt(receipt,{requireHumanFixture=false,requireSpatialRuntim
             }
             if(!/^[0-9a-f]{64}$/.test(String(row.observation_sha256||""))){
               reasons.push("SpatialRuntime bound observation SHA256 missing");
+            }
+            const authValue=Number(row.authorized_value);
+            const requestedValue=Number(row.requested_position_pct);
+            const observedValue=Number(row.observed_value);
+            const convergenceError=Number(row.convergence_error_pct);
+            if(!Number.isFinite(authValue)){
+              reasons.push("SpatialRuntime bound authorized value missing");
+            }
+            if(
+              Number.isFinite(requestedValue)&&Number.isFinite(authValue)&&
+              requestedValue!==authValue
+            ){
+              reasons.push("SpatialRuntime driver request differs from authorized value");
+            }
+            if(!Number.isFinite(observedValue)){
+              reasons.push("SpatialRuntime bound observed value missing");
+            }
+            if(
+              Number.isFinite(convergenceError)&&Number.isFinite(tolerance)&&
+              convergenceError>tolerance
+            ){
+              reasons.push("SpatialRuntime authorized readback outside tolerance");
             }
           }
         }
