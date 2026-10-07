@@ -200,3 +200,20 @@ console.log(JSON.stringify({
   ok:true,
   contract:"decision receipts bind candidate, provider evidence, adjudication and exact trust-registry snapshot without authorizing device execution"
 }));
+
+
+const wrongTimeAdjudication=JSON.parse(JSON.stringify(adjudication));
+wrongTimeAdjudication.by_dimension.rain_ingress.providers[0].trust_resolution.evaluation_time=
+  "2026-10-09T00:00:00Z";
+assert.throws(
+  ()=>buildEvidenceDecisionReceipt({
+    decision_id:"decision-time-mismatch",
+    evaluated_at:"2026-10-10T00:00:00Z",
+    actor:"home-policy-shadow",
+    learned_candidate:learnedCandidate,
+    adjudication:wrongTimeAdjudication,
+    provider_results:providerResults,
+    trust_snapshot:snapshot
+  }),
+  /evaluation_time_mismatch/
+);
