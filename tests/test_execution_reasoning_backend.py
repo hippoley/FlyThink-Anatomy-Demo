@@ -158,3 +158,65 @@ def test_candidate_action_target_must_be_resolved():
         assert "candidate_action_target_not_resolved" in str(exc)
         return
     raise AssertionError("candidate actions must stay inside resolved targets")
+
+
+def _set_fixture_path(root, path_text, value):
+    import copy
+    parts = path_text.split(".")
+    cur = root
+    for part in parts[:-1]:
+        cur = cur[int(part)] if part.isdigit() else cur[part]
+    last = parts[-1]
+    cur[int(last) if last.isdigit() else last] = copy.deepcopy(value)
+
+
+def _build_fixture_case(fixture, row):
+    import copy
+    request = copy.deepcopy(fixture["base"]["request"])
+    proposal = copy.deepcopy(fixture["base"]["proposal"])
+    target = request if row["kind"] == "request" else proposal
+    for mutation in row.get("mutations", []):
+        _set_fixture_path(target, mutation["path"], mutation["value"])
+    if row.get("append_candidate_from") is not None:
+        request["candidate_actions"].append(
+            copy.deepcopy(request["candidate_actions"][row["append_candidate_from"]])
+        )
+    if row.get("extra_candidate") is not None:
+        request["candidate_actions"].append(copy.deepcopy(row["extra_candidate"]))
+        if row.get("append_extra_proposed"):
+            proposal["proposed_actions"].append(copy.deepcopy(row["extra_candidate"]))
+    if row.get("append_proposed_from") is not None:
+        proposal["proposed_actions"].append(
+            copy.deepcopy(proposal["proposed_actions"][row["append_proposed_from"]])
+        )
+    return request, proposal
+
+
+def test_shared_execution_contract_fixture():
+    import json
+    fixture_path = (
+        Path(__file__).resolve().parents[1]
+        / "benchmarks"
+        / "execution_reasoning_contract_cases.json"
+    )
+    fixture = json.loads(fixture_path.read_text(encoding="utf-8"))
+    assert fixture["schema_version"] == "flythink-execution-contract-cases-v1"
+
+    for row in fixture["cases"]:
+        request, proposal = _build_fixture_case(fixture, row)
+        try:
+            if row["kind"] == "request":
+                validate_execution_request(request)
+            else:
+                validate_execution_proposal(proposal, request=request)
+            error = None
+        except ValueError as exc:
+            error = str(exc)
+
+        if row.get("expect") == "PASS":
+            assert error is None, f'{row["id"]}: {error}'
+        else:
+            assert error is not None, f'{row["id"]}: expected error'
+            assert row["expect_error"] in error, (
+                f'{row["id"]}: expected {row["expect_error"]}, got {error}'
+            )
