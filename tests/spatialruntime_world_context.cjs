@@ -24,6 +24,7 @@ assert.equal(context.case_id,"interior-kitchen-original");
 assert.equal(context.world_snapshot_sha256,receipt.world_snapshot_sha256);
 assert.equal(context.validation_receipt_sha256,receipt.receipt_sha256);
 assert.equal(context.source_fingerprint,receipt.source_fingerprint);
+assert.equal(context.spatialruntime_commit_sha,receipt.spatialruntime_commit_sha||null);
 assert.equal(context.context_sha256.length,64);
 assert.deepEqual(context.exterior_window_keys,["次卧（二）::窗::default"]);
 assert.equal(context.exterior_windows.length,1);

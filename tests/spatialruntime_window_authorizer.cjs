@@ -37,6 +37,12 @@ async function ordinaryOpeningPassesSpatialRuntime(){
   assert.equal(row.committed,true);
   assert.equal(row.physical_authorization.schema,RECEIPT_SCHEMA);
   assert.equal(row.physical_authorization.allow,true);
+  if(process.env.SPATIALRUNTIME_COMMIT_SHA){
+    assert.equal(
+      row.physical_authorization.spatialruntime_commit_sha,
+      process.env.SPATIALRUNTIME_COMMIT_SHA
+    );
+  }
   assert.equal(row.authorized_patch_proposal[0].value,5);
   assert.equal(row.physical_authorization.trace_status,"completed");
   assert.equal(row.physical_authorization.trace_hash.length,64);

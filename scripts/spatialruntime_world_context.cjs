@@ -43,6 +43,9 @@ function validateSceneContext(context){
       throw new Error("spatialruntime_scene_context_sha_invalid:"+key);
     }
   }
+  if(context.spatialruntime_commit_sha!=null&&!isGitCommit(context.spatialruntime_commit_sha)){
+    throw new Error("spatialruntime_scene_context_runtime_commit_invalid");
+  }
   if(context.handoff_evidence!=null){
     const handoff=context.handoff_evidence;
     if(!handoff||handoff.schema!==HANDOFF_SCHEMA){
@@ -190,6 +193,7 @@ function validateSceneArtifacts(world,receipt,{windowEntityLabel="窗"}={}){
     validation_receipt_sha256:receipt.receipt_sha256,
     source_fingerprint:receipt.source_fingerprint,
     relation_graph_fingerprint:receipt.relation_graph_fingerprint,
+    spatialruntime_commit_sha:receipt.spatialruntime_commit_sha||null,
     exterior_windows:explicitExterior,
     exterior_window_keys:explicitExterior.map(x=>x.key)
   };
@@ -230,6 +234,9 @@ function validateSceneHandoff(world,receipt,handoff,options={}){
   }
   if(handoff.relation_graph_fingerprint!==context.relation_graph_fingerprint){
     throw new Error("spatialruntime_scene_handoff_relation_graph_mismatch");
+  }
+  if((handoff.spatialruntime_commit_sha||null)!==(context.spatialruntime_commit_sha||null)){
+    throw new Error("spatialruntime_scene_handoff_runtime_commit_mismatch");
   }
   if(!sameObject(handoff.source_files_sha256,receipt.source_files_sha256)){
     throw new Error("spatialruntime_scene_handoff_source_files_mismatch");
@@ -274,6 +281,7 @@ function validateSceneHandoff(world,receipt,handoff,options={}){
     schema:HANDOFF_SCHEMA,
     source_repo:handoff.source_repo,
     source_commit_sha:handoff.source_commit_sha,
+    spatialruntime_commit_sha:handoff.spatialruntime_commit_sha||null,
     handoff_sha256:handoff.handoff_sha256,
     explicit_exterior_windows_sha256:sha256Object(handoffRows)
   };
