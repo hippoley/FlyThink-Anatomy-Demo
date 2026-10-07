@@ -169,6 +169,36 @@ async function quarantinePreflightMustBlockBeforeDriver(){
   );
 }
 
+async function semanticOnlyFinalizationMustNeverCrossPhysicalBoundary(){
+  const initial=runtime();
+  const driver=new MockThingDriver(initial);
+  const predictor=async()=>({
+    decision:"EXECUTE",
+    confidence:0.99,
+    patches:[patch("主卧",24)]
+  });
+  const out=await runStreamingSequence([
+    {turn_id:"t-semantic",kind:"partial",text:"把主卧空调"},
+    {turn_id:"t-semantic",kind:"final",text:"把主卧空调调到24度"}
+  ],{
+    initialRuntime:initial,
+    predictor,
+    driver,
+    semanticOnly:true
+  });
+
+  assert.equal(out.trace[0].semantic_ready,false);
+  assert.equal(out.trace[1].semantic_ready,true);
+  assert.equal(out.trace[1].physical_boundary_crossed,false);
+  assert.equal(out.trace[1].committed,false);
+  assert.equal(out.physical_commands,0);
+  assert.deepEqual(out.runtime.devices,initial.devices);
+  assert.deepEqual(out.trace[1].patch_proposal,[patch("主卧",24)]);
+  assert.equal(out.history[0].semantic_ready,true);
+  assert.equal(out.history[0].physical_boundary_crossed,false);
+  assert.deepEqual(out.history[0].applied_patches,[]);
+}
+
 async function finalClarifyMustNotExecute(){
   const initial=runtime();
   const driver=new MockThingDriver(initial);
@@ -188,8 +218,9 @@ async function finalClarifyMustNotExecute(){
   await rejectedPhysicalReceiptMustNotBecomeCommit();
   await quarantinePreflightMustBlockBeforeDriver();
   await finalClarifyMustNotExecute();
+  await semanticOnlyFinalizationMustNeverCrossPhysicalBoundary();
   console.log(JSON.stringify({
     ok:true,
-    contract:"streaming ASR -> semantic -> quarantine preflight -> commit -> thing model -> feedback -> reconcile; forbidden quarantined writes make zero driver calls"
+    contract:"streaming ASR separates semantic readiness from physical commit; semantic-only finalization makes zero driver calls and preserves runtime"
   }));
 })().catch(e=>{console.error(e);process.exit(1)});
