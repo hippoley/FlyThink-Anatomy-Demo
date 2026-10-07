@@ -20,6 +20,7 @@ const {MockThingDriver}=require("../scripts/physical_runtime.cjs");
 const {runStreamingSequence}=require("../scripts/streaming_slu_e2e.cjs");
 
 const SOURCE_COMMIT="1".repeat(40);
+const SPATIALRUNTIME_COMMIT=process.env.SPATIALRUNTIME_COMMIT_SHA||"d123ab9a5310cb9ce15d9e82630828a0d32211f4";
 const SOURCE_REPO="hippoley/interior-kitchen-original";
 const AREA="次卧（二）";
 const TARGET={area:AREA,entity:"窗",instance:"default"};
@@ -65,6 +66,7 @@ function buildArtifacts(){
     schema:"interior_scene_spatialruntime_consumer_v1",
     valid:true,
     case_id:world.case_id,
+    spatialruntime_commit_sha:SPATIALRUNTIME_COMMIT,
     world_snapshot_sha256:sha256Object(world),
     source_fingerprint:sourceFingerprint,
     source_fingerprint_verified:true,
@@ -84,6 +86,7 @@ function buildArtifacts(){
     schema:HANDOFF_SCHEMA,
     source_repo:SOURCE_REPO,
     source_commit_sha:SOURCE_COMMIT,
+    spatialruntime_commit_sha:SPATIALRUNTIME_COMMIT,
     case_id:world.case_id,
     world_snapshot_sha256:receipt.world_snapshot_sha256,
     validation_receipt_sha256:receipt.receipt_sha256,
@@ -139,6 +142,8 @@ async function validHandoffDrivesSpatialRuntimeSafety(){
   );
   assert.equal(context.handoff_evidence.schema,HANDOFF_SCHEMA);
   assert.equal(context.handoff_evidence.source_commit_sha,SOURCE_COMMIT);
+  assert.equal(context.spatialruntime_commit_sha,SPATIALRUNTIME_COMMIT);
+  assert.equal(context.handoff_evidence.spatialruntime_commit_sha,SPATIALRUNTIME_COMMIT);
   assert.equal(context.handoff_evidence.handoff_sha256,artifacts.handoff.handoff_sha256);
 
   const paths=writeArtifacts(artifacts);
@@ -185,6 +190,7 @@ async function validHandoffDrivesSpatialRuntimeSafety(){
   assert.equal(row.committed,true);
   assert.equal(row.authorized_patch_proposal[0].value,0);
   assert.equal(row.physical_authorization.scene_evidence.handoff_evidence.source_commit_sha,SOURCE_COMMIT);
+  assert.equal(row.physical_authorization.scene_evidence.spatialruntime_commit_sha,SPATIALRUNTIME_COMMIT);
   assert.equal(row.physical_authorization.scene_evidence.handoff_evidence.handoff_sha256,artifacts.handoff.handoff_sha256);
   assert.equal(driver.commands[0].patch.value,0);
 }
@@ -215,10 +221,23 @@ function expectedCommitMismatchFailsClosed(){
   );
 }
 
+
+function spatialRuntimeCommitMismatchFailsClosed(){
+  const artifacts=buildArtifacts();
+  artifacts.handoff.spatialruntime_commit_sha="f".repeat(40);
+  const base={...artifacts.handoff};delete base.handoff_sha256;
+  artifacts.handoff.handoff_sha256=sha256Object(base);
+  assert.throws(
+    ()=>validateSceneHandoff(artifacts.world,artifacts.receipt,artifacts.handoff),
+    /runtime_commit_mismatch/
+  );
+}
+
 (async()=>{
   await validHandoffDrivesSpatialRuntimeSafety();
   tamperedMappingFailsClosed();
   expectedCommitMismatchFailsClosed();
+  spatialRuntimeCommitMismatchFailsClosed();
   console.log(JSON.stringify({
     ok:true,
     contract:"verified scene handoff -> HomeAI scene context -> SpatialRuntime authorization -> physical dispatch"
