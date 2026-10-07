@@ -27,6 +27,16 @@ function arg(name){
 function flag(name){return process.argv.includes(name)}
 function clone(v){return v==null?v:JSON.parse(JSON.stringify(v))}
 
+function assertLiveSemanticProposal(prediction,apply){
+  if(!apply)return prediction;
+  if(!prediction||prediction.decision!=="EXECUTE")return prediction;
+  const patches=Array.isArray(prediction.patches)?prediction.patches:[];
+  if(patches.length!==1){
+    throw new Error("windowpilot_live_probe_requires_exactly_one_semantic_patch");
+  }
+  return prediction;
+}
+
 function initialRuntimeFromPhysical(target,pct){
   const key=[target.area,target.entity,target.instance||"default"].join("::");
   return normalizeRuntime({devices:{
@@ -62,6 +72,9 @@ function assertLiveProbePreconditions({
   }
   if(!Number.isFinite(tolerancePct)||tolerancePct<0||tolerancePct>2){
     throw new Error("windowpilot_live_probe_tolerance_invalid");
+  }
+  if(apply&&probeOpenPct<=tolerancePct){
+    throw new Error("windowpilot_live_probe_must_exceed_tolerance");
   }
   if(!Number.isFinite(initialPct)||initialPct<0||initialPct>100){
     throw new Error("windowpilot_live_probe_initial_position_invalid");
@@ -159,9 +172,13 @@ async function main(){
     judgement:arg("--judgement"),
     semantic:arg("--semantic")
   });
+  const guardedPredictor=async request=>{
+    const prediction=await client.predict(request);
+    return assertLiveSemanticProposal(prediction,apply);
+  };
   const session=new StreamingHomeSession({
     initialRuntime,
-    predictor:client.predict,
+    predictor:guardedPredictor,
     driver
   });
   const guard=new AsrEventSequenceGuard();
@@ -304,5 +321,6 @@ module.exports={
   initialRuntimeFromPhysical,
   assertLiveProbePreconditions,
   closeout,
+  assertLiveSemanticProposal,
   main
 };
