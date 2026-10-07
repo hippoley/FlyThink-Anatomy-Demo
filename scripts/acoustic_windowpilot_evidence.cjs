@@ -237,6 +237,9 @@ function validateReceipt(receipt,{requireHumanFixture=false}={}){
     const afterTick=Number(evidence.tick);
     const ackAtMs=Number(evidence.ack_at_ms);
     const receivedAtMs=Number(evidence.received_at_ms);
+    if(evidence.source!=="windowpilot:/api/state"){
+      reasons.push(label+" readback source is not WindowPilot state");
+    }
     if(!Number.isFinite(beforeTick)||!Number.isFinite(afterTick)||afterTick<=beforeTick){
       reasons.push(label+" readback tick is not causally newer");
     }
