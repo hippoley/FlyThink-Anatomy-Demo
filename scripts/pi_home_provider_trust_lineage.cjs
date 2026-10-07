@@ -185,10 +185,12 @@ function renewProvider(previous,providerId,{
   const index=entries.findIndex(x=>x.provider_id===id);
   if(index<0)throw new Error("provider_trust_provider_not_found:"+id);
   if(entries[index].status!=="active")throw new Error("provider_trust_renew_requires_active_provider");
+  const reviewedAt=normalizeInstant(reviewed_at,"provider_trust_reviewed_at");
   entries[index]={
     ...entries[index],
+    not_before:reviewedAt,
     expires_at:normalizeInstant(expires_at,"provider_trust_expires_at"),
-    reviewed_at:normalizeInstant(reviewed_at,"provider_trust_reviewed_at"),
+    reviewed_at:reviewedAt,
     review_due_at:normalizeInstant(review_due_at,"provider_trust_review_due_at"),
     lifecycle_metadata:{
       ...(entries[index].lifecycle_metadata||{}),
