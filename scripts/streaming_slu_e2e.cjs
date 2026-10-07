@@ -112,6 +112,7 @@ function bindSpatialRuntimeAuthorization(receipt,authorizedPatches,physicalRecei
     case_id:receipt.case_id,
     source_step:receipt.source_step,
     source_revision:receipt.source_revision,
+    spatialruntime_pin:receipt.spatialruntime_pin||null,
     authorization_receipt_sha256:receipt.receipt_sha256,
     authorization_trace_hash:receipt.trace_hash,
     bindings
