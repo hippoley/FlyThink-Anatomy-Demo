@@ -41,6 +41,9 @@ function validateAuthorizationReceipt(receipt,request,requestedPatches){
   if(receipt.allow!==true){
     throw new Error("spatialruntime_authorizer_receipt_not_allowed");
   }
+  if(receipt.canonicalization!=="sorted-json-number-normalized-v1"){
+    throw new Error("spatialruntime_authorizer_canonicalization_mismatch");
+  }
   if(receipt.case_id!==request.case_id){
     throw new Error("spatialruntime_authorizer_case_id_mismatch");
   }
