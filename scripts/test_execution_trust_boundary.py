@@ -18,7 +18,7 @@ assert not plan(registry,["客厅::空调::default","书房::空调::default"],"
 
 node=r'''
 const assert=require("assert");
-const payload=JSON.parse(process.argv[1]);
+const payload=JSON.parse(process.argv[1]);\nconst registryDigest=payload.authorization.registry_digest;
 const {normalizeRuntime,applyTurn}=require("./scripts/whole_home_patch_contract.cjs");
 const {atomicApplyAuthorizedPlan}=require("./scripts/atomic_authorized_commit.cjs");
 const parse=k=>{const [area,entity,instance]=k.split("::");return {area,entity,instance};};
@@ -30,7 +30,7 @@ r=applyTurn(r,[
  {op:"ADD_DEVICE",target:parse("客厅::灯::default"),slots:{power:"OFF"}}
 ]).runtime;
 const untouched=JSON.parse(JSON.stringify(r.devices["客厅::灯::default"]));
-let out=atomicApplyAuthorizedPlan(r,payload);
+let out=atomicApplyAuthorizedPlan(r,payload,registryDigest);
 assert(out.ok);
 assert.equal(out.runtime.devices["客厅::空调::default"].slots.temperature,22);
 assert.equal(out.runtime.devices["主卧::空调::default"].slots.temperature,22);
@@ -40,7 +40,7 @@ assert.deepStrictEqual(out.runtime.devices["客厅::灯::default"],untouched);
 // A valid mounted/capable third device cannot be injected after planning.
 const tampered=JSON.parse(JSON.stringify(payload));
 tampered.patches[1].target="次卧::空调::default";
-out=atomicApplyAuthorizedPlan(r,tampered);
+out=atomicApplyAuthorizedPlan(r,tampered,registryDigest);
 assert(!out.ok);assert.equal(out.reason,"planner_authorization_digest_mismatch");
 assert.deepStrictEqual(out.runtime,r);assert.equal(out.receipts.length,0);
 
@@ -48,14 +48,19 @@ assert.deepStrictEqual(out.runtime,r);assert.equal(out.receipts.length,0);
 for(const field of ["value","model_id","capability"]){
  const x=JSON.parse(JSON.stringify(payload));
  x.patches[0][field]=field==="value"?23:"FORGED";
- out=atomicApplyAuthorizedPlan(r,x);
+ out=atomicApplyAuthorizedPlan(r,x,registryDigest);
  assert(!out.ok);assert.equal(out.reason,"planner_authorization_digest_mismatch");
  assert.equal(out.receipts.length,0);
 }
+// Authorization cannot survive a registry rebind/re-provision event.
+out=atomicApplyAuthorizedPlan(r,payload,"registry-after-rebind");
+assert(!out.ok);assert.equal(out.reason,"planner_authorization_stale_registry");
+assert.deepStrictEqual(out.runtime,r);assert.equal(out.receipts.length,0);
+
 console.log(JSON.stringify({
  planner_bound_authorization:"PASS",
  mounted_wrong_device_injection:0,
- post_planner_patch_tamper:0,
+ post_planner_patch_tamper:0,\n stale_registry_authorization:0,
  unauthorized_receipt:0,
  untouched_state_violation:0
 }));
