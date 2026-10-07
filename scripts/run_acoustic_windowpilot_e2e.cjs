@@ -1,5 +1,6 @@
 "use strict";
 
+const fs=require("fs");
 const readline=require("readline");
 const {createCheckpointClient}=require("./stateful_checkpoint_trajectory.cjs");
 const {StreamingHomeSession}=require("./streaming_slu_e2e.cjs");
@@ -14,6 +15,10 @@ const {
   parseTarget,
   assertApplyPreconditions
 }=require("./probe_windowpilot_checkpoint_e2e.cjs");
+const {
+  buildReceipt,
+  validateReceipt
+}=require("./acoustic_windowpilot_evidence.cjs");
 
 function arg(name){
   const i=process.argv.indexOf(name);
@@ -123,8 +128,12 @@ async function main(){
   const probeOpenPct=Number(arg("--probe-open-pct")||5);
   const tolerancePct=Number(arg("--tolerance")||1);
   const timeoutMs=Number(arg("--timeout-ms")||5000);
+  const receiptPath=arg("--receipt");
+  const fixtureJson=arg("--acoustic-fixture-json");
+  const acousticFixture=fixtureJson?JSON.parse(fixtureJson):null;
 
   if(!url)throw new Error("--url is required");
+  if(apply&&!receiptPath)throw new Error("--apply requires --receipt");
 
   const driver=new WindowPilotHttpDriver({
     baseUrl:url,
@@ -157,6 +166,7 @@ async function main(){
   const guard=new AsrEventSequenceGuard();
   const input=readline.createInterface({input:process.stdin,crlfDelay:Infinity});
   let events=0,finals=0;
+  const acceptedEvents=[];
   let processingError=null;
   let closeoutEvidence=null;
 
@@ -164,6 +174,7 @@ async function main(){
     for await(const line of input){
       if(!line.trim())continue;
       const event=guard.accept(JSON.parse(line));
+      acceptedEvents.push(clone(event));
       if(apply&&event.kind==="final"&&finals>=1){
         throw new Error("windowpilot_live_probe_allows_one_final_segment");
       }
@@ -215,6 +226,40 @@ async function main(){
   const semanticCommands=session.trace
     .filter(x=>x.asr.is_final&&x.committed).length;
 
+  const closeoutPublic=closeoutEvidence?{
+    attempted:closeoutEvidence.attempted,
+    already_closed:closeoutEvidence.already_closed,
+    before_position_pct:closeoutEvidence.before_position_pct,
+    after_position_pct:closeoutEvidence.after_position_pct,
+    receipt:closeoutEvidence.receipt
+  }:null;
+
+  let evidenceReceipt=null;
+  let evidenceValidation=null;
+  if(apply){
+    evidenceReceipt=buildReceipt({
+      mode:"APPLY",
+      target,
+      probeOpenPct,
+      tolerancePct,
+      expectedHardwareIdentity,
+      readiness,
+      beforePositionPct:initialPct,
+      acceptedEvents,
+      trace:session.trace,
+      driverCommands:driver.commands,
+      closeout:closeoutPublic,
+      runtime:session.runtime,
+      acousticFixture
+    });
+    evidenceValidation=validateReceipt(evidenceReceipt,{
+      requireHumanFixture:!!(
+        acousticFixture&&acousticFixture.require_human_acceptance===true
+      )
+    });
+    fs.writeFileSync(receiptPath,JSON.stringify(evidenceReceipt,null,2)+"\n");
+  }
+
   const out={
     truth:"acoustic_windowpilot_live_probe_v1",
     mode:apply?"APPLY":"DRY_RUN",
@@ -226,21 +271,16 @@ async function main(){
       write_blockers:readiness.write_blockers||[],
       hardware_identity:readiness.hardware_identity||null
     },
-    before:{
-      position_pct:initialPct
-    },
+    acoustic_fixture:clone(acousticFixture),
+    before:{position_pct:initialPct},
     asr_events:events,
     final_segments:finals,
     speculative_physical_commands:speculativePhysical,
     semantic_commits:semanticCommands,
     physical_driver_commands:driver.commands.length,
-    closeout:closeoutEvidence?{
-      attempted:closeoutEvidence.attempted,
-      already_closed:closeoutEvidence.already_closed,
-      before_position_pct:closeoutEvidence.before_position_pct,
-      after_position_pct:closeoutEvidence.after_position_pct,
-      receipt:closeoutEvidence.receipt
-    }:null,
+    closeout:closeoutPublic,
+    evidence_receipt:receiptPath||null,
+    evidence_validation:evidenceValidation,
     runtime:session.runtime,
     trace:session.trace
   };
@@ -251,6 +291,7 @@ async function main(){
   if(apply){
     if(finals!==1||semanticCommands!==1)process.exitCode=2;
     if(!closeoutEvidence)process.exitCode=2;
+    if(!evidenceValidation||!evidenceValidation.valid)process.exitCode=2;
   }
 }
 
