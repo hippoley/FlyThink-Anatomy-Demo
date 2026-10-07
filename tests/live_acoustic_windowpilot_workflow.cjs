@@ -28,6 +28,21 @@ assert.match(y,/--apply/);
 assert.match(y,/verify_acoustic_windowpilot_evidence\.cjs/);
 assert.match(y,/--require-human-fixture/);
 
+
+const dryStart=y.indexOf("DRY_RUN human WAV");
+const applyStart=y.indexOf("APPLY human WAV");
+const verifyStart=y.indexOf("Independently verify human acoustic + hardware evidence");
+const attestStart=y.indexOf("Attest validated live evidence provenance");
+assert.ok(dryStart>=0&&applyStart>dryStart&&verifyStart>applyStart&&attestStart>verifyStart);
+
+const dryBlock=y.slice(dryStart,applyStart);
+const applyBlock=y.slice(applyStart,verifyStart);
+const verifyBlock=y.slice(verifyStart,attestStart);
+assert.match(dryBlock,/--spatialruntime-authorize/);
+assert.match(applyBlock,/--spatialruntime-authorize/);
+assert.match(applyBlock,/--apply/);
+assert.match(verifyBlock,/--require-spatialruntime-authorization/);
+
 assert.match(y,/probe_open_pct must be in \(0,5\]/);
 assert.match(y,/tolerance_pct must be in \[0,2\]/);
 assert.match(y,/probe_open_pct must exceed tolerance_pct/);
