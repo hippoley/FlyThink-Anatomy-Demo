@@ -41,7 +41,13 @@ async function ordinaryOpeningPassesSpatialRuntime(){
   assert.equal(row.physical_authorization.trace_status,"completed");
   assert.equal(row.physical_authorization.trace_hash.length,64);
   assert.equal(row.physical_authorization.receipt_sha256.length,64);
+  if(process.env.SPATIALRUNTIME_PIN){
+    assert.equal(row.physical_authorization.spatialruntime_pin,process.env.SPATIALRUNTIME_PIN);
+  }
   assert.equal(row.physical_authorization_binding.schema,"homeai_spatialruntime_physical_binding_v1");
+  if(process.env.SPATIALRUNTIME_PIN){
+    assert.equal(row.physical_authorization_binding.spatialruntime_pin,process.env.SPATIALRUNTIME_PIN);
+  }
   assert.equal(row.physical_authorization_binding.authorization_receipt_sha256,row.physical_authorization.receipt_sha256);
   assert.equal(row.physical_authorization_binding.authorization_trace_hash,row.physical_authorization.trace_hash);
   assert.equal(row.physical_authorization_binding.case_id,"sr-pass");
