@@ -41,10 +41,24 @@ function validateAuthorizationResult(result,requestedActions){
     throw new Error("physical_authorization_patch_count_mismatch");
   if(!result.receipt||typeof result.receipt!=="object")
     throw new Error("physical_authorization_receipt_required");
+  if(result.receipt.allow!==true)
+    throw new Error("physical_authorization_receipt_not_allowed");
+  if(
+    !Array.isArray(result.receipt.authorized_patches)||
+    result.receipt.authorized_patches.length!==result.patches.length
+  ){
+    throw new Error("physical_authorization_receipt_patch_binding_required");
+  }
 
   for(let i=0;i<requestedActions.length;i++){
     if(!samePatchIdentity(requestedActions[i],result.patches[i])){
       throw new Error("physical_authorization_patch_identity_mismatch:"+String(i));
+    }
+    if(
+      JSON.stringify(canonical(result.receipt.authorized_patches[i]))!==
+      JSON.stringify(canonical(result.patches[i]))
+    ){
+      throw new Error("physical_authorization_receipt_patch_mismatch:"+String(i));
     }
   }
   return {
