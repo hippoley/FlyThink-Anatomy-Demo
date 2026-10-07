@@ -131,6 +131,20 @@ def authorize(request: Mapping[str, Any]) -> dict[str, Any]:
             value = str(scene_evidence.get(key) or "")
             if len(value) != 64 or any(ch not in "0123456789abcdef" for ch in value):
                 raise ValueError(f"spatialruntime_scene_evidence_sha_invalid:{key}")
+        scene_source_commit = str(scene_evidence.get("source_commit_sha") or "").lower()
+        if re.fullmatch(r"[0-9a-f]{40}", scene_source_commit) is None:
+            raise ValueError("spatialruntime_scene_evidence_source_commit_invalid")
+        handoff_evidence = scene_evidence.get("handoff_evidence")
+        if handoff_evidence is not None:
+            if not isinstance(handoff_evidence, Mapping):
+                raise ValueError("spatialruntime_scene_handoff_evidence_invalid")
+            if handoff_evidence.get("schema") != "interior_scene_downstream_handoff_v1":
+                raise ValueError("spatialruntime_scene_handoff_evidence_schema_invalid")
+            handoff_source_commit = str(
+                handoff_evidence.get("source_commit_sha") or ""
+            ).lower()
+            if handoff_source_commit != scene_source_commit:
+                raise ValueError("spatialruntime_scene_handoff_source_commit_mismatch")
         scene_runtime_commit = scene_evidence.get("spatialruntime_commit_sha")
         if scene_runtime_commit is not None:
             scene_runtime_commit = str(scene_runtime_commit).lower()
