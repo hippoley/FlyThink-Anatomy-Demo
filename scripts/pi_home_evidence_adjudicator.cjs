@@ -1,5 +1,7 @@
 "use strict";
 
+const {fuseCandidateEvidence}=require("./pi_home_multiphysics_evidence.cjs");
+
 function uniq(xs){return [...new Set((xs||[]).map(String))].sort()}
 function clone(v){return v==null?v:JSON.parse(JSON.stringify(v))}
 
@@ -90,8 +92,50 @@ function adjudicateEvidence({
   };
 }
 
+function adjudicateCandidateEvidence({
+  required_dimensions=[],
+  provider_results=[],
+  learned_candidate_label=null,
+  dimension_weights={}
+}={}){
+  const fusion=fuseCandidateEvidence({
+    required_dimensions,
+    provider_results,
+    learned_candidate_label,
+    dimension_weights
+  });
+
+  if(fusion.decision==="BLOCKED"||fusion.decision==="NOT_ADJUDICABLE"){
+    return {
+      schema_version:"pi-home-candidate-evidence-adjudication-v1",
+      ...fusion,
+      trusted_for_generalization_claim:false
+    };
+  }
+
+  const providers=(provider_results||[]).map(result=>({
+    id:result.id,
+    kind:result.kind,
+    covered_dimensions:Object.keys(result.dimensions||{}),
+    evidence_level:result.evidence_level,
+    trusted_for_promotion:result.trusted_for_promotion===true,
+    provenance:result.provenance||null
+  }));
+  const coverage=buildEvidenceCoverage({required_dimensions,providers});
+
+  return {
+    schema_version:"pi-home-candidate-evidence-adjudication-v1",
+    ...fusion,
+    coverage,
+    trusted_for_generalization_claim:
+      fusion.trusted_for_generalization_claim===true &&
+      coverage.trusted_coverage_complete===true
+  };
+}
+
 module.exports={
   normalizeProvider,
   buildEvidenceCoverage,
-  adjudicateEvidence
+  adjudicateEvidence,
+  adjudicateCandidateEvidence
 };
