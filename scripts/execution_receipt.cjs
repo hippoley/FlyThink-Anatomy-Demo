@@ -105,6 +105,29 @@ function physicalEvidenceRow(receipt,index){
   };
 }
 
+function authorizationReceiptVerification(authorization,authorizedActions=[]){
+  if(!authorization||typeof authorization!=="object"){
+    return {
+      receipt_integrity_verified:false,
+      authorized_patches_verified:false
+    };
+  }
+  let receiptIntegrity=false;
+  if(isDigest(authorization.receipt_sha256)){
+    const base=clone(authorization);
+    const saved=base.receipt_sha256;
+    delete base.receipt_sha256;
+    receiptIntegrity=digestObject(base)===saved;
+  }
+  const authorizedPatchesVerified=
+    Array.isArray(authorization.authorized_patches)&&
+    digestObject(authorization.authorized_patches)===digestObject(authorizedActions);
+  return {
+    receipt_integrity_verified:receiptIntegrity,
+    authorized_patches_verified:authorizedPatchesVerified
+  };
+}
+
 function resultFromStatus(status,physicalCommitted,physicalTruthVerified=false){
   if(status==="EXECUTED"&&physicalCommitted){
     return physicalTruthVerified?"APPLIED":"APPLIED_UNVERIFIED";
@@ -167,6 +190,8 @@ function buildExecutionReceipt({
   }
 
   const verifiedRows=evidence.filter(x=>x.status==="applied");
+  const authorizationReceiptChecks=
+    authorizationReceiptVerification(authorization,authorized_actions);
   const authorizationBindingVerified=
     authorized_actions.length===evidence.length&&
     authorized_actions.every((action,index)=>
@@ -185,6 +210,10 @@ function buildExecutionReceipt({
       catch(e){return false}
     });
   const verification={
+    authorization_receipt_integrity_verified:
+      authorizationReceiptChecks.receipt_integrity_verified,
+    authorization_receipt_patches_verified:
+      authorizationReceiptChecks.authorized_patches_verified,
     authorization_binding_verified:authorizationBindingVerified,
     logical_target_binding_verified:logicalTargetBindingVerified,
     target_binding_verified:
@@ -200,6 +229,8 @@ function buildExecutionReceipt({
   };
   verification.physical_truth_verified=
     physical_committed===true&&
+    verification.authorization_receipt_integrity_verified&&
+    verification.authorization_receipt_patches_verified&&
     verification.authorization_binding_verified&&
     verification.logical_target_binding_verified&&
     verification.target_binding_verified&&
@@ -380,6 +411,8 @@ function verifyExecutionReceipt(receipt={},{
   const verification=receipt.verification||{};
   const applied=rebuiltRows.filter(x=>x.status==="applied");
   const authorizedActions=auth.authorized_actions||[];
+  const authorizationReceiptChecks=
+    authorizationReceiptVerification(auth.receipt,authorizedActions);
   const authorizationBindingVerified=
     authorizedActions.length===rebuiltRows.length&&
     authorizedActions.every((action,index)=>
@@ -398,6 +431,10 @@ function verifyExecutionReceipt(receipt={},{
       catch(e){return false}
     });
   const expectedVerification={
+    authorization_receipt_integrity_verified:
+      authorizationReceiptChecks.receipt_integrity_verified,
+    authorization_receipt_patches_verified:
+      authorizationReceiptChecks.authorized_patches_verified,
     authorization_binding_verified:authorizationBindingVerified,
     logical_target_binding_verified:logicalTargetBindingVerified,
     target_binding_verified:
@@ -413,6 +450,8 @@ function verifyExecutionReceipt(receipt={},{
   };
   expectedVerification.physical_truth_verified=
     physical.committed===true&&
+    expectedVerification.authorization_receipt_integrity_verified&&
+    expectedVerification.authorization_receipt_patches_verified&&
     expectedVerification.authorization_binding_verified&&
     expectedVerification.logical_target_binding_verified&&
     expectedVerification.target_binding_verified&&
@@ -454,6 +493,7 @@ module.exports={
   SCHEMA_VERSION,
   digestObject,
   patchTarget,
+  authorizationReceiptVerification,
   physicalEvidenceRow,
   buildExecutionReceipt,
   verifyExecutionReceipt
