@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Fail-closed planner with deterministic, single-use authorization binding."""
 import hashlib
+import hmac
 import json
 import uuid
 import math
@@ -66,7 +67,26 @@ def authorization_digest(patches):
     payload=canonical_encode([canonical_patch(p) for p in patches])
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
-def plan(registry,target_keys,slot,value,turn_id=None):
+def _proof_frame(value):
+    raw=str(value if value is not None else "").encode("utf-8")
+    return str(len(raw)).encode("ascii")+b":"+raw
+
+def authorization_proof(authority_key,authorization):
+    if not authority_key:
+        raise ValueError("authorization_authority_key_required")
+    fields=[
+        authorization.get("version"),
+        authorization.get("authorization_id"),
+        authorization.get("turn_id"),
+        authorization.get("patch_digest"),
+        authorization.get("registry_digest"),
+        authorization.get("proof_type"),
+    ]
+    payload=b"".join(_proof_frame(v) for v in fields)
+    key=authority_key.encode("utf-8") if isinstance(authority_key,str) else authority_key
+    return hmac.new(key,payload,hashlib.sha256).hexdigest()
+
+def plan(registry,target_keys,slot,value,turn_id=None,authority_key=None):
     patches=[]
     rejected=[]
     for key in target_keys:
@@ -99,11 +119,21 @@ def plan(registry,target_keys,slot,value,turn_id=None):
             "rejected":rejected,
             "reason":"authorized_set_validation_failed",
         }
+    if not authority_key:
+        return {
+            "ok":False,
+            "patches":[],
+            "authorization":None,
+            "rejected":[],
+            "reason":"authorization_authority_key_required",
+        }
     authorization={
         "version":2,
         "authorization_id":str(uuid.uuid4()),
         "turn_id":turn_id,
         "patch_digest":authorization_digest(patches),
         "registry_digest":registry.snapshot_digest(),
+        "proof_type":"hmac-sha256-v1",
     }
+    authorization["proof"]=authorization_proof(authority_key,authorization)
     return {"ok":True,"patches":patches,"authorization":authorization,"rejected":[]}
