@@ -1,6 +1,7 @@
 "use strict";
 
 const {digestObject,verifyEvidenceDecisionReceipt}=require("./pi_home_evidence_decision_receipt.cjs");
+const {verifyEvidenceRecords}=require("./pi_home_evidence_journal.cjs");
 
 function clone(v){return v==null?v:JSON.parse(JSON.stringify(v))}
 
@@ -17,10 +18,9 @@ function receiptIndex(records=[]){
   }));
 }
 
-function buildReceiptJournalSeal(journal){
-  if(!journal||typeof journal.verify!=="function")throw new Error("evidence_journal_required");
-  const verified=journal.verify();
-  const index=receiptIndex(journal.records||[]);
+function buildReceiptJournalSealFromRecords(records=[]){
+  const verified=verifyEvidenceRecords(records||[]);
+  const index=receiptIndex(records||[]);
   const core={
     schema_version:"pi-home-receipt-journal-seal-v1",
     journal_count:verified.count,
@@ -31,8 +31,7 @@ function buildReceiptJournalSeal(journal){
   return {...core,seal_digest:digestObject(core)};
 }
 
-function verifyReceiptJournalSeal(journal,seal={}){
-  if(!journal||typeof journal.verify!=="function")throw new Error("evidence_journal_required");
+function verifyReceiptJournalSealPayload(seal={}){
   if(seal.schema_version!=="pi-home-receipt-journal-seal-v1"){
     throw new Error("receipt_journal_seal_schema_invalid");
   }
@@ -41,6 +40,18 @@ function verifyReceiptJournalSeal(journal,seal={}){
   if(seal.seal_digest!==digestObject(core)){
     throw new Error("receipt_journal_seal_digest_mismatch");
   }
+  return {valid:true,seal_digest:seal.seal_digest};
+}
+
+function buildReceiptJournalSeal(journal){
+  if(!journal||typeof journal.verify!=="function")throw new Error("evidence_journal_required");
+  if(typeof journal.refresh==="function")journal.refresh();
+  return buildReceiptJournalSealFromRecords(journal.records||[]);
+}
+
+function verifyReceiptJournalSeal(journal,seal={}){
+  if(!journal||typeof journal.verify!=="function")throw new Error("evidence_journal_required");
+  verifyReceiptJournalSealPayload(seal);
   const current=buildReceiptJournalSeal(journal);
   if(seal.journal_count!==current.journal_count){
     throw new Error("receipt_journal_seal_count_mismatch");
@@ -142,6 +153,8 @@ module.exports={
   EvidenceDecisionReceiptLedger,
   receiptEvents,
   receiptIndex,
+  buildReceiptJournalSealFromRecords,
+  verifyReceiptJournalSealPayload,
   buildReceiptJournalSeal,
   verifyReceiptJournalSeal
 };
