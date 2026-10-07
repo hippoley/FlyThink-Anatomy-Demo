@@ -24,6 +24,7 @@ function request(){
     case_id:"turn-1",
     source_step:2,
     source_revision:2,
+    spatialruntime_commit_sha:"d123ab9a5310cb9ce15d9e82630828a0d32211f4",
     runtime:{devices:{
       "客厅::窗::default":{
         key:"客厅::窗::default",
@@ -48,6 +49,7 @@ function receipt(overrides={}){
     case_id:"turn-1",
     source_step:2,
     source_revision:2,
+    spatialruntime_commit_sha:"d123ab9a5310cb9ce15d9e82630828a0d32211f4",
     requested_patch_count:1,
     authorized_patches:[patch(3)],
     patch_digest:sha256Object([patch(3)]),
@@ -147,6 +149,17 @@ function receipt(overrides={}){
   assert.throws(
     ()=>validateAuthorizationReceipt(bad,request(),request().patches),
     /requested_patch_count_mismatch/
+  );
+}
+
+
+{
+  const bad=receipt({spatialruntime_commit_sha:"f".repeat(40)});
+  const base={...bad};delete base.receipt_sha256;
+  bad.receipt_sha256=sha256Object(base);
+  assert.throws(
+    ()=>validateAuthorizationReceipt(bad,request(),request().patches),
+    /commit_mismatch/
   );
 }
 
