@@ -9,7 +9,9 @@ on:
       - "scripts/semantic_capability_map.py"
       - "scripts/atomic_authorized_commit.cjs"
       - "scripts/authorization_ledger.cjs"
-      - "scripts/test_authorization_ledger.cjs"\n      - "scripts/authorization_reserve_worker.cjs"\n      - "scripts/test_authorization_reservation_race.cjs"
+      - "scripts/authorization_reserve_worker.cjs"
+      - "scripts/test_authorization_ledger.cjs"
+      - "scripts/test_authorization_reservation_race.cjs"
       - "scripts/test_durable_authorization_commit.cjs"
       - "scripts/atomic_physical_set.cjs"
       - "scripts/physical_driver_capabilities.cjs"
@@ -28,7 +30,9 @@ on:
       - "scripts/semantic_capability_map.py"
       - "scripts/atomic_authorized_commit.cjs"
       - "scripts/authorization_ledger.cjs"
+      - "scripts/authorization_reserve_worker.cjs"
       - "scripts/test_authorization_ledger.cjs"
+      - "scripts/test_authorization_reservation_race.cjs"
       - "scripts/test_durable_authorization_commit.cjs"
       - "scripts/atomic_physical_set.cjs"
       - "scripts/physical_driver_capabilities.cjs"
@@ -59,7 +63,6 @@ jobs:
           python - <<'PY'
           from pathlib import Path
           paths = [
-              ".github/workflows/execution-trust-boundary.yml",
               "scripts/authorized_patch_planner.py",
               "scripts/atomic_authorized_commit.cjs",
               "scripts/authorization_ledger.cjs",
@@ -74,7 +77,9 @@ jobs:
           python -m py_compile scripts/authorized_patch_planner.py scripts/device_registry.py scripts/test_execution_trust_boundary.py
           node --check scripts/atomic_authorized_commit.cjs
           node --check scripts/authorization_ledger.cjs
-          node --check scripts/test_authorization_ledger.cjs\n          node --check scripts/authorization_reserve_worker.cjs\n          node --check scripts/test_authorization_reservation_race.cjs
+          node --check scripts/authorization_reserve_worker.cjs
+          node --check scripts/test_authorization_ledger.cjs
+          node --check scripts/test_authorization_reservation_race.cjs
           node --check scripts/test_durable_authorization_commit.cjs
           node --check scripts/atomic_physical_set.cjs
           node --check scripts/physical_driver_capabilities.cjs
@@ -85,10 +90,11 @@ jobs:
           node --check scripts/test_production_physical_turn_atomicity.cjs
       - name: Prove planner-to-commit safety invariants
         run: python scripts/test_execution_trust_boundary.py
-      - name: Prove authorization consumption survives executor restart
+      - name: Prove durable authorization boundaries
         run: |
           node scripts/test_authorization_ledger.cjs
           node scripts/test_durable_authorization_commit.cjs
+          node scripts/test_authorization_reservation_race.cjs
       - name: Prove multi-target physical SET cannot degrade to sequential writes
         run: node scripts/test_atomic_physical_set.cjs
       - name: Prove transaction routing preserves SET atomicity
