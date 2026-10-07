@@ -40,7 +40,7 @@ const ledger=()=>{const s=new Set();return {has:id=>s.has(id),add:id=>{if(s.has(
 
 let out=atomicApplyAuthorizedPlan(r,payload,registryDigest,consumed);
 assert(out.ok);
-assert(consumed.has(payload.authorization.authorization_id));
+assert.equal(consumed.status(payload.authorization.authorization_id),"consumed");
 assert.equal(out.runtime.devices["客厅::空调::default"].slots.temperature,22);
 assert.equal(out.runtime.devices["主卧::空调::default"].slots.temperature,22);
 assert.equal(out.runtime.devices["次卧::空调::default"].slots.temperature,26);
