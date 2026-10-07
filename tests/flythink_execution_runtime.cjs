@@ -408,7 +408,25 @@ function passAuthorizer(counter=null,transform=null,authorizationId=null){
     assert.equal(verifiedReceipt.physical_truth_verified,true);
   }
 
-  // 11. Replay of the same authorization id is rejected before a second physical command.
+  // 11. Missing authorization ledger blocks before physical execution.
+  {
+    const action={op:"PATCH_SLOT",target:B,slot:"temperature",value:19};
+    const driver=new MockThingDriver(initial);
+    const out=await runExecutionProposal({
+      runtime:initial,
+      contextual_state:context,
+      request:request([action]),
+      proposal:proposal([action]),
+      driver,
+      physicalAuthorizer:passAuthorizer()
+    });
+    assert.equal(out.ok,false);
+    assert.equal(out.status,"BLOCKED");
+    assert.equal(out.reason,"authorization_ledger_required");
+    assert.equal(driver.commands.length,0);
+  }
+
+  // 12. Replay of the same authorization id is rejected before a second physical command.
   {
     const action={op:"PATCH_SLOT",target:B,slot:"temperature",value:19};
     const driver=new MockThingDriver(initial);
@@ -442,7 +460,7 @@ function passAuthorizer(counter=null,transform=null,authorizationId=null){
     assert.equal(driver.commands.length,1);
   }
 
-  // 12. Runtime facade exposes the formal recovery path, not manual trust clearing.
+  // 13. Runtime facade exposes the formal recovery path, not manual trust clearing.
   {
     const W={area:"客厅",entity:"窗",instance:"default"};
     const wk="客厅::窗::default";
@@ -501,7 +519,7 @@ function passAuthorizer(counter=null,transform=null,authorizationId=null){
 
   console.log(JSON.stringify({
     ok:true,
-    cases:12,
+    cases:13,
     contract:"contextual execution proposal -> deterministic authorization -> atomic/single physical execution -> readback, with formal recovery"
   }));
 })().catch(e=>{console.error(e);process.exit(1)});
