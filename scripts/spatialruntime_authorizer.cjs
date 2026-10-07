@@ -3,6 +3,10 @@
 const crypto=require("crypto");
 const path=require("path");
 const {spawnSync}=require("child_process");
+const {
+  loadSceneContext,
+  targetKey
+}=require("./spatialruntime_world_context.cjs");
 
 const REQUEST_SCHEMA="homeai_spatialruntime_authorization_request_v1";
 const RECEIPT_SCHEMA="homeai_spatialruntime_authorization_receipt_v1";
@@ -94,14 +98,57 @@ function createSpatialRuntimeAuthorizer(options={}){
   const python=options.python||process.env.PYTHON||"python";
   const script=options.script||path.join(__dirname,"spatialruntime_window_authorizer.py");
   const maxOpenRatioDelta=options.maxOpenRatioDelta==null?0.25:Number(options.maxOpenRatioDelta);
+  const hasScenePath=!!(options.worldSnapshotPath||options.worldValidationReceiptPath);
+  if(hasScenePath&&!(options.worldSnapshotPath&&options.worldValidationReceiptPath)){
+    throw new Error("spatialruntime_scene_world_and_receipt_required");
+  }
+  const sceneContext=options.sceneContext
+    ?clone(options.sceneContext)
+    :(hasScenePath
+      ?loadSceneContext(
+        options.worldSnapshotPath,
+        options.worldValidationReceiptPath,
+        {windowEntityLabel:options.windowEntityLabel||"窗"}
+      )
+      :null);
   return async function authorize({runtime,patches,event,context,source_step,source_revision}={}){
     const requestedPatches=clone(patches||[]);
     const hint=(event&&event.context_hint&&event.context_hint.spatialruntime)||{};
+    const hintedKeys=Array.isArray(hint.exterior_window_keys)
+      ?hint.exterior_window_keys.map(String)
+      :[];
+    if(sceneContext){
+      const reviewed=new Set(sceneContext.exterior_window_keys||[]);
+      for(const key of hintedKeys){
+        if(!reviewed.has(key)){
+          throw new Error("spatialruntime_scene_hint_not_reviewed:"+key);
+        }
+      }
+      for(const patch of requestedPatches){
+        if(!patch||!patch.target||!reviewed.has(targetKey(patch.target))){
+          throw new Error(
+            "spatialruntime_scene_target_not_reviewed:"+
+            targetKey(patch&&patch.target||{})
+          );
+        }
+      }
+    }
     const spatialContext={
       rain:hint.rain ?? context?.rain ?? context?.sensors?.rain?.value ?? "dry",
-      exterior_window_keys:Array.isArray(hint.exterior_window_keys)
-        ?hint.exterior_window_keys
-        :(Array.isArray(options.exteriorWindowKeys)?options.exteriorWindowKeys:[])
+      exterior_window_keys:sceneContext
+        ?clone(sceneContext.exterior_window_keys||[])
+        :(hintedKeys.length
+          ?hintedKeys
+          :(Array.isArray(options.exteriorWindowKeys)?options.exteriorWindowKeys:[])),
+      scene_evidence:sceneContext?{
+        schema:sceneContext.schema,
+        case_id:sceneContext.case_id,
+        world_snapshot_sha256:sceneContext.world_snapshot_sha256,
+        validation_receipt_sha256:sceneContext.validation_receipt_sha256,
+        source_fingerprint:sceneContext.source_fingerprint,
+        relation_graph_fingerprint:sceneContext.relation_graph_fingerprint,
+        context_sha256:sceneContext.context_sha256
+      }:null
     };
     const request={
       schema:REQUEST_SCHEMA,
