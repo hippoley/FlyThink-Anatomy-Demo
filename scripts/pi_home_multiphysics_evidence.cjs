@@ -1,5 +1,7 @@
 "use strict";
 
+const {applyResolvedTrust}=require("./pi_home_provider_trust.cjs");
+
 function clone(v){return v==null?v:JSON.parse(JSON.stringify(v))}
 function uniq(xs){return [...new Set((xs||[]).map(String))].sort()}
 
@@ -19,18 +21,26 @@ function normalizeDimensionSpec(spec={}){
   };
 }
 
-function normalizeEvidenceResult(result={}){
+function normalizeEvidenceResult(result={},trust_registry=null){
   if(!result.id)throw new Error("evidence_result_id_required");
   const dimensions={};
   for(const [name,spec] of Object.entries(result.dimensions||{})){
     dimensions[String(name)]=normalizeDimensionSpec(spec);
   }
   if(!Object.keys(dimensions).length)throw new Error("evidence_result_dimensions_required");
+  const trusted=applyResolvedTrust({
+    ...result,
+    id:String(result.id),
+    covered_dimensions:Object.keys(dimensions)
+  },trust_registry);
   return {
     id:String(result.id),
     kind:String(result.kind||"unknown"),
     evidence_level:String(result.evidence_level||"unspecified"),
-    trusted_for_promotion:result.trusted_for_promotion===true,
+    claimed_trusted_for_promotion:trusted.claimed_trusted_for_promotion===true,
+    trusted_for_promotion:trusted.trusted_for_promotion===true,
+    trust_resolution:clone(trusted.trust_resolution||null),
+    trust_attestation:clone(result.trust_attestation||null),
     provenance:clone(result.provenance||null),
     dimensions
   };
@@ -61,10 +71,11 @@ function fuseCandidateEvidence({
   required_dimensions=[],
   provider_results=[],
   dimension_weights={},
-  learned_candidate_label=null
+  learned_candidate_label=null,
+  trust_registry=null
 }={}){
   const required=uniq(required_dimensions);
-  const providers=(provider_results||[]).map(normalizeEvidenceResult);
+  const providers=(provider_results||[]).map(x=>normalizeEvidenceResult(x,trust_registry));
   const labels=candidateLabelsFromResults(providers);
   if(!labels.length){
     return {
@@ -113,7 +124,9 @@ function fuseCandidateEvidence({
         id:x.id,
         kind:x.kind,
         evidence_level:x.evidence_level,
-        trusted_for_promotion:x.trusted_for_promotion
+        claimed_trusted_for_promotion:x.claimed_trusted_for_promotion,
+        trusted_for_promotion:x.trusted_for_promotion,
+        trust_resolution:clone(x.trust_resolution||null)
       })),
       normalized_candidate_scores:aggregate
     };
