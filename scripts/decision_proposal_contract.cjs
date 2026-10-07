@@ -103,6 +103,10 @@ function validateDecisionProposal(proposal){
       throw new Error("decision_proposal_operator_invalid");
     if(!Object.prototype.hasOwnProperty.call(mutation,"value"))
       throw new Error("decision_proposal_value_required");
+    if(
+      mutation.operator==="ADD"&&
+      !Number.isFinite(Number(mutation.value))
+    )throw new Error("decision_proposal_relative_value_invalid");
     const identity=canonicalString({
       target:mutation.target,
       property:mutation.property
