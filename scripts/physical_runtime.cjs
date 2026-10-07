@@ -53,7 +53,14 @@ function clearQuarantine(runtime,target,recoveryProof){
   if(!runtime.deviceHealth[key]||runtime.deviceHealth[key].status!=="quarantined"){
     throw new Error("device_not_quarantined");
   }
-  if(!recoveryProof||recoveryProof.verified!==true){
+  const validProof=
+    recoveryProof&&
+    recoveryProof.verified===true&&
+    recoveryProof.readiness_verified===true&&
+    recoveryProof.hardware_identity_verified===true&&
+    recoveryProof.physical_readback_verified===true&&
+    recoveryProof.safe_position_verified===true;
+  if(!validProof){
     throw new Error("quarantine_recovery_proof_required");
   }
   runtime.deviceHealth[key]={
