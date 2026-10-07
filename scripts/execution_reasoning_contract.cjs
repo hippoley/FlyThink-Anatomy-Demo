@@ -145,11 +145,16 @@ function validateExecutionProposal(proposal,request=null){
       throw new Error("execution_proposal_task_mismatch");
     const allowed=new Set(request.candidate_actions.map(canonicalString));
     const seen=new Set();
+    const seenIdentities=new Set();
     for(const action of proposal.proposed_actions){
       const id=canonicalString(action);
       if(!allowed.has(id))throw new Error("execution_action_not_in_candidate_set");
       if(seen.has(id))throw new Error("duplicate_proposed_action");
       seen.add(id);
+      const identity=canonicalString(patchIdentity(action));
+      if(seenIdentities.has(identity))
+        throw new Error("conflicting_proposed_action_identity");
+      seenIdentities.add(identity);
     }
   }
   return true;
