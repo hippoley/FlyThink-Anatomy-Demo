@@ -3,6 +3,7 @@
 import hashlib
 import json
 import uuid
+import math
 from semantic_capability_map import validate_value
 
 def parse_key(key):
@@ -11,13 +12,31 @@ def parse_key(key):
         raise ValueError("invalid_target_key")
     return {"area":p[0],"entity":p[1],"instance":p[2]}
 
+def canonical_value(value):
+    if isinstance(value, float):
+        if not math.isfinite(value):
+            raise ValueError("non_finite_authorization_value")
+        if value == 0:
+            return 0
+        if value.is_integer():
+            if abs(value) > 9007199254740991:
+                raise ValueError("unsafe_authorization_number")
+            return int(value)
+    if isinstance(value, int) and not isinstance(value, bool) and abs(value) > 9007199254740991:
+        raise ValueError("unsafe_authorization_number")
+    if isinstance(value, list):
+        return [canonical_value(v) for v in value]
+    if isinstance(value, dict):
+        return {k:canonical_value(v) for k,v in value.items()}
+    return value
+
 def canonical_patch(p):
     return {
         "capability":p["capability"],
         "model_id":p["model_id"],
         "slot":p["slot"],
         "target":p["target"],
-        "value":p["value"],
+        "value":canonical_value(p["value"]),
     }
 
 def authorization_digest(patches):
