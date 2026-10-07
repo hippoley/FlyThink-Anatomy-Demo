@@ -46,6 +46,7 @@ def build_commands(args):
             "schema":manifest.get("schema"),
             "source_kind":manifest.get("source_kind"),
             "expected_text":manifest.get("expected_text"),
+            "max_cer":(manifest.get("acceptance") or {}).get("max_cer"),
             "wav_sha256":report.get("wav_sha256"),
             "manifest_sha256":manifest_sha256,
             "provenance_note":manifest.get("provenance_note"),
