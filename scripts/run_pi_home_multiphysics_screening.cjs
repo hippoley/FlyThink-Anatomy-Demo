@@ -4,7 +4,8 @@ const fs=require("fs");
 const {
   fuseCandidateEvidence,
   rainIngressScreeningProvider,
-  acousticScreeningProvider
+  acousticScreeningProvider,
+  contamProviderFromP47Evidence
 }=require("./pi_home_multiphysics_evidence.cjs");
 
 function read(path){return JSON.parse(fs.readFileSync(path,"utf8"))}
@@ -18,32 +19,6 @@ function learnedLabel(caseDef,learnedRow){
   return "candidate-"+String(index+1);
 }
 
-function contamProvider(realRow){
-  if(!realRow||realRow.status!=="REAL_CONTAM_EXECUTED")return null;
-  const branches=realRow.branches||[];
-  const co2={};
-  for(const branch of branches){
-    if(!Number.isFinite(Number(branch.end_co2_ppm))){
-      throw new Error("contam_end_co2_missing:"+String(branch.label));
-    }
-    co2[String(branch.label)]=Number(branch.end_co2_ppm);
-  }
-  return {
-    id:"contam-"+String(realRow.case_id),
-    kind:"simulation",
-    evidence_level:String(realRow.evidence_level||"real-contam"),
-    trusted_for_promotion:realRow.profile_trusted_for_promotion===true,
-    provenance:{
-      backend:realRow.backend,
-      physics_fidelity:realRow.physics_fidelity,
-      engine_version:realRow.engine_version
-    },
-    dimensions:{
-      co2:{direction:"min",scores:co2}
-    }
-  };
-}
-
 function screeningProviderFor(caseDef){
   const required=new Set(caseDef.physics&&caseDef.physics.required_dimensions||[]);
   const providers=[];
@@ -54,8 +29,9 @@ function screeningProviderFor(caseDef){
 
 function evaluateCase(caseDef,learnedRow,realRow){
   const providers=[];
-  const contam=contamProvider(realRow);
-  if(contam)providers.push(contam);
+  if(realRow&&realRow.status==="REAL_CONTAM_EXECUTED"){
+    providers.push(contamProviderFromP47Evidence(realRow));
+  }
   providers.push(...screeningProviderFor(caseDef));
   const required=caseDef.physics&&caseDef.physics.required_dimensions||[];
   const weights=caseDef.physics&&caseDef.physics.dimension_weights||{};
@@ -94,8 +70,11 @@ function main(){
     schema_version:"pi-home-multiphysics-screening-run-v1",
     cases:rows.length,
     trusted_generalization_cases:trusted.length,
+    device_execution_authorized:false,
     rows
   };
+  const outPath=args.includes("--out")?get("--out"):null;
+  if(outPath)fs.writeFileSync(outPath,JSON.stringify(payload,null,2)+"\n","utf8");
   console.log(JSON.stringify(payload,null,2));
   if(trusted.length!==0){
     throw new Error("screening providers must not produce trusted promotion claims");
@@ -104,4 +83,4 @@ function main(){
 
 if(require.main===module)main();
 
-module.exports={contamProvider,screeningProviderFor,evaluateCase,learnedLabel};
+module.exports={screeningProviderFor,evaluateCase,learnedLabel};
