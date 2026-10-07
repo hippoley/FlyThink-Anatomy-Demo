@@ -57,9 +57,21 @@ const trusted=fuseCandidateEvidence({
   dimension_weights:{co2:.6,rain_ingress:.4},
   learned_candidate_label:"candidate-3"
 });
-assert.equal(trusted.decision,"ALIGNED");
+assert.equal(trusted.decision,"MISALIGNED");
+assert.equal(trusted.winner.label,"candidate-2");
 assert.equal(trusted.trusted_coverage_complete,true);
-assert.equal(trusted.trusted_for_generalization_claim,true);
+assert.equal(trusted.trusted_for_generalization_claim,false);
+
+const trustedAligned=fuseCandidateEvidence({
+  required_dimensions:["co2","rain_ingress"],
+  provider_results:[trustedContam,trustedRain],
+  dimension_weights:{co2:.6,rain_ingress:.4},
+  learned_candidate_label:"candidate-2"
+});
+assert.equal(trustedAligned.decision,"ALIGNED");
+assert.equal(trustedAligned.winner.label,"candidate-2");
+assert.equal(trustedAligned.trusted_coverage_complete,true);
+assert.equal(trustedAligned.trusted_for_generalization_claim,true);
 
 const missing=fuseCandidateEvidence({
   required_dimensions:["co2","rain_ingress"],
