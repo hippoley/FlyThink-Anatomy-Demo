@@ -3,6 +3,7 @@
 const assert=require("assert");
 const {normalizeRuntime}=require("../scripts/whole_home_patch_contract.cjs");
 const {toContextStateSnapshot}=require("../scripts/contextual_edge_slu_adapter.cjs");
+const {runtimeRegistryDigest}=require("../scripts/spatialruntime_authorizer.cjs");
 const {MockThingDriver,isQuarantined,markQuarantined}=require("../scripts/physical_runtime.cjs");
 const {
   validateExecutionProposal
@@ -19,11 +20,11 @@ const B={area:"主卧",entity:"空调",instance:"default"};
 const initial=normalizeRuntime({devices:{
   "客厅::空调::default":{
     key:"客厅::空调::default",area:"客厅",entity:"空调",instance:"default",
-    slots:{power:"ON",temperature:24}
+    model_id:"AWGD-ZA01",slots:{power:"ON",temperature:24}
   },
   "主卧::空调::default":{
     key:"主卧::空调::default",area:"主卧",entity:"空调",instance:"default",
-    slots:{power:"ON",temperature:25}
+    model_id:"AWGD-ZA01",slots:{power:"ON",temperature:25}
   }
 }});
 const context=toContextStateSnapshot(initial,[],{
@@ -69,11 +70,11 @@ function freshLedger(){
   };
 }
 function passAuthorizer(counter=null,transform=null,authorizationId=null){
-  return async({patches})=>{
+  return async({patches,runtime})=>{
     if(counter)counter.calls++;
     const out=patches.map(p=>transform?transform(p):p);
     const patchDigest=sha256Object(out);
-    const registryDigest=sha256Object({fixture:"registry-v1"});
+    const registryDigest=runtimeRegistryDigest(runtime);
     const receiptBase={
       schema:"test-authorization-v1",
       allow:true,
@@ -127,7 +128,10 @@ function passAuthorizer(counter=null,transform=null,authorizationId=null){
     assert.equal(out.receipt.result,"APPLIED_UNVERIFIED");
     assert.equal(out.receipt.verification.physical_truth_verified,false);
     assert.match(out.receipt.receipt_sha256,/^[0-9a-f]{64}$/);
-    const verifiedReceipt=verifyExecutionReceipt(out.receipt);
+    const verifiedReceipt=verifyExecutionReceipt(out.receipt,{
+      before_runtime:initial,
+      after_runtime:out.runtime
+    });
     assert.equal(verifiedReceipt.valid,true);
     assert.equal(verifiedReceipt.physical_truth_verified,false);
   }
@@ -326,7 +330,7 @@ function passAuthorizer(counter=null,transform=null,authorizationId=null){
     const windowRuntime=normalizeRuntime({devices:{
       [wk]:{
         key:wk,area:"客厅",entity:"窗",instance:"default",
-        slots:{opening:0}
+        model_id:"CWDS-CA01",slots:{opening:0}
       }
     }});
     const windowContext=toContextStateSnapshot(windowRuntime,[],{
@@ -396,7 +400,9 @@ function passAuthorizer(counter=null,transform=null,authorizationId=null){
     const verifiedReceipt=verifyExecutionReceipt(out.receipt,{
       contextual_state:windowContext,
       request:windowRequest,
-      proposal:windowProposal
+      proposal:windowProposal,
+      before_runtime:windowRuntime,
+      after_runtime:out.runtime
     });
     assert.equal(verifiedReceipt.valid,true);
     assert.equal(verifiedReceipt.physical_truth_verified,true);
