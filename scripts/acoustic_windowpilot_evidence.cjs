@@ -138,6 +138,9 @@ function validateReceipt(receipt,{requireHumanFixture=false}={}){
   if(!target||!target.area||!target.entity)reasons.push("target missing");
   if(!Number.isFinite(probe)||probe<=0||probe>5)reasons.push("probe target outside (0,5]");
   if(!Number.isFinite(tolerance)||tolerance<0||tolerance>2)reasons.push("tolerance outside [0,2]");
+  if(Number.isFinite(probe)&&Number.isFinite(tolerance)&&probe<=tolerance){
+    reasons.push("probe target must exceed tolerance");
+  }
 
   const expected=receipt&&receipt.expected_hardware_identity;
   const observed=receipt&&receipt.observed_hardware_identity;
@@ -203,11 +206,14 @@ function validateReceipt(receipt,{requireHumanFixture=false}={}){
     if(!targets.some(t=>targetKey(t)===targetKey(target))){
       reasons.push("semantic target does not match physical target");
     }
-    if(!Array.isArray(committed.patches)||committed.patches.length<1){
-      reasons.push("committed semantic patch missing");
+    if(!Array.isArray(committed.patches)||committed.patches.length!==1){
+      reasons.push("expected exactly one committed semantic patch");
     }
-    if(!Array.isArray(committed.feedback)||committed.feedback.length<1){
-      reasons.push("measured device feedback missing");
+    if(!Array.isArray(committed.thing_model)||committed.thing_model.length!==1){
+      reasons.push("expected exactly one thing-model execution binding");
+    }
+    if(!Array.isArray(committed.feedback)||committed.feedback.length!==1){
+      reasons.push("expected exactly one measured device feedback");
     }else if(committed.feedback.some(
       x=>!x||!x.evidence||x.evidence.measured!==true
     )){
@@ -221,7 +227,9 @@ function validateReceipt(receipt,{requireHumanFixture=false}={}){
     reasons.push("live probe did not start closed");
   }
   const commands=Array.isArray(physical.driver_commands)?physical.driver_commands:[];
-  if(commands.length<1)reasons.push("physical command evidence missing");
+  if(commands.length!==2){
+    reasons.push("expected exactly one semantic command plus one closeout command");
+  }
   const semanticCommand=commands[0];
   if(semanticCommand){
     if(semanticCommand.status!=="applied")reasons.push("semantic physical command not applied");
@@ -234,14 +242,40 @@ function validateReceipt(receipt,{requireHumanFixture=false}={}){
     if(!Number.isFinite(measured)||Math.abs(measured-requested)>tolerance){
       reasons.push("semantic command measured readback outside tolerance");
     }
+    if(Number.isFinite(measured)&&measured<=tolerance){
+      reasons.push("semantic command did not produce observable opening motion");
+    }
   }
 
   const closeout=physical.closeout;
   if(!closeout)reasons.push("closeout evidence missing");
   else{
+    if(closeout.attempted!==true||closeout.already_closed===true){
+      reasons.push("closeout must be an explicit physical action");
+    }
+    if(!closeout.receipt||closeout.receipt.status!=="applied"){
+      reasons.push("closeout physical command not applied");
+    }
     const after=Number(closeout.after_position_pct);
     if(!Number.isFinite(after)||after>tolerance){
       reasons.push("closeout did not restore closed position");
+    }
+  }
+  const closeoutCommand=commands[1];
+  if(closeoutCommand){
+    if(closeoutCommand.status!=="applied"){
+      reasons.push("closeout driver command not applied");
+    }
+    const requested=Number(closeoutCommand.requested_position_pct);
+    if(requested!==0){
+      reasons.push("closeout driver command must request zero opening");
+    }
+    const measured=Number(
+      closeoutCommand.observation&&closeoutCommand.observation.evidence&&
+      closeoutCommand.observation.evidence.position_pct
+    );
+    if(!Number.isFinite(measured)||measured>tolerance){
+      reasons.push("closeout driver readback is not closed");
     }
   }
 
