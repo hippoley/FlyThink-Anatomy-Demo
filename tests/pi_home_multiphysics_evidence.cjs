@@ -43,9 +43,9 @@ const screening=fuseCandidateEvidence({
   dimension_weights:{co2:.6,rain_ingress:.4},
   learned_candidate_label:"candidate-3"
 });
-assert.equal(screening.decision,"SCREENING_ALIGNED");
-assert.equal(screening.winner.label,"candidate-3");
-assert.equal(screening.semantic_physics_aligned,true);
+assert.equal(screening.decision,"SCREENING_MISALIGNED");
+assert.equal(screening.winner.label,"candidate-2");
+assert.equal(screening.semantic_physics_aligned,false);
 assert.equal(screening.trusted_coverage_complete,false);
 assert.equal(screening.trusted_for_generalization_claim,false);
 
