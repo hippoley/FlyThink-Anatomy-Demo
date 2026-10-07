@@ -80,7 +80,7 @@ jobs:
         run: |
           node scripts/test_authorization_ledger.cjs
           node scripts/test_durable_authorization_commit.cjs
-          node scripts/test_authorization_reservation_race.cjs
+          node scripts/test_authorization_reservation_race.cjs\n          node scripts/test_authorization_distinct_race.cjs
       - name: Prove multi-target physical SET cannot degrade to sequential writes
         run: node scripts/test_atomic_physical_set.cjs
       - name: Prove transaction routing preserves SET atomicity
