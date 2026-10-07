@@ -138,6 +138,17 @@ function validateAuthorizationReceipt(receipt,request,requestedPatches){
      receipt.patch_digest!==sha256Object(receipt.authorized_patches)){
     throw new Error("spatialruntime_authorizer_patch_digest_mismatch");
   }
+  for(let i=0;i<requestedPatches.length;i++){
+    const requested=requestedPatches[i];
+    const authorized=receipt.authorized_patches[i];
+    if(!samePatchIdentity(requested,authorized)){
+      throw new Error("spatialruntime_authorizer_patch_identity_mismatch:"+String(i));
+    }
+    const value=Number(authorized&&authorized.value);
+    if(!Number.isFinite(value)||value<0||value>100){
+      throw new Error("spatialruntime_authorizer_patch_value_invalid:"+String(i));
+    }
+  }
   if(!isSha256(receipt.authorization_id)){
     throw new Error("spatialruntime_authorizer_authorization_id_invalid");
   }
@@ -152,17 +163,6 @@ function validateAuthorizationReceipt(receipt,request,requestedPatches){
   });
   if(receipt.authorization_id!==expectedAuthorizationId){
     throw new Error("spatialruntime_authorizer_authorization_id_mismatch");
-  }
-  for(let i=0;i<requestedPatches.length;i++){
-    const requested=requestedPatches[i];
-    const authorized=receipt.authorized_patches[i];
-    if(!samePatchIdentity(requested,authorized)){
-      throw new Error("spatialruntime_authorizer_patch_identity_mismatch:"+String(i));
-    }
-    const value=Number(authorized&&authorized.value);
-    if(!Number.isFinite(value)||value<0||value>100){
-      throw new Error("spatialruntime_authorizer_patch_value_invalid:"+String(i));
-    }
   }
   return {
     allow:true,
