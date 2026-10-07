@@ -745,9 +745,36 @@ function passAuthorizer(counter=null,transform=null,authorizationId=null,overrid
     assert.equal(driver.commands.length,0);
   }
 
+
+  // 19. Scene evidence implicitly pins the SpatialRuntime commit.
+  {
+    const action={op:"PATCH_SLOT",target:B,slot:"temperature",value:19};
+    const driver=new MockThingDriver(initial);
+    const sceneEvidence={
+      schema:"homeai_spatialruntime_scene_context_v1",
+      spatialruntime_commit_sha:"d123ab9a5310cb9ce15d9e82630828a0d32211f4"
+    };
+    const out=await runExecutionProposal({
+      runtime:initial,
+      contextual_state:context,
+      request:request([action]),
+      proposal:proposal([action]),
+      driver,
+      authorization_context:{scene_evidence:sceneEvidence},
+      physicalAuthorizer:passAuthorizer(null,null,null,{
+        spatialruntime_commit_sha:"e".repeat(40)
+      }),
+      authorizationLedger:freshLedger()
+    });
+    assert.equal(out.ok,false);
+    assert.equal(out.reason,"physical_authorization_invalid");
+    assert.match(out.authorization_error,/commit_mismatch/);
+    assert.equal(driver.commands.length,0);
+  }
+
   console.log(JSON.stringify({
     ok:true,
-    cases:19,
+    cases:20,
     contract:"contextual execution proposal -> deterministic authorization -> atomic/single physical execution -> readback, with formal recovery"
   }));
 })().catch(e=>{console.error(e);process.exit(1)});
