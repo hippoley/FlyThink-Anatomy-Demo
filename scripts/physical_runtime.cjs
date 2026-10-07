@@ -10,6 +10,60 @@ function activeDevice(runtime, target) {
   return (runtime.devices || {})[deviceKey(target)] || null;
 }
 
+function deviceHealth(runtime,target){
+  return (runtime.deviceHealth||{})[deviceKey(target)]||null;
+}
+
+function isQuarantined(runtime,target){
+  const health=deviceHealth(runtime,target);
+  return !!health&&health.status==="quarantined";
+}
+
+function isSafetyReducingPatch(runtime,patch){
+  if(!patch||!patch.target)return false;
+  if(patch.op==="CLOSE_DEVICE")return true;
+  if(patch.op!=="PATCH_SLOT")return false;
+  if(patch.slot==="power"){
+    return patch.value==="OFF"||patch.value===false||patch.value===0;
+  }
+  if(["opening","window_open_pct","position","position_pct"].includes(patch.slot)){
+    const device=activeDevice(runtime,patch.target);
+    const slots=device&&device.slots||{};
+    const before=slots.opening ?? slots.window_open_pct ?? slots.position ?? slots.position_pct;
+    const next=Number(patch.value);
+    return Number.isFinite(Number(before))&&Number.isFinite(next)&&next<=Number(before);
+  }
+  return false;
+}
+
+function markQuarantined(runtime,target,command,turnId){
+  const key=deviceKey(target);
+  runtime.deviceHealth[key]={
+    status:"quarantined",
+    reason:command&&command.reason||command&&command.status||"physical_state_uncertain",
+    source_status:command&&command.status||"unknown",
+    command_id:command&&command.id||null,
+    since_turn_id:turnId||null
+  };
+  return runtime.deviceHealth[key];
+}
+
+function clearQuarantine(runtime,target,recoveryProof){
+  const key=deviceKey(target);
+  if(!runtime.deviceHealth[key]||runtime.deviceHealth[key].status!=="quarantined"){
+    throw new Error("device_not_quarantined");
+  }
+  if(!recoveryProof||recoveryProof.verified!==true){
+    throw new Error("quarantine_recovery_proof_required");
+  }
+  runtime.deviceHealth[key]={
+    status:"healthy",
+    recovered_at_turn_id:recoveryProof.turn_id||null,
+    recovery:clone(recoveryProof)
+  };
+  return runtime.deviceHealth[key];
+}
+
 function materializePatch(runtime, patch) {
   if (!patch) throw new Error("physical_patch_required");
   if (patch.op === "PATCH_RELATIVE") {
@@ -164,5 +218,10 @@ module.exports = {
   MockThingDriver,
   materializePatch,
   reconcileObservation,
+  deviceHealth,
+  isQuarantined,
+  isSafetyReducingPatch,
+  markQuarantined,
+  clearQuarantine,
   executePhysicalTurn
 };
