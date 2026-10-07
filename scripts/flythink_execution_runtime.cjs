@@ -348,8 +348,11 @@ async function runDecisionProposal({
   validateDecisionProposal(decision_proposal);
 
   const current=normalizeRuntime(runtime||{});
-  const worldRevision=Number(world_snapshot_revision);
-  if(!Number.isInteger(worldRevision)||worldRevision<0){
+  const worldRevision=
+    world_snapshot_revision==null
+      ?null
+      :Number(world_snapshot_revision);
+  if(worldRevision==null||!Number.isInteger(worldRevision)||worldRevision<0){
     const {request,internal_proposal}=decisionProposalToExecutionContracts(
       contextual_state,
       decision_proposal
