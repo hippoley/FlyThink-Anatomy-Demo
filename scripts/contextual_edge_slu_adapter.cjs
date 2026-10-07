@@ -32,6 +32,15 @@ function deriveSemanticContext(runtime,history=[]){
 
 function toContextStateSnapshot(runtime,history=[],meta={}){
   const context=deriveContext(runtime,history);
+  const hasContextRevision=Object.prototype.hasOwnProperty.call(meta,"context_revision");
+  if(
+    hasContextRevision&&(
+      !Number.isInteger(meta.context_revision)||
+      meta.context_revision<0
+    )
+  ){
+    throw new Error("context_state_revision_invalid");
+  }
   const devices={};
   for(const [key,device] of Object.entries((runtime&&runtime.devices)||{})){
     const target=logicalTarget(device&&device.area?device:{
@@ -64,6 +73,7 @@ function toContextStateSnapshot(runtime,history=[],meta={}){
 
   return {
     contract_version:CONTRACT_VERSION,
+    ...(hasContextRevision?{context_revision:meta.context_revision}:{}),
     conversation:{
       conversation_id:meta.conversation_id||null,
       active_task_id:meta.active_task_id||null,
@@ -78,6 +88,20 @@ function toContextStateSnapshot(runtime,history=[],meta={}){
       pending_ids:(context.pending_ids||[]).slice(),
       last_execution:clone(context.last_execution||null)
     }
+  };
+}
+
+function contextStateIdentity(snapshot){
+  assertContextStateSnapshot(snapshot);
+  if(
+    !Number.isInteger(snapshot.context_revision)||
+    snapshot.context_revision<0
+  ){
+    throw new Error("context_state_revision_required");
+  }
+  return {
+    contract_version:snapshot.contract_version,
+    context_revision:snapshot.context_revision
   };
 }
 
@@ -107,6 +131,7 @@ module.exports={
   logicalTarget,
   deriveSemanticContext,
   toContextStateSnapshot,
+  contextStateIdentity,
   assertContextStateSnapshot,
   deviceKey
 };
