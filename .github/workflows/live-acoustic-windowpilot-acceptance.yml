@@ -51,6 +51,9 @@ on:
 permissions:
   contents: read
   actions: read
+  id-token: write
+  attestations: write
+  artifact-metadata: write
 
 concurrency:
   group: physical-lab-windowpilot
@@ -80,13 +83,10 @@ jobs:
           test "${{ inputs.confirm_apply }}" = "APPLY_REAL_HARDWARE"
           test -f "${{ inputs.wav_path }}"
           test -f "${{ inputs.fixture_manifest_path }}"
-          case "${{ inputs.expected_hardware_identity }}" in
-            [0-9a-fA-F][0-9a-fA-F]*) ;;
-            *) echo "expected_hardware_identity must be a hex SHA-256"; exit 2 ;;
-          esac
-          test "${#INPUT_HW}" -eq 64
           python - <<'PY'
-          import os
+          import os, re
+          hw=os.environ["INPUT_HW"]
+          assert re.fullmatch(r"[0-9a-fA-F]{64}",hw),               "expected_hardware_identity must be exactly 64 hex characters"
           probe=float(os.environ["INPUT_PROBE"])
           tolerance=float(os.environ["INPUT_TOLERANCE"])
           assert 0 < probe <= 5, "probe_open_pct must be in (0,5]"
@@ -208,6 +208,15 @@ jobs:
             evidence_sha256:x.evidence_sha256
           });
           NODE
+
+      - name: Attest validated live evidence provenance
+        uses: actions/attest@v4
+        with:
+          subject-path: |
+            live-acoustic-dry-run.json
+            live-acoustic-windowpilot-result.json
+            live-acoustic-windowpilot-receipt.json
+            live-acoustic-windowpilot-verification.json
 
       - uses: actions/upload-artifact@v4
         if: always()
