@@ -10,6 +10,7 @@
     "task_id",
     "context_revision",
     "world_snapshot_revision",
+    "world_snapshot_sha256",
     "intent",
     "logical_targets",
     "proposed_mutations",
@@ -74,6 +75,10 @@
       "items": {
         "type": "string"
       }
+    },
+    "world_snapshot_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
     }
   },
   "$defs": {
