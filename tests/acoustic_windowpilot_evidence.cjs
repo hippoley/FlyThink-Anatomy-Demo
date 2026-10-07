@@ -394,6 +394,7 @@ console.log(JSON.stringify({
 {
   const authBase={
     schema:"homeai_spatialruntime_authorization_receipt_v1",
+    canonicalization:"sorted-json-number-normalized-v1",
     allow:true,
     case_id:"evidence-turn",
     source_step:0,
