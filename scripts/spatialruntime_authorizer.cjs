@@ -29,6 +29,7 @@ function sha256Object(v){
     .digest("hex");
 }
 function isSha256(v){return /^[0-9a-f]{64}$/.test(String(v||""))}
+function isGitCommitSha(v){return /^[0-9a-f]{40}$/.test(String(v||""))}
 function patchIdentity(p){
   return {
     op:p&&p.op||null,
@@ -63,7 +64,7 @@ function validateAuthorizationReceipt(receipt,request,requestedPatches){
     throw new Error("spatialruntime_authorizer_source_revision_mismatch");
   }
   if(request.spatialruntime_pin!=null){
-    if(!isSha256(request.spatialruntime_pin)){
+    if(!isGitCommitSha(request.spatialruntime_pin)){
       throw new Error("spatialruntime_authorizer_requested_pin_invalid");
     }
     if(receipt.spatialruntime_pin!==request.spatialruntime_pin){
@@ -120,7 +121,7 @@ function createSpatialRuntimeAuthorizer(options={}){
   const script=options.script||path.join(__dirname,"spatialruntime_window_authorizer.py");
   const maxOpenRatioDelta=options.maxOpenRatioDelta==null?0.25:Number(options.maxOpenRatioDelta);
   const spatialRuntimePin=options.spatialRuntimePin||process.env.SPATIALRUNTIME_PIN||null;
-  if(spatialRuntimePin!=null&&!isSha256(spatialRuntimePin)){
+  if(spatialRuntimePin!=null&&!isGitCommitSha(spatialRuntimePin)){
     throw new Error("spatialruntime_authorizer_pin_invalid");
   }
   const hasScenePath=!!(options.worldSnapshotPath||options.worldValidationReceiptPath);
@@ -224,6 +225,7 @@ module.exports={
   patchIdentity,
   sameObject,
   samePatchIdentity,
+  isGitCommitSha,
   validateAuthorizationReceipt,
   createSpatialRuntimeAuthorizer
 };
