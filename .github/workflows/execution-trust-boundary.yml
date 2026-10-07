@@ -4,45 +4,11 @@ on:
   push:
     branches: [main]
     paths:
-      - "scripts/authorized_patch_planner.py"
-      - "scripts/device_registry.py"
-      - "scripts/semantic_capability_map.py"
-      - "scripts/atomic_authorized_commit.cjs"
-      - "scripts/authorization_ledger.cjs"
-      - "scripts/authorization_reserve_worker.cjs"
-      - "scripts/test_authorization_ledger.cjs"
-      - "scripts/test_authorization_reservation_race.cjs"
-      - "scripts/test_durable_authorization_commit.cjs"
-      - "scripts/atomic_physical_set.cjs"
-      - "scripts/physical_driver_capabilities.cjs"
-      - "scripts/physical_transaction_router.cjs"
-      - "scripts/physical_runtime.cjs"
-      - "scripts/whole_home_patch_contract.cjs"
-      - "scripts/test_execution_trust_boundary.py"
-      - "scripts/test_atomic_physical_set.cjs"
-      - "scripts/test_physical_transaction_router.cjs"
-      - "scripts/test_production_physical_turn_atomicity.cjs"
+      - "scripts/**"
       - ".github/workflows/execution-trust-boundary.yml"
   pull_request:
     paths:
-      - "scripts/authorized_patch_planner.py"
-      - "scripts/device_registry.py"
-      - "scripts/semantic_capability_map.py"
-      - "scripts/atomic_authorized_commit.cjs"
-      - "scripts/authorization_ledger.cjs"
-      - "scripts/authorization_reserve_worker.cjs"
-      - "scripts/test_authorization_ledger.cjs"
-      - "scripts/test_authorization_reservation_race.cjs"
-      - "scripts/test_durable_authorization_commit.cjs"
-      - "scripts/atomic_physical_set.cjs"
-      - "scripts/physical_driver_capabilities.cjs"
-      - "scripts/physical_transaction_router.cjs"
-      - "scripts/physical_runtime.cjs"
-      - "scripts/whole_home_patch_contract.cjs"
-      - "scripts/test_execution_trust_boundary.py"
-      - "scripts/test_atomic_physical_set.cjs"
-      - "scripts/test_physical_transaction_router.cjs"
-      - "scripts/test_production_physical_turn_atomicity.cjs"
+      - "scripts/**"
       - ".github/workflows/execution-trust-boundary.yml"
   workflow_dispatch:
 
@@ -64,8 +30,10 @@ jobs:
           node --check scripts/atomic_authorized_commit.cjs
           node --check scripts/authorization_ledger.cjs
           node --check scripts/authorization_reserve_worker.cjs
+          node --check scripts/authorization_distinct_worker.cjs
           node --check scripts/test_authorization_ledger.cjs
           node --check scripts/test_authorization_reservation_race.cjs
+          node --check scripts/test_authorization_distinct_race.cjs
           node --check scripts/test_durable_authorization_commit.cjs
           node --check scripts/atomic_physical_set.cjs
           node --check scripts/physical_driver_capabilities.cjs
@@ -80,7 +48,8 @@ jobs:
         run: |
           node scripts/test_authorization_ledger.cjs
           node scripts/test_durable_authorization_commit.cjs
-          node scripts/test_authorization_reservation_race.cjs\n          node scripts/test_authorization_distinct_race.cjs
+          node scripts/test_authorization_reservation_race.cjs
+          node scripts/test_authorization_distinct_race.cjs
       - name: Prove multi-target physical SET cannot degrade to sequential writes
         run: node scripts/test_atomic_physical_set.cjs
       - name: Prove transaction routing preserves SET atomicity
