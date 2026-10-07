@@ -43,6 +43,13 @@ async function runRecoveryTransaction(inputRuntime,{
     throw new Error("recovery_driver_readiness_state_required");
   }
   if(!safe_patch)throw new Error("recovery_safe_patch_required");
+  if(!safe_patch.target||deviceKey(safe_patch.target)!==deviceKey(target)){
+    throw new Error("recovery_patch_target_mismatch");
+  }
+  const safeLimit=Number(safe_position_max_pct);
+  if(!Number.isFinite(safeLimit)||safeLimit<0||safeLimit>100){
+    throw new Error("recovery_safe_position_limit_invalid");
+  }
 
   let runtime=inputRuntime;
   if(!isQuarantined(runtime,target))throw new Error("device_not_quarantined");
@@ -93,7 +100,7 @@ async function runRecoveryTransaction(inputRuntime,{
   if(afterTick==null||afterTick<=beforeTick){
     return blocked(runtime,"recovery_post_readback_not_fresh",trace,{receipt});
   }
-  if(afterPct==null||afterPct>Number(safe_position_max_pct)){
+  if(afterPct==null||afterPct>safeLimit){
     return blocked(runtime,"recovery_safe_position_not_verified",trace,{receipt});
   }
 
@@ -122,7 +129,7 @@ async function runRecoveryTransaction(inputRuntime,{
     before_tick:beforeTick,
     after_tick:afterTick,
     safe_position_pct:afterPct,
-    safe_position_max_pct:Number(safe_position_max_pct),
+    safe_position_max_pct:safeLimit,
     execution_receipt_id:receipt.command_id||null
   };
   clearQuarantine(runtime,target,proof);
@@ -139,7 +146,7 @@ async function runRecoveryTransaction(inputRuntime,{
     proof,
     trace,
     recovery_state:recoveryState(runtime,target),
-    device_execution_authorized:false
+    normal_execution_authorized:false
   };
 }
 
@@ -153,7 +160,7 @@ function blocked(runtime,reason,trace,extra={}){
     receipt:clone(extra.receipt||null),
     proof:null,
     trace:clone(trace),
-    device_execution_authorized:false
+    normal_execution_authorized:false
   };
 }
 
