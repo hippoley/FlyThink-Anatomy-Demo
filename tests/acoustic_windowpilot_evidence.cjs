@@ -133,6 +133,67 @@ const valid=buildReceipt({
 }
 
 {
+  const bad=JSON.parse(JSON.stringify(valid));
+  bad.semantic.committed_finals[0].patches.push(
+    {op:"PATCH_SLOT",target,slot:"opening",value:3}
+  );
+  delete bad.evidence_sha256;
+  const resigned=finalizeReceipt(bad);
+  const report=validateReceipt(resigned,{requireHumanFixture:true});
+  assert.equal(report.valid,false);
+  assert.ok(report.reasons.includes("expected exactly one committed semantic patch"));
+}
+
+{
+  const bad=JSON.parse(JSON.stringify(valid));
+  bad.physical.driver_commands.splice(1,0,{
+    id:"windowpilot:extra",
+    status:"applied",
+    requested_position_pct:3,
+    observation:{
+      target,exists:true,slots:{opening:3,power:"ON"},
+      evidence:{source:"windowpilot:/api/state",position_pct:3,measured:true}
+    }
+  });
+  delete bad.evidence_sha256;
+  const resigned=finalizeReceipt(bad);
+  const report=validateReceipt(resigned,{requireHumanFixture:true});
+  assert.equal(report.valid,false);
+  assert.ok(report.reasons.includes(
+    "expected exactly one semantic command plus one closeout command"
+  ));
+}
+
+{
+  const bad=JSON.parse(JSON.stringify(valid));
+  bad.probe_open_pct=1;
+  bad.tolerance_pct=2;
+  bad.semantic.committed_finals[0].feedback[0].evidence.position_pct=0;
+  bad.physical.driver_commands[0].requested_position_pct=1;
+  bad.physical.driver_commands[0].observation.evidence.position_pct=0;
+  delete bad.evidence_sha256;
+  const resigned=finalizeReceipt(bad);
+  const report=validateReceipt(resigned,{requireHumanFixture:true});
+  assert.equal(report.valid,false);
+  assert.ok(report.reasons.includes("probe target must exceed tolerance"));
+  assert.ok(report.reasons.includes(
+    "semantic command did not produce observable opening motion"
+  ));
+}
+
+{
+  const bad=JSON.parse(JSON.stringify(valid));
+  bad.physical.closeout.receipt.status="timeout";
+  bad.physical.driver_commands[1].status="timeout";
+  delete bad.evidence_sha256;
+  const resigned=finalizeReceipt(bad);
+  const report=validateReceipt(resigned,{requireHumanFixture:true});
+  assert.equal(report.valid,false);
+  assert.ok(report.reasons.includes("closeout physical command not applied"));
+  assert.ok(report.reasons.includes("closeout driver command not applied"));
+}
+
+{
   const root=fs.mkdtempSync(path.join(os.tmpdir(),"flythink-evidence-"));
   const wavPath=path.join(root,"human.wav");
   const manifestPath=path.join(root,"human.json");
@@ -215,5 +276,5 @@ const valid=buildReceipt({
 
 console.log(JSON.stringify({
   ok:true,
-  contract:"human acoustic + hardware identity + measured readback + closeout evidence is independently auditable"
+  contract:"human acoustic flagship evidence requires one observable probe, one measured semantic action, one applied closeout, and no hidden extra motion"
 }));
