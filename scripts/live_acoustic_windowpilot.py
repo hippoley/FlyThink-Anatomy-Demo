@@ -8,6 +8,7 @@ run_acoustic_windowpilot_e2e.cjs.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import subprocess
 import sys
@@ -18,6 +19,10 @@ from acoustic_fixture_manifest import verify_manifest
 
 def build_commands(args):
     root = Path(__file__).resolve().parents[1]
+    if args.apply and not args.expected_hardware_identity:
+        raise SystemExit("--apply requires --expected-hardware-identity")
+    if args.apply and not args.receipt:
+        raise SystemExit("--apply requires --receipt")
     fixture_payload=None
     if args.fixture_manifest:
         if not args.wav:
@@ -35,11 +40,14 @@ def build_commands(args):
                 "acoustic fixture verification failed: "
                 + "; ".join(report["reasons"])
             )
+        manifest_path=Path(args.fixture_manifest)
+        manifest_sha256=hashlib.sha256(manifest_path.read_bytes()).hexdigest()
         fixture_payload={
             "schema":manifest.get("schema"),
             "source_kind":manifest.get("source_kind"),
             "expected_text":manifest.get("expected_text"),
             "wav_sha256":report.get("wav_sha256"),
+            "manifest_sha256":manifest_sha256,
             "provenance_note":manifest.get("provenance_note"),
             "require_human_acceptance":bool(args.require_human_fixture),
         }
