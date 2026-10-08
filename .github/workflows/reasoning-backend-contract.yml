@@ -15,10 +15,20 @@ jobs:
           python-version: "3.12"
       - name: Install test dependency
         run: python -m pip install pytest
+      - name: Install FlyWire decision-gate dependency
+        run: python -m pip install --index-url https://download.pytorch.org/whl/cpu torch
       - name: Build immutable capability index
         run: python scripts/build_capability_index.py
       - name: Validate reasoning and physical-world contracts
         run: python -m pytest -q tests/test_reasoning_backend_contract.py tests/test_execution_reasoning_backend.py tests/test_physical_world_benchmark.py tests/test_multiturn_episode_generation.py tests/test_whole_home_patch_corpus.py tests/test_flywire_whole_home_patch.py tests/test_whole_home_grounding.py
+      - name: Validate FlyWire decision-gate structure
+        run: python -m pytest -q tests/test_flywire_decision_gate.py
+      - name: Smoke FlyWire decision gate
+        run: >
+          python scripts/benchmark_flywire_decision_gate.py
+          --epochs 2
+          --seeds 1783
+          --out artifacts/flywire-decision-gate-smoke/report.json
       - name: Build frozen whole-home patch acceptance
         run: python scripts/whole_home_patch_corpus.py --output artifacts/whole-home-patch-acceptance.json
       - name: Build 46-model benchmark manifest
