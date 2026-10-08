@@ -3,7 +3,7 @@ from pathlib import Path
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/"scripts"))
 from whole_home_patch_corpus import build
 
-OPS={"ADD_DEVICE","PATCH_SLOT","CLOSE_DEVICE","REMOVE_DEVICE","REPLACE_TARGET","CANCEL_PENDING","UNDO_EXECUTED","PROTECT"}
+OPS={"ADD_DEVICE","PATCH_SLOT","PATCH_RELATIVE","CLOSE_DEVICE","REMOVE_DEVICE","REPLACE_TARGET","CANCEL_PENDING","UNDO_EXECUTED","PROTECT"}
 
 def test_frozen_suite_covers_distinct_whole_home_semantics():
     data=build()
@@ -29,3 +29,16 @@ def test_generator_writes_public_evidence(tmp_path):
     subprocess.run([sys.executable,"scripts/whole_home_patch_corpus.py","--output",str(out)],check=True)
     data=json.loads(out.read_text(encoding="utf-8"))
     assert data["semantic_unit"]=="minimal_patch_not_full_state_regeneration"
+
+
+def test_relative_patch_is_a_first_class_frozen_family():
+    data=build()
+    e=next(x for x in data["episodes"] if x["family"]=="relative_patch")
+    second=e["turns"][1]
+    assert second["gold_patches"] == [{
+        "op":"PATCH_RELATIVE",
+        "target":{"area":"客厅","entity":"空调","instance":"ac-1"},
+        "slot":"temperature",
+        "delta":-1,
+    }]
+    assert second["lifecycle"]["focused_target"] == {"area":"客厅","entity":"空调","instance":"ac-1"}
