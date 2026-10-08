@@ -6,6 +6,7 @@ import torch
 from scripts.benchmark_flywire_decision_gate import (
     OUT_DIM,
     build_models,
+    coverage_at_precision,
     parameter_count,
 )
 from scripts.train_flywire import EXPECTED_SHA256, digest
@@ -56,3 +57,21 @@ def test_disconnected_control_has_no_recurrent_connectome_effect():
         a=model(x)
         b=model(x,disconnect=True)
     torch.testing.assert_close(a,b)
+
+
+def test_commit_curve_never_splits_equal_confidence_ties():
+    confidence=torch.tensor([0.9,0.9,0.8])
+    exact=torch.tensor([True,False,True])
+    gate=coverage_at_precision(confidence,exact,target=0.99)
+    # No scalar threshold can keep only the correct 0.9 sample.
+    assert gate["coverage"]==0.0
+    assert gate["committed"]==0
+
+
+def test_commit_curve_reports_largest_real_threshold_group():
+    confidence=torch.tensor([0.99,0.95,0.95,0.5])
+    exact=torch.tensor([True,True,True,False])
+    gate=coverage_at_precision(confidence,exact,target=0.99)
+    assert gate["coverage"]==0.75
+    assert gate["precision"]==1.0
+    assert gate["threshold"]==0.95
