@@ -2465,26 +2465,50 @@ function reset(){
   $('#chat').innerHTML='<div class="msg"><div class="who">SYSTEM</div>Session reset.</div>';$('#input').value='把客厅外窗关上，客厅灯也关了';updateDecisionHeads($('#input').value);$('#turnPill').textContent='turn 0';$('#deltaPill').textContent='IDLE';$('#delta').textContent='{}';$('#tasks').textContent='No active task.';$('#slots').innerHTML='';renderStateTree();$('#flow').innerHTML='';$('#revisions').textContent='[]';$('#rawStateTree').textContent='{}';$('#resolutionMode').textContent='waiting';$('#resolutionGrid').innerHTML='<div class="resolutionCard"><div class="resolutionPath">Run a turn to inspect grounding provenance.</div></div>';$('#route').textContent='WAITING';$('#action').textContent='—';$('#focus').textContent='—';$('#worldDelta').textContent='—';$('#bindingCount').textContent=(THINGREG?.model_count||0)+' real models loaded';$('#bindingGrid').innerHTML='<div class="bindingCard"><div class="bindingRoute">No output yet</div></div>';$('#semanticMatches').innerHTML='';$('#corpusCase').textContent='Corpus case · 抽取一条语料后，这里会显示 train seed、mutation provenance、expected model 与本轮 readout 对比。';$('#bridgeRows').innerHTML='';$('#bridgeMeta').textContent=DATA?.g?.projection_pool?.length?(DATA.g.projection_pool.length+' projection roots · no active turn'):'projection pool unavailable';if(NEURAL){drawNeural();$('#neuralHud').innerHTML='state reset · 216 developmental units';}drawBrain();resetHomeResult();
 }
 
-async function loadAnatomy(){
-  const [g,snap,n,lm,tr,ci]=await Promise.all([
-    fetch('./anatomy-sample.json').then(r=>r.json()),
-    fetch('./measured-snapshot.json').then(r=>r.json()),
-    fetch('./neural-substrate.json').then(r=>r.json()),
-    fetch('./learned-dialogue-model.json').then(r=>r.json()),
-    fetch('./real-home-thing-model-registry.json').then(r=>r.json()),
-    fetch('./capability-index.json').then(r=>r.json())
+async function fetchJsonRequired(path,label){
+  const response=await fetch(path);
+  if(!response.ok)throw new Error(label+' HTTP '+response.status);
+  return response.json();
+}
+async function loadConversationCore(){
+  const [n,lm,tr,ci]=await Promise.all([
+    fetchJsonRequired('./neural-substrate.json','Neural substrate'),
+    fetchJsonRequired('./learned-dialogue-model.json','Dialogue model'),
+    fetchJsonRequired('./real-home-thing-model-registry.json','Thing Model registry'),
+    fetchJsonRequired('./capability-index.json','Capability index')
   ]);
-  DATA={g,s:snap};NEURAL=n;LEARNED=lm;THINGREG=normalizeThingRegistry(tr);CAPINDEX=normalizeCapabilityIndex(ci);
+  NEURAL=n;LEARNED=lm;THINGREG=normalizeThingRegistry(tr);CAPINDEX=normalizeCapabilityIndex(ci);
   if(THINGREG.source_archive_sha256!==THING_MODEL_SOURCE_SHA256)throw new Error('Thing Model registry SHA mismatch');
   if(CAPINDEX.truth!=='compiled_from_all_46_fixed_user_uploaded_thing_models'||Number(CAPINDEX.models)!==46||Number(CAPINDEX.count)<700)throw new Error('Full 46-model capability index unavailable');
   populateModelBrowser();
-  neuralState=Array(n.config.dim).fill(0);buildUnitToRootMap();projectActiveUnits();drawNeural();drawTurnFly();
-  $('#mappedPill').textContent=(snap.graph.nodes||[]).length+' measured · '+(g.projection_pool||[]).length+' projection';
+  neuralState=Array(n.config.dim).fill(0);
+  drawNeural();drawTurnFly();
   $('#neuralHud').innerHTML='216 units · '+(n.recurrent_edges||[]).length+' recurrent edges · '+n.training.example_count+' action + '+(n.goal_training?.example_count||0)+' goal train exemplars';
   $('#corpusMeta').textContent='LEARNED '+lm.version+' · '+lm.training.train_rows+' train / '+lm.training.dev_rows+' dev · family '+Math.round((lm.metrics?.family?.accuracy||0)*100)+'% · context '+Math.round((lm.metrics?.context_operation?.accuracy||0)*100)+'% · '+CAPINDEX.count+' global capabilities';
   initEssenceFilters();buildEssenceBatch();updateDecisionHeads($('#input').value);
-  $('#hud').innerHTML='geometry: '+g.truth+'<br>source: Codex FAFB v783<br>source points: '+Number(g.source_count).toLocaleString()+'<br>display sample: '+Number(g.points.length).toLocaleString()+'<br>projection pool: '+Number((g.projection_pool||[]).length).toLocaleString()+' roots<br>measured replay: '+Number((snap.graph.nodes||[]).length).toLocaleString()+' roots<br><br>Thing Models: '+CAPINDEX.models+' · capabilities: '+CAPINDEX.count+'<br>activity: '+snap.truth;
-  drawBrain();setConversationReady(true);loadFailureLibrary();if(!restorePersistedSession())resetHomeResult();
+  setConversationReady(true);
+  loadFailureLibrary();
+  if(!restorePersistedSession())resetHomeResult();
+}
+async function loadAnatomyViews(){
+  try{
+    const [g,snap]=await Promise.all([
+      fetchJsonRequired('./anatomy-sample.json','Anatomy sample'),
+      fetchJsonRequired('./measured-snapshot.json','Measured snapshot')
+    ]);
+    DATA={g,s:snap};
+    buildUnitToRootMap();projectActiveUnits();drawNeural();drawTurnFly();
+    $('#mappedPill').textContent=(snap.graph.nodes||[]).length+' measured · '+(g.projection_pool||[]).length+' projection';
+    $('#hud').innerHTML='geometry: '+g.truth+'<br>source: Codex FAFB v783<br>source points: '+Number(g.source_count).toLocaleString()+'<br>display sample: '+Number(g.points.length).toLocaleString()+'<br>projection pool: '+Number((g.projection_pool||[]).length).toLocaleString()+' roots<br>measured replay: '+Number((snap.graph.nodes||[]).length).toLocaleString()+' roots<br><br>Thing Models: '+CAPINDEX.models+' · capabilities: '+CAPINDEX.count+'<br>activity: '+snap.truth;
+    drawBrain();
+  }catch(e){
+    $('#mappedPill').textContent='anatomy optional · unavailable';
+    $('#hud').textContent='Anatomy view unavailable: '+e.message+' · conversation demo remains usable.';
+  }
+}
+async function bootDemo(){
+  await loadConversationCore();
+  loadAnatomyViews();
 }
 function fit(){const c=$('#brain'),r=c.getBoundingClientRect(),d=devicePixelRatio||1;c.width=Math.max(1,r.width*d);c.height=Math.max(1,r.height*d);const x=c.getContext('2d');x.setTransform(d,0,0,d,0,0);return[x,r.width,r.height]}
 function R(p){let[x,y,z]=p,cy=Math.cos(rot.y),sy=Math.sin(rot.y),cx=Math.cos(rot.x),sx=Math.sin(rot.x);let x1=x*cy-z*sy,z1=x*sy+z*cy;let y1=y*cx-z1*sx,z2=y*sx+z1*cx;return[x1,y1,z2]}
@@ -2631,7 +2655,7 @@ const c=$('#brain');c.addEventListener('pointerdown',e=>{drag={x:e.clientX,y:e.c
 $('#sceneSelect').addEventListener('change',reset);
 document.querySelectorAll('details').forEach(el=>el.addEventListener('toggle',()=>{if(el.open){drawBrain();drawNeural()}}));
 loadComposerTemplate('interrupt');generateBenchmark();
-loadAnatomy().catch(e=>{setConversationReady(false,e);$('#hud').textContent='Failed to load anatomy: '+e.message;$('#mappedPill').textContent='load failed'});
+bootDemo().catch(e=>{setConversationReady(false,e);$('#hud').textContent='Core demo failed to load: '+e.message;$('#mappedPill').textContent='core load failed'});
 </script><section id="coverageMatrix" style="max-width:1180px;margin:36px auto;padding:0 20px 42px">
 <h2>46-model reality coverage</h2><p style="opacity:.7">Generated from the immutable Thing Model archive — not a hand-written demo list.</p>
 <div id="coverageStats" style="margin:14px 0;font-family:monospace">loading benchmark evidence…</div>
