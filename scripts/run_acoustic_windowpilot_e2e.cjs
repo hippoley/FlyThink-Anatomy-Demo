@@ -238,6 +238,9 @@ async function main(){
   const tolerancePct=Number(arg("--tolerance")||1);
   const timeoutMs=Number(arg("--timeout-ms")||5000);
   const receiptPath=arg("--receipt");
+  const proofBundlePath=arg("--proof-bundle");
+  const contextualStatePath=arg("--contextual-state");
+  const authorizationLedgerPath=arg("--authorization-ledger");
   const fixtureJson=arg("--acoustic-fixture-json");
   const acousticFixture=fixtureJson?JSON.parse(fixtureJson):null;
   const useSpatialRuntime=flag("--spatialruntime-authorize");
@@ -253,6 +256,13 @@ async function main(){
 
   if(!url)throw new Error("--url is required");
   if(apply&&!receiptPath)throw new Error("--apply requires --receipt");
+  if(apply&&!proofBundlePath)throw new Error("--apply requires --proof-bundle");
+  if(apply&&!contextualStatePath)throw new Error("--apply requires --contextual-state");
+  if(apply&&!authorizationLedgerPath)throw new Error("--apply requires --authorization-ledger");
+  if(apply&&!useSpatialRuntime)throw new Error("--apply requires --spatialruntime-authorize");
+  if(apply&&!sceneContextPath&&!worldSnapshotPath){
+    throw new Error("--apply requires authoritative SpatialRuntime scene identity");
+  }
 
   const driver=new WindowPilotHttpDriver({
     baseUrl:url,
@@ -275,6 +285,19 @@ async function main(){
   });
 
   const initialRuntime=initialRuntimeFromPhysical(target,initialPct);
+  let contextualState=null;
+  let canonicalScene=null;
+  let authorizationLedger=null;
+  if(apply){
+    contextualState=JSON.parse(fs.readFileSync(contextualStatePath,"utf8"));
+    contextStateIdentity(contextualState);
+    canonicalScene=loadCanonicalSceneIdentity({
+      sceneContextPath,
+      worldSnapshotPath,
+      worldValidationReceiptPath
+    });
+    authorizationLedger=new FileAuthorizationLedger(authorizationLedgerPath);
+  }
   const client=createCheckpointClient({
     graph:arg("--graph"),
     judgement:arg("--judgement"),
@@ -299,7 +322,8 @@ async function main(){
     initialRuntime,
     predictor:guardedPredictor,
     driver,
-    physicalAuthorizer:spatialRuntimeAuthorizer
+    physicalAuthorizer:spatialRuntimeAuthorizer,
+    semanticOnly:apply
   });
   const guard=new AsrEventSequenceGuard();
   const input=readline.createInterface({input:process.stdin,crlfDelay:Infinity});
@@ -307,6 +331,10 @@ async function main(){
   const acceptedEvents=[];
   let processingError=null;
   let closeoutEvidence=null;
+  let canonicalExecution=null;
+  let decisionProposal=null;
+  let proofBundle=null;
+  let proofVerification=null;
 
   try{
     for await(const line of input){
