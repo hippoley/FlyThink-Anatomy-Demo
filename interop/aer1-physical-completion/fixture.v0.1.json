@@ -1,0 +1,541 @@
+{
+  "fixture_version": "aer1-flythink-claim-scope-interop.v0.1",
+  "aer1_draft": "draft-zambo-aer1-12",
+  "note": "Interop fixture only. It does not extend the AER-1 core and does not make either verifier authoritative for the other system's claims.",
+  "correlation": {
+    "action_id": "window-action-42",
+    "rule": "Correlation is explicit metadata for the fixture; it does not cause claim inheritance."
+  },
+  "cases": [
+    {
+      "id": "aer-valid-physical-proven",
+      "aer_receipt": {
+        "id": "11111111-2222-4333-8444-555555555555",
+        "receipt_schema_version": "0.3",
+        "created_at": "2026-10-08T07:30:00Z",
+        "tool": {
+          "name": "window.set_opening",
+          "version": "1.0.0",
+          "scope": "home.window"
+        },
+        "provenance_class": "OBSERVED VIA GATEWAY",
+        "canonical_bytes": "{\"request_id\":\"req-42\",\"status\":\"accepted\"}",
+        "output_hash": "sha256:42ecd1b44f00ff05a200925c7ad410ba68ec7f45f31a8dd44293514fa99418c8",
+        "verification_status": "verified"
+      },
+      "physical_vector": {
+        "schema_version": "flythink.physical-completion-vector.v0.1",
+        "authorized_completion_criterion": {
+          "criterion": {
+            "version": "windowpilot-completion-criterion.v1",
+            "target": {
+              "area": "客厅",
+              "entity": "窗",
+              "instance": "default"
+            },
+            "slot": "opening",
+            "predicate": "abs(observed_position_pct-requested_position_pct)<=tolerance_pct",
+            "requested_position_pct": 5,
+            "tolerance_pct": 1,
+            "require_fresh_readback": true,
+            "witness_source": "windowpilot:/api/state",
+            "witness_method": "windowpilot-state-readback",
+            "expected_hardware_identity_sha256": "hw-demo"
+          },
+          "criterion_sha256": "b1f91de35b87ea928cf2dc183d7ccc7f31a954df590b39989cf77108a330457c"
+        },
+        "physical_receipt": {
+          "patch": {
+            "op": "PATCH_SLOT",
+            "target": {
+              "area": "客厅",
+              "entity": "窗",
+              "instance": "default"
+            },
+            "slot": "opening",
+            "value": 5
+          },
+          "physical_patch": {
+            "op": "PATCH_SLOT",
+            "target": {
+              "area": "客厅",
+              "entity": "窗",
+              "instance": "default"
+            },
+            "slot": "opening",
+            "value": 5
+          },
+          "command_id": "windowpilot:interop-1",
+          "status": "applied",
+          "observation": {
+            "target": {
+              "area": "客厅",
+              "entity": "窗",
+              "instance": "default"
+            },
+            "exists": true,
+            "slots": {
+              "opening": 5
+            },
+            "evidence": {
+              "source": "windowpilot:/api/state",
+              "position_pct": 5,
+              "measured": true,
+              "tick": 11,
+              "ack_at_ms": 1000,
+              "received_at_ms": 1001
+            }
+          },
+          "ack": {
+            "ok": true
+          },
+          "before_tick": 10,
+          "requested_position_pct": 5,
+          "hardware_identity_before": "hw-demo",
+          "hardware_identity_after": "hw-demo",
+          "completion_criterion": {
+            "version": "windowpilot-completion-criterion.v1",
+            "target": {
+              "area": "客厅",
+              "entity": "窗",
+              "instance": "default"
+            },
+            "slot": "opening",
+            "predicate": "abs(observed_position_pct-requested_position_pct)<=tolerance_pct",
+            "requested_position_pct": 5,
+            "tolerance_pct": 1,
+            "require_fresh_readback": true,
+            "witness_source": "windowpilot:/api/state",
+            "witness_method": "windowpilot-state-readback",
+            "expected_hardware_identity_sha256": "hw-demo"
+          },
+          "completion_criterion_sha256": "b1f91de35b87ea928cf2dc183d7ccc7f31a954df590b39989cf77108a330457c",
+          "witness": {
+            "witness_id": "windowpilot-state:hw-demo",
+            "source": "windowpilot:/api/state",
+            "method": "windowpilot-state-readback",
+            "hardware_identity_sha256": "hw-demo"
+          },
+          "criterion_fixed_at_ms": 999,
+          "observation_window": {
+            "criterion_fixed_at_ms": 999,
+            "ack_at_ms": 1000,
+            "received_at_ms": 1001
+          }
+        }
+      },
+      "expected": {
+        "aer": {
+          "verdict": "valid"
+        },
+        "physical": {
+          "verdict": "valid",
+          "result": "PHYSICAL_COMPLETION_PROVEN"
+        },
+        "combined_claims": {
+          "aer_observed_execution_record": true,
+          "physical_completion": true,
+          "claim_inheritance": false
+        }
+      }
+    },
+    {
+      "id": "aer-valid-physical-indeterminate",
+      "aer_receipt": {
+        "id": "11111111-2222-4333-8444-555555555555",
+        "receipt_schema_version": "0.3",
+        "created_at": "2026-10-08T07:30:00Z",
+        "tool": {
+          "name": "window.set_opening",
+          "version": "1.0.0",
+          "scope": "home.window"
+        },
+        "provenance_class": "OBSERVED VIA GATEWAY",
+        "canonical_bytes": "{\"request_id\":\"req-42\",\"status\":\"accepted\"}",
+        "output_hash": "sha256:42ecd1b44f00ff05a200925c7ad410ba68ec7f45f31a8dd44293514fa99418c8",
+        "verification_status": "verified"
+      },
+      "physical_vector": {
+        "schema_version": "flythink.physical-completion-vector.v0.1",
+        "authorized_completion_criterion": {
+          "criterion": {
+            "version": "windowpilot-completion-criterion.v1",
+            "target": {
+              "area": "客厅",
+              "entity": "窗",
+              "instance": "default"
+            },
+            "slot": "opening",
+            "predicate": "abs(observed_position_pct-requested_position_pct)<=tolerance_pct",
+            "requested_position_pct": 5,
+            "tolerance_pct": 1,
+            "require_fresh_readback": true,
+            "witness_source": "windowpilot:/api/state",
+            "witness_method": "windowpilot-state-readback",
+            "expected_hardware_identity_sha256": "hw-demo"
+          },
+          "criterion_sha256": "b1f91de35b87ea928cf2dc183d7ccc7f31a954df590b39989cf77108a330457c"
+        },
+        "physical_receipt": {
+          "patch": {
+            "op": "PATCH_SLOT",
+            "target": {
+              "area": "客厅",
+              "entity": "窗",
+              "instance": "default"
+            },
+            "slot": "opening",
+            "value": 5
+          },
+          "physical_patch": {
+            "op": "PATCH_SLOT",
+            "target": {
+              "area": "客厅",
+              "entity": "窗",
+              "instance": "default"
+            },
+            "slot": "opening",
+            "value": 5
+          },
+          "command_id": "windowpilot:interop-1",
+          "status": "applied",
+          "observation": {
+            "target": {
+              "area": "客厅",
+              "entity": "窗",
+              "instance": "default"
+            },
+            "exists": true,
+            "slots": {
+              "opening": 5
+            },
+            "evidence": {
+              "source": "windowpilot:/api/state",
+              "position_pct": 5,
+              "measured": true,
+              "tick": 10,
+              "ack_at_ms": 1000,
+              "received_at_ms": 1001
+            }
+          },
+          "ack": {
+            "ok": true
+          },
+          "before_tick": 10,
+          "requested_position_pct": 5,
+          "hardware_identity_before": "hw-demo",
+          "hardware_identity_after": "hw-demo",
+          "completion_criterion": {
+            "version": "windowpilot-completion-criterion.v1",
+            "target": {
+              "area": "客厅",
+              "entity": "窗",
+              "instance": "default"
+            },
+            "slot": "opening",
+            "predicate": "abs(observed_position_pct-requested_position_pct)<=tolerance_pct",
+            "requested_position_pct": 5,
+            "tolerance_pct": 1,
+            "require_fresh_readback": true,
+            "witness_source": "windowpilot:/api/state",
+            "witness_method": "windowpilot-state-readback",
+            "expected_hardware_identity_sha256": "hw-demo"
+          },
+          "completion_criterion_sha256": "b1f91de35b87ea928cf2dc183d7ccc7f31a954df590b39989cf77108a330457c",
+          "witness": {
+            "witness_id": "windowpilot-state:hw-demo",
+            "source": "windowpilot:/api/state",
+            "method": "windowpilot-state-readback",
+            "hardware_identity_sha256": "hw-demo"
+          },
+          "criterion_fixed_at_ms": 999,
+          "observation_window": {
+            "criterion_fixed_at_ms": 999,
+            "ack_at_ms": 1000,
+            "received_at_ms": 1001
+          }
+        }
+      },
+      "expected": {
+        "aer": {
+          "verdict": "valid"
+        },
+        "physical": {
+          "verdict": "valid",
+          "result": "PHYSICAL_COMPLETION_INDETERMINATE"
+        },
+        "combined_claims": {
+          "aer_observed_execution_record": true,
+          "physical_completion": false,
+          "physical_outcome_indeterminate": true,
+          "claim_inheritance": false
+        }
+      }
+    },
+    {
+      "id": "aer-invalid-physical-proven",
+      "aer_receipt": {
+        "id": "11111111-2222-4333-8444-555555555555",
+        "receipt_schema_version": "0.3",
+        "created_at": "2026-10-08T07:30:00Z",
+        "tool": {
+          "name": "window.set_opening",
+          "version": "1.0.0",
+          "scope": "home.window"
+        },
+        "provenance_class": "OBSERVED VIA GATEWAY",
+        "canonical_bytes": "{\"request_id\":\"req-42\",\"status\":\"tampered\"}",
+        "output_hash": "sha256:42ecd1b44f00ff05a200925c7ad410ba68ec7f45f31a8dd44293514fa99418c8",
+        "verification_status": "verified"
+      },
+      "physical_vector": {
+        "schema_version": "flythink.physical-completion-vector.v0.1",
+        "authorized_completion_criterion": {
+          "criterion": {
+            "version": "windowpilot-completion-criterion.v1",
+            "target": {
+              "area": "客厅",
+              "entity": "窗",
+              "instance": "default"
+            },
+            "slot": "opening",
+            "predicate": "abs(observed_position_pct-requested_position_pct)<=tolerance_pct",
+            "requested_position_pct": 5,
+            "tolerance_pct": 1,
+            "require_fresh_readback": true,
+            "witness_source": "windowpilot:/api/state",
+            "witness_method": "windowpilot-state-readback",
+            "expected_hardware_identity_sha256": "hw-demo"
+          },
+          "criterion_sha256": "b1f91de35b87ea928cf2dc183d7ccc7f31a954df590b39989cf77108a330457c"
+        },
+        "physical_receipt": {
+          "patch": {
+            "op": "PATCH_SLOT",
+            "target": {
+              "area": "客厅",
+              "entity": "窗",
+              "instance": "default"
+            },
+            "slot": "opening",
+            "value": 5
+          },
+          "physical_patch": {
+            "op": "PATCH_SLOT",
+            "target": {
+              "area": "客厅",
+              "entity": "窗",
+              "instance": "default"
+            },
+            "slot": "opening",
+            "value": 5
+          },
+          "command_id": "windowpilot:interop-1",
+          "status": "applied",
+          "observation": {
+            "target": {
+              "area": "客厅",
+              "entity": "窗",
+              "instance": "default"
+            },
+            "exists": true,
+            "slots": {
+              "opening": 5
+            },
+            "evidence": {
+              "source": "windowpilot:/api/state",
+              "position_pct": 5,
+              "measured": true,
+              "tick": 11,
+              "ack_at_ms": 1000,
+              "received_at_ms": 1001
+            }
+          },
+          "ack": {
+            "ok": true
+          },
+          "before_tick": 10,
+          "requested_position_pct": 5,
+          "hardware_identity_before": "hw-demo",
+          "hardware_identity_after": "hw-demo",
+          "completion_criterion": {
+            "version": "windowpilot-completion-criterion.v1",
+            "target": {
+              "area": "客厅",
+              "entity": "窗",
+              "instance": "default"
+            },
+            "slot": "opening",
+            "predicate": "abs(observed_position_pct-requested_position_pct)<=tolerance_pct",
+            "requested_position_pct": 5,
+            "tolerance_pct": 1,
+            "require_fresh_readback": true,
+            "witness_source": "windowpilot:/api/state",
+            "witness_method": "windowpilot-state-readback",
+            "expected_hardware_identity_sha256": "hw-demo"
+          },
+          "completion_criterion_sha256": "b1f91de35b87ea928cf2dc183d7ccc7f31a954df590b39989cf77108a330457c",
+          "witness": {
+            "witness_id": "windowpilot-state:hw-demo",
+            "source": "windowpilot:/api/state",
+            "method": "windowpilot-state-readback",
+            "hardware_identity_sha256": "hw-demo"
+          },
+          "criterion_fixed_at_ms": 999,
+          "observation_window": {
+            "criterion_fixed_at_ms": 999,
+            "ack_at_ms": 1000,
+            "received_at_ms": 1001
+          }
+        }
+      },
+      "expected": {
+        "aer": {
+          "verdict": "invalid",
+          "code": "aer-output-hash-mismatch"
+        },
+        "physical": {
+          "verdict": "valid",
+          "result": "PHYSICAL_COMPLETION_PROVEN"
+        },
+        "combined_claims": {
+          "aer_observed_execution_record": false,
+          "physical_completion": true,
+          "claim_inheritance": false
+        }
+      }
+    },
+    {
+      "id": "aer-valid-physical-invalid-binding",
+      "aer_receipt": {
+        "id": "11111111-2222-4333-8444-555555555555",
+        "receipt_schema_version": "0.3",
+        "created_at": "2026-10-08T07:30:00Z",
+        "tool": {
+          "name": "window.set_opening",
+          "version": "1.0.0",
+          "scope": "home.window"
+        },
+        "provenance_class": "OBSERVED VIA GATEWAY",
+        "canonical_bytes": "{\"request_id\":\"req-42\",\"status\":\"accepted\"}",
+        "output_hash": "sha256:42ecd1b44f00ff05a200925c7ad410ba68ec7f45f31a8dd44293514fa99418c8",
+        "verification_status": "verified"
+      },
+      "physical_vector": {
+        "schema_version": "flythink.physical-completion-vector.v0.1",
+        "authorized_completion_criterion": {
+          "criterion": {
+            "version": "windowpilot-completion-criterion.v1",
+            "target": {
+              "area": "客厅",
+              "entity": "窗",
+              "instance": "default"
+            },
+            "slot": "opening",
+            "predicate": "abs(observed_position_pct-requested_position_pct)<=tolerance_pct",
+            "requested_position_pct": 5,
+            "tolerance_pct": 1,
+            "require_fresh_readback": true,
+            "witness_source": "windowpilot:/api/state",
+            "witness_method": "windowpilot-state-readback",
+            "expected_hardware_identity_sha256": "hw-demo"
+          },
+          "criterion_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        "physical_receipt": {
+          "patch": {
+            "op": "PATCH_SLOT",
+            "target": {
+              "area": "客厅",
+              "entity": "窗",
+              "instance": "default"
+            },
+            "slot": "opening",
+            "value": 5
+          },
+          "physical_patch": {
+            "op": "PATCH_SLOT",
+            "target": {
+              "area": "客厅",
+              "entity": "窗",
+              "instance": "default"
+            },
+            "slot": "opening",
+            "value": 5
+          },
+          "command_id": "windowpilot:interop-1",
+          "status": "applied",
+          "observation": {
+            "target": {
+              "area": "客厅",
+              "entity": "窗",
+              "instance": "default"
+            },
+            "exists": true,
+            "slots": {
+              "opening": 5
+            },
+            "evidence": {
+              "source": "windowpilot:/api/state",
+              "position_pct": 5,
+              "measured": true,
+              "tick": 11,
+              "ack_at_ms": 1000,
+              "received_at_ms": 1001
+            }
+          },
+          "ack": {
+            "ok": true
+          },
+          "before_tick": 10,
+          "requested_position_pct": 5,
+          "hardware_identity_before": "hw-demo",
+          "hardware_identity_after": "hw-demo",
+          "completion_criterion": {
+            "version": "windowpilot-completion-criterion.v1",
+            "target": {
+              "area": "客厅",
+              "entity": "窗",
+              "instance": "default"
+            },
+            "slot": "opening",
+            "predicate": "abs(observed_position_pct-requested_position_pct)<=tolerance_pct",
+            "requested_position_pct": 5,
+            "tolerance_pct": 1,
+            "require_fresh_readback": true,
+            "witness_source": "windowpilot:/api/state",
+            "witness_method": "windowpilot-state-readback",
+            "expected_hardware_identity_sha256": "hw-demo"
+          },
+          "completion_criterion_sha256": "b1f91de35b87ea928cf2dc183d7ccc7f31a954df590b39989cf77108a330457c",
+          "witness": {
+            "witness_id": "windowpilot-state:hw-demo",
+            "source": "windowpilot:/api/state",
+            "method": "windowpilot-state-readback",
+            "hardware_identity_sha256": "hw-demo"
+          },
+          "criterion_fixed_at_ms": 999,
+          "observation_window": {
+            "criterion_fixed_at_ms": 999,
+            "ack_at_ms": 1000,
+            "received_at_ms": 1001
+          }
+        }
+      },
+      "expected": {
+        "aer": {
+          "verdict": "valid"
+        },
+        "physical": {
+          "verdict": "invalid",
+          "code": "completion-criterion-not-authorization-bound"
+        },
+        "combined_claims": {
+          "aer_observed_execution_record": true,
+          "physical_completion": false,
+          "claim_inheritance": false
+        }
+      }
+    }
+  ]
+}
