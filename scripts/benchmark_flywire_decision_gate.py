@@ -223,44 +223,6 @@ def latency_ms(model,x,repeats=80):
     }
 
 
-def train_one(model,train,dev,epochs,lr):
-    opt=torch.optim.Adam(model.parameters(),lr=lr)
-    best=None
-    logs=[]
-    for epoch in range(epochs):
-        model.train()
-        order=torch.randperm(len(train[1]))
-        total=0.0
-        for idx in order.split(64):
-            opt.zero_grad()
-            z=model(train[0][idx])
-            loss=objective(z,train[1][idx],None,None)
-            # objective expects weights for operation/count; reproduce neutral CE weights.
-            # Recompute explicitly when neutral weights are requested.
-            if not torch.isfinite(loss):
-                raise RuntimeError("non_finite_loss")
-            loss.backward()
-            torch.nn.utils.clip_grad_norm_(model.parameters(),1)
-            opt.step()
-            total+=float(loss.detach())*len(idx)
-        logs.append(total/len(order))
-        model.eval()
-        with torch.no_grad():
-            raw=model(dev[0])
-            dp=resolve(predict(raw),dev[2])
-            dm=metrics(dp,dev[1],dev[2])
-            score=selection_score(dm)
-        if best is None or score>best["score"]:
-            best={
-                "score":score,
-                "epoch":epoch+1,
-                "state_dict":copy.deepcopy(model.state_dict()),
-                "development":dm,
-            }
-    model.load_state_dict(best["state_dict"])
-    return best,logs
-
-
 def neutral_objective(z,y):
     h=heads(z)
     loss=2*torch.nn.functional.cross_entropy(h[0],y[:,0])
