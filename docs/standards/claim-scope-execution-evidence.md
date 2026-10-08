@@ -43,6 +43,47 @@ agent-to-reality boundary.
 | FlyThink `execution-receipt.v1` | the execution evidence graph binds exact context/world identity, authorization, physical command evidence and measured readback | does not prove broad safety, legal compliance, business correctness or facts beyond the observed physical evidence | canonical execution-truth object |
 | FlyThink `execution-proof-bundle.v1` | portable envelope binds DecisionProposal + context + runtime + canonical execution receipt for offline verification | bundle does not create a second truth authority | cross-system transport / independent verification surface |
 
+## Mapping to IETF RATS / EAT
+
+FlyThink should reuse the attestation architecture vocabulary rather than invent
+a parallel trust model.
+
+RFC 9334 separates four important concepts:
+
+- **Evidence**: claims produced by an Attester for appraisal;
+- **Verifier**: appraises Evidence under an appraisal policy;
+- **Attestation Result**: verifier output for downstream use;
+- **Relying Party**: decides whether to trust / authorize based on Attestation Results.
+
+RFC 9711 (EAT) provides a Standards Track token format for attested claims about
+the state and characteristics of an entity/device.
+
+A useful non-normative mapping is:
+
+| FlyThink object / role | RATS/EAT interpretation | Boundary that must remain explicit |
+| --- | --- | --- |
+| measured readback, hardware identity, ACK/readback timing, authorization receipt | candidate **Evidence** inputs | raw evidence is not yet a relying-party trust decision |
+| `verifyExecutionReceipt()` / `verifyExecutionProofBundle()` | **Verifier**-like appraisal function | verification applies FlyThink-specific appraisal rules; it does not become universal policy |
+| derived `physical_truth_verified`, `INDETERMINATE`, mismatch/failure reasons | **Attestation Result**-like output | result describes execution evidence, not broad safety/legal/business correctness |
+| external consumer / controller / governance system | **Relying Party** | relying party owns the final policy decision and may require additional evidence |
+| PSER / EAT hardware/site attestation | additional attested claims / evidence source | hardware/site trust does not replace per-action physical-effect evidence |
+
+This mapping is intentionally architectural, not a wire-format claim. FlyThink does
+not claim to emit an RFC 9711 EAT today, and it should not wrap receipts in EAT
+unless an interoperability requirement proves that useful.
+
+The durable design rule is:
+
+```text
+execution evidence
+    -> appraisal
+    -> execution attestation result
+    -> relying-party policy decision
+```
+
+Do not collapse those steps. In particular, `physical_truth_verified=true` is an
+execution-evidence conclusion, not permission for a relying party to skip its own
+risk, safety, policy, or compliance checks.
 ## Interoperability rule
 
 A bridge MUST preserve claim scope.
