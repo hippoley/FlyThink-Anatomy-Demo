@@ -17,6 +17,7 @@ on:
       - "scripts/execution_receipt.cjs"
       - "scripts/execution_proof_bundle.cjs"
       - "scripts/verify_physical_completion_vector_cli.cjs"
+      - "scripts/evc_physical_completion_verifier.cjs"
       - "scripts/execution_reasoning_contract.cjs"
       - "scripts/decision_proposal_contract.cjs"
       - "scripts/contextual_edge_slu_adapter.cjs"
@@ -30,6 +31,7 @@ on:
       - "tests/execution_receipt.cjs"
       - "tests/execution_proof_bundle.cjs"
       - "tests/physical_completion_external_rail.cjs"
+      - "tests/evc_physical_completion_verifier.cjs"
       - ".github/workflows/execution-trust-boundary.yml"
       - "benchmarks/execution_reasoning_contract_cases.json"
       - "contracts/decision-proposal.v1.schema.json"
@@ -104,7 +106,9 @@ jobs:
           node --check scripts/execution_receipt.cjs
           node --check scripts/execution_proof_bundle.cjs
           node --check scripts/verify_physical_completion_vector_cli.cjs
+          node --check scripts/evc_physical_completion_verifier.cjs
           node --check tests/physical_completion_external_rail.cjs
+          node --check tests/evc_physical_completion_verifier.cjs
           node --check tests/flythink_execution_runtime.cjs
           node --check tests/execution_receipt.cjs
           node --check tests/execution_proof_bundle.cjs
@@ -153,6 +157,8 @@ jobs:
         run: node tests/execution_proof_bundle.cjs
       - name: Prove external physical completion verifier rail
         run: node tests/physical_completion_external_rail.cjs
+      - name: Verify EVC physical completion adapter
+        run: node tests/evc_physical_completion_verifier.cjs
       - name: Smoke external rail on public sample vector
         run: node scripts/verify_physical_completion_vector_cli.cjs interop/physical-completion/sample-proven.json
       - name: Verify AER-1 claim-scope interop fixture
