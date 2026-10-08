@@ -335,6 +335,7 @@ async function main(){
   let decisionProposal=null;
   let proofBundle=null;
   let proofVerification=null;
+  let executionContracts=null;
 
   try{
     for await(const line of input){
@@ -356,6 +357,80 @@ async function main(){
       if(event.kind!=="final"&&row.committed){
         throw new Error("acoustic_speculative_event_committed");
       }
+    }
+
+    if(apply){
+      const finalRows=session.trace.filter(x=>x.asr&&x.asr.is_final);
+      if(finalRows.length!==1)throw new Error("canonical_live_apply_requires_one_final_row");
+      const handoff=finalRows[0];
+      if(handoff.handoff_ready!==true)
+        throw new Error("canonical_live_apply_semantic_handoff_not_ready");
+      if(driver.commands.length!==0)
+        throw new Error("canonical_live_apply_preboundary_physical_write_detected");
+
+      decisionProposal=buildCanonicalDecisionProposal(
+        handoff,
+        contextualState,
+        canonicalScene.world_identity
+      );
+      executionContracts=decisionProposalToExecutionContracts(
+        contextualState,
+        decisionProposal
+      );
+      const beforeRuntime=normalizeRuntime(session.runtime);
+      canonicalExecution=await runDecisionProposal({
+        runtime:beforeRuntime,
+        contextual_state:contextualState,
+        decision_proposal:decisionProposal,
+        world_snapshot_revision:
+          canonicalScene.world_identity.world_snapshot_revision,
+        world_snapshot_sha256:
+          canonicalScene.world_identity.world_snapshot_sha256,
+        driver,
+        physicalAuthorizer:spatialRuntimeAuthorizer,
+        authorization_context:{
+          scene_evidence:canonicalScene.scene_context
+        },
+        expected_spatialruntime_commit_sha:
+          canonicalScene.scene_context.spatialruntime_commit_sha||null,
+        source_step:0,
+        authorizationLedger
+      });
+      session.runtime=canonicalExecution.runtime;
+      if(!canonicalExecution.ok){
+        throw new Error(
+          "canonical_live_apply_not_executed:"+
+          String(canonicalExecution.reason||canonicalExecution.status)
+        );
+      }
+      if(driver.commands.length!==1){
+        throw new Error("canonical_live_apply_requires_exactly_one_probe_write");
+      }
+
+      proofBundle=buildExecutionProofBundle({
+        decision_proposal:decisionProposal,
+        contextual_state:contextualState,
+        request:executionContracts.request,
+        internal_proposal:executionContracts.internal_proposal,
+        before_runtime:beforeRuntime,
+        after_runtime:canonicalExecution.runtime,
+        execution_receipt:canonicalExecution.receipt
+      });
+      proofVerification=verifyExecutionProofBundle(proofBundle);
+      if(
+        !proofVerification.valid||
+        proofVerification.physical_truth_verified!==true
+      ){
+        throw new Error("canonical_live_apply_proof_verification_failed");
+      }
+      fs.writeFileSync(
+        receiptPath,
+        JSON.stringify(canonicalExecution.receipt,null,2)+"\n"
+      );
+      fs.writeFileSync(
+        proofBundlePath,
+        JSON.stringify(proofBundle,null,2)+"\n"
+      );
     }
   }catch(e){
     processingError=e;
@@ -391,6 +466,8 @@ async function main(){
     ),0);
   const semanticCommands=session.trace
     .filter(x=>x.asr.is_final&&x.committed).length;
+  const semanticHandoffs=session.trace
+    .filter(x=>x.asr.is_final&&x.handoff_ready).length;
 
   const closeoutPublic=closeoutEvidence?{
     attempted:closeoutEvidence.attempted,
@@ -400,32 +477,10 @@ async function main(){
     receipt:closeoutEvidence.receipt
   }:null;
 
-  let evidenceReceipt=null;
-  let evidenceValidation=null;
-  if(apply){
-    evidenceReceipt=buildReceipt({
-      mode:"APPLY",
-      target,
-      probeOpenPct,
-      tolerancePct,
-      expectedHardwareIdentity,
-      readiness,
-      beforePositionPct:initialPct,
-      acceptedEvents,
-      trace:session.trace,
-      driverCommands:driver.commands,
-      closeout:closeoutPublic,
-      runtime:session.runtime,
-      acousticFixture
-    });
-    evidenceValidation=validateReceipt(evidenceReceipt,{
-      requireHumanFixture:!!(
-        acousticFixture&&acousticFixture.require_human_acceptance===true
-      ),
-      requireSpatialRuntimeAuthorization:useSpatialRuntime
-    });
-    fs.writeFileSync(receiptPath,JSON.stringify(evidenceReceipt,null,2)+"\n");
-  }
+  // Acoustic trace is retained as upstream provenance only.
+  // Canonical APPLY success is owned by execution-receipt.v1 and the proof bundle.
+  const evidenceReceipt=null;
+  const evidenceValidation=null;
 
   const out={
     truth:"acoustic_windowpilot_live_probe_v1",
@@ -451,6 +506,11 @@ async function main(){
     final_segments:finals,
     speculative_physical_commands:speculativePhysical,
     semantic_commits:semanticCommands,
+    semantic_handoffs:semanticHandoffs,
+    canonical_execution_status:canonicalExecution&&canonicalExecution.status||null,
+    canonical_execution_receipt:apply?receiptPath:null,
+    canonical_proof_bundle:apply?proofBundlePath:null,
+    proof_verification:clone(proofVerification),
     physical_driver_commands:driver.commands.length,
     closeout:closeoutPublic,
     evidence_receipt:receiptPath||null,
@@ -463,9 +523,12 @@ async function main(){
   if(speculativePhysical!==0)process.exitCode=2;
   if(!apply&&driver.commands.length!==0)process.exitCode=2;
   if(apply){
-    if(finals!==1||semanticCommands!==1)process.exitCode=2;
+    if(finals!==1||semanticHandoffs!==1||semanticCommands!==0)process.exitCode=2;
+    if(!canonicalExecution||canonicalExecution.ok!==true)process.exitCode=2;
+    if(!proofVerification||proofVerification.physical_truth_verified!==true)
+      process.exitCode=2;
     if(!closeoutEvidence)process.exitCode=2;
-    if(!evidenceValidation||!evidenceValidation.valid)process.exitCode=2;
+    if(driver.commands.length!==2)process.exitCode=2;
   }
 }
 
