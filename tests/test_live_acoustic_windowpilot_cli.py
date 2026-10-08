@@ -41,6 +41,13 @@ def args(**overrides):
         instance="default",
         expected_hardware_identity=None,
         receipt=None,
+        proof_bundle=None,
+        contextual_state=None,
+        authorization_ledger=None,
+        spatialruntime_authorize=False,
+        world_snapshot=None,
+        world_validation_receipt=None,
+        scene_context=None,
         fixture_manifest=None,
         require_human_fixture=False,
         apply=False,
@@ -71,6 +78,11 @@ class LiveAcousticWindowPilotCliTest(unittest.TestCase):
             apply=True,
             expected_hardware_identity="hw-abc",
             receipt="live-receipt.json",
+            proof_bundle="live-proof-bundle.json",
+            contextual_state="contextual-state.json",
+            authorization_ledger="authorization-ledger.json",
+            spatialruntime_authorize=True,
+            scene_context="scene-context.json",
             probe_open_pct=4.0,
         ))
         self.assertIn("--apply",node)
@@ -82,6 +94,11 @@ class LiveAcousticWindowPilotCliTest(unittest.TestCase):
             node[node.index("--expected-hardware-identity")+1],
             "hw-abc",
         )
+        self.assertEqual(node[node.index("--proof-bundle")+1],"live-proof-bundle.json")
+        self.assertEqual(node[node.index("--contextual-state")+1],"contextual-state.json")
+        self.assertEqual(node[node.index("--authorization-ledger")+1],"authorization-ledger.json")
+        self.assertIn("--spatialruntime-authorize",node)
+        self.assertEqual(node[node.index("--scene-context")+1],"scene-context.json")
         self.assertEqual(
             node[node.index("--probe-open-pct")+1],
             "4.0",
@@ -130,6 +147,11 @@ class LiveAcousticWindowPilotCliTest(unittest.TestCase):
                 fixture_manifest=str(manifest_path),
                 require_human_fixture=True,
                 receipt="receipt.json",
+                proof_bundle="proof-bundle.json",
+                contextual_state="contextual-state.json",
+                authorization_ledger="authorization-ledger.json",
+                spatialruntime_authorize=True,
+                scene_context="scene-context.json",
                 apply=True,
                 expected_hardware_identity="hw-abc",
             ))
@@ -142,6 +164,29 @@ class LiveAcousticWindowPilotCliTest(unittest.TestCase):
             self.assertTrue(payload["require_human_acceptance"])
             self.assertEqual(payload["wav_sha256"],manifest["wav"]["sha256"])
             self.assertEqual(len(payload["manifest_sha256"]),64)
+
+    def test_apply_builder_rejects_missing_canonical_inputs(self):
+        base=dict(
+            apply=True,
+            expected_hardware_identity="hw-abc",
+            receipt="receipt.json",
+            proof_bundle="proof.json",
+            contextual_state="context.json",
+            authorization_ledger="ledger.json",
+            spatialruntime_authorize=True,
+            scene_context="scene.json",
+        )
+        for key,pattern in [
+            ("proof_bundle","--proof-bundle"),
+            ("contextual_state","--contextual-state"),
+            ("authorization_ledger","--authorization-ledger"),
+            ("spatialruntime_authorize","--spatialruntime-authorize"),
+            ("scene_context","SpatialRuntime scene identity"),
+        ]:
+            case=dict(base)
+            case[key]=False if key=="spatialruntime_authorize" else None
+            with self.assertRaisesRegex(SystemExit,pattern):
+                build_commands(args(**case))
 
     def test_apply_builder_rejects_missing_receipt(self):
         with self.assertRaisesRegex(SystemExit,"--apply requires --receipt"):
