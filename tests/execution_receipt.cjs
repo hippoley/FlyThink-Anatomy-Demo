@@ -60,7 +60,8 @@ const authorizationBase={
   registry_digest:digestObject({
     "客厅::窗::default":{model_id:"CWDS-CA01"}
   }),
-  authorization_id:"a".repeat(64),
+  spatialruntime_commit_sha:null,
+  trace_hash:"c".repeat(64),
   single_use:true,
   case_id:"task-1",
   source_step:3,
@@ -75,6 +76,16 @@ const authorizationBase={
     criterion_sha256:completionCriterionSha
   }])
 };
+authorizationBase.authorization_id=digestObject({
+  case_id:authorizationBase.case_id,
+  source_step:authorizationBase.source_step,
+  source_revision:authorizationBase.source_revision,
+  patch_digest:authorizationBase.patch_digest,
+  registry_digest:authorizationBase.registry_digest,
+  completion_criteria_sha256:authorizationBase.completion_criteria_sha256,
+  spatialruntime_commit_sha:authorizationBase.spatialruntime_commit_sha,
+  trace_hash:authorizationBase.trace_hash
+});
 const authorization={
   ...authorizationBase,
   receipt_sha256:digestObject(authorizationBase)
