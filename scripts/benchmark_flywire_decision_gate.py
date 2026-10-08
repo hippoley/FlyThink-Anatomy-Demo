@@ -312,19 +312,31 @@ def evaluate(model,data):
 
     gate=coverage_at_precision(conf,exact,.99)
     base["commit_curve_99"]=gate
-    base["wrong_target_rate"]=float(wrong_target.float().mean())
-    base["ood_false_commit_rate"]=float(ood_false_commit.float().mean())
+
+    target_count=int(target_mask.sum())
+    ood_count=int(ood_gold.sum())
+    base["wrong_target_rate"]=(
+        float(wrong_target.float().sum()/target_count)
+        if target_count else None
+    )
+    base["ood_false_commit_rate"]=(
+        float(ood_false_commit.float().sum()/ood_count)
+        if ood_count else None
+    )
 
     if gate["threshold"] is not None:
         committed=conf>=gate["threshold"]
-        committed_count=int(committed.sum())
+        committed_target=committed & target_mask
+        committed_ood=committed & ood_gold
+        committed_target_count=int(committed_target.sum())
+        committed_ood_count=int(committed_ood.sum())
         base["committed_wrong_target_rate"]=(
-            float((wrong_target & committed).float().sum()/committed_count)
-            if committed_count else None
+            float((wrong_target & committed).float().sum()/committed_target_count)
+            if committed_target_count else None
         )
         base["committed_ood_false_commit_rate"]=(
-            float((ood_false_commit & committed).float().sum()/committed_count)
-            if committed_count else None
+            float((ood_false_commit & committed).float().sum()/committed_ood_count)
+            if committed_ood_count else None
         )
     else:
         base["committed_wrong_target_rate"]=None
