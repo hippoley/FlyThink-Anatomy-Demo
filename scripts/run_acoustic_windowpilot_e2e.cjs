@@ -20,6 +20,25 @@ const {
   buildReceipt,
   validateReceipt
 }=require("./acoustic_windowpilot_evidence.cjs");
+const {
+  contextStateIdentity
+}=require("./contextual_edge_slu_adapter.cjs");
+const {
+  loadPinnedSceneContext,
+  loadSceneContext,
+  sceneWorldIdentity
+}=require("./spatialruntime_world_context.cjs");
+const {
+  decisionProposalToExecutionContracts
+}=require("./decision_proposal_contract.cjs");
+const {
+  runDecisionProposal
+}=require("./flythink_execution_runtime.cjs");
+const {
+  buildExecutionProofBundle,
+  verifyExecutionProofBundle
+}=require("./execution_proof_bundle.cjs");
+const {FileAuthorizationLedger}=require("./authorization_ledger.cjs");
 
 function arg(name){
   const i=process.argv.indexOf(name);
@@ -36,6 +55,82 @@ function assertLiveSemanticProposal(prediction,apply){
     throw new Error("windowpilot_live_probe_requires_exactly_one_semantic_patch");
   }
   return prediction;
+}
+
+function patchToDecisionMutation(patch){
+  if(!patch||!patch.target)throw new Error("canonical_handoff_patch_target_required");
+  if(patch.op==="PATCH_SLOT"){
+    return {
+      target:clone(patch.target),
+      property:String(patch.slot||""),
+      operator:"SET",
+      value:clone(patch.value)
+    };
+  }
+  if(patch.op==="PATCH_RELATIVE"){
+    return {
+      target:clone(patch.target),
+      property:String(patch.slot||""),
+      operator:"ADD",
+      value:Number(patch.delta)
+    };
+  }
+  throw new Error("canonical_handoff_patch_operator_unsupported");
+}
+
+function buildCanonicalDecisionProposal(row,contextualState,worldIdentity){
+  if(!row||row.handoff_ready!==true)
+    throw new Error("canonical_handoff_not_ready");
+  const patches=Array.isArray(row.patch_proposal)?row.patch_proposal:[];
+  if(patches.length!==1)
+    throw new Error("canonical_handoff_requires_exactly_one_patch");
+  const contextIdentity=contextStateIdentity(contextualState);
+  const taskId=String(
+    contextualState&&contextualState.conversation&&
+    contextualState.conversation.active_task_id||""
+  );
+  if(!taskId)throw new Error("canonical_handoff_active_task_id_required");
+  const confidence=Number(row.semantic&&row.semantic.confidence);
+  if(!Number.isFinite(confidence)||confidence<0||confidence>1)
+    throw new Error("canonical_handoff_confidence_invalid");
+  const targets=(row.target_resolution&&row.target_resolution.targets||[])
+    .map(clone);
+  if(targets.length!==1)
+    throw new Error("canonical_handoff_requires_exactly_one_target");
+  return {
+    schema_version:"decision-proposal.v1",
+    proposal_id:[
+      "acoustic",
+      taskId,
+      String(contextIdentity.context_revision),
+      String(worldIdentity.world_snapshot_revision)
+    ].join(":"),
+    task_id:taskId,
+    context_revision:contextIdentity.context_revision,
+    context_sha256:contextIdentity.context_sha256,
+    world_snapshot_revision:worldIdentity.world_snapshot_revision,
+    world_snapshot_sha256:worldIdentity.world_snapshot_sha256,
+    intent:"window.set_opening",
+    logical_targets:targets,
+    proposed_mutations:patches.map(patchToDecisionMutation),
+    confidence,
+    requires_confirmation:false,
+    evidence_refs:["acoustic-semantic-handoff:"+String(row.turn_id||"final")]
+  };
+}
+
+function loadCanonicalSceneIdentity({
+  sceneContextPath,
+  worldSnapshotPath,
+  worldValidationReceiptPath
+}={}){
+  const sceneContext=sceneContextPath
+    ?loadPinnedSceneContext(sceneContextPath)
+    :loadSceneContext(worldSnapshotPath,worldValidationReceiptPath);
+  return {
+    scene_context:sceneContext,
+    world_identity:sceneWorldIdentity(sceneContext)
+  };
 }
 
 function initialRuntimeFromPhysical(target,pct){
