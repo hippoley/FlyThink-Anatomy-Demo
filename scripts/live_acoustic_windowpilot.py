@@ -31,6 +31,14 @@ def build_commands(args):
         raise SystemExit("--apply requires --authorization-ledger")
     if args.apply and not getattr(args, "spatialruntime_authorize", False):
         raise SystemExit("--apply requires --spatialruntime-authorize")
+    if (
+        args.apply
+        and not getattr(args, "scene_context", None)
+        and not getattr(args, "world_snapshot", None)
+    ):
+        raise SystemExit(
+            "--apply requires authoritative SpatialRuntime scene identity"
+        )
     fixture_payload=None
     if args.fixture_manifest:
         if not args.wav:
