@@ -347,6 +347,12 @@ async function executeSinglePhysicalPatch(inputRuntime, expanded, driver, option
     hardware_identity_after:command.hardware_identity_after||null,
     readiness_before:clone(command.readiness_before||command.readiness||null),
     readiness_after:clone(command.readiness_after||null),
+    completion_criterion:clone(command.completion_criterion||null),
+    completion_criterion_sha256:command.completion_criterion_sha256||null,
+    witness:clone(command.witness||null),
+    criterion_fixed_at_ms:
+      command.criterion_fixed_at_ms==null?null:Number(command.criterion_fixed_at_ms),
+    observation_window:clone(command.observation_window||null),
     safety_stop:clone(command.safety_stop||null)
   }],reason:null};
 }
