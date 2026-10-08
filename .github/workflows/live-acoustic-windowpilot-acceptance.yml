@@ -39,6 +39,14 @@ on:
         description: "Absolute path to reviewed HomeAI scene context built from an interior-kitchen verified handoff"
         required: true
         type: string
+      contextual_state_path:
+        description: "Absolute path to externally sealed contextual-state.v1 artifact on the self-hosted runner"
+        required: true
+        type: string
+      authorization_ledger_path:
+        description: "Absolute persistent path to the single-use authorization ledger on the self-hosted runner"
+        required: true
+        type: string
       probe_open_pct:
         description: "Bounded live opening probe percentage"
         required: true
@@ -101,8 +109,10 @@ jobs:
           test -f "${{ inputs.wav_path }}"
           test -f "${{ inputs.fixture_manifest_path }}"
           test -f "${{ inputs.scene_context_path }}"
+          test -f "${{ inputs.contextual_state_path }}"
           python - <<'PY'
           import os, re
+          from pathlib import Path
           hw=os.environ["INPUT_HW"]
           assert re.fullmatch(r"[0-9a-fA-F]{64}",hw),               "expected_hardware_identity must be exactly 64 hex characters"
           probe=float(os.environ["INPUT_PROBE"])
@@ -110,6 +120,13 @@ jobs:
           assert 0 < probe <= 5, "probe_open_pct must be in (0,5]"
           assert 0 <= tolerance <= 2, "tolerance_pct must be in [0,2]"
           assert probe > tolerance, "probe_open_pct must exceed tolerance_pct"
+          context_path=Path(os.environ["INPUT_CONTEXTUAL_STATE"])
+          ledger_path=Path(os.environ["INPUT_AUTH_LEDGER"])
+          assert context_path.is_absolute(), "contextual_state_path must be absolute"
+          assert ledger_path.is_absolute(), "authorization_ledger_path must be absolute"
+          assert context_path.is_file(), "contextual_state_path must exist"
+          assert ledger_path.parent.exists(), "authorization ledger parent must exist"
+          assert os.access(ledger_path.parent, os.W_OK), "authorization ledger parent must be writable"
           PY
           python - <<'PY'
           import json, os, pathlib, wave
@@ -133,7 +150,11 @@ jobs:
           })
           PY
           node - <<'NODE'
+          const fs=require("fs");
+          const {contextStateIdentity}=require("./scripts/contextual_edge_slu_adapter.cjs");
           const {loadPinnedSceneContext,targetKey}=require("./scripts/spatialruntime_world_context.cjs");
+          const contextualState=JSON.parse(fs.readFileSync(process.env.INPUT_CONTEXTUAL_STATE,"utf8"));
+          contextStateIdentity(contextualState);
           const context=loadPinnedSceneContext(process.env.INPUT_SCENE_CONTEXT);
           if(!context.handoff_evidence){
             throw new Error("live scene context must contain verified handoff evidence");
@@ -172,6 +193,8 @@ jobs:
           INPUT_WAV: ${{ inputs.wav_path }}
           INPUT_MANIFEST: ${{ inputs.fixture_manifest_path }}
           INPUT_SCENE_CONTEXT: ${{ inputs.scene_context_path }}
+          INPUT_CONTEXTUAL_STATE: ${{ inputs.contextual_state_path }}
+          INPUT_AUTH_LEDGER: ${{ inputs.authorization_ledger_path }}
           INPUT_AREA: ${{ inputs.area }}
           INPUT_INSTANCE: ${{ inputs.instance }}
           INPUT_HW: ${{ inputs.expected_hardware_identity }}
@@ -246,25 +269,41 @@ jobs:
         run: |
           set -euo pipefail
           MODEL=sherpa-onnx-streaming-zipformer-zh-14M-2023-02-23
-          python scripts/live_acoustic_windowpilot.py             --wav "${{ inputs.wav_path }}"             --fixture-manifest "${{ inputs.fixture_manifest_path }}"             --require-human-fixture             --spatialruntime-authorize             --scene-context "${{ inputs.scene_context_path }}"             --apply             --receipt live-acoustic-windowpilot-receipt.json             --url "${{ inputs.windowpilot_url }}"             --area "${{ inputs.area }}"             --entity "窗"             --instance "${{ inputs.instance }}"             --expected-hardware-identity "${{ inputs.expected_hardware_identity }}"             --probe-open-pct "${{ inputs.probe_open_pct }}"             --tolerance "${{ inputs.tolerance_pct }}"             --timeout-ms "${{ inputs.timeout_ms }}"             --graph artifacts/flywire/connectome.json             --judgement artifacts/context-judgement-v3/model.pt             --semantic artifacts/semantic-patch-v1/model.pt             --tokens "$MODEL/tokens.txt"             --encoder "$MODEL/encoder-epoch-99-avg-1.int8.onnx"             --decoder "$MODEL/decoder-epoch-99-avg-1.onnx"             --joiner "$MODEL/joiner-epoch-99-avg-1.int8.onnx"             > live-acoustic-windowpilot-result.json
+          python scripts/live_acoustic_windowpilot.py             --wav "${{ inputs.wav_path }}"             --fixture-manifest "${{ inputs.fixture_manifest_path }}"             --require-human-fixture             --spatialruntime-authorize             --scene-context "${{ inputs.scene_context_path }}"             --apply             --receipt live-execution-receipt.json             --proof-bundle live-execution-proof-bundle.json             --contextual-state "${{ inputs.contextual_state_path }}"             --authorization-ledger "${{ inputs.authorization_ledger_path }}"             --url "${{ inputs.windowpilot_url }}"             --area "${{ inputs.area }}"             --entity "窗"             --instance "${{ inputs.instance }}"             --expected-hardware-identity "${{ inputs.expected_hardware_identity }}"             --probe-open-pct "${{ inputs.probe_open_pct }}"             --tolerance "${{ inputs.tolerance_pct }}"             --timeout-ms "${{ inputs.timeout_ms }}"             --graph artifacts/flywire/connectome.json             --judgement artifacts/context-judgement-v3/model.pt             --semantic artifacts/semantic-patch-v1/model.pt             --tokens "$MODEL/tokens.txt"             --encoder "$MODEL/encoder-epoch-99-avg-1.int8.onnx"             --decoder "$MODEL/decoder-epoch-99-avg-1.onnx"             --joiner "$MODEL/joiner-epoch-99-avg-1.int8.onnx"             > live-acoustic-windowpilot-result.json
 
-      - name: Independently verify human acoustic + hardware evidence
+      - name: Independently verify canonical execution proof
         shell: bash
         run: |
           set -euo pipefail
-          node scripts/verify_acoustic_windowpilot_evidence.cjs             --receipt live-acoustic-windowpilot-receipt.json             --wav "${{ inputs.wav_path }}"             --fixture-manifest "${{ inputs.fixture_manifest_path }}"             --require-human-fixture             --require-spatialruntime-authorization             --require-spatialruntime-scene-evidence             > live-acoustic-windowpilot-verification.json
-          cat live-acoustic-windowpilot-verification.json
+          node scripts/verify_execution_proof_bundle_cli.cjs live-execution-proof-bundle.json > live-execution-proof-verification.json
+          cat live-execution-proof-verification.json
           node - <<'NODE'
           const fs=require("fs");
-          const x=JSON.parse(fs.readFileSync("live-acoustic-windowpilot-verification.json","utf8"));
-          if(!x.valid)throw new Error("live acoustic WindowPilot evidence invalid: "+JSON.stringify(x.reasons));
+          const {verifyExecutionReceipt}=require("./scripts/execution_receipt.cjs");
+          const bundleVerdict=JSON.parse(fs.readFileSync("live-execution-proof-verification.json","utf8"));
+          if(bundleVerdict.verdict!=="VERIFIED"||bundleVerdict.valid!==true){
+            throw new Error("canonical proof bundle invalid");
+          }
+          if(bundleVerdict.physical_truth_verified!==true){
+            throw new Error("canonical proof did not verify physical truth");
+          }
+          const bundle=JSON.parse(fs.readFileSync("live-execution-proof-bundle.json","utf8"));
+          const receipt=JSON.parse(fs.readFileSync("live-execution-receipt.json","utf8"));
+          const verified=verifyExecutionReceipt(receipt,{
+            contextual_state:bundle.artifacts.contextual_state,
+            request:bundle.artifacts.request,
+            proposal:bundle.artifacts.internal_proposal,
+            before_runtime:bundle.artifacts.before_runtime,
+            after_runtime:bundle.artifacts.after_runtime
+          });
+          if(verified.physical_completion_verified!==true){
+            throw new Error("physical completion criterion/witness verification failed");
+          }
           console.log({
-            valid:x.valid,
-            final_text:x.final_text,
-            transcript_cer:x.transcript_cer,
-            target:x.target,
-            hardware_identity:x.hardware_identity,
-            evidence_sha256:x.evidence_sha256
+            receipt_sha256:verified.receipt_sha256,
+            physical_truth_verified:verified.physical_truth_verified,
+            physical_completion_verified:verified.physical_completion_verified,
+            bundle_sha256:bundleVerdict.bundle_sha256
           });
           NODE
 
@@ -274,17 +313,19 @@ jobs:
           subject-path: |
             live-acoustic-dry-run.json
             live-acoustic-windowpilot-result.json
-            live-acoustic-windowpilot-receipt.json
-            live-acoustic-windowpilot-verification.json
+            live-execution-receipt.json
+            live-execution-proof-bundle.json
+            live-execution-proof-verification.json
 
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: live-acoustic-windowpilot-evidence
+          name: live-canonical-windowpilot-golden-proof-candidate
           if-no-files-found: error
           path: |
             live-acoustic-dry-run.json
             live-acoustic-windowpilot-result.json
-            live-acoustic-windowpilot-receipt.json
-            live-acoustic-windowpilot-verification.json
-          retention-days: 30
+            live-execution-receipt.json
+            live-execution-proof-bundle.json
+            live-execution-proof-verification.json
+          retention-days: 90

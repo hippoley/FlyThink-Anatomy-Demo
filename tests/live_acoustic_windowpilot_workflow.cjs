@@ -21,18 +21,21 @@ assert.match(y,/APPLY_REAL_HARDWARE/);
 
 assert.match(y,/--require-human-fixture/);
 assert.match(y,/scene_context_path:/);
+assert.match(y,/contextual_state_path:/);
+assert.match(y,/authorization_ledger_path:/);
 assert.match(y,/--spatialruntime-authorize/);
 assert.match(y,/repository:\s*hippoley\/SpatialRuntime/);
 assert.match(y,/pip install -e "_spatialruntime"/);
 assert.match(y,/--expected-hardware-identity/);
 assert.match(y,/--apply/);
-assert.match(y,/verify_acoustic_windowpilot_evidence\.cjs/);
+assert.match(y,/verify_execution_proof_bundle_cli\.cjs/);
+assert.doesNotMatch(y,/verify_acoustic_windowpilot_evidence\.cjs/);
 assert.match(y,/--require-human-fixture/);
 
 
 const dryStart=y.indexOf("DRY_RUN human WAV");
 const applyStart=y.indexOf("APPLY human WAV");
-const verifyStart=y.indexOf("Independently verify human acoustic + hardware evidence");
+const verifyStart=y.indexOf("Independently verify canonical execution proof");
 const attestStart=y.indexOf("Attest validated live evidence provenance");
 assert.ok(dryStart>=0&&applyStart>dryStart&&verifyStart>applyStart&&attestStart>verifyStart);
 
@@ -44,8 +47,14 @@ assert.match(dryBlock,/--scene-context/);
 assert.match(applyBlock,/--spatialruntime-authorize/);
 assert.match(applyBlock,/--scene-context/);
 assert.match(applyBlock,/--apply/);
-assert.match(verifyBlock,/--require-spatialruntime-authorization/);
-assert.match(verifyBlock,/--require-spatialruntime-scene-evidence/);
+assert.match(applyBlock,/--contextual-state/);
+assert.match(applyBlock,/--authorization-ledger/);
+assert.match(applyBlock,/--proof-bundle/);
+assert.match(verifyBlock,/verify_execution_proof_bundle_cli\.cjs/);
+assert.match(verifyBlock,/verifyExecutionReceipt/);
+assert.match(verifyBlock,/physical_completion_verified/);
+assert.match(verifyBlock,/bundle\.artifacts\.contextual_state/);
+assert.match(verifyBlock,/bundle\.artifacts\.before_runtime/);
 
 assert.match(y,/probe_open_pct must be in \(0,5\]/);
 assert.match(y,/tolerance_pct must be in \[0,2\]/);
@@ -57,10 +66,15 @@ assert.match(y,/id-token:\s*write/);
 assert.match(y,/attestations:\s*write/);
 assert.match(y,/artifact-metadata:\s*write/);
 assert.match(y,/uses:\s*actions\/attest@v4/);
-assert.match(y,/live-acoustic-windowpilot-receipt\.json/);
+assert.match(y,/live-execution-receipt\.json/);
+assert.match(y,/live-execution-proof-bundle\.json/);
+assert.match(y,/live-execution-proof-verification\.json/);
 assert.match(y,/expected_hardware_identity must be exactly 64 hex characters/);
 assert.match(y,/live scene context must contain verified handoff evidence/);
 assert.match(y,/live physical target is not a reviewed exterior window in scene context/);
+assert.match(y,/context_state_sha256_mismatch|contextStateIdentity/);
+assert.match(y,/authorization_ledger_path must be absolute/);
+assert.match(y,/authorization ledger parent must be writable/);
 
 const artifactBlock=y.slice(y.indexOf("name: live-acoustic-windowpilot-evidence"));
 assert.ok(artifactBlock.length>0,"evidence artifact block missing");
@@ -77,5 +91,5 @@ assert.doesNotMatch(
 
 console.log(JSON.stringify({
   ok:true,
-  contract:"manual self-hosted human-acoustic WindowPilot acceptance remains fail-closed and validated evidence is Sigstore-attested"
+  contract:"manual self-hosted physical-lab acceptance produces a canonical execution receipt and proof bundle, verifies physical completion, and Sigstore-attests the candidate evidence"
 }));
