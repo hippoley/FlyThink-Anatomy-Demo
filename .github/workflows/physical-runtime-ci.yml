@@ -25,6 +25,7 @@ on:
       - "scripts/run_long_checkpoint_e2e_v2.cjs"
       - "tests/commit_gate.cjs"
       - "tests/physical_runtime.cjs"
+      - "tests/streaming_slu_e2e.cjs"
       - "tests/recovery_transaction.cjs"
       - "tests/runtime_context_adapter.cjs"
       - "tests/contextual_edge_slu_adapter.cjs"
@@ -70,6 +71,8 @@ jobs:
           node --check scripts/windowpilot_http_driver.cjs
           node --check scripts/runtime_context_adapter.cjs
           node --check scripts/contextual_edge_slu_adapter.cjs
+          node --check scripts/streaming_slu_e2e.cjs
+          node --check tests/streaming_slu_e2e.cjs
           node --check scripts/stateful_checkpoint_trajectory.cjs
           node --check scripts/probe_windowpilot_checkpoint_e2e.cjs
           node --check scripts/run_acoustic_windowpilot_e2e.cjs
@@ -83,6 +86,8 @@ jobs:
         run: node tests/commit_gate.cjs
       - name: Verify patch -> execute -> observe -> reconcile
         run: node tests/physical_runtime.cjs
+      - name: Prove semantic-only streaming handoff cannot reach physical driver
+        run: node tests/streaming_slu_e2e.cjs
       - name: Verify formal recovery transaction trust restore
         run: node tests/recovery_transaction.cjs
       - name: Verify device feedback enters next-turn context
