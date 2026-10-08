@@ -1,9 +1,12 @@
 import json
+import sys
 from pathlib import Path
 
 import torch
 
-from scripts.benchmark_flywire_decision_gate import (
+sys.path.insert(0,str(Path(__file__).resolve().parents[1]/"scripts"))
+
+from benchmark_flywire_decision_gate import (
     OUT_DIM,
     build_models,
     coverage_at_precision,
@@ -11,8 +14,8 @@ from scripts.benchmark_flywire_decision_gate import (
     parameter_count,
     split_development_dialogues,
 )
-from scripts.train_flywire import EXPECTED_SHA256, digest
-from scripts.train_flywire_delta import GRAPH_SHA, TEXT_DIM, STATE_DIM
+from train_flywire import EXPECTED_SHA256, digest
+from train_flywire_delta import GRAPH_SHA, TEXT_DIM, STATE_DIM
 
 
 def load_graph():
