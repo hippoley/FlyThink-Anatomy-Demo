@@ -318,6 +318,23 @@ function buildExecutionReceipt({
     authorized_actions.every((action,index)=>
       digestObject(action)===digestObject(evidence[index]&&evidence[index].semantic_patch)
     );
+  const authorizationCompletionCriteria=
+    authorization&&Array.isArray(authorization.completion_criteria)
+      ?authorization.completion_criteria
+      :[];
+  const completionCriterionAuthorizationBindingVerified=
+    evidence.length>0&&
+    authorizationCompletionCriteria.length===evidence.length&&
+    evidence.every((row,index)=>{
+      const authorizedCriterion=authorizationCompletionCriteria[index]||{};
+      return (
+        isDigest(row.completion_criterion_sha256)&&
+        row.completion_criterion_sha256===authorizedCriterion.criterion_sha256&&
+        authorizedCriterion.criterion&&
+        digestObject(authorizedCriterion.criterion)===
+          row.completion_criterion_sha256
+      );
+    });
   const logicalTargetKeys=new Set(
     (request.resolved_targets||[]).map(target=>{
       try{return deviceKey(target)}catch(e){return null}
@@ -367,6 +384,8 @@ function buildExecutionReceipt({
       verifiedRows.length>0&&verifiedRows.every(
         x=>x.checks.completion_criterion_digest_verified
       ),
+    completion_criterion_authorization_binding_verified:
+      completionCriterionAuthorizationBindingVerified,
     completion_criterion_precommitted_verified:
       verifiedRows.length>0&&verifiedRows.every(
         x=>x.checks.completion_criterion_precommitted
@@ -408,6 +427,7 @@ function buildExecutionReceipt({
   verification.physical_completion_verified=
     verification.physical_truth_verified&&
     verification.completion_criterion_digest_verified&&
+    verification.completion_criterion_authorization_binding_verified&&
     verification.completion_criterion_precommitted_verified&&
     verification.physical_witness_identified_verified&&
     verification.observation_method_verified&&
@@ -651,6 +671,23 @@ function verifyExecutionReceipt(receipt={},{
     authorizedActions.every((action,index)=>
       digestObject(action)===digestObject(rebuiltRows[index]&&rebuiltRows[index].semantic_patch)
     );
+  const authorizationCompletionCriteria=
+    auth.receipt&&Array.isArray(auth.receipt.completion_criteria)
+      ?auth.receipt.completion_criteria
+      :[];
+  const completionCriterionAuthorizationBindingVerified=
+    rebuiltRows.length>0&&
+    authorizationCompletionCriteria.length===rebuiltRows.length&&
+    rebuiltRows.every((row,index)=>{
+      const authorizedCriterion=authorizationCompletionCriteria[index]||{};
+      return (
+        isDigest(row.completion_criterion_sha256)&&
+        row.completion_criterion_sha256===authorizedCriterion.criterion_sha256&&
+        authorizedCriterion.criterion&&
+        digestObject(authorizedCriterion.criterion)===
+          row.completion_criterion_sha256
+      );
+    });
   const logicalTargetKeys=new Set(
     (receipt.logical_targets||[]).map(target=>{
       try{return deviceKey(target)}catch(e){return null}
@@ -700,6 +737,8 @@ function verifyExecutionReceipt(receipt={},{
       applied.length>0&&applied.every(
         x=>x.checks.completion_criterion_digest_verified
       ),
+    completion_criterion_authorization_binding_verified:
+      completionCriterionAuthorizationBindingVerified,
     completion_criterion_precommitted_verified:
       applied.length>0&&applied.every(
         x=>x.checks.completion_criterion_precommitted
@@ -741,6 +780,7 @@ function verifyExecutionReceipt(receipt={},{
   expectedVerification.physical_completion_verified=
     expectedVerification.physical_truth_verified&&
     expectedVerification.completion_criterion_digest_verified&&
+    expectedVerification.completion_criterion_authorization_binding_verified&&
     expectedVerification.completion_criterion_precommitted_verified&&
     expectedVerification.physical_witness_identified_verified&&
     expectedVerification.observation_method_verified&&
