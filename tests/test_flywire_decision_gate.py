@@ -79,7 +79,7 @@ def test_commit_curve_reports_largest_real_threshold_group():
     gate=coverage_at_precision(confidence,exact,target=0.99)
     assert gate["coverage"]==0.75
     assert gate["precision"]==1.0
-    assert gate["threshold"]==0.95
+    assert abs(gate["threshold"]-0.95) < 1e-6
 
 
 def test_sealed_evaluation_uses_fixed_development_threshold():
