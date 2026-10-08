@@ -11,6 +11,19 @@ const {normalizeRuntime}=require("../scripts/whole_home_patch_contract.cjs");
 const W={area:"客厅",entity:"窗",instance:"default"};
 const OTHER={area:"卧室",entity:"窗",instance:"default"};
 const action={op:"PATCH_SLOT",target:W,slot:"opening",value:5};
+const completionCriterion={
+  version:"windowpilot-completion-criterion.v1",
+  target:W,
+  slot:"opening",
+  predicate:"abs(observed_position_pct-requested_position_pct)<=tolerance_pct",
+  requested_position_pct:5,
+  tolerance_pct:1,
+  require_fresh_readback:true,
+  witness_source:"windowpilot:/api/state",
+  witness_method:"windowpilot-state-readback",
+  expected_hardware_identity_sha256:"hw-1"
+};
+const completionCriterionSha=digestObject(completionCriterion);
 const contextualState={
   contract_version:"contextual-state.v1",
   context_revision:7,
@@ -52,7 +65,15 @@ const authorizationBase={
   case_id:"task-1",
   source_step:3,
   source_revision:8,
-  authorized_patches:[action]
+  authorized_patches:[action],
+  completion_criteria:[{
+    criterion:completionCriterion,
+    criterion_sha256:completionCriterionSha
+  }],
+  completion_criteria_sha256:digestObject([{
+    criterion:completionCriterion,
+    criterion_sha256:completionCriterionSha
+  }])
 };
 const authorization={
   ...authorizationBase,
@@ -89,6 +110,7 @@ function verifiedPhysicalReceipt(){
       slots:{opening:5},
       evidence:{
         source:"windowpilot:/api/state",
+        position_pct:5,
         measured:true,
         tick:11,
         ack_at_ms:1000,
@@ -102,6 +124,21 @@ function verifiedPhysicalReceipt(){
     hardware_identity_after:"hw-1",
     readiness_before:{physical_write_ready:true},
     readiness_after:{physical_write_ready:true},
+    completion_criterion:clone(completionCriterion),
+    completion_criterion_sha256:completionCriterionSha,
+    witness:{
+      witness_id:"windowpilot-state:hw-1",
+      source:"windowpilot:/api/state",
+      method:"windowpilot-state-readback",
+      hardware_identity_sha256:"hw-1",
+      independent:false
+    },
+    criterion_fixed_at_ms:999,
+    observation_window:{
+      criterion_fixed_at_ms:999,
+      ack_at_ms:1000,
+      received_at_ms:1001
+    },
     safety_stop:null
   };
 }
@@ -163,6 +200,11 @@ function buildVerified(){
     assert.equal(receipt.verification.hardware_identity_verified,true);
     assert.equal(receipt.verification.measured_readback_verified,true);
     assert.equal(receipt.verification.physical_truth_verified,true);
+    assert.equal(receipt.verification.physical_completion_verified,true);
+    assert.equal(
+      receipt.verification.completion_criterion_authorization_binding_verified,
+      true
+    );
     const {before,after}=runtimes();
     const verified=verifyExecutionReceipt(receipt,{
       contextual_state:contextualState,
@@ -173,6 +215,7 @@ function buildVerified(){
     });
     assert.equal(verified.valid,true);
     assert.equal(verified.physical_truth_verified,true);
+    assert.equal(verified.physical_completion_verified,true);
   }
 
   // 2. Mutating the exact authorized action is detected even if outer receipt is re-sealed.
@@ -513,10 +556,60 @@ function buildVerified(){
     assert.equal(receipt.result,"APPLIED_UNVERIFIED");
   }
 
+  // 16. A post-hoc criterion mutation cannot survive independent verification.
+  {
+    let forged=buildVerified();
+    forged.physical.evidence[0].completion_criterion.tolerance_pct=99;
+    forged=refreshEvidenceDigest(forged);
+    assert.throws(
+      ()=>verifyWithRuntime(forged),
+      /execution_receipt_physical_checks_mismatch/
+    );
+  }
+
+  // 17. Valid physical truth does not become policy-bound physical completion
+  //     when the observed criterion was not the one sealed at authorization time.
+  {
+    const {before,after}=runtimes();
+    const physical=verifiedPhysicalReceipt();
+    const differentCriterion={
+      ...clone(completionCriterion),
+      tolerance_pct:2
+    };
+    physical.completion_criterion=differentCriterion;
+    physical.completion_criterion_sha256=digestObject(differentCriterion);
+    const receipt=buildExecutionReceipt({
+      contextual_state:contextualState,
+      request,
+      proposal,
+      authorization,
+      authorized_actions:[action],
+      physical_receipts:[physical],
+      before_runtime:before,
+      after_runtime:after,
+      status:"EXECUTED",
+      physical_committed:true,
+      source_step:3,
+      source_revision:8
+    });
+    assert.equal(receipt.verification.physical_truth_verified,true);
+    assert.equal(
+      receipt.verification.completion_criterion_authorization_binding_verified,
+      false
+    );
+    assert.equal(receipt.verification.physical_completion_verified,false);
+    const verified=verifyExecutionReceipt(receipt,{
+      before_runtime:before,
+      after_runtime:after
+    });
+    assert.equal(verified.physical_truth_verified,true);
+    assert.equal(verified.physical_completion_verified,false);
+  }
+
   console.log(JSON.stringify({
     ok:true,
-    cases:15,
+    cases:17,
     schema:"execution-receipt.v1",
-    contract:"authorized action + physical patch + target + ACK + causal readback + hardware identity are digest-bound and independently checked"
+    contract:"physical truth remains backward-compatible; stronger physical completion additionally requires an authorization-time criterion and identified witness"
   }));
 })();
