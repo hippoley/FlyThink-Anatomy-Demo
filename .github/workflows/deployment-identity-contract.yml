@@ -5,6 +5,7 @@ on:
     paths:
       - "index.html"
       - "tests/deployment_identity.test.cjs"
+      - "tests/guided-demo.test.cjs"
       - ".github/workflows/deployment-identity-contract.yml"
   workflow_dispatch:
 
@@ -18,4 +19,4 @@ jobs:
         with:
           node-version: "20"
       - name: Check public deployment identity
-        run: node --test tests/deployment_identity.test.cjs
+        run: node --test tests/deployment_identity.test.cjs tests/guided-demo.test.cjs

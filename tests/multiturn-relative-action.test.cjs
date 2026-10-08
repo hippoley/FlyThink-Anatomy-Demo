@@ -101,3 +101,27 @@ test('wrong result retains its original trace and a later turn is only a candida
   vm.runInContext("const SESSION_STORAGE_KEY='flythink.runtime.session.v1',FAILURE_STORAGE_KEY='flythink.runtime.failures.v1';"+source('function browserSessionStorage(', 'function restorePersistedSession('),second);
   assert.equal(second.loadFailureLibrary()[0].reply,'书房主灯 · 电源：开启');
 });
+
+
+test('guided demo sequence preserves one focused light across all three turns',()=>{
+  const c=parserRuntime();
+  const first=c.parseUtterance('把客厅灯打开');
+  assert.equal(first.nodes.length,1);
+  mountFocus(c,first.nodes[0]);
+
+  const second=c.parseUtterance('调到30%');
+  assert.equal(second.nodes.length,1);
+  assert.equal(second.nodes[0].target.entity,'light');
+  assert.equal(second.nodes[0].slots.area,'客厅');
+  assert.equal(second.nodes[0].slots.property,'brightness');
+  assert.equal(second.nodes[0].slots.value,30);
+  mountFocus(c,second.nodes[0]);
+
+  const third=c.parseUtterance('关掉');
+  assert.equal(third.nodes.length,1);
+  assert.equal(third.nodes[0].target.entity,'light');
+  assert.equal(third.nodes[0].slots.area,'客厅');
+  assert.equal(third.nodes[0].slots.property,'power');
+  assert.equal(third.nodes[0].slots.value,false);
+  assert.equal(third.nodes[0].slots.reference_source,'persistent_focus');
+});

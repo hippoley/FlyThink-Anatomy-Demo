@@ -88,6 +88,23 @@ details{margin-top:14px;border:1px solid #202b38;border-radius:14px;background:#
   .executionHero h1{font-size:38px}
 }
 @media(max-width:480px){.truthRail{grid-template-columns:1fr}}
+
+.demoGuide{margin:0 0 18px;border:1px solid #2a3b4d;border-radius:16px;background:linear-gradient(180deg,#0c141d,#090f15);padding:13px 14px}
+.demoGuideTop{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.demoGuideTitle{font-size:12px;font-weight:760;color:#dce7f1}
+.demoGuideSub{font-size:10px;color:#7e93a7;margin-top:3px;line-height:1.5}
+.demoMode{display:inline-flex;align-items:center;gap:6px;border:1px solid #665334;border-radius:999px;padding:4px 7px;color:#e6c98e;font-size:8.5px;white-space:nowrap}
+.demoMode:before{content:"";width:6px;height:6px;border-radius:50%;background:#edbf77;box-shadow:0 0 0 4px rgba(237,191,119,.08)}
+.demoSteps{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:11px}
+.demoStep{appearance:none;text-align:left;border:1px solid #26394b;border-radius:11px;background:#080f16;color:#c9d7e3;padding:9px 10px;cursor:pointer;transition:.16s ease}
+.demoStep:hover{border-color:#587ba0;background:#0d1721;transform:translateY(-1px)}
+.demoStep strong{display:block;font-size:10px;color:#e3edf5}
+.demoStep span{display:block;margin-top:3px;font-size:9px;color:#71869a;line-height:1.4}
+.demoStep.ready{border-color:#3b5e50}
+.demoStep.active{border-color:#7098c3;background:#101c28;box-shadow:inset 0 0 20px rgba(112,152,195,.08)}
+.demoGuideFoot{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-top:9px;padding-top:9px;border-top:1px solid #1f2c39;font-size:9px;color:#6f8498}
+.demoGuideFoot code{font:9px ui-monospace,Consolas,monospace;color:#9db3c7}
+@media(max-width:720px){.demoSteps{grid-template-columns:1fr}.demoGuideTop{flex-direction:column}}
 </style></head><body><div class="app">
 <nav class="nav"><div class="brand"><span class="mark"></span>FlyThink</div><span class="navnote">Execution Truth for Physical AI</span></nav>
 <header class="executionHero">
@@ -115,6 +132,21 @@ details{margin-top:14px;border:1px solid #202b38;border-radius:14px;background:#
   <div class="truthCell warn"><div class="truthKey">Real hardware golden</div><strong>PENDING</strong><span>human-WAV → canonical runtime → WindowPilot proof is still converging in #93.</span></div>
 </section>
 <div class="researchDivider">Research Playground · home dialogue, Thing Models, regression and FlyWire views</div>
+<section class="demoGuide" id="guidedDemo" aria-label="Guided demo">
+  <div class="demoGuideTop">
+    <div>
+      <div class="demoGuideTitle">3-turn guided demo · prove context survives between turns</div>
+      <div class="demoGuideSub">按顺序点三步；每一步只负责把推荐语句放进输入框，你仍然亲自点击「发送」，方便观察右侧状态如何变化。</div>
+    </div>
+    <div class="demoMode">PLAYGROUND MODE · browser simulation · no physical write</div>
+  </div>
+  <div class="demoSteps">
+    <button class="demoStep" type="button" data-guided-turn="把客厅灯打开" data-guided-step="1"><strong>01 · 建立目标</strong><span>“把客厅灯打开” · create persistent focus</span></button>
+    <button class="demoStep" type="button" data-guided-turn="调到30%" data-guided-step="2"><strong>02 · 省略目标</strong><span>“调到30%” · resolve from prior context</span></button>
+    <button class="demoStep" type="button" data-guided-turn="关掉" data-guided-step="3"><strong>03 · 再次指代</strong><span>“关掉” · patch the same focused device</span></button>
+  </div>
+  <div class="demoGuideFoot"><span id="guidedDemoStatus">从 01 开始；右侧会显示房间、设备与状态变化。</span><code>real hardware golden proof: PENDING</code></div>
+</section>
 <main class="stage" id="experience">
 <section class="panel chatShell"><div class="panelhead"><b>和家说话</b><button class="quietLink" id="reset" type="button">重新开始</button></div><div class="conversationBody">
 <label class="scenePicker" for="sceneSelect">从这里开始<select id="sceneSelect"><option value="revise">开灯，再调整亮度</option><option value="rooms">换个房间试试</option><option value="multi">一句话，两件事</option><option value="goal">只描述一个情景</option><option value="roomGoals">多房间，不同目标</option><option value="constraint">矛盾条件，反推替代动作</option><option value="wholeHome">全屋、多房间、多物件</option></select></label>
@@ -2536,7 +2568,36 @@ function drawBrain(){if(!DATA||!$('#brain').getClientRects().length)return;const
  }
  const nodes=DATA.s.graph.nodes||[];const phase=Math.max(0,state.turn-1)%3;const active=nodes.filter((_,i)=>i%3===phase);for(const n of active){const p=by[String(n.flywire_id)];if(!p)continue;const q=P([p[1],-p[2],-p[3]],W,H),r=4+Math.log1p(Number(n.activity||0));x.beginPath();x.arc(q.x,q.y,r+4,0,Math.PI*2);x.strokeStyle='rgba(241,189,105,.35)';x.lineWidth=2;x.stroke();x.beginPath();x.arc(q.x,q.y,r,0,Math.PI*2);x.fillStyle='#f1bd69';x.fill();hits.push({kind:'measured',x:q.x,y:q.y,r:r+6,n,p})}
  if(selected&&selected.p){const q=P([selected.p[1],-selected.p[2],-selected.p[3]],W,H);x.beginPath();x.arc(q.x,q.y,7,0,Math.PI*2);x.strokeStyle='white';x.lineWidth=2;x.stroke()}}
-$('#turnStageRail').addEventListener('click',e=>{const stage=e.target.closest('[data-turn-stage]');if(stage)selectTurnJourneyStage(Number(stage.dataset.turnStage))});document.querySelectorAll('[data-p]').forEach(b=>b.addEventListener('click',()=>{const t=b.dataset.p;$('#input').value=t;updateDecisionHeads(t)}));document.querySelectorAll('[data-mutate]').forEach(b=>b.addEventListener('click',()=>mutateDraft(b.dataset.mutate)));$('#sampleCorpus').addEventListener('click',sampleCorpus);$('#copyDecision').addEventListener('click',async()=>{const s=JSON.stringify(window.__decisionContract||{},null,2);try{await navigator.clipboard.writeText(s);$('#copyDecision').textContent='Copied';setTimeout(()=>$('#copyDecision').textContent='Copy JSON',900)}catch(e){$('#decisionAnswer').textContent=s}});$('#reset').addEventListener('click',()=>{closeTelemetryEpisode();reset()});$('#homeRoomGrid').addEventListener('click',e=>{const b=e.target.closest('[data-home-probe]');if(!b)return;loadHomeProbe(b.dataset.area,b.dataset.entity)});$('#nextHint').addEventListener('click',e=>{const b=e.target.closest('[data-next-prompt]');if(!b)return;const t=b.dataset.nextPrompt||'';$('#input').value=t;currentCorpusCase=null;updateDecisionHeads(t);$('#input').focus()});$('#markWrong').addEventListener('click',markLastResultWrong);$('#exportFailures').addEventListener('click',exportFailureLibrary);$('#exportTrajectory').addEventListener('click',exportTrajectory);$('#openTrajectoryReview').addEventListener('click',openTrajectoryReview);$('#openTrajectoryReview').hidden=!telemetryLocalEnabled();$('#composer').addEventListener('submit',e=>{e.preventDefault();if($('#sendTurn').disabled)return;const t=$('#input').value;if(!t.trim())return;submit(t);$('#input').value='';$('#input').focus()});$('#runAsSequence').addEventListener('click',()=>{currentCorpusCase=null;const seq=splitSequence($('#input').value);for(const t of seq)submit(t)});$('#input').addEventListener('input',e=>{currentCorpusCase=null;$('#corpusCase').textContent='Edited free-form turn · expected label cleared.';updateDecisionHeads(e.target.value)});
+function prepareGuidedTurn(button){
+  const text=button&&button.dataset&&button.dataset.guidedTurn||"";
+  const step=Number(button&&button.dataset&&button.dataset.guidedStep||0);
+  if(!text)return;
+  currentCorpusCase=null;
+  $('#input').value=text;
+  $('#corpusCase').textContent='Guided demo turn · inspect how persistent context changes the decision.';
+  updateDecisionHeads(text);
+  document.querySelectorAll('[data-guided-step]').forEach(el=>{
+    const n=Number(el.dataset.guidedStep||0);
+    el.classList.toggle('active',n===step);
+    el.classList.toggle('ready',n<step);
+  });
+  const labels={
+    1:'01 已装入：发送后建立客厅灯的 persistent focus。',
+    2:'02 已装入：只说数值，观察系统是否继承上轮目标。',
+    3:'03 已装入：只说动作，观察系统是否继续作用于同一设备。'
+  };
+  $('#guidedDemoStatus').textContent=labels[step]||'Guided turn ready.';
+  $('#input').focus();
+  $('#experience').scrollIntoView({behavior:'smooth',block:'start'});
+}
+$('#turnStageRail').addEventListener('click',e=>{const stage=e.target.closest('[data-turn-stage]');if(stage)selectTurnJourneyStage(Number(stage.dataset.turnStage))});document.querySelectorAll('[data-guided-turn]').forEach(b=>b.addEventListener('click',()=>prepareGuidedTurn(b)));
+document.querySelectorAll('[data-p]').forEach(b=>b.addEventListener('click',()=>{const t=b.dataset.p;$('#input').value=t;updateDecisionHeads(t)}));document.querySelectorAll('[data-mutate]').forEach(b=>b.addEventListener('click',()=>mutateDraft(b.dataset.mutate)));$('#sampleCorpus').addEventListener('click',sampleCorpus);$('#copyDecision').addEventListener('click',async()=>{const s=JSON.stringify(window.__decisionContract||{},null,2);try{await navigator.clipboard.writeText(s);$('#copyDecision').textContent='Copied';setTimeout(()=>$('#copyDecision').textContent='Copy JSON',900)}catch(e){$('#decisionAnswer').textContent=s}});$('#reset').addEventListener('click',()=>{closeTelemetryEpisode();reset()});$('#homeRoomGrid').addEventListener('click',e=>{const b=e.target.closest('[data-home-probe]');if(!b)return;loadHomeProbe(b.dataset.area,b.dataset.entity)});$('#nextHint').addEventListener('click',e=>{const b=e.target.closest('[data-next-prompt]');if(!b)return;const t=b.dataset.nextPrompt||'';$('#input').value=t;currentCorpusCase=null;updateDecisionHeads(t);$('#input').focus()});$('#markWrong').addEventListener('click',markLastResultWrong);$('#exportFailures').addEventListener('click',exportFailureLibrary);$('#exportTrajectory').addEventListener('click',exportTrajectory);$('#openTrajectoryReview').addEventListener('click',openTrajectoryReview);$('#openTrajectoryReview').hidden=!telemetryLocalEnabled();$('#composer').addEventListener('submit',e=>{e.preventDefault();if($('#sendTurn').disabled)return;const t=$('#input').value;if(!t.trim())return;submit(t);$('#input').value='';$('#input').focus()});$('#runAsSequence').addEventListener('click',()=>{currentCorpusCase=null;const seq=splitSequence($('#input').value);for(const t of seq)submit(t)});$('#input').addEventListener('keydown',e=>{
+  if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){
+    e.preventDefault();
+    if(!$('#sendTurn').disabled)$('#composer').requestSubmit();
+  }
+});
+$('#input').addEventListener('input',e=>{currentCorpusCase=null;$('#corpusCase').textContent='Edited free-form turn · expected label cleared.';updateDecisionHeads(e.target.value)});
 document.querySelectorAll('[data-composer-template]').forEach(b=>b.addEventListener('click',()=>loadComposerTemplate(b.dataset.composerTemplate)));
 document.querySelectorAll('[data-add-turn]').forEach(b=>b.addEventListener('click',()=>{composerTurns.push(composerTurn(b.dataset.addTurn,''));composerResults=[];renderTurnComposer();renderComposerResults()}));
 $('#runComposer').addEventListener('click',runComposer);$('#clearComposerResults').addEventListener('click',()=>{composerResults=[];composerInspectIndex=null;renderComposerResults()});$('#composerResults').addEventListener('click',e=>{const row=e.target.closest('[data-inspect-turn]');if(row&&!e.target.closest('summary'))inspectComposerResult(Number(row.dataset.inspectTurn));});
