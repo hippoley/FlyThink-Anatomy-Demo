@@ -184,23 +184,37 @@ def exact_rows(pred,gold):
 
 
 def coverage_at_precision(confidence,exact,target=0.99):
+    """Best deployable coverage using a scalar confidence threshold.
+
+    Equal-confidence samples are evaluated as one threshold group.  A real
+    deployment cannot keep the correct members of a tie while rejecting the
+    incorrect members at the same threshold.
+    """
     rows=sorted(
         [(float(confidence[i]),bool(exact[i])) for i in range(len(exact))],
         reverse=True,
     )
     if not rows:
         return {"coverage":0.0,"precision":None,"threshold":None,"committed":0}
-    correct=0
     best={"coverage":0.0,"precision":None,"threshold":None,"committed":0}
-    for i,(conf,ok) in enumerate(rows,1):
-        correct+=int(ok)
-        precision=correct/i
+    correct=0
+    committed=0
+    i=0
+    while i<len(rows):
+        threshold=rows[i][0]
+        group=[]
+        while i<len(rows) and rows[i][0]==threshold:
+            group.append(rows[i])
+            i+=1
+        committed+=len(group)
+        correct+=sum(int(ok) for _,ok in group)
+        precision=correct/committed
         if precision>=target:
             best={
-                "coverage":i/len(rows),
+                "coverage":committed/len(rows),
                 "precision":precision,
-                "threshold":conf,
-                "committed":i,
+                "threshold":threshold,
+                "committed":committed,
             }
     return best
 
@@ -281,7 +295,37 @@ def evaluate(model,data):
         base=metrics(pred,data[1],data[2])
         conf=confidence_rows(logits,pred)
         exact=exact_rows(pred,data[1])
-    base["commit_curve_99"]=coverage_at_precision(conf,exact,.99)
+
+        gold=data[1]
+        target_mask=gold[:,1]>0
+        predicted_target=pred[:,3:6]
+        gold_target=gold[:,3:6]
+        wrong_target=(target_mask & ~(predicted_target==gold_target).all(1))
+
+        ood_index=7
+        ood_gold=gold[:,0]==ood_index
+        ood_false_commit=ood_gold & (pred[:,0]!=ood_index)
+
+    gate=coverage_at_precision(conf,exact,.99)
+    base["commit_curve_99"]=gate
+    base["wrong_target_rate"]=float(wrong_target.float().mean())
+    base["ood_false_commit_rate"]=float(ood_false_commit.float().mean())
+
+    if gate["threshold"] is not None:
+        committed=conf>=gate["threshold"]
+        committed_count=int(committed.sum())
+        base["committed_wrong_target_rate"]=(
+            float((wrong_target & committed).float().sum()/committed_count)
+            if committed_count else None
+        )
+        base["committed_ood_false_commit_rate"]=(
+            float((ood_false_commit & committed).float().sum()/committed_count)
+            if committed_count else None
+        )
+    else:
+        base["committed_wrong_target_rate"]=None
+        base["committed_ood_false_commit_rate"]=None
+
     return base
 
 
