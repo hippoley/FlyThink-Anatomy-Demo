@@ -23,6 +23,22 @@ def build_commands(args):
         raise SystemExit("--apply requires --expected-hardware-identity")
     if args.apply and not args.receipt:
         raise SystemExit("--apply requires --receipt")
+    if args.apply and not getattr(args, "proof_bundle", None):
+        raise SystemExit("--apply requires --proof-bundle")
+    if args.apply and not getattr(args, "contextual_state", None):
+        raise SystemExit("--apply requires --contextual-state")
+    if args.apply and not getattr(args, "authorization_ledger", None):
+        raise SystemExit("--apply requires --authorization-ledger")
+    if args.apply and not getattr(args, "spatialruntime_authorize", False):
+        raise SystemExit("--apply requires --spatialruntime-authorize")
+    if (
+        args.apply
+        and not getattr(args, "scene_context", None)
+        and not getattr(args, "world_snapshot", None)
+    ):
+        raise SystemExit(
+            "--apply requires authoritative SpatialRuntime scene identity"
+        )
     fixture_payload=None
     if args.fixture_manifest:
         if not args.wav:
@@ -140,6 +156,12 @@ def build_commands(args):
         ]
     if args.receipt:
         node += ["--receipt", args.receipt]
+    if getattr(args, "proof_bundle", None):
+        node += ["--proof-bundle", getattr(args, "proof_bundle", None)]
+    if getattr(args, "contextual_state", None):
+        node += ["--contextual-state", getattr(args, "contextual_state", None)]
+    if getattr(args, "authorization_ledger", None):
+        node += ["--authorization-ledger", getattr(args, "authorization_ledger", None)]
     if fixture_payload is not None:
         node += [
             "--acoustic-fixture-json",
@@ -225,7 +247,22 @@ def parse_args():
     p.add_argument("--entity", default="窗")
     p.add_argument("--instance", default="default")
     p.add_argument("--expected-hardware-identity")
-    p.add_argument("--receipt")
+    p.add_argument(
+        "--receipt",
+        help="canonical execution-receipt.v1 output path in APPLY mode",
+    )
+    p.add_argument(
+        "--proof-bundle",
+        help="execution-proof-bundle.v1 output path in APPLY mode",
+    )
+    p.add_argument(
+        "--contextual-state",
+        help="sealed upstream contextual-state.v1 artifact",
+    )
+    p.add_argument(
+        "--authorization-ledger",
+        help="durable single-use SpatialRuntime authorization ledger",
+    )
     p.add_argument("--fixture-manifest")
     p.add_argument("--require-human-fixture", action="store_true")
     p.add_argument("--apply", action="store_true")
@@ -290,6 +327,16 @@ def parse_args():
         p.error("--apply requires --expected-hardware-identity")
     if args.apply and not args.receipt:
         p.error("--apply requires --receipt")
+    if args.apply and not getattr(args, "proof_bundle", None):
+        p.error("--apply requires --proof-bundle")
+    if args.apply and not getattr(args, "contextual_state", None):
+        p.error("--apply requires --contextual-state")
+    if args.apply and not getattr(args, "authorization_ledger", None):
+        p.error("--apply requires --authorization-ledger")
+    if args.apply and not getattr(args, "spatialruntime_authorize", False):
+        p.error("--apply requires --spatialruntime-authorize")
+    if args.apply and not args.scene_context and not args.world_snapshot:
+        p.error("--apply requires authoritative SpatialRuntime scene identity")
     if args.require_human_fixture and not args.fixture_manifest:
         p.error("--require-human-fixture requires --fixture-manifest")
     if args.fixture_manifest and not args.wav:

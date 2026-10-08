@@ -26,6 +26,7 @@ on:
       - "tests/commit_gate.cjs"
       - "tests/physical_runtime.cjs"
       - "tests/streaming_slu_e2e.cjs"
+      - "tests/canonical_live_apply_boundary.cjs"
       - "tests/recovery_transaction.cjs"
       - "tests/runtime_context_adapter.cjs"
       - "tests/contextual_edge_slu_adapter.cjs"
@@ -76,6 +77,8 @@ jobs:
           node --check scripts/stateful_checkpoint_trajectory.cjs
           node --check scripts/probe_windowpilot_checkpoint_e2e.cjs
           node --check scripts/run_acoustic_windowpilot_e2e.cjs
+          python -m py_compile scripts/live_acoustic_windowpilot.py
+          node --check tests/canonical_live_apply_boundary.cjs
           node --check scripts/spatialruntime_authorizer.cjs
           python -m py_compile scripts/spatialruntime_window_authorizer.py
           node --check scripts/acoustic_windowpilot_evidence.cjs
@@ -88,6 +91,8 @@ jobs:
         run: node tests/physical_runtime.cjs
       - name: Prove semantic-only streaming handoff cannot reach physical driver
         run: node tests/streaming_slu_e2e.cjs
+      - name: Prove live APPLY crosses only the canonical execution boundary
+        run: node tests/canonical_live_apply_boundary.cjs
       - name: Verify formal recovery transaction trust restore
         run: node tests/recovery_transaction.cjs
       - name: Verify device feedback enters next-turn context

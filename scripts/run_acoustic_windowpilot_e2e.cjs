@@ -20,6 +20,25 @@ const {
   buildReceipt,
   validateReceipt
 }=require("./acoustic_windowpilot_evidence.cjs");
+const {
+  contextStateIdentity
+}=require("./contextual_edge_slu_adapter.cjs");
+const {
+  loadPinnedSceneContext,
+  loadSceneContext,
+  sceneWorldIdentity
+}=require("./spatialruntime_world_context.cjs");
+const {
+  decisionProposalToExecutionContracts
+}=require("./decision_proposal_contract.cjs");
+const {
+  runDecisionProposal
+}=require("./flythink_execution_runtime.cjs");
+const {
+  buildExecutionProofBundle,
+  verifyExecutionProofBundle
+}=require("./execution_proof_bundle.cjs");
+const {FileAuthorizationLedger}=require("./authorization_ledger.cjs");
 
 function arg(name){
   const i=process.argv.indexOf(name);
@@ -36,6 +55,82 @@ function assertLiveSemanticProposal(prediction,apply){
     throw new Error("windowpilot_live_probe_requires_exactly_one_semantic_patch");
   }
   return prediction;
+}
+
+function patchToDecisionMutation(patch){
+  if(!patch||!patch.target)throw new Error("canonical_handoff_patch_target_required");
+  if(patch.op==="PATCH_SLOT"){
+    return {
+      target:clone(patch.target),
+      property:String(patch.slot||""),
+      operator:"SET",
+      value:clone(patch.value)
+    };
+  }
+  if(patch.op==="PATCH_RELATIVE"){
+    return {
+      target:clone(patch.target),
+      property:String(patch.slot||""),
+      operator:"ADD",
+      value:Number(patch.delta)
+    };
+  }
+  throw new Error("canonical_handoff_patch_operator_unsupported");
+}
+
+function buildCanonicalDecisionProposal(row,contextualState,worldIdentity){
+  if(!row||row.handoff_ready!==true)
+    throw new Error("canonical_handoff_not_ready");
+  const patches=Array.isArray(row.patch_proposal)?row.patch_proposal:[];
+  if(patches.length!==1)
+    throw new Error("canonical_handoff_requires_exactly_one_patch");
+  const contextIdentity=contextStateIdentity(contextualState);
+  const taskId=String(
+    contextualState&&contextualState.conversation&&
+    contextualState.conversation.active_task_id||""
+  );
+  if(!taskId)throw new Error("canonical_handoff_active_task_id_required");
+  const confidence=Number(row.semantic&&row.semantic.confidence);
+  if(!Number.isFinite(confidence)||confidence<0||confidence>1)
+    throw new Error("canonical_handoff_confidence_invalid");
+  const targets=(row.target_resolution&&row.target_resolution.targets||[])
+    .map(clone);
+  if(targets.length!==1)
+    throw new Error("canonical_handoff_requires_exactly_one_target");
+  return {
+    schema_version:"decision-proposal.v1",
+    proposal_id:[
+      "acoustic",
+      taskId,
+      String(contextIdentity.context_revision),
+      String(worldIdentity.world_snapshot_revision)
+    ].join(":"),
+    task_id:taskId,
+    context_revision:contextIdentity.context_revision,
+    context_sha256:contextIdentity.context_sha256,
+    world_snapshot_revision:worldIdentity.world_snapshot_revision,
+    world_snapshot_sha256:worldIdentity.world_snapshot_sha256,
+    intent:"window.set_opening",
+    logical_targets:targets,
+    proposed_mutations:patches.map(patchToDecisionMutation),
+    confidence,
+    requires_confirmation:false,
+    evidence_refs:["acoustic-semantic-handoff:"+String(row.turn_id||"final")]
+  };
+}
+
+function loadCanonicalSceneIdentity({
+  sceneContextPath,
+  worldSnapshotPath,
+  worldValidationReceiptPath
+}={}){
+  const sceneContext=sceneContextPath
+    ?loadPinnedSceneContext(sceneContextPath)
+    :loadSceneContext(worldSnapshotPath,worldValidationReceiptPath);
+  return {
+    scene_context:sceneContext,
+    world_identity:sceneWorldIdentity(sceneContext)
+  };
 }
 
 function initialRuntimeFromPhysical(target,pct){
@@ -143,6 +238,9 @@ async function main(){
   const tolerancePct=Number(arg("--tolerance")||1);
   const timeoutMs=Number(arg("--timeout-ms")||5000);
   const receiptPath=arg("--receipt");
+  const proofBundlePath=arg("--proof-bundle");
+  const contextualStatePath=arg("--contextual-state");
+  const authorizationLedgerPath=arg("--authorization-ledger");
   const fixtureJson=arg("--acoustic-fixture-json");
   const acousticFixture=fixtureJson?JSON.parse(fixtureJson):null;
   const useSpatialRuntime=flag("--spatialruntime-authorize");
@@ -158,6 +256,13 @@ async function main(){
 
   if(!url)throw new Error("--url is required");
   if(apply&&!receiptPath)throw new Error("--apply requires --receipt");
+  if(apply&&!proofBundlePath)throw new Error("--apply requires --proof-bundle");
+  if(apply&&!contextualStatePath)throw new Error("--apply requires --contextual-state");
+  if(apply&&!authorizationLedgerPath)throw new Error("--apply requires --authorization-ledger");
+  if(apply&&!useSpatialRuntime)throw new Error("--apply requires --spatialruntime-authorize");
+  if(apply&&!sceneContextPath&&!worldSnapshotPath){
+    throw new Error("--apply requires authoritative SpatialRuntime scene identity");
+  }
 
   const driver=new WindowPilotHttpDriver({
     baseUrl:url,
@@ -180,6 +285,19 @@ async function main(){
   });
 
   const initialRuntime=initialRuntimeFromPhysical(target,initialPct);
+  let contextualState=null;
+  let canonicalScene=null;
+  let authorizationLedger=null;
+  if(apply){
+    contextualState=JSON.parse(fs.readFileSync(contextualStatePath,"utf8"));
+    contextStateIdentity(contextualState);
+    canonicalScene=loadCanonicalSceneIdentity({
+      sceneContextPath,
+      worldSnapshotPath,
+      worldValidationReceiptPath
+    });
+    authorizationLedger=new FileAuthorizationLedger(authorizationLedgerPath);
+  }
   const client=createCheckpointClient({
     graph:arg("--graph"),
     judgement:arg("--judgement"),
@@ -204,7 +322,8 @@ async function main(){
     initialRuntime,
     predictor:guardedPredictor,
     driver,
-    physicalAuthorizer:spatialRuntimeAuthorizer
+    physicalAuthorizer:spatialRuntimeAuthorizer,
+    semanticOnly:apply
   });
   const guard=new AsrEventSequenceGuard();
   const input=readline.createInterface({input:process.stdin,crlfDelay:Infinity});
@@ -212,6 +331,11 @@ async function main(){
   const acceptedEvents=[];
   let processingError=null;
   let closeoutEvidence=null;
+  let canonicalExecution=null;
+  let decisionProposal=null;
+  let proofBundle=null;
+  let proofVerification=null;
+  let executionContracts=null;
 
   try{
     for await(const line of input){
@@ -233,6 +357,80 @@ async function main(){
       if(event.kind!=="final"&&row.committed){
         throw new Error("acoustic_speculative_event_committed");
       }
+    }
+
+    if(apply){
+      const finalRows=session.trace.filter(x=>x.asr&&x.asr.is_final);
+      if(finalRows.length!==1)throw new Error("canonical_live_apply_requires_one_final_row");
+      const handoff=finalRows[0];
+      if(handoff.handoff_ready!==true)
+        throw new Error("canonical_live_apply_semantic_handoff_not_ready");
+      if(driver.commands.length!==0)
+        throw new Error("canonical_live_apply_preboundary_physical_write_detected");
+
+      decisionProposal=buildCanonicalDecisionProposal(
+        handoff,
+        contextualState,
+        canonicalScene.world_identity
+      );
+      executionContracts=decisionProposalToExecutionContracts(
+        contextualState,
+        decisionProposal
+      );
+      const beforeRuntime=normalizeRuntime(session.runtime);
+      canonicalExecution=await runDecisionProposal({
+        runtime:beforeRuntime,
+        contextual_state:contextualState,
+        decision_proposal:decisionProposal,
+        world_snapshot_revision:
+          canonicalScene.world_identity.world_snapshot_revision,
+        world_snapshot_sha256:
+          canonicalScene.world_identity.world_snapshot_sha256,
+        driver,
+        physicalAuthorizer:spatialRuntimeAuthorizer,
+        authorization_context:{
+          scene_evidence:canonicalScene.scene_context
+        },
+        expected_spatialruntime_commit_sha:
+          canonicalScene.scene_context.spatialruntime_commit_sha||null,
+        source_step:0,
+        authorizationLedger
+      });
+      session.runtime=canonicalExecution.runtime;
+      if(!canonicalExecution.ok){
+        throw new Error(
+          "canonical_live_apply_not_executed:"+
+          String(canonicalExecution.reason||canonicalExecution.status)
+        );
+      }
+      if(driver.commands.length!==1){
+        throw new Error("canonical_live_apply_requires_exactly_one_probe_write");
+      }
+
+      proofBundle=buildExecutionProofBundle({
+        decision_proposal:decisionProposal,
+        contextual_state:contextualState,
+        request:executionContracts.request,
+        internal_proposal:executionContracts.internal_proposal,
+        before_runtime:beforeRuntime,
+        after_runtime:canonicalExecution.runtime,
+        execution_receipt:canonicalExecution.receipt
+      });
+      proofVerification=verifyExecutionProofBundle(proofBundle);
+      if(
+        !proofVerification.valid||
+        proofVerification.physical_truth_verified!==true
+      ){
+        throw new Error("canonical_live_apply_proof_verification_failed");
+      }
+      fs.writeFileSync(
+        receiptPath,
+        JSON.stringify(canonicalExecution.receipt,null,2)+"\n"
+      );
+      fs.writeFileSync(
+        proofBundlePath,
+        JSON.stringify(proofBundle,null,2)+"\n"
+      );
     }
   }catch(e){
     processingError=e;
@@ -268,6 +466,8 @@ async function main(){
     ),0);
   const semanticCommands=session.trace
     .filter(x=>x.asr.is_final&&x.committed).length;
+  const semanticHandoffs=session.trace
+    .filter(x=>x.asr.is_final&&x.handoff_ready).length;
 
   const closeoutPublic=closeoutEvidence?{
     attempted:closeoutEvidence.attempted,
@@ -277,32 +477,10 @@ async function main(){
     receipt:closeoutEvidence.receipt
   }:null;
 
-  let evidenceReceipt=null;
-  let evidenceValidation=null;
-  if(apply){
-    evidenceReceipt=buildReceipt({
-      mode:"APPLY",
-      target,
-      probeOpenPct,
-      tolerancePct,
-      expectedHardwareIdentity,
-      readiness,
-      beforePositionPct:initialPct,
-      acceptedEvents,
-      trace:session.trace,
-      driverCommands:driver.commands,
-      closeout:closeoutPublic,
-      runtime:session.runtime,
-      acousticFixture
-    });
-    evidenceValidation=validateReceipt(evidenceReceipt,{
-      requireHumanFixture:!!(
-        acousticFixture&&acousticFixture.require_human_acceptance===true
-      ),
-      requireSpatialRuntimeAuthorization:useSpatialRuntime
-    });
-    fs.writeFileSync(receiptPath,JSON.stringify(evidenceReceipt,null,2)+"\n");
-  }
+  // Acoustic trace is retained as upstream provenance only.
+  // Canonical APPLY success is owned by execution-receipt.v1 and the proof bundle.
+  const evidenceReceipt=null;
+  const evidenceValidation=null;
 
   const out={
     truth:"acoustic_windowpilot_live_probe_v1",
@@ -328,6 +506,11 @@ async function main(){
     final_segments:finals,
     speculative_physical_commands:speculativePhysical,
     semantic_commits:semanticCommands,
+    semantic_handoffs:semanticHandoffs,
+    canonical_execution_status:canonicalExecution&&canonicalExecution.status||null,
+    canonical_execution_receipt:apply?receiptPath:null,
+    canonical_proof_bundle:apply?proofBundlePath:null,
+    proof_verification:clone(proofVerification),
     physical_driver_commands:driver.commands.length,
     closeout:closeoutPublic,
     evidence_receipt:receiptPath||null,
@@ -340,9 +523,12 @@ async function main(){
   if(speculativePhysical!==0)process.exitCode=2;
   if(!apply&&driver.commands.length!==0)process.exitCode=2;
   if(apply){
-    if(finals!==1||semanticCommands!==1)process.exitCode=2;
+    if(finals!==1||semanticHandoffs!==1||semanticCommands!==0)process.exitCode=2;
+    if(!canonicalExecution||canonicalExecution.ok!==true)process.exitCode=2;
+    if(!proofVerification||proofVerification.physical_truth_verified!==true)
+      process.exitCode=2;
     if(!closeoutEvidence)process.exitCode=2;
-    if(!evidenceValidation||!evidenceValidation.valid)process.exitCode=2;
+    if(driver.commands.length!==2)process.exitCode=2;
   }
 }
 
@@ -351,6 +537,9 @@ if(require.main===module){
 }
 
 module.exports={
+  patchToDecisionMutation,
+  buildCanonicalDecisionProposal,
+  loadCanonicalSceneIdentity,
   initialRuntimeFromPhysical,
   assertLiveProbePreconditions,
   closeout,
