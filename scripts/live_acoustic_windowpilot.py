@@ -23,13 +23,13 @@ def build_commands(args):
         raise SystemExit("--apply requires --expected-hardware-identity")
     if args.apply and not args.receipt:
         raise SystemExit("--apply requires --receipt")
-    if args.apply and not args.proof_bundle:
+    if args.apply and not getattr(args, "proof_bundle", None):
         raise SystemExit("--apply requires --proof-bundle")
-    if args.apply and not args.contextual_state:
+    if args.apply and not getattr(args, "contextual_state", None):
         raise SystemExit("--apply requires --contextual-state")
-    if args.apply and not args.authorization_ledger:
+    if args.apply and not getattr(args, "authorization_ledger", None):
         raise SystemExit("--apply requires --authorization-ledger")
-    if args.apply and not args.spatialruntime_authorize:
+    if args.apply and not getattr(args, "spatialruntime_authorize", False):
         raise SystemExit("--apply requires --spatialruntime-authorize")
     fixture_payload=None
     if args.fixture_manifest:
@@ -148,12 +148,12 @@ def build_commands(args):
         ]
     if args.receipt:
         node += ["--receipt", args.receipt]
-    if args.proof_bundle:
-        node += ["--proof-bundle", args.proof_bundle]
-    if args.contextual_state:
-        node += ["--contextual-state", args.contextual_state]
-    if args.authorization_ledger:
-        node += ["--authorization-ledger", args.authorization_ledger]
+    if getattr(args, "proof_bundle", None):
+        node += ["--proof-bundle", getattr(args, "proof_bundle", None)]
+    if getattr(args, "contextual_state", None):
+        node += ["--contextual-state", getattr(args, "contextual_state", None)]
+    if getattr(args, "authorization_ledger", None):
+        node += ["--authorization-ledger", getattr(args, "authorization_ledger", None)]
     if fixture_payload is not None:
         node += [
             "--acoustic-fixture-json",
@@ -319,13 +319,13 @@ def parse_args():
         p.error("--apply requires --expected-hardware-identity")
     if args.apply and not args.receipt:
         p.error("--apply requires --receipt")
-    if args.apply and not args.proof_bundle:
+    if args.apply and not getattr(args, "proof_bundle", None):
         p.error("--apply requires --proof-bundle")
-    if args.apply and not args.contextual_state:
+    if args.apply and not getattr(args, "contextual_state", None):
         p.error("--apply requires --contextual-state")
-    if args.apply and not args.authorization_ledger:
+    if args.apply and not getattr(args, "authorization_ledger", None):
         p.error("--apply requires --authorization-ledger")
-    if args.apply and not args.spatialruntime_authorize:
+    if args.apply and not getattr(args, "spatialruntime_authorize", False):
         p.error("--apply requires --spatialruntime-authorize")
     if args.apply and not args.scene_context and not args.world_snapshot:
         p.error("--apply requires authoritative SpatialRuntime scene identity")
