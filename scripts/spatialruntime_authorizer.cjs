@@ -112,15 +112,22 @@ function validateAuthorizationReceipt(receipt,request,requestedPatches){
   const requestedCompletionCriteria=Array.isArray(request&&request.completion_criteria)
     ?request.completion_criteria
     :[];
-  if(!Array.isArray(receipt.completion_criteria)){
-    throw new Error("spatialruntime_authorizer_completion_criteria_missing");
-  }
-  if(!sameObject(receipt.completion_criteria,requestedCompletionCriteria)){
+  const receiptCompletionCriteria=Array.isArray(receipt.completion_criteria)
+    ?receipt.completion_criteria
+    :[];
+  if(!sameObject(receiptCompletionCriteria,requestedCompletionCriteria)){
     throw new Error("spatialruntime_authorizer_completion_criteria_mismatch");
   }
-  if(
-    !isSha256(receipt.completion_criteria_sha256)||
-    receipt.completion_criteria_sha256!==sha256Object(requestedCompletionCriteria)
+  if(requestedCompletionCriteria.length>0){
+    if(
+      !isSha256(receipt.completion_criteria_sha256)||
+      receipt.completion_criteria_sha256!==sha256Object(requestedCompletionCriteria)
+    ){
+      throw new Error("spatialruntime_authorizer_completion_criteria_digest_mismatch");
+    }
+  }else if(
+    receipt.completion_criteria_sha256!=null&&
+    receipt.completion_criteria_sha256!==sha256Object([])
   ){
     throw new Error("spatialruntime_authorizer_completion_criteria_digest_mismatch");
   }
@@ -173,7 +180,9 @@ function validateAuthorizationReceipt(receipt,request,requestedPatches){
     source_revision:receipt.source_revision,
     patch_digest:receipt.patch_digest,
     registry_digest:receipt.registry_digest,
-    completion_criteria_sha256:receipt.completion_criteria_sha256,
+    ...(receipt.completion_criteria_sha256!=null
+      ?{completion_criteria_sha256:receipt.completion_criteria_sha256}
+      :{}),
     spatialruntime_commit_sha:receipt.spatialruntime_commit_sha,
     trace_hash:receipt.trace_hash
   });
