@@ -44,13 +44,13 @@ class EffectThenDisconnectDriver{
   assert.equal(driver.world.opening,50,"device world must show the effect");
 
   assert.equal(out.ok,false);
-  assert.equal(out.reason,"physical_outcome_indeterminate_after_dispatch");
+  assert.equal(out.reason,"physical_outcome_indeterminate_after_driver_call");
   assert.equal(isQuarantined(out.runtime,target),true);
 
   const health=out.runtime.deviceHealth["客厅::窗户::default"];
   assert.equal(health.status,"quarantined");
   assert.equal(health.source_status,"indeterminate");
-  assert.equal(health.reason,"physical_outcome_indeterminate_after_dispatch");
+  assert.equal(health.reason,"physical_outcome_indeterminate_after_driver_call");
 
   assert.equal(out.receipts.length,1);
   assert.equal(out.receipts[0].status,"indeterminate");
