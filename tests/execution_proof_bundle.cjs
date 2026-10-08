@@ -1,6 +1,10 @@
 "use strict";
 
 const assert=require("assert");
+const fs=require("fs");
+const os=require("os");
+const path=require("path");
+const {spawnSync}=require("child_process");
 const {
   digestObject,
   buildExecutionReceipt
@@ -168,6 +172,24 @@ function buildBundle(){
 (()=>{
   const bundle=buildBundle();
   const verified=verifyExecutionProofBundle(bundle);
+
+  {
+    const dir=fs.mkdtempSync(path.join(os.tmpdir(),"flythink-proof-"));
+    const file=path.join(dir,"bundle.json");
+    fs.writeFileSync(file,JSON.stringify(bundle,null,2)+"\n");
+    const cli=spawnSync(
+      process.execPath,
+      [
+        path.join(__dirname,"..","scripts","verify_execution_proof_bundle_cli.cjs"),
+        file
+      ],
+      {encoding:"utf8"}
+    );
+    assert.equal(cli.status,0);
+    const row=JSON.parse(cli.stdout.trim());
+    assert.equal(row.verdict,"VERIFIED");
+    assert.equal(row.bundle_sha256,bundle.bundle_sha256);
+  }
   assert.equal(verified.valid,true);
   assert.equal(verified.physical_committed,true);
   assert.equal(verified.physical_truth_verified,true);
@@ -210,6 +232,25 @@ function buildBundle(){
       ()=>verifyExecutionProofBundle(forged),
       /execution_receipt_digest_mismatch/
     );
+  }
+
+  {
+    const dir=fs.mkdtempSync(path.join(os.tmpdir(),"flythink-proof-invalid-"));
+    const file=path.join(dir,"bundle.json");
+    const forged=clone(buildBundle());
+    forged.artifacts.contextual_state.conversation.conversation_id="tampered";
+    fs.writeFileSync(file,JSON.stringify(forged,null,2)+"\n");
+    const cli=spawnSync(
+      process.execPath,
+      [
+        path.join(__dirname,"..","scripts","verify_execution_proof_bundle_cli.cjs"),
+        file
+      ],
+      {encoding:"utf8"}
+    );
+    assert.equal(cli.status,1);
+    const row=JSON.parse(cli.stdout.trim());
+    assert.equal(row.verdict,"INVALID");
   }
 
   {

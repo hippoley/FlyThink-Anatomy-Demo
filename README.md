@@ -1,8 +1,73 @@
 # FlyThink
 
-**A playable research playground for multi-turn home intelligence and fly-inspired neural state.**
+**A proof-carrying execution boundary for agents acting on physical systems — with a playable home-intelligence research surface.**
 
-> Talk to a home. Mutate the utterance. Interrupt it. Revise it. Make it ambiguous. Then watch the semantic decision, recurrent neural state, task graph and anatomy view update together.
+> Agents propose. Reality responds. FlyThink makes the execution evidence independently verifiable.
+
+FlyThink's durable backend responsibility is narrower than "another agent framework":
+
+```
+contextual-state.v1 exact identity
+        +
+decision-proposal.v1
+        +
+WorldSnapshot exact identity
+        ↓
+FlyThink execution boundary
+        ↓
+SpatialRuntime authorization proof
+        ↓
+physical driver
+        ↓
+ACK + measured readback
+        ↓
+execution-receipt.v1
+        ↓
+execution-proof-bundle.v1
+        ↓
+independent verifier
+```
+
+The repository still contains the original fly-inspired semantic/anatomy research playground, but semantic context ownership now lives in `hippoley/NLUSLOT`. FlyThink consumes that state and focuses its stable public contracts on execution authorization, physical evidence, reconciliation and verification.
+
+### Current claim boundary
+
+Already on `main`:
+
+- `decision-proposal.v1` is an untrusted external proposal boundary;
+- semantic Context identity is bound as `context_revision + context_sha256`;
+- World identity is bound as `world_snapshot_revision + world_snapshot_sha256`;
+- SpatialRuntime authorization proofs are independently re-verified at the execution boundary;
+- `execution-receipt.v1` remains the single execution-truth object;
+- `execution-proof-bundle.v1` packages the retained evidence for offline verification.
+
+Still under active reality convergence:
+
+- the flagship human-WAV → WindowPilot APPLY path must cross the canonical `runDecisionProposal()` boundary before the first actuator write;
+- a retained real-hardware Golden Proof Bundle is not claimed until that run exists and verifies independently;
+- indeterminate physical outcomes under transport loss are being hardened separately rather than collapsed into ordinary failure.
+
+### Verify a retained proof bundle
+
+A third party does not need to trust a FlyThink success flag. Given a retained bundle:
+
+```bash
+node scripts/verify_execution_proof_bundle_cli.cjs path/to/execution-proof-bundle.json
+```
+
+The command prints exactly one machine-readable verdict:
+
+```json
+{"verdict":"VERIFIED", "...":"..."}
+```
+
+or exits non-zero with:
+
+```json
+{"verdict":"INVALID","error":"..."}
+```
+
+The CLI is only a thin entrypoint over the canonical verifier; it does not implement a second validation path.
 
 ## Play it
 
