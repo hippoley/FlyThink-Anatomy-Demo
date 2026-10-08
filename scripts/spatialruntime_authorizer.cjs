@@ -109,6 +109,28 @@ function validateAuthorizationReceipt(receipt,request,requestedPatches){
   if(receipt.single_use!==true){
     throw new Error("spatialruntime_authorizer_single_use_required");
   }
+  const requestedCompletionCriteria=Array.isArray(request&&request.completion_criteria)
+    ?request.completion_criteria
+    :[];
+  const receiptCompletionCriteria=Array.isArray(receipt.completion_criteria)
+    ?receipt.completion_criteria
+    :[];
+  if(!sameObject(receiptCompletionCriteria,requestedCompletionCriteria)){
+    throw new Error("spatialruntime_authorizer_completion_criteria_mismatch");
+  }
+  if(requestedCompletionCriteria.length>0){
+    if(
+      !isSha256(receipt.completion_criteria_sha256)||
+      receipt.completion_criteria_sha256!==sha256Object(requestedCompletionCriteria)
+    ){
+      throw new Error("spatialruntime_authorizer_completion_criteria_digest_mismatch");
+    }
+  }else if(
+    receipt.completion_criteria_sha256!=null&&
+    receipt.completion_criteria_sha256!==sha256Object([])
+  ){
+    throw new Error("spatialruntime_authorizer_completion_criteria_digest_mismatch");
+  }
   const requestedScene=request&&request.spatial_context&&request.spatial_context.scene_evidence;
   if(requestedScene){
     if(!receipt.scene_evidence||!sameObject(receipt.scene_evidence,requestedScene)){
@@ -158,6 +180,9 @@ function validateAuthorizationReceipt(receipt,request,requestedPatches){
     source_revision:receipt.source_revision,
     patch_digest:receipt.patch_digest,
     registry_digest:receipt.registry_digest,
+    ...(receipt.completion_criteria_sha256!=null
+      ?{completion_criteria_sha256:receipt.completion_criteria_sha256}
+      :{}),
     spatialruntime_commit_sha:receipt.spatialruntime_commit_sha,
     trace_hash:receipt.trace_hash
   });
@@ -268,6 +293,9 @@ function createSpatialRuntimeAuthorizer(options={}){
       runtime:clone(runtime||{}),
       registry_digest:runtimeRegistryDigest(runtime||{}),
       patches:requestedPatches,
+      completion_criteria:Array.isArray(context&&context.completion_criteria)
+        ?clone(context.completion_criteria)
+        :[],
       spatial_context:spatialContext,
       max_open_ratio_delta:maxOpenRatioDelta
     };

@@ -199,6 +199,30 @@ async function runExecutionProposal({
   if(!driver||typeof driver!=="object")
     return noExecution("BLOCKED","physical_driver_required");
 
+  const completionCriteria=
+    typeof driver.completionCriterionForPatch==="function"
+      ?requested.map((patch,index)=>{
+        const out=driver.completionCriterionForPatch(patch);
+        if(
+          !out||typeof out!=="object"||
+          !out.criterion||typeof out.criterion!=="object"||
+          !isSha256(out.criterion_sha256)
+        ){
+          throw new Error(
+            "execution_completion_criterion_invalid:"+String(index)
+          );
+        }
+        return {
+          criterion:clone(out.criterion),
+          criterion_sha256:String(out.criterion_sha256)
+        };
+      })
+      :[];
+  const authorizationContext={
+    ...clone(authorization_context||{}),
+    completion_criteria:completionCriteria
+  };
+
   const preflight=evaluateQuarantinePreflight(current,requested);
   if(!preflight.allow){
     return {
@@ -216,7 +240,7 @@ async function runExecutionProposal({
       runtime:clone(current),
       patches:clone(requested),
       event:{turn_id:request.task_id},
-      context:clone(authorization_context||{}),
+      context:clone(authorizationContext),
       source_step,
       source_revision
     });
@@ -238,7 +262,7 @@ async function runExecutionProposal({
         source_step,
         source_revision,
         runtime:current,
-        authorization_context,
+        authorization_context:authorizationContext,
         expected_spatialruntime_commit_sha
       }
     );

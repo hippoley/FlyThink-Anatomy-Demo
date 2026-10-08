@@ -47,6 +47,21 @@ function stateAt(tick,pct,extra={}){
     });
     const out=await executePhysicalTurn(initial,[{op:"PATCH_SLOT",target,slot:"opening",value:30}],driver);
     assert.equal(out.receipts[0].status,"applied");
+    assert.match(out.receipts[0].completion_criterion_sha256,/^[0-9a-f]{64}$/);
+    assert.equal(
+      out.receipts[0].completion_criterion.requested_position_pct,
+      30
+    );
+    assert.equal(
+      out.receipts[0].completion_criterion.witness_method,
+      "windowpilot-state-readback"
+    );
+    assert.equal(out.receipts[0].witness.witness_id,"windowpilot-state:hw-1");
+    assert.equal(out.receipts[0].witness.independent,false);
+    assert.ok(
+      out.receipts[0].criterion_fixed_at_ms<=
+      out.receipts[0].observation_window.ack_at_ms
+    );
     assert.equal(out.runtime.devices[key].slots.opening,30);
     assert.ok(calls.some(x=>x.path==="/api/window/open"));
   }
@@ -66,6 +81,9 @@ function stateAt(tick,pct,extra={}){
     const out=await executePhysicalTurn(initial,[{op:"PATCH_SLOT",target,slot:"opening",value:40}],driver);
     assert.equal(out.receipts[0].status,"blocked");
     assert.equal(out.receipts[0].reason,"physical_write_not_ready");
+    assert.equal(out.receipts[0].completion_criterion,undefined);
+    assert.equal(out.receipts[0].completion_criterion_sha256,undefined);
+    assert.equal(out.receipts[0].witness,undefined);
     assert.equal(out.runtime.devices[key].slots.opening,0);
     assert.equal(calls.filter(x=>x.method==="POST").length,0);
   }
@@ -308,5 +326,5 @@ function stateAt(tick,pct,extra={}){
     assert.match(out.receipts[0].safety_stop.readback_error,/post-stop-readback-failed/);
   }
 
-  console.log(JSON.stringify({ok:true,cases:11,contract:"WindowPilot ACK != Reality; applied requires post-ACK fresh readback from WindowPilot state, stable hardware identity, and confirmed STOP recovery"}));
+  console.log(JSON.stringify({ok:true,cases:11,contract:"WindowPilot ACK != Reality; completion evidence is created only after the physical boundary and carries the authorization-time deterministic criterion plus identified witness"}));
 })().catch(e=>{console.error(e);process.exit(1)});

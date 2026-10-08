@@ -103,13 +103,23 @@ function authorization(before){
     registry_digest:digestObject({
       "客厅::窗::default":{model_id:"CWDS-CA01"}
     }),
-    authorization_id:"a".repeat(64),
+    spatialruntime_commit_sha:null,
+    trace_hash:"c".repeat(64),
     single_use:true,
     case_id:"task-1",
     source_step:3,
     source_revision:8,
     authorized_patches:[action]
   };
+  base.authorization_id=digestObject({
+    case_id:base.case_id,
+    source_step:base.source_step,
+    source_revision:base.source_revision,
+    patch_digest:base.patch_digest,
+    registry_digest:base.registry_digest,
+    spatialruntime_commit_sha:base.spatialruntime_commit_sha,
+    trace_hash:base.trace_hash
+  });
   return {...base,receipt_sha256:digestObject(base)};
 }
 function physicalReceipt(){

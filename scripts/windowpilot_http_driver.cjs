@@ -1,6 +1,14 @@
 "use strict";
 
+const crypto=require("crypto");
+const {canonical}=require("./execution_reasoning_contract.cjs");
+
 function clone(v){return v==null?v:JSON.parse(JSON.stringify(v))}
+function digestObject(v){
+  return crypto.createHash("sha256")
+    .update(JSON.stringify(canonical(v)))
+    .digest("hex");
+}
 function sleep(ms){return ms>0?new Promise(r=>setTimeout(r,ms)):Promise.resolve()}
 function key(t){return t&&[t.area,t.entity,t.instance||"default"].join("::")}
 function sameTarget(a,b){return !!a&&!!b&&key(a)===key(b)}
@@ -107,6 +115,36 @@ class WindowPilotHttpDriver {
     throw new Error("windowpilot_unsupported_slot:"+String(patch.slot));
   }
 
+  completionCriterionForPatch(patch){
+    const targetPct=this._targetPct(patch);
+    const criterion={
+      version:"windowpilot-completion-criterion.v1",
+      target:clone(this.target),
+      slot:this.canonicalPositionSlot,
+      predicate:"abs(observed_position_pct-requested_position_pct)<=tolerance_pct",
+      requested_position_pct:Number(targetPct),
+      tolerance_pct:Number(this.tolerancePct),
+      require_fresh_readback:this.requireFreshReadback===true,
+      witness_source:"windowpilot:/api/state",
+      witness_method:"windowpilot-state-readback",
+      expected_hardware_identity_sha256:this.expectedHardwareIdentity||null
+    };
+    return {
+      criterion,
+      criterion_sha256:digestObject(criterion)
+    };
+  }
+
+  _witness(identity){
+    return {
+      witness_id:"windowpilot-state:"+String(identity||"unknown"),
+      source:"windowpilot:/api/state",
+      method:"windowpilot-state-readback",
+      hardware_identity_sha256:identity||null,
+      independent:false
+    };
+  }
+
   _observation(patch,state,pct,meta={}){
     const slots={[this.canonicalPositionSlot]:pct};
     if(patch.op==="ADD_DEVICE"||patch.slot==="power"){
@@ -189,6 +227,10 @@ class WindowPilotHttpDriver {
       if(Number(tm.wind_speed_ms||0)>=10)return this._blocked(patch,before,beforePct,"high_wind",readiness);
     }
 
+    const criterionFixedAtMs=Date.now();
+    const completion=this.completionCriterionForPatch(patch);
+    const witness=this._witness(identity);
+
     let ack;
     if(targetPct<=this.tolerancePct)ack=await this._request("POST","/api/window/close",{});
     else ack=await this._request("POST","/api/window/open",{target_pct:targetPct});
@@ -202,8 +244,17 @@ class WindowPilotHttpDriver {
         status:"rejected",
         reason:"command_not_acknowledged",
         patch:clone(patch),
+        completion_criterion:clone(completion.criterion),
+        completion_criterion_sha256:completion.criterion_sha256,
+        witness:clone(witness),
+        criterion_fixed_at_ms:criterionFixedAtMs,
         ack:clone(ack),
-        observation:this._observation(patch,current,pct,{ackAtMs,receivedAtMs:Date.now()})
+        observation:this._observation(patch,current,pct,{ackAtMs,receivedAtMs:Date.now()}),
+        observation_window:{
+          criterion_fixed_at_ms:criterionFixedAtMs,
+          ack_at_ms:ackAtMs,
+          received_at_ms:Date.now()
+        }
       };
       this.commands.push(receipt);
       return receipt;
@@ -235,6 +286,10 @@ class WindowPilotHttpDriver {
               status:"uncertain",
               reason:"hardware_identity_changed_after_actuation",
               patch:clone(patch),
+              completion_criterion:clone(completion.criterion),
+              completion_criterion_sha256:completion.criterion_sha256,
+              witness:clone(witness),
+              criterion_fixed_at_ms:criterionFixedAtMs,
               ack:clone(ack),
               requested_position_pct:targetPct,
               polls,
@@ -243,7 +298,12 @@ class WindowPilotHttpDriver {
               readiness_after:clone(readinessAfter),
               hardware_identity_before:identity,
               hardware_identity_after:identityAfter,
-              observation:this._observation(patch,last,lastPct,{ackAtMs,receivedAtMs})
+              observation:this._observation(patch,last,lastPct,{ackAtMs,receivedAtMs}),
+              observation_window:{
+                criterion_fixed_at_ms:criterionFixedAtMs,
+                ack_at_ms:ackAtMs,
+                received_at_ms:receivedAtMs
+              }
             };
             this.commands.push(receipt);
             return receipt;
@@ -253,6 +313,10 @@ class WindowPilotHttpDriver {
           id:"windowpilot:"+(this.commands.length+1),
           status:"applied",
           patch:clone(patch),
+          completion_criterion:clone(completion.criterion),
+          completion_criterion_sha256:completion.criterion_sha256,
+          witness:clone(witness),
+          criterion_fixed_at_ms:criterionFixedAtMs,
           ack:clone(ack),
           requested_position_pct:targetPct,
           polls,
@@ -261,7 +325,12 @@ class WindowPilotHttpDriver {
           readiness_after:clone(readinessAfter),
           hardware_identity_before:identity,
           hardware_identity_after:identityAfter,
-          observation:this._observation(patch,last,lastPct,{ackAtMs,receivedAtMs})
+          observation:this._observation(patch,last,lastPct,{ackAtMs,receivedAtMs}),
+              observation_window:{
+                criterion_fixed_at_ms:criterionFixedAtMs,
+                ack_at_ms:ackAtMs,
+                received_at_ms:receivedAtMs
+              }
         };
         this.commands.push(receipt);
         return receipt;
@@ -297,6 +366,10 @@ class WindowPilotHttpDriver {
         ?"safety_stop_not_confirmed"
         :"position_not_observed_within_tolerance",
       patch:clone(patch),
+      completion_criterion:clone(completion.criterion),
+      completion_criterion_sha256:completion.criterion_sha256,
+      witness:clone(witness),
+      criterion_fixed_at_ms:criterionFixedAtMs,
       ack:clone(ack),
       requested_position_pct:targetPct,
       polls,
@@ -309,7 +382,12 @@ class WindowPilotHttpDriver {
           ackAtMs,
           receivedAtMs:safetyStop.readback_received_at_ms||Date.now()
         }
-      )
+      ),
+      observation_window:{
+        criterion_fixed_at_ms:criterionFixedAtMs,
+        ack_at_ms:ackAtMs,
+        received_at_ms:safetyStop.readback_received_at_ms||Date.now()
+      }
     };
     this.commands.push(receipt);
     return receipt;

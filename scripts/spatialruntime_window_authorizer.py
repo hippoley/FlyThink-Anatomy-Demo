@@ -110,6 +110,23 @@ def authorize(request: Mapping[str, Any]) -> dict[str, Any]:
     if not isinstance(patches, list) or not patches:
         raise ValueError("authorization_patches_required")
 
+    completion_criteria = request.get("completion_criteria") or []
+    if not isinstance(completion_criteria, list):
+        raise ValueError("authorization_completion_criteria_invalid")
+    if completion_criteria and len(completion_criteria) != len(patches):
+        raise ValueError("authorization_completion_criteria_count_mismatch")
+    for index, row in enumerate(completion_criteria):
+        if not isinstance(row, Mapping):
+            raise ValueError(f"authorization_completion_criterion_invalid:{index}")
+        criterion = row.get("criterion")
+        criterion_sha256 = str(row.get("criterion_sha256") or "")
+        if not isinstance(criterion, Mapping):
+            raise ValueError(f"authorization_completion_criterion_object_required:{index}")
+        if criterion_sha256 != digest(criterion):
+            raise ValueError(f"authorization_completion_criterion_sha_mismatch:{index}")
+
+    completion_criteria_sha256 = digest(completion_criteria)
+
     spatial_context = request.get("spatial_context") or {}
     if not isinstance(spatial_context, Mapping):
         raise ValueError("authorization_spatial_context_invalid")
@@ -264,6 +281,7 @@ def authorize(request: Mapping[str, Any]) -> dict[str, Any]:
         "source_revision": revision,
         "patch_digest": patch_digest,
         "registry_digest": computed_registry_digest,
+        "completion_criteria_sha256": completion_criteria_sha256,
         "spatialruntime_commit_sha": spatialruntime_commit_sha,
         "trace_hash": trace.get("trace_hash"),
     })
@@ -279,6 +297,8 @@ def authorize(request: Mapping[str, Any]) -> dict[str, Any]:
         "authorized_patches": authorized_for_receipt,
         "patch_digest": patch_digest,
         "registry_digest": computed_registry_digest,
+        "completion_criteria": completion_criteria,
+        "completion_criteria_sha256": completion_criteria_sha256,
         "authorization_id": authorization_id,
         "single_use": True,
         "blocked": blocked,
