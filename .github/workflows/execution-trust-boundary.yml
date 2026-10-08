@@ -16,6 +16,7 @@ on:
       - "scripts/flythink_execution_runtime.cjs"
       - "scripts/execution_receipt.cjs"
       - "scripts/execution_proof_bundle.cjs"
+      - "scripts/build_public_execution_proof_sample.cjs"
       - "scripts/verify_physical_completion_vector_cli.cjs"
       - "scripts/execution_reasoning_contract.cjs"
       - "scripts/decision_proposal_contract.cjs"
@@ -29,6 +30,7 @@ on:
       - "tests/flythink_execution_runtime.cjs"
       - "tests/execution_receipt.cjs"
       - "tests/execution_proof_bundle.cjs"
+      - "tests/public_execution_proof_sample.cjs"
       - "tests/physical_completion_external_rail.cjs"
       - ".github/workflows/execution-trust-boundary.yml"
       - "benchmarks/execution_reasoning_contract_cases.json"
@@ -36,6 +38,7 @@ on:
       - "contracts/execution-proof-bundle.v1.schema.json"
       - "interop/claim-scope/claim-scope-cases.v0.1.json"
       - "interop/physical-completion/**"
+      - "interop/execution-proof/**"
       - "interop/aer1-physical-completion/**"
       - "tests/claim_scope_interop.cjs"
       - "tests/execution_reasoning_contract.cjs"
@@ -103,11 +106,13 @@ jobs:
           node --check scripts/flythink_execution_runtime.cjs
           node --check scripts/execution_receipt.cjs
           node --check scripts/execution_proof_bundle.cjs
+          node --check scripts/build_public_execution_proof_sample.cjs
           node --check scripts/verify_physical_completion_vector_cli.cjs
           node --check tests/physical_completion_external_rail.cjs
           node --check tests/flythink_execution_runtime.cjs
           node --check tests/execution_receipt.cjs
           node --check tests/execution_proof_bundle.cjs
+          node --check tests/public_execution_proof_sample.cjs
           node --check tests/execution_reasoning_contract.cjs
           node --check tests/decision_proposal_contract.cjs
           node --check tests/contextual_edge_slu_adapter.cjs
@@ -151,6 +156,8 @@ jobs:
         run: node tests/execution_receipt.cjs
       - name: Prove portable execution proof bundle binding
         run: node tests/execution_proof_bundle.cjs
+      - name: Prove public execution proof quickstart
+        run: node tests/public_execution_proof_sample.cjs
       - name: Prove external physical completion verifier rail
         run: node tests/physical_completion_external_rail.cjs
       - name: Smoke external rail on public sample vector
