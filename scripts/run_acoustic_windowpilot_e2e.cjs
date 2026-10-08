@@ -537,6 +537,9 @@ if(require.main===module){
 }
 
 module.exports={
+  patchToDecisionMutation,
+  buildCanonicalDecisionProposal,
+  loadCanonicalSceneIdentity,
   initialRuntimeFromPhysical,
   assertLiveProbePreconditions,
   closeout,
