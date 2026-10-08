@@ -99,7 +99,8 @@ function deriveVerification(artifacts){
       evidence_digest:execution.evidence_digest,
       result:execution.result,
       physical_committed:execution.physical_committed,
-      physical_truth_verified:execution.physical_truth_verified
+      physical_truth_verified:execution.physical_truth_verified,
+      physical_completion_verified:execution.physical_completion_verified
     }
   };
 }
@@ -174,7 +175,20 @@ function verifyExecutionProofBundle(bundle={}){
   }
 
   const expectedVerification=deriveVerification(bundle.artifacts);
-  if(digestObject(bundle.verification)!==digestObject(expectedVerification))
+  const legacyVerification=clone(expectedVerification);
+  if(
+    legacyVerification&&legacyVerification.execution&&
+    Object.prototype.hasOwnProperty.call(
+      legacyVerification.execution,
+      "physical_completion_verified"
+    )
+  ){
+    delete legacyVerification.execution.physical_completion_verified;
+  }
+  const verificationMatches=
+    digestObject(bundle.verification)===digestObject(expectedVerification)||
+    digestObject(bundle.verification)===digestObject(legacyVerification);
+  if(!verificationMatches)
     throw new Error("execution_proof_bundle_verification_mismatch");
 
   return {
@@ -188,6 +202,8 @@ function verifyExecutionProofBundle(bundle={}){
       expectedVerification.execution.physical_committed,
     physical_truth_verified:
       expectedVerification.execution.physical_truth_verified,
+    physical_completion_verified:
+      expectedVerification.execution.physical_completion_verified,
     result:expectedVerification.execution.result
   };
 }
