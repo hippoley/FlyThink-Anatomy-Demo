@@ -94,6 +94,18 @@ See [`docs/standards/claim-scope-execution-evidence.md`](docs/standards/claim-sc
 for the current crosswalk across OpenTelemetry GenAI tool spans, AER-1,
 Agent Passport System receipts, SCITT Physical-Site Engagement Receipts, and
 FlyThink's own execution proof boundary.
+## Maturity discipline
+
+This repository contains durable execution contracts **and** older research/playground layers. They are not equivalent claims.
+
+- durable interoperability surface: decision/execution contracts, authorization verification, physical evidence, proof bundles, reconciliation and offline verification;
+- research surface: browser dialogue tools, FlyWire/anatomy experiments, generated corpora and policy-learning experiments;
+- external owner: semantic conversation/task truth lives in NLUSLOT;
+- reality-pending: retained real-hardware Golden Proof and non-FlyThink downstream consumption;
+- intentionally blocked: service inputs, nested-value writes and other operations that cannot yet be fully schema-validated.
+
+See `docs/user-story-maturity.md` before promoting a research capability into a public claim.
+
 ## Repository boundary
 
 FlyThink is a **consumer/backend**, not the canonical owner of Contextual Edge
