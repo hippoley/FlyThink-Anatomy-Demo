@@ -198,6 +198,9 @@ async function semanticOnlyFinalMustProduceHandoffWithoutPhysicalWrite(){
   assert.equal(out.trace[0].handoff_ready,false);
   assert.equal(out.trace[1].commit_gate.allow,true);
   assert.equal(out.trace[1].handoff_ready,true);
+  assert.equal(out.trace[1].physical_authorization,null);
+  assert.equal(out.trace[1].physical_authorization_binding,null);
+  assert.deepEqual(out.trace[1].authorized_patch_proposal,[patch("主卧",24)]);
   assert.equal(out.trace[1].committed,false);
   assert.deepEqual(out.trace[1].patch_proposal,[patch("主卧",24)]);
   assert.deepEqual(out.trace[1].reconcile.changed_device_paths,[]);
