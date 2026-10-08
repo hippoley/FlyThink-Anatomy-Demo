@@ -132,13 +132,17 @@ def build_models(graph,target_params,seed):
         target_params or fly_params,
     )
 
+    torch.manual_seed(seed); mlp=MLPBaseline(mlp_h)
+    torch.manual_seed(seed); gru=GRUBaseline(gru_h)
+    torch.manual_seed(seed); transformer=TinyTransformerBaseline(tr_d)
+
     return {
         "flywire-real":real,
         "flywire-rewired":rewired,
         "flywire-disconnected":disconnected,
-        "mlp":MLPBaseline(mlp_h),
-        "gru":GRUBaseline(gru_h),
-        "tiny-transformer":TinyTransformerBaseline(tr_d),
+        "mlp":mlp,
+        "gru":gru,
+        "tiny-transformer":transformer,
     }, {
         "target_params":target_params or fly_params,
         "flywire_params":fly_params,
