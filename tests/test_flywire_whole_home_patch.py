@@ -12,6 +12,7 @@ def test_predictor_supervision_is_patch_not_snapshot():
     rows=turns()
     assert rows and all(t["must_preserve_untouched_state"] for t in rows)
     seen={p["op"] for t in rows for p in t["gold_patches"]}
+    assert set(build()["required_operations"]) == OPS
     assert OPS <= seen
 
 def test_additive_also_and_explicit_replace_have_distinct_operation_labels():
