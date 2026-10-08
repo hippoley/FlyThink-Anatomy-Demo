@@ -52,6 +52,64 @@ function physicalEvidenceRow(receipt,index){
   const hardwareBefore=receipt&&receipt.hardware_identity_before||null;
   const hardwareAfter=receipt&&receipt.hardware_identity_after||null;
   const measured=observation&&observation.evidence&&observation.evidence.measured===true;
+  const completionCriterion=clone(receipt&&receipt.completion_criterion||null);
+  const completionCriterionSha=receipt&&receipt.completion_criterion_sha256||null;
+  const witness=clone(receipt&&receipt.witness||null);
+  const observationWindow=clone(receipt&&receipt.observation_window||null);
+  const criterionFixedAt=Number(
+    receipt&&receipt.criterion_fixed_at_ms!=null
+      ?receipt.criterion_fixed_at_ms
+      :completionCriterion&&completionCriterion.fixed_at_ms
+  );
+  const criterionDigestVerified=
+    !!completionCriterion&&
+    isDigest(completionCriterionSha)&&
+    digestObject(completionCriterion)===completionCriterionSha;
+  const criterionPrecommitted=
+    criterionDigestVerified&&
+    Number.isFinite(criterionFixedAt)&&
+    times.ack_at_ms!=null&&
+    criterionFixedAt<=times.ack_at_ms;
+  const witnessIdentified=
+    !!witness&&
+    typeof witness.witness_id==="string"&&witness.witness_id.length>0&&
+    typeof witness.source==="string"&&witness.source.length>0&&
+    typeof witness.method==="string"&&witness.method.length>0&&
+    typeof witness.hardware_identity_sha256==="string"&&
+    witness.hardware_identity_sha256.length>0&&
+    witness.hardware_identity_sha256===hardwareBefore&&
+    witness.hardware_identity_sha256===hardwareAfter;
+  const observationMethodVerified=
+    witnessIdentified&&
+    !!observation&&!!observation.evidence&&
+    observation.evidence.source===witness.source&&
+    completionCriterion&&
+    completionCriterion.witness_source===witness.source&&
+    completionCriterion.witness_method===witness.method;
+  const observationWindowVerified=
+    !!observationWindow&&
+    Number(observationWindow.criterion_fixed_at_ms)===criterionFixedAt&&
+    Number(observationWindow.ack_at_ms)===times.ack_at_ms&&
+    Number(observationWindow.received_at_ms)===times.received_at_ms&&
+    Number.isFinite(criterionFixedAt)&&
+    times.ack_at_ms!=null&&times.received_at_ms!=null&&
+    criterionFixedAt<=times.ack_at_ms&&
+    times.ack_at_ms<=times.received_at_ms;
+  const observedPosition=Number(
+    observation&&observation.evidence&&observation.evidence.position_pct
+  );
+  const requestedPosition=Number(
+    completionCriterion&&completionCriterion.requested_position_pct
+  );
+  const tolerance=Number(
+    completionCriterion&&completionCriterion.tolerance_pct
+  );
+  const criterionSatisfied=
+    criterionDigestVerified&&
+    Number.isFinite(observedPosition)&&
+    Number.isFinite(requestedPosition)&&
+    Number.isFinite(tolerance)&&tolerance>=0&&
+    Math.abs(observedPosition-requestedPosition)<=tolerance;
 
   const targetMatch=
     !!logicalTarget&&
@@ -96,12 +154,23 @@ function physicalEvidenceRow(receipt,index){
       after:clone(receipt&&receipt.readiness_after||null)
     },
     safety_stop:clone(receipt&&receipt.safety_stop||null),
+    completion_criterion:completionCriterion,
+    completion_criterion_sha256:completionCriterionSha,
+    witness,
+    criterion_fixed_at_ms:Number.isFinite(criterionFixedAt)?criterionFixedAt:null,
+    observation_window:observationWindow,
     checks:{
       target_match:targetMatch,
       ack_verified:ackVerified,
       fresh_readback_verified:freshReadback,
       hardware_identity_stable:identityStable,
-      measured_readback:measured
+      measured_readback:measured,
+      completion_criterion_digest_verified:criterionDigestVerified,
+      completion_criterion_precommitted:criterionPrecommitted,
+      witness_identified:witnessIdentified,
+      observation_method_verified:observationMethodVerified,
+      observation_window_verified:observationWindowVerified,
+      completion_criterion_satisfied:criterionSatisfied
     }
   };
 }
@@ -293,7 +362,29 @@ function buildExecutionReceipt({
     hardware_identity_verified:
       verifiedRows.length>0&&verifiedRows.every(x=>x.checks.hardware_identity_stable),
     measured_readback_verified:
-      verifiedRows.length>0&&verifiedRows.every(x=>x.checks.measured_readback)
+      verifiedRows.length>0&&verifiedRows.every(x=>x.checks.measured_readback),
+    completion_criterion_digest_verified:
+      verifiedRows.length>0&&verifiedRows.every(
+        x=>x.checks.completion_criterion_digest_verified
+      ),
+    completion_criterion_precommitted_verified:
+      verifiedRows.length>0&&verifiedRows.every(
+        x=>x.checks.completion_criterion_precommitted
+      ),
+    physical_witness_identified_verified:
+      verifiedRows.length>0&&verifiedRows.every(x=>x.checks.witness_identified),
+    observation_method_verified:
+      verifiedRows.length>0&&verifiedRows.every(
+        x=>x.checks.observation_method_verified
+      ),
+    observation_window_verified:
+      verifiedRows.length>0&&verifiedRows.every(
+        x=>x.checks.observation_window_verified
+      ),
+    completion_criterion_satisfied_verified:
+      verifiedRows.length>0&&verifiedRows.every(
+        x=>x.checks.completion_criterion_satisfied
+      )
   };
   verification.physical_truth_verified=
     physical_committed===true&&
@@ -314,6 +405,14 @@ function buildExecutionReceipt({
     verification.fresh_readback_verified&&
     verification.hardware_identity_verified&&
     verification.measured_readback_verified;
+  verification.physical_completion_verified=
+    verification.physical_truth_verified&&
+    verification.completion_criterion_digest_verified&&
+    verification.completion_criterion_precommitted_verified&&
+    verification.physical_witness_identified_verified&&
+    verification.observation_method_verified&&
+    verification.observation_window_verified&&
+    verification.completion_criterion_satisfied_verified;
 
   if(
     physical_committed===true&&
@@ -507,7 +606,12 @@ function verifyExecutionReceipt(receipt={},{
       hardware_identity_after:row.hardware_identity&&row.hardware_identity.after,
       readiness_before:row.readiness&&row.readiness.before,
       readiness_after:row.readiness&&row.readiness.after,
-      safety_stop:row.safety_stop
+      safety_stop:row.safety_stop,
+      completion_criterion:row.completion_criterion,
+      completion_criterion_sha256:row.completion_criterion_sha256,
+      witness:row.witness,
+      criterion_fixed_at_ms:row.criterion_fixed_at_ms,
+      observation_window:row.observation_window
     };
     return physicalEvidenceRow(synthetic,index);
   });
@@ -591,7 +695,29 @@ function verifyExecutionReceipt(receipt={},{
     hardware_identity_verified:
       applied.length>0&&applied.every(x=>x.checks.hardware_identity_stable),
     measured_readback_verified:
-      applied.length>0&&applied.every(x=>x.checks.measured_readback)
+      applied.length>0&&applied.every(x=>x.checks.measured_readback),
+    completion_criterion_digest_verified:
+      applied.length>0&&applied.every(
+        x=>x.checks.completion_criterion_digest_verified
+      ),
+    completion_criterion_precommitted_verified:
+      applied.length>0&&applied.every(
+        x=>x.checks.completion_criterion_precommitted
+      ),
+    physical_witness_identified_verified:
+      applied.length>0&&applied.every(x=>x.checks.witness_identified),
+    observation_method_verified:
+      applied.length>0&&applied.every(
+        x=>x.checks.observation_method_verified
+      ),
+    observation_window_verified:
+      applied.length>0&&applied.every(
+        x=>x.checks.observation_window_verified
+      ),
+    completion_criterion_satisfied_verified:
+      applied.length>0&&applied.every(
+        x=>x.checks.completion_criterion_satisfied
+      )
   };
   expectedVerification.physical_truth_verified=
     physical.committed===true&&
@@ -612,6 +738,14 @@ function verifyExecutionReceipt(receipt={},{
     expectedVerification.fresh_readback_verified&&
     expectedVerification.hardware_identity_verified&&
     expectedVerification.measured_readback_verified;
+  expectedVerification.physical_completion_verified=
+    expectedVerification.physical_truth_verified&&
+    expectedVerification.completion_criterion_digest_verified&&
+    expectedVerification.completion_criterion_precommitted_verified&&
+    expectedVerification.physical_witness_identified_verified&&
+    expectedVerification.observation_method_verified&&
+    expectedVerification.observation_window_verified&&
+    expectedVerification.completion_criterion_satisfied_verified;
   if(digestObject(verification)!==digestObject(expectedVerification))
     throw new Error("execution_receipt_verification_summary_mismatch");
 
@@ -638,7 +772,9 @@ function verifyExecutionReceipt(receipt={},{
     evidence_digest:receipt.evidence_digest,
     result:receipt.result,
     physical_committed:physical.committed===true,
-    physical_truth_verified:expectedVerification.physical_truth_verified
+    physical_truth_verified:expectedVerification.physical_truth_verified,
+    physical_completion_verified:
+      expectedVerification.physical_completion_verified===true
   };
 }
 
