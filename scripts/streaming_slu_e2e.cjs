@@ -163,10 +163,18 @@ function receiptFailure(receipts){
 }
 
 class StreamingHomeSession{
-  constructor({initialRuntime={},predictor,driver=null,physicalAuthorizer=null,physicalAuthorizationTolerancePct=1}={}){
+  constructor({
+    initialRuntime={},
+    predictor,
+    driver=null,
+    physicalAuthorizer=null,
+    physicalAuthorizationTolerancePct=1,
+    semanticOnly=false
+  }={}){
     if(typeof predictor!=="function")throw new Error("streaming_predictor_required");
     this.runtime=normalizeRuntime(initialRuntime);
     this.predictor=predictor;
+    this.semanticOnly=semanticOnly===true;
     this.driver=driver||new MockThingDriver(this.runtime);
     this.physicalAuthorizer=physicalAuthorizer;
     this.physicalAuthorizationTolerancePct=Number(physicalAuthorizationTolerancePct);
@@ -217,7 +225,10 @@ class StreamingHomeSession{
     let physicalAuthorization=null;
     let physicalAuthorizationBinding=null;
     let authorizedPatches=clone(patches);
-    if(gate.allow){
+    let handoffReady=false;
+    if(gate.allow&&this.semanticOnly){
+      handoffReady=true;
+    }else if(gate.allow){
       const preflight=evaluateQuarantinePreflight(this.runtime,patches);
       if(!preflight.allow){
         const keys=preflight.violations.map(x=>x.device_key).join(",");
@@ -295,10 +306,20 @@ class StreamingHomeSession{
     const after=normalizeRuntime(this.runtime);
     const afterCommands=this.commandCount();
 
-    if(!gate.allow){
-      if(!eq(before,after))throw new Error("speculative_hypothesis_mutated_runtime");
+    if(!gate.allow||this.semanticOnly){
+      if(!eq(before,after)){
+        throw new Error(
+          this.semanticOnly
+            ?"semantic_only_hypothesis_mutated_runtime"
+            :"speculative_hypothesis_mutated_runtime"
+        );
+      }
       if(beforeCommands!=null&&afterCommands!==beforeCommands){
-        throw new Error("speculative_hypothesis_reached_physical_driver");
+        throw new Error(
+          this.semanticOnly
+            ?"semantic_only_hypothesis_reached_physical_driver"
+            :"speculative_hypothesis_reached_physical_driver"
+        );
       }
     }
 
@@ -332,6 +353,7 @@ class StreamingHomeSession{
         targets:targetsOf(patches)
       },
       patch_proposal:clone(patches),
+      handoff_ready:handoffReady,
       physical_authorization:clone(physicalAuthorization),
       physical_authorization_binding:clone(physicalAuthorizationBinding),
       authorized_patch_proposal:clone(authorizedPatches),
@@ -355,6 +377,7 @@ class StreamingHomeSession{
         text:event.text,
         outcome:error?"INVALID":(prediction&&prediction.decision||null),
         predicted:prediction&&prediction.decision||null,
+        handoff_ready:handoffReady,
         committed,
         semantic_patches:clone(patches),
         applied_patches:committed?clone(authorizedPatches):[],
