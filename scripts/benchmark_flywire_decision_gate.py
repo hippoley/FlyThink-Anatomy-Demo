@@ -22,6 +22,7 @@ from train_flywire_delta import (
     GRAPH_SHA,
     STATE_DIM,
     TEXT_DIM,
+    OPS,
     DeltaNet,
     corpus,
     heads,
@@ -161,7 +162,7 @@ def required_head_indices(row):
     idx=[0,1,2]
     if count>0:
         idx.extend([3,4,5])
-        if op in (0,1): # add / revise in the frozen corpus vocabulary
+        if op in (OPS.index("add"),OPS.index("revise")):
             idx.append(6)
     if count>1:
         idx.extend([7,8,9,10])
@@ -275,7 +276,7 @@ def neutral_objective(z,y):
     target=y[:,1]>0
     if target.any():
         loss+=sum(torch.nn.functional.cross_entropy(h[j][target],y[target,j]) for j in (3,4,5))
-    valued=(y[:,0]==0)|(y[:,0]==1)
+    valued=(y[:,0]==OPS.index("add"))|(y[:,0]==OPS.index("revise"))
     if valued.any():
         loss+=torch.nn.functional.cross_entropy(h[6][valued],y[valued,6])
     second=y[:,1]>1
@@ -332,7 +333,7 @@ def evaluate(model,data,commit_threshold="calibrate"):
         gold_target=gold[:,3:6]
         wrong_target=(target_mask & ~(predicted_target==gold_target).all(1))
 
-        ood_index=7
+        ood_index=OPS.index("ood")
         ood_gold=gold[:,0]==ood_index
         ood_false_commit=ood_gold & (pred[:,0]!=ood_index)
 
