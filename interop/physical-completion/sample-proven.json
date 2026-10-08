@@ -1,0 +1,101 @@
+{
+  "schema_version": "flythink.physical-completion-vector.v0.1",
+  "authorized_completion_criterion": {
+    "criterion": {
+      "version": "windowpilot-completion-criterion.v1",
+      "target": {
+        "area": "客厅",
+        "entity": "窗",
+        "instance": "default"
+      },
+      "slot": "opening",
+      "predicate": "abs(observed_position_pct-requested_position_pct)<=tolerance_pct",
+      "requested_position_pct": 5,
+      "tolerance_pct": 1,
+      "require_fresh_readback": true,
+      "witness_source": "windowpilot:/api/state",
+      "witness_method": "windowpilot-state-readback",
+      "expected_hardware_identity_sha256": "hw-demo"
+    },
+    "criterion_sha256": "b1f91de35b87ea928cf2dc183d7ccc7f31a954df590b39989cf77108a330457c"
+  },
+  "physical_receipt": {
+    "patch": {
+      "op": "PATCH_SLOT",
+      "target": {
+        "area": "客厅",
+        "entity": "窗",
+        "instance": "default"
+      },
+      "slot": "opening",
+      "value": 5
+    },
+    "physical_patch": {
+      "op": "PATCH_SLOT",
+      "target": {
+        "area": "客厅",
+        "entity": "窗",
+        "instance": "default"
+      },
+      "slot": "opening",
+      "value": 5
+    },
+    "command_id": "windowpilot:demo-1",
+    "status": "applied",
+    "observation": {
+      "target": {
+        "area": "客厅",
+        "entity": "窗",
+        "instance": "default"
+      },
+      "exists": true,
+      "slots": {
+        "opening": 5
+      },
+      "evidence": {
+        "source": "windowpilot:/api/state",
+        "position_pct": 5,
+        "measured": true,
+        "tick": 11,
+        "ack_at_ms": 1000,
+        "received_at_ms": 1001
+      }
+    },
+    "ack": {
+      "ok": true
+    },
+    "before_tick": 10,
+    "requested_position_pct": 5,
+    "hardware_identity_before": "hw-demo",
+    "hardware_identity_after": "hw-demo",
+    "completion_criterion": {
+      "version": "windowpilot-completion-criterion.v1",
+      "target": {
+        "area": "客厅",
+        "entity": "窗",
+        "instance": "default"
+      },
+      "slot": "opening",
+      "predicate": "abs(observed_position_pct-requested_position_pct)<=tolerance_pct",
+      "requested_position_pct": 5,
+      "tolerance_pct": 1,
+      "require_fresh_readback": true,
+      "witness_source": "windowpilot:/api/state",
+      "witness_method": "windowpilot-state-readback",
+      "expected_hardware_identity_sha256": "hw-demo"
+    },
+    "completion_criterion_sha256": "b1f91de35b87ea928cf2dc183d7ccc7f31a954df590b39989cf77108a330457c",
+    "witness": {
+      "witness_id": "windowpilot-state:hw-demo",
+      "source": "windowpilot:/api/state",
+      "method": "windowpilot-state-readback",
+      "hardware_identity_sha256": "hw-demo"
+    },
+    "criterion_fixed_at_ms": 999,
+    "observation_window": {
+      "criterion_fixed_at_ms": 999,
+      "ack_at_ms": 1000,
+      "received_at_ms": 1001
+    }
+  }
+}
