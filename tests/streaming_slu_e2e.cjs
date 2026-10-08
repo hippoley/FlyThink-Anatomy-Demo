@@ -169,6 +169,36 @@ async function quarantinePreflightMustBlockBeforeDriver(){
   );
 }
 
+async function semanticOnlyFinalMustProduceHandoffWithoutPhysicalWrite(){
+  const initial=runtime();
+  const driver=new MockThingDriver(initial);
+  const predictor=async()=>({
+    decision:"EXECUTE",
+    confidence:0.99,
+    patches:[patch("主卧",24)]
+  });
+  const out=await runStreamingSequence([
+    {turn_id:"t-semantic",kind:"partial",text:"把主卧空调"},
+    {turn_id:"t-semantic",kind:"final",text:"把主卧空调调到24度"}
+  ],{
+    initialRuntime:initial,
+    predictor,
+    driver,
+    semanticOnly:true
+  });
+
+  assert.equal(out.physical_commands,0);
+  assert.equal(out.trace[0].handoff_ready,false);
+  assert.equal(out.trace[1].commit_gate.allow,true);
+  assert.equal(out.trace[1].handoff_ready,true);
+  assert.equal(out.trace[1].committed,false);
+  assert.deepEqual(out.trace[1].patch_proposal,[patch("主卧",24)]);
+  assert.deepEqual(out.trace[1].reconcile.changed_device_paths,[]);
+  assert.equal(out.runtime.devices[key("主卧")].slots.temperature,27);
+  assert.equal(out.history[0].handoff_ready,true);
+  assert.deepEqual(out.history[0].applied_patches,[]);
+}
+
 async function finalClarifyMustNotExecute(){
   const initial=runtime();
   const driver=new MockThingDriver(initial);
@@ -187,9 +217,10 @@ async function finalClarifyMustNotExecute(){
   await feedbackMustOwnReconciledTruth();
   await rejectedPhysicalReceiptMustNotBecomeCommit();
   await quarantinePreflightMustBlockBeforeDriver();
+  await semanticOnlyFinalMustProduceHandoffWithoutPhysicalWrite();
   await finalClarifyMustNotExecute();
   console.log(JSON.stringify({
     ok:true,
-    contract:"streaming ASR -> semantic -> quarantine preflight -> commit -> thing model -> feedback -> reconcile; forbidden quarantined writes make zero driver calls"
+    contract:"streaming ASR supports a semantic-only finalized handoff that cannot authorize, drive, or reconcile physical state"
   }));
 })().catch(e=>{console.error(e);process.exit(1)});
