@@ -3,7 +3,7 @@ from pathlib import Path
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/"scripts"))
 from whole_home_patch_corpus import build
 
-OPS={"ADD_DEVICE","PATCH_SLOT","CLOSE_DEVICE","REMOVE_DEVICE","REPLACE_TARGET","CANCEL_PENDING","UNDO_EXECUTED","PROTECT"}
+OPS={"ADD_DEVICE","PATCH_SLOT","PATCH_RELATIVE","CLOSE_DEVICE","REMOVE_DEVICE","REPLACE_TARGET","CANCEL_PENDING","UNDO_EXECUTED","PROTECT"}
 
 def turns():
     return [t for e in build()["episodes"] for t in e["turns"]]
@@ -29,3 +29,9 @@ def test_lifecycle_context_distinguishes_cancel_from_undo():
     assert by[("cancel_pending",2)]["lifecycle"]["pending_ids"]
     assert not by[("cancel_pending",2)]["lifecycle"]["executed_ids"]
     assert by[("undo_executed",2)]["lifecycle"]["executed_ids"]
+
+
+def test_relative_patch_is_not_hidden_outside_frozen_acceptance():
+    row=next(r for r in turns() if r["family"]=="relative_patch" and r["turn"]==2)
+    assert row["gold_patches"][0]["op"]=="PATCH_RELATIVE"
+    assert row["gold_patches"][0]["delta"]==-1
