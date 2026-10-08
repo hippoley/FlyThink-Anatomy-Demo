@@ -42,6 +42,26 @@ def parameter_count(model):
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
 
 
+def split_development_dialogues(data,turns_per_dialogue=10):
+    """Split development by whole dialogue, never by individual turn.
+
+    Even dialogue indices are used for checkpoint selection; odd dialogue
+    indices are held out for confidence-threshold calibration.
+    """
+    x,y,rows=data
+    if len(y)%turns_per_dialogue:
+        raise ValueError("development_rows_not_whole_dialogues")
+    selection=[]
+    calibration=[]
+    for i in range(len(y)):
+        dialogue=i//turns_per_dialogue
+        (selection if dialogue%2==0 else calibration).append(i)
+    def take(indices):
+        idx=torch.tensor(indices,dtype=torch.long)
+        return x[idx],y[idx],[rows[i] for i in indices]
+    return take(selection),take(calibration)
+
+
 class MLPBaseline(torch.nn.Module):
     def __init__(self, hidden):
         super().__init__()
@@ -395,7 +415,8 @@ def main():
     assert digest(a.graph)==GRAPH_SHA
 
     data=corpus(augment=True)
-    train,dev,sealed=[pack(data[k]) for k in ["train","test","sealed"]]
+    train,development,sealed=[pack(data[k]) for k in ["train","test","sealed"]]
+    dev_select,calibration=split_development_dialogues(development)
 
     report={
         "truth":"same_input_same_output_same_budget_flywire_decision_gate",
@@ -405,7 +426,8 @@ def main():
         "seeds":a.seeds,
         "limitations":[
             "No pretrained BERT/SLM comparison: this gate isolates bounded-kernel architecture.",
-            "The sealed suite is small; its commit threshold is fixed from development and never selected on sealed labels.",
+            "Development dialogues are split: one half selects checkpoints and the other half calibrates the commit threshold.",
+            "The sealed suite is small; its commit threshold is fixed from calibration and never selected on sealed labels.",
             "99%-precision coverage on the sealed suite is directional, not a production guarantee.",
             "Hashed text/state features are shared by all compared models and are not an open-language benchmark.",
             "Parameter matching is approximate and reported explicitly.",
@@ -418,16 +440,22 @@ def main():
         seed_row={"budget":budget,"models":{}}
         for name,model in models.items():
             torch.manual_seed(seed)
-            best,losses=fit(model,train,dev,a.epochs,a.learning_rate)
-            development=evaluate(model,dev,commit_threshold="calibrate")
-            threshold=development["commit_curve_99"]["threshold"]
+            best,losses=fit(model,train,dev_select,a.epochs,a.learning_rate)
+            selection_eval=evaluate(
+                model,dev_select,commit_threshold=None
+            )
+            calibration_eval=evaluate(
+                model,calibration,commit_threshold="calibrate"
+            )
+            threshold=calibration_eval["commit_curve_99"]["threshold"]
             sealed_eval=evaluate(model,sealed,commit_threshold=threshold)
             seed_row["models"][name]={
                 "params":parameter_count(model),
                 "selected_epoch":best["epoch"],
-                "development":development,
+                "development_selection":selection_eval,
+                "calibration":calibration_eval,
                 "sealed":sealed_eval,
-                "cpu_latency":latency_ms(model,dev[0]),
+                "cpu_latency":latency_ms(model,calibration[0]),
                 "loss":losses,
             }
         report["runs"][str(seed)]=seed_row
