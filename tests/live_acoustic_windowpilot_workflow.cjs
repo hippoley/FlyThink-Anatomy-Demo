@@ -35,7 +35,7 @@ assert.match(y,/--require-human-fixture/);
 
 const dryStart=y.indexOf("DRY_RUN human WAV");
 const applyStart=y.indexOf("APPLY human WAV");
-const verifyStart=y.indexOf("Independently verify human acoustic + hardware evidence");
+const verifyStart=y.indexOf("Independently verify canonical execution proof");
 const attestStart=y.indexOf("Attest validated live evidence provenance");
 assert.ok(dryStart>=0&&applyStart>dryStart&&verifyStart>applyStart&&attestStart>verifyStart);
 
