@@ -40,7 +40,7 @@ jobs:
           path: artifacts/flywire-decision-gate-smoke/
 
   full:
-    if: github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.head_ref == 'flywire-decision-gate-baselines')
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
