@@ -49,23 +49,28 @@ Still under active reality convergence:
 
 ### Verify a retained proof bundle
 
-A third party does not need to trust a FlyThink success flag. Given a retained bundle:
+A third party does not need to trust a FlyThink success flag.
+
+For a zero-setup quickstart, first generate the deterministic completion-proven sample from the canonical builders:
+
+```bash
+node scripts/build_public_execution_proof_sample.cjs
+node scripts/verify_execution_proof_bundle_cli.cjs \
+  interop/execution-proof/sample-completion-proven.json
+```
+
+The current sample verifies both `physical_truth_verified=true` and
+`physical_completion_verified=true`. It is synthetic interoperability evidence,
+not a real-hardware Golden Proof.
+
+For any retained bundle:
 
 ```bash
 node scripts/verify_execution_proof_bundle_cli.cjs path/to/execution-proof-bundle.json
 ```
 
-The command prints exactly one machine-readable verdict:
-
-```json
-{"verdict":"VERIFIED", "...":"..."}
-```
-
-or exits non-zero with:
-
-```json
-{"verdict":"INVALID","error":"..."}
-```
+The command prints exactly one machine-readable verdict or exits non-zero with
+`{"verdict":"INVALID","error":"..."}`.
 
 The CLI is only a thin entrypoint over the canonical verifier; it does not implement a second validation path.
 
