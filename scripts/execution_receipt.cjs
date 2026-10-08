@@ -209,7 +209,23 @@ function authorizationReceiptVerification(
     isDigest(authorization.patch_digest)&&
     authorization.patch_digest===digestObject(authorizedActions);
   const registryDigestVerified=isDigest(authorization.registry_digest);
-  const authorizationIdVerified=isDigest(authorization.authorization_id);
+  let authorizationIdVerified=false;
+  if(isDigest(authorization.authorization_id)){
+    const authorizationIdInput={
+      case_id:authorization.case_id,
+      source_step:authorization.source_step,
+      source_revision:authorization.source_revision,
+      patch_digest:authorization.patch_digest,
+      registry_digest:authorization.registry_digest,
+      ...(authorization.completion_criteria_sha256!=null
+        ?{completion_criteria_sha256:authorization.completion_criteria_sha256}
+        :{}),
+      spatialruntime_commit_sha:authorization.spatialruntime_commit_sha,
+      trace_hash:authorization.trace_hash
+    };
+    authorizationIdVerified=
+      authorization.authorization_id===digestObject(authorizationIdInput);
+  }
   const singleUseVerified=authorization.single_use===true;
   const caseIdVerified=
     typeof authorization.case_id==="string"&&
