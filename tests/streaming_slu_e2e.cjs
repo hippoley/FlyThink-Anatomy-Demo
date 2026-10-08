@@ -177,6 +177,11 @@ async function semanticOnlyFinalMustProduceHandoffWithoutPhysicalWrite(){
     confidence:0.99,
     patches:[patch("主卧",24)]
   });
+  let authorizerCalls=0;
+  const physicalAuthorizer=async()=>{
+    authorizerCalls++;
+    throw new Error("semantic_only_must_not_call_authorizer");
+  };
   const out=await runStreamingSequence([
     {turn_id:"t-semantic",kind:"partial",text:"把主卧空调"},
     {turn_id:"t-semantic",kind:"final",text:"把主卧空调调到24度"}
@@ -184,9 +189,11 @@ async function semanticOnlyFinalMustProduceHandoffWithoutPhysicalWrite(){
     initialRuntime:initial,
     predictor,
     driver,
+    physicalAuthorizer,
     semanticOnly:true
   });
 
+  assert.equal(authorizerCalls,0);
   assert.equal(out.physical_commands,0);
   assert.equal(out.trace[0].handoff_ready,false);
   assert.equal(out.trace[1].commit_gate.allow,true);
