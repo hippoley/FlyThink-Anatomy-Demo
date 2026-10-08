@@ -9,6 +9,7 @@ from scripts.benchmark_flywire_decision_gate import (
     coverage_at_precision,
     fixed_threshold_result,
     parameter_count,
+    split_development_dialogues,
 )
 from scripts.train_flywire import EXPECTED_SHA256, digest
 from scripts.train_flywire_delta import GRAPH_SHA, TEXT_DIM, STATE_DIM
@@ -88,3 +89,17 @@ def test_sealed_evaluation_uses_fixed_development_threshold():
     # The helper must report reality at the supplied threshold; it must not
     # re-select 0.99 just because that would look better on this split.
     assert result["coverage"]==2/3
+
+
+def test_development_split_keeps_whole_dialogues_disjoint():
+    x=torch.arange(40).reshape(20,2).float()
+    y=torch.arange(20).reshape(20,1)
+    rows=[{"id":i} for i in range(20)]
+    selection,calibration=split_development_dialogues(
+        (x,y,rows),turns_per_dialogue=5
+    )
+    selection_ids={r["id"] for r in selection[2]}
+    calibration_ids={r["id"] for r in calibration[2]}
+    assert selection_ids.isdisjoint(calibration_ids)
+    assert selection_ids==set(range(0,5))|set(range(10,15))
+    assert calibration_ids==set(range(5,10))|set(range(15,20))
