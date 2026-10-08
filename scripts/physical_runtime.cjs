@@ -248,7 +248,7 @@ async function executeSinglePhysicalPatch(inputRuntime, expanded, driver, option
     const indeterminateCommand={
       id:null,
       status:"indeterminate",
-      reason:"physical_outcome_indeterminate_after_dispatch"
+      reason:"physical_outcome_indeterminate_after_driver_call"
     };
     if(physicalPatch.target){
       markQuarantined(runtime,physicalPatch.target,indeterminateCommand,turnId);
@@ -258,7 +258,7 @@ async function executeSinglePhysicalPatch(inputRuntime, expanded, driver, option
       turn_id:turnId,
       kind:"physical",
       status:"indeterminate",
-      reason:"physical_outcome_indeterminate_after_dispatch",
+      reason:"physical_outcome_indeterminate_after_driver_call",
       semantic_patch:clone(expanded),
       physical_patch:clone(physicalPatch),
       observation:null,
@@ -273,11 +273,11 @@ async function executeSinglePhysicalPatch(inputRuntime, expanded, driver, option
         physical_patch:clone(physicalPatch),
         command_id:executionRecord.id,
         status:"indeterminate",
-        reason:"physical_outcome_indeterminate_after_dispatch",
+        reason:"physical_outcome_indeterminate_after_driver_call",
         observation:null,
         transport_error:executionRecord.transport_error
       }],
-      reason:"physical_outcome_indeterminate_after_dispatch"
+      reason:"physical_outcome_indeterminate_after_driver_call"
     };
   }
   if (!command || typeof command !== "object") throw new Error("physical_driver_invalid_receipt");
