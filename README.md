@@ -41,11 +41,20 @@ Already on `main`:
 - `execution-receipt.v1` remains the single execution-truth object;
 - `execution-proof-bundle.v1` packages the retained evidence for offline verification.
 
-Still under active reality convergence:
+Closed in the canonical software path:
 
-- the flagship human-WAV → WindowPilot APPLY path must cross the canonical `runDecisionProposal()` boundary before the first actuator write;
-- a retained real-hardware Golden Proof Bundle is not claimed until that run exists and verifies independently;
-- indeterminate physical outcomes under transport loss are being hardened separately rather than collapsed into ordinary failure.
+- the flagship human-WAV → WindowPilot APPLY path crosses `runDecisionProposal()` before the first actuator write;
+- potentially side-effecting transport ambiguity remains explicit `INDETERMINATE`;
+- physical completion requires an authorization-time completion criterion plus identified/fresh witness evidence;
+- the protected physical-lab workflow emits the canonical execution receipt/proof bundle and invokes the standalone verifier.
+
+Reality gates still open:
+
+- no retained real-hardware Golden Proof is claimed until the protected run succeeds and its artifact is preserved;
+- safe closeout must be retained with that proof;
+- external adoption requires a non-FlyThink verifier, corpus, project or CI to consume the artifact.
+
+See `docs/user-story-maturity.md` for the maturity map.
 
 ### Verify a retained proof bundle
 
