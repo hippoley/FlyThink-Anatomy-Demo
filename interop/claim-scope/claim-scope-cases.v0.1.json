@@ -1,0 +1,135 @@
+{
+  "schema": "flythink.claim-scope-interop-cases.v0.1",
+  "note": "Reference cases only. This file is not a receipt schema and does not define cross-project compatibility.",
+  "claims": [
+    "AUTHORITY_VERIFIED",
+    "TOOL_EXECUTION_OBSERVED",
+    "PHYSICAL_EFFECT_VERIFIED",
+    "PHYSICAL_NON_EXECUTION_VERIFIED",
+    "PHYSICAL_OUTCOME_INDETERMINATE",
+    "SITE_ENGAGEMENT_RECORDED",
+    "SAFE_CORRECT_LEGAL"
+  ],
+  "cases": [
+    {
+      "case_id": "authority-only",
+      "evidence": {
+        "authority": "VERIFIED",
+        "tool_observation": "ABSENT",
+        "physical_execution": "ABSENT",
+        "site_engagement": "ABSENT"
+      },
+      "expected_claims": [
+        "AUTHORITY_VERIFIED"
+      ],
+      "forbidden_claims": [
+        "TOOL_EXECUTION_OBSERVED",
+        "PHYSICAL_EFFECT_VERIFIED",
+        "PHYSICAL_NON_EXECUTION_VERIFIED",
+        "PHYSICAL_OUTCOME_INDETERMINATE",
+        "SITE_ENGAGEMENT_RECORDED",
+        "SAFE_CORRECT_LEGAL"
+      ]
+    },
+    {
+      "case_id": "tool-observed-only",
+      "evidence": {
+        "authority": "ABSENT",
+        "tool_observation": "VERIFIED",
+        "physical_execution": "ABSENT",
+        "site_engagement": "ABSENT"
+      },
+      "expected_claims": [
+        "TOOL_EXECUTION_OBSERVED"
+      ],
+      "forbidden_claims": [
+        "AUTHORITY_VERIFIED",
+        "PHYSICAL_EFFECT_VERIFIED",
+        "PHYSICAL_NON_EXECUTION_VERIFIED",
+        "PHYSICAL_OUTCOME_INDETERMINATE",
+        "SITE_ENGAGEMENT_RECORDED",
+        "SAFE_CORRECT_LEGAL"
+      ]
+    },
+    {
+      "case_id": "authorized-but-physical-indeterminate",
+      "evidence": {
+        "authority": "VERIFIED",
+        "tool_observation": "VERIFIED",
+        "physical_execution": "INDETERMINATE",
+        "site_engagement": "ABSENT"
+      },
+      "expected_claims": [
+        "AUTHORITY_VERIFIED",
+        "TOOL_EXECUTION_OBSERVED",
+        "PHYSICAL_OUTCOME_INDETERMINATE"
+      ],
+      "forbidden_claims": [
+        "PHYSICAL_EFFECT_VERIFIED",
+        "PHYSICAL_NON_EXECUTION_VERIFIED",
+        "SITE_ENGAGEMENT_RECORDED",
+        "SAFE_CORRECT_LEGAL"
+      ]
+    },
+    {
+      "case_id": "physical-effect-without-authority",
+      "evidence": {
+        "authority": "INVALID",
+        "tool_observation": "ABSENT",
+        "physical_execution": "VERIFIED_EXECUTED",
+        "site_engagement": "ABSENT"
+      },
+      "expected_claims": [
+        "PHYSICAL_EFFECT_VERIFIED"
+      ],
+      "forbidden_claims": [
+        "AUTHORITY_VERIFIED",
+        "TOOL_EXECUTION_OBSERVED",
+        "PHYSICAL_NON_EXECUTION_VERIFIED",
+        "PHYSICAL_OUTCOME_INDETERMINATE",
+        "SITE_ENGAGEMENT_RECORDED",
+        "SAFE_CORRECT_LEGAL"
+      ]
+    },
+    {
+      "case_id": "verified-non-execution",
+      "evidence": {
+        "authority": "VERIFIED",
+        "tool_observation": "VERIFIED",
+        "physical_execution": "VERIFIED_NOT_EXECUTED",
+        "site_engagement": "ABSENT"
+      },
+      "expected_claims": [
+        "AUTHORITY_VERIFIED",
+        "TOOL_EXECUTION_OBSERVED",
+        "PHYSICAL_NON_EXECUTION_VERIFIED"
+      ],
+      "forbidden_claims": [
+        "PHYSICAL_EFFECT_VERIFIED",
+        "PHYSICAL_OUTCOME_INDETERMINATE",
+        "SITE_ENGAGEMENT_RECORDED",
+        "SAFE_CORRECT_LEGAL"
+      ]
+    },
+    {
+      "case_id": "site-and-effect-still-not-safety",
+      "evidence": {
+        "authority": "VERIFIED",
+        "tool_observation": "VERIFIED",
+        "physical_execution": "VERIFIED_EXECUTED",
+        "site_engagement": "VERIFIED"
+      },
+      "expected_claims": [
+        "AUTHORITY_VERIFIED",
+        "TOOL_EXECUTION_OBSERVED",
+        "PHYSICAL_EFFECT_VERIFIED",
+        "SITE_ENGAGEMENT_RECORDED"
+      ],
+      "forbidden_claims": [
+        "PHYSICAL_NON_EXECUTION_VERIFIED",
+        "PHYSICAL_OUTCOME_INDETERMINATE",
+        "SAFE_CORRECT_LEGAL"
+      ]
+    }
+  ]
+}

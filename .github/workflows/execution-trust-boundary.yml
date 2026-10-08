@@ -32,6 +32,8 @@ on:
       - "benchmarks/execution_reasoning_contract_cases.json"
       - "contracts/decision-proposal.v1.schema.json"
       - "contracts/execution-proof-bundle.v1.schema.json"
+      - "interop/claim-scope/claim-scope-cases.v0.1.json"
+      - "tests/claim_scope_interop.cjs"
       - "tests/execution_reasoning_contract.cjs"
       - "tests/decision_proposal_contract.cjs"
       - "tests/contextual_edge_slu_adapter.cjs"
