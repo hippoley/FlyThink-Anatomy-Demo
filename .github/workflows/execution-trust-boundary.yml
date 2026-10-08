@@ -36,6 +36,7 @@ on:
       - "contracts/execution-proof-bundle.v1.schema.json"
       - "interop/claim-scope/claim-scope-cases.v0.1.json"
       - "interop/physical-completion/**"
+      - "interop/aer1-physical-completion/**"
       - "tests/claim_scope_interop.cjs"
       - "tests/execution_reasoning_contract.cjs"
       - "tests/decision_proposal_contract.cjs"
@@ -154,3 +155,5 @@ jobs:
         run: node tests/physical_completion_external_rail.cjs
       - name: Smoke external rail on public sample vector
         run: node scripts/verify_physical_completion_vector_cli.cjs interop/physical-completion/sample-proven.json
+      - name: Verify AER-1 claim-scope interop fixture
+        run: node interop/aer1-physical-completion/verify_fixture.cjs
