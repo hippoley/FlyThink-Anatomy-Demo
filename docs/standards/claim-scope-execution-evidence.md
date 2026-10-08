@@ -37,7 +37,7 @@ agent-to-reality boundary.
 | Surface | Primary claim | Explicit / practical non-claim | Useful FlyThink relation |
 | --- | --- | --- | --- |
 | OpenTelemetry GenAI `execute_tool` | a tool execution operation was observed and instrumented | telemetry does not itself prove an external side effect | attach trace/span identity as provenance; never treat span success as physical truth |
-| AER-1 (draft-zambo-aer1) | one agent tool execution was recorded with reproducible bytes / output commitment and provenance class; newer drafts distinguish `executed` from `confirmed` when post-action read-back/callback/delivery/settlement is observed and bound | `executed` is not effect confirmation; even `confirmed` proves only the confirmation evidence actually observed and bound by that implementation | correlate AER execution/confirmation identity with FlyThink evidence while preserving confirmation provenance and FlyThink's independent Context/World/authorization claims |
+| AER-1 (draft-zambo-aer1) | one agent tool execution was recorded with canonical bytes, an output commitment, timing, tool identity and provenance class | the receipt proves what the recording system observed and committed; it does not independently prove outside-world effects beyond that observation | correlate the AER receipt identity / output commitment with FlyThink physical evidence while preserving AER provenance and FlyThink's independent Context/World/authorization claims |
 | Agent Passport System `aps:action:v1` | gateway observed an action issued under a delegation chain | explicitly does not prove off-protocol side-effect completion | APS can own authority/accountability evidence while FlyThink owns physical execution evidence |
 | SCITT Physical-Site Engagement Receipt (PSER) | signed, tamper-evident record that an engagement occurred at a site under an operating envelope, with attestation | explicitly does not claim the engagement was safe/correct/wise or that downstream outcome followed | PSER can anchor site/actor/envelope/attestation; FlyThink can provide action/readback-level execution evidence |
 | FlyThink `execution-receipt.v1` | the execution evidence graph binds exact context/world identity, authorization, physical command evidence and measured readback | does not prove broad safety, legal compliance, business correctness or facts beyond the observed physical evidence | canonical execution-truth object |
@@ -153,47 +153,43 @@ Success means a verifier can independently establish both:
 
 Failure of either side must not be hidden by the other.
 
-### 2. AER-1 execution / confirmation + FlyThink physical evidence
+### 2. AER-1 observed execution record + FlyThink physical evidence
 
-AER-1 draft-12 introduces an important distinction between `executed` and
-`confirmed`: a receipt may advance to `confirmed` only after a real post-action
-read-back, callback, delivery event, or settlement is observed and bound.
+AER-1 draft-12 keeps a deliberately narrow interoperable core: a receipt records
+one tool execution as observed by the recording system, binds the exact canonical
+bytes with an output commitment, and carries a provenance class.
 
-That reduces one interoperability gap, but it does not erase claim-scope boundaries.
-The confirmation source still matters. A provider callback, gateway observation,
-settlement event, and independently measured physical actuator state are not
-interchangeable evidence.
+It does **not** make an outside-world claim merely because the receipt verifies.
+`EXECUTED BY <implementation>`, `OBSERVED VIA GATEWAY`, and `LOGGED BY AGENT`
+describe different provenance, but verification MUST NOT upgrade a report or
+gateway observation into independently established physical truth.
+
+That makes the useful FlyThink interoperability question:
 
 ```text
 AER-1 receipt
-  executed / confirmed
-  provenance_class
-  bound confirmation evidence
+  receipt id
+  canonical bytes + output commitment
+  tool metadata
+  provenance class
         |
-        | explicit correlation
+        | explicit correlation only
         v
-FlyThink proof bundle
+FlyThink physical completion evidence
   exact Context + World identity
-  authorization verification
-  physical execution evidence
-  measured readback
-  VERIFIED_EXECUTED / VERIFIED_NOT_EXECUTED / INDETERMINATE
+  authorization-bound completion criterion
+  identified/fresh physical witness
+  VERIFIED / NOT_SATISFIED / INDETERMINATE
 ```
 
-The bridge should therefore preserve at least three separations:
+The bridge must preserve both claim scopes:
 
-- `executed` vs `confirmed`;
-- confirmation **source/provenance** vs confirmation **claim**;
-- AER confirmation vs FlyThink's independent semantic/world/authorization chain.
-
-A valid AER `confirmed` receipt must not automatically imply that FlyThink's
-`physical_truth_verified` condition is satisfied. Conversely, a verified FlyThink
-physical effect must not imply the AER receipt's provenance or output commitment
-verified.
-
-If no authoritative post-action confirmation exists after a potentially
-side-effecting boundary was crossed, an interop consumer must be able to preserve
-`INDETERMINATE` rather than collapsing the physical outcome into failure.
+- a valid AER receipt does not imply FlyThink physical completion;
+- verified physical completion does not repair an invalid AER receipt;
+- AER provenance remains AER provenance and must not be rewritten by FlyThink;
+- FlyThink's Context/World/authorization chain remains independently verified;
+- missing or stale physical evidence may remain `INDETERMINATE` without
+  invalidating the AER receipt itself.
 
 ### 3. OpenTelemetry trace + FlyThink proof
 
