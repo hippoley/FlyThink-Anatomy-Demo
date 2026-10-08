@@ -19,6 +19,11 @@ for(const token of [
 }
 
 assert.ok(
+  html.includes('<a class="heroAction primary" href="#guidedDemo">Try the guided demo</a>'),
+  "primary hero CTA must route into the guided path"
+);
+
+assert.ok(
   html.indexOf("3-turn guided demo") < html.indexOf('<main class="stage" id="experience">'),
   "guided path must appear before the primary playground panels"
 );
