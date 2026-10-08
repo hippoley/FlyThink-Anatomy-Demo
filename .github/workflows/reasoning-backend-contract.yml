@@ -42,3 +42,4 @@ jobs:
             artifacts/whole-home-patch-acceptance.json
             artifacts/physical-world-benchmark.json
             artifacts/multiturn-episodes.json
+            artifacts/flywire-decision-gate-smoke/report.json
