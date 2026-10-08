@@ -7,6 +7,7 @@ from scripts.benchmark_flywire_decision_gate import (
     OUT_DIM,
     build_models,
     coverage_at_precision,
+    fixed_threshold_result,
     parameter_count,
 )
 from scripts.train_flywire import EXPECTED_SHA256, digest
@@ -75,3 +76,15 @@ def test_commit_curve_reports_largest_real_threshold_group():
     assert gate["coverage"]==0.75
     assert gate["precision"]==1.0
     assert gate["threshold"]==0.95
+
+
+def test_sealed_evaluation_uses_fixed_development_threshold():
+    confidence=torch.tensor([0.99,0.80,0.79])
+    exact=torch.tensor([True,False,True])
+    result=fixed_threshold_result(confidence,exact,threshold=0.80)
+    assert result["threshold"]==0.80
+    assert result["committed"]==2
+    assert result["precision"]==0.5
+    # The helper must report reality at the supplied threshold; it must not
+    # re-select 0.99 just because that would look better on this split.
+    assert result["coverage"]==2/3
