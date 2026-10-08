@@ -150,7 +150,11 @@ jobs:
           })
           PY
           node - <<'NODE'
+          const fs=require("fs");
+          const {contextStateIdentity}=require("./scripts/contextual_edge_slu_adapter.cjs");
           const {loadPinnedSceneContext,targetKey}=require("./scripts/spatialruntime_world_context.cjs");
+          const contextualState=JSON.parse(fs.readFileSync(process.env.INPUT_CONTEXTUAL_STATE,"utf8"));
+          contextStateIdentity(contextualState);
           const context=loadPinnedSceneContext(process.env.INPUT_SCENE_CONTEXT);
           if(!context.handoff_evidence){
             throw new Error("live scene context must contain verified handoff evidence");
@@ -283,8 +287,15 @@ jobs:
           if(bundleVerdict.physical_truth_verified!==true){
             throw new Error("canonical proof did not verify physical truth");
           }
+          const bundle=JSON.parse(fs.readFileSync("live-execution-proof-bundle.json","utf8"));
           const receipt=JSON.parse(fs.readFileSync("live-execution-receipt.json","utf8"));
-          const verified=verifyExecutionReceipt(receipt);
+          const verified=verifyExecutionReceipt(receipt,{
+            contextual_state:bundle.artifacts.contextual_state,
+            request:bundle.artifacts.request,
+            proposal:bundle.artifacts.internal_proposal,
+            before_runtime:bundle.artifacts.before_runtime,
+            after_runtime:bundle.artifacts.after_runtime
+          });
           if(verified.physical_completion_verified!==true){
             throw new Error("physical completion criterion/witness verification failed");
           }
