@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>FlyThink · 和家说话</title><style>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>FlyThink · Execution Truth for Physical AI</title><style>
 :root{
   --bg:#07090d;--surface:#0d1117;--surface2:#111722;--surface3:#151d29;--line:#202b38;
   --text:#f4f7fb;--muted:#8f9cab;--soft:#b7c3cf;--accent:#89b8ff;--accent2:#a8e6cf;
@@ -59,9 +59,62 @@ details{margin-top:14px;border:1px solid #202b38;border-radius:14px;background:#
 .turnJourney{border:1px solid #26394a;border-radius:14px;background:linear-gradient(180deg,#0b141d,#090f16);padding:12px;margin:0 0 18px}.turnJourneyHead{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:9px}.turnJourneyHead b{font-size:11px;color:#d7e4ee}.turnJourneyTruth{font-size:9px;color:#71869a}.turnStageRail{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:5px}.turnStage{appearance:none;text-align:left;border:1px solid #243647;background:#0a1118;color:#74899d;border-radius:10px;padding:8px;min-width:0;cursor:pointer;transition:.18s ease}.turnStage:hover{border-color:#496986}.turnStage .stageNo{display:block;font:9px ui-monospace,Consolas,monospace;color:#60788f}.turnStage .stageName{display:block;font-size:10px;color:#9fb1c1;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.turnStage.done{border-color:#315548}.turnStage.done .stageNo{color:#7fbea4}.turnStage.active{border-color:#7098c3;background:#101d2a;box-shadow:inset 0 0 18px rgba(112,152,195,.12)}.turnStage.selected{outline:1px solid #9fc5ff;outline-offset:1px}.turnStageDetail{margin-top:8px;border-top:1px solid #1f303f;padding:10px 2px 1px}.turnStageDetail strong{font-size:11px;color:#e1ebf3}.turnStageDetail p{font-size:11px;color:#92a6b8;line-height:1.6;margin:4px 0 0}.turnStageDetail code{font:10px/1.55 ui-monospace,Consolas,monospace;color:#b8d5e9;white-space:normal;word-break:break-word}.turnStageBadge{display:inline-block;margin-top:7px;border:1px solid #2c4557;border-radius:999px;padding:3px 6px;font-size:8px;color:#80a8c5}
 .turnFly{margin-top:14px;border:1px solid #263b50;border-radius:14px;background:#080e14;overflow:hidden}.turnFlyHead{display:flex;justify-content:space-between;gap:10px;padding:10px 12px 7px;font-size:11px;color:#d9e6f2}.turnFlyHead span{color:#71879b;font-size:9px}.turnFly canvas{display:block;width:100%;height:150px}.turnFlyStages{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid #1e2d3b}.turnFlyStage{padding:7px 4px;text-align:center;color:#63778a;font:9px/1.3 ui-monospace,Consolas,monospace;border-right:1px solid #1e2d3b}.turnFlyStage:last-child{border-right:0}.turnFlyStage.on{color:#b9d7ff;background:#102033}.turnFlyStage.done{color:#9dcdb9}.turnFlyTruth{padding:7px 10px;color:#63778a;font-size:9px;border-top:1px solid #1e2d3b}.feedbackRow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:12px}.feedbackCount{font-size:10px;color:#708699}
 @media(max-width:760px){.app{width:calc(100% - 28px);padding-top:16px}.hero{padding:24px 0}.hero h1{font-size:32px}.journey{gap:14px;font-size:11px}.stage{grid-template-columns:1fr;gap:16px}.chatShell,.resultPanel{min-height:0}.chat{min-height:80px}.conversationBody,.resultBody{padding:16px}.disclosure>summary span{display:none}.navnote{font-size:10px}.resultEmpty{padding:15px 0}.resultBody h2{font-size:22px}.sendRow span{max-width:160px}.bindingGrid{grid-template-columns:1fr}.homeRoomGrid{grid-template-columns:1fr}.turnStageRail{grid-template-columns:repeat(5,112px);overflow-x:auto;padding-bottom:5px}.turnJourneyHead{align-items:flex-start;flex-direction:column}}
+
+.executionHero{padding:38px 2px 24px}
+.executionHero .eyebrow{color:#8fb4da}
+.executionHero h1{font-size:clamp(38px,6vw,72px);line-height:1.01;letter-spacing:-.052em;max-width:980px}
+.executionHero h1 span{color:#9fc5ff}
+.executionHero .lead{max-width:780px;font-size:15px;line-height:1.75}
+.heroActions{display:flex;gap:9px;flex-wrap:wrap;margin-top:20px}
+.heroAction{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:0 13px;border-radius:10px;border:1px solid #30445a;background:#0d151e;color:#dce8f3;text-decoration:none;font-size:11px}
+.heroAction.primary{background:#e7eef8;color:#0b1017;border-color:#e7eef8;font-weight:760}
+.heroAction:hover{border-color:#6689af}
+.truthRail{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:0 0 26px}
+.truthCell{border:1px solid #253646;border-radius:13px;background:linear-gradient(180deg,#0d151e,#090e14);padding:12px 13px;min-width:0}
+.truthCell .truthKey{font-size:8.5px;letter-spacing:.1em;text-transform:uppercase;color:#70869c}
+.truthCell strong{display:block;font-size:12px;margin-top:5px;color:#dce7f1}
+.truthCell span{display:block;font-size:9.5px;line-height:1.45;color:#7f93a7;margin-top:4px}
+.truthCell.ok{border-color:#315546}
+.truthCell.warn{border-color:#665334}
+.truthCell.ok strong{color:#bce5d2}
+.truthCell.warn strong{color:#ecd19d}
+.executionChain{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:17px}
+.executionChain .node{border:1px solid #2a3b4d;border-radius:999px;padding:5px 8px;background:#0a1118;color:#aebdcb;font:9px/1.2 ui-monospace,Consolas,monospace}
+.executionChain .edge{color:#526779;font-size:10px}
+.researchDivider{display:flex;align-items:center;gap:10px;margin:8px 0 16px;color:#6f8499;font-size:10px;letter-spacing:.08em;text-transform:uppercase}
+.researchDivider:before,.researchDivider:after{content:"";height:1px;background:#1f2c39;flex:1}
+@media(max-width:760px){
+  .truthRail{grid-template-columns:1fr 1fr}
+  .executionHero h1{font-size:38px}
+}
+@media(max-width:480px){.truthRail{grid-template-columns:1fr}}
 </style></head><body><div class="app">
-<nav class="nav"><div class="brand"><span class="mark"></span>FlyThink</div><span class="navnote">家居对话实验室 · v4.6</span></nav>
-<header class="hero"><div class="eyebrow">A conversation with your home</div><h1>说一句，再改一句。<br><span>看看家能否跟上你的意思。</span></h1><p class="lead">先试一句开灯指令，再换房间、改数值或插话。每一步的理解与变化，都在右边。</p><div class="journey"><strong>01 选个场景</strong><span>02 发送或改写</span><span>03 看结果，再接着说</span></div></header>
+<nav class="nav"><div class="brand"><span class="mark"></span>FlyThink</div><span class="navnote">Execution Truth for Physical AI</span></nav>
+<header class="executionHero">
+  <div class="eyebrow">Proof-carrying execution boundary</div>
+  <h1>Agents propose.<br><span>Reality responds.</span></h1>
+  <p class="lead">FlyThink binds exact semantic context and world identity to authorization, physical execution, measured readback and a portable proof bundle. It verifies what can be proven — and marks what remains physically indeterminate.</p>
+  <div class="heroActions">
+    <a class="heroAction primary" href="#experience">Run the research playground</a>
+    <a class="heroAction" href="https://github.com/hippoley/FlyThink-Anatomy-Demo#verify-a-retained-proof-bundle">Verify a proof bundle</a>
+    <a class="heroAction" href="https://github.com/hippoley/FlyThink-Anatomy-Demo/issues/93">Inspect live convergence</a>
+  </div>
+  <div class="executionChain" aria-label="Execution truth chain">
+    <span class="node">Context identity</span><span class="edge">→</span>
+    <span class="node">DecisionProposal</span><span class="edge">→</span>
+    <span class="node">Authorization</span><span class="edge">→</span>
+    <span class="node">Physical driver</span><span class="edge">→</span>
+    <span class="node">Measured readback</span><span class="edge">→</span>
+    <span class="node">Proof bundle</span>
+  </div>
+</header>
+<section class="truthRail" aria-label="Current execution truth status">
+  <div class="truthCell ok"><div class="truthKey">Context + World</div><strong>IDENTITY BOUND</strong><span>revision + SHA are independently verified before execution.</span></div>
+  <div class="truthCell ok"><div class="truthKey">Receipt + Bundle</div><strong>OFFLINE VERIFIABLE</strong><span>retained evidence can be checked without trusting a runtime success flag.</span></div>
+  <div class="truthCell ok"><div class="truthKey">Unknown outcome</div><strong>INDETERMINATE</strong><span>driver-call ambiguity quarantines the target and requires reconciliation.</span></div>
+  <div class="truthCell warn"><div class="truthKey">Real hardware golden</div><strong>PENDING</strong><span>human-WAV → canonical runtime → WindowPilot proof is still converging in #93.</span></div>
+</section>
+<div class="researchDivider">Research Playground · home dialogue, Thing Models, regression and FlyWire views</div>
 <main class="stage" id="experience">
 <section class="panel chatShell"><div class="panelhead"><b>和家说话</b><button class="quietLink" id="reset" type="button">重新开始</button></div><div class="conversationBody">
 <label class="scenePicker" for="sceneSelect">从这里开始<select id="sceneSelect"><option value="revise">开灯，再调整亮度</option><option value="rooms">换个房间试试</option><option value="multi">一句话，两件事</option><option value="goal">只描述一个情景</option><option value="roomGoals">多房间，不同目标</option><option value="constraint">矛盾条件，反推替代动作</option><option value="wholeHome">全屋、多房间、多物件</option></select></label>
