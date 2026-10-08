@@ -10,6 +10,7 @@ def test_frozen_suite_covers_distinct_whole_home_semantics():
     assert data["families"] >= 10
     assert data["hard_invariant"] == "untouched_state_preservation_100_percent"
     seen={p["op"] for e in data["episodes"] for t in e["turns"] for p in t["gold_patches"]}
+    assert set(data["required_operations"]) == OPS
     assert OPS <= seen
 
 def test_additive_also_never_labels_replacement():
