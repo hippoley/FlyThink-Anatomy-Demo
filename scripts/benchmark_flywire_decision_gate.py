@@ -223,6 +223,32 @@ def coverage_at_precision(confidence,exact,target=0.99):
     return best
 
 
+def fixed_threshold_result(confidence,exact,threshold):
+    if threshold is None:
+        return {
+            "coverage":0.0,
+            "precision":None,
+            "threshold":None,
+            "committed":0,
+        }
+    committed=confidence>=threshold
+    count=int(committed.sum())
+    if not count:
+        return {
+            "coverage":0.0,
+            "precision":None,
+            "threshold":threshold,
+            "committed":0,
+        }
+    correct=int((exact & committed).sum())
+    return {
+        "coverage":count/len(exact),
+        "precision":correct/count,
+        "threshold":threshold,
+        "committed":count,
+    }
+
+
 def latency_ms(model,x,repeats=80):
     sample=x[:min(len(x),64)]
     model.eval()
@@ -291,7 +317,7 @@ def fit(model,train,dev,epochs,lr):
     return best,logs
 
 
-def evaluate(model,data):
+def evaluate(model,data,commit_threshold="calibrate"):
     model.eval()
     with torch.no_grad():
         logits=model(data[0])
@@ -310,8 +336,15 @@ def evaluate(model,data):
         ood_gold=gold[:,0]==ood_index
         ood_false_commit=ood_gold & (pred[:,0]!=ood_index)
 
-    gate=coverage_at_precision(conf,exact,.99)
+    if commit_threshold=="calibrate":
+        gate=coverage_at_precision(conf,exact,.99)
+        threshold_source="this_split_calibration"
+    else:
+        gate=fixed_threshold_result(conf,exact,commit_threshold)
+        threshold_source="development_fixed"
+
     base["commit_curve_99"]=gate
+    base["commit_threshold_source"]=threshold_source
 
     target_count=int(target_mask.sum())
     ood_count=int(ood_gold.sum())
@@ -324,8 +357,9 @@ def evaluate(model,data):
         if ood_count else None
     )
 
-    if gate["threshold"] is not None:
-        committed=conf>=gate["threshold"]
+    threshold=gate["threshold"]
+    if threshold is not None:
+        committed=conf>=threshold
         committed_target=committed & target_mask
         committed_ood=committed & ood_gold
         committed_target_count=int(committed_target.sum())
@@ -370,7 +404,8 @@ def main():
         "seeds":a.seeds,
         "limitations":[
             "No pretrained BERT/SLM comparison: this gate isolates bounded-kernel architecture.",
-            "The sealed suite is small; 99%-precision coverage there is directional, not a production guarantee.",
+            "The sealed suite is small; its commit threshold is fixed from development and never selected on sealed labels.",
+            "99%-precision coverage on the sealed suite is directional, not a production guarantee.",
             "Hashed text/state features are shared by all compared models and are not an open-language benchmark.",
             "Parameter matching is approximate and reported explicitly.",
         ],
@@ -383,11 +418,14 @@ def main():
         for name,model in models.items():
             torch.manual_seed(seed)
             best,losses=fit(model,train,dev,a.epochs,a.learning_rate)
+            development=evaluate(model,dev,commit_threshold="calibrate")
+            threshold=development["commit_curve_99"]["threshold"]
+            sealed_eval=evaluate(model,sealed,commit_threshold=threshold)
             seed_row["models"][name]={
                 "params":parameter_count(model),
                 "selected_epoch":best["epoch"],
-                "development":evaluate(model,dev),
-                "sealed":evaluate(model,sealed),
+                "development":development,
+                "sealed":sealed_eval,
                 "cpu_latency":latency_ms(model,dev[0]),
                 "loss":losses,
             }
