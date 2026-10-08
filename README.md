@@ -75,6 +75,16 @@ Interactive public build:
 
 https://raw.githack.com/hippoley/FlyThink-Anatomy-Demo/gh-pages/index.html
 
+## Emerging standards position
+
+FlyThink is tracking a narrow interoperability question across 2026 agent-action
+receipt and observability work: how to combine authority, tool-call, telemetry
+and physical execution evidence **without claim laundering**.
+
+See [`docs/standards/claim-scope-execution-evidence.md`](docs/standards/claim-scope-execution-evidence.md)
+for the current crosswalk across OpenTelemetry GenAI tool spans, AER-1,
+Agent Passport System receipts, SCITT Physical-Site Engagement Receipts, and
+FlyThink's own execution proof boundary.
 ## Repository boundary
 
 FlyThink is a **consumer/backend**, not the canonical owner of Contextual Edge
