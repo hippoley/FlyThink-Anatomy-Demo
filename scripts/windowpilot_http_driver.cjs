@@ -115,7 +115,8 @@ class WindowPilotHttpDriver {
     throw new Error("windowpilot_unsupported_slot:"+String(patch.slot));
   }
 
-  _completionCriterion(targetPct,beforeTick,identity,fixedAtMs){
+  completionCriterionForPatch(patch){
+    const targetPct=this._targetPct(patch);
     const criterion={
       version:"windowpilot-completion-criterion.v1",
       target:clone(this.target),
@@ -124,11 +125,9 @@ class WindowPilotHttpDriver {
       requested_position_pct:Number(targetPct),
       tolerance_pct:Number(this.tolerancePct),
       require_fresh_readback:this.requireFreshReadback===true,
-      before_tick:beforeTick==null?null:Number(beforeTick),
       witness_source:"windowpilot:/api/state",
       witness_method:"windowpilot-state-readback",
-      witness_hardware_identity_sha256:identity||null,
-      fixed_at_ms:Number(fixedAtMs)
+      expected_hardware_identity_sha256:this.expectedHardwareIdentity||null
     };
     return {
       criterion,
@@ -229,9 +228,7 @@ class WindowPilotHttpDriver {
     }
 
     const criterionFixedAtMs=Date.now();
-    const completion=this._completionCriterion(
-      targetPct,beforeTick,identity,criterionFixedAtMs
-    );
+    const completion=this.completionCriterionForPatch(patch);
     const witness=this._witness(identity);
 
     let ack;
