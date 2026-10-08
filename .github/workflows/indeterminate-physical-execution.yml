@@ -1,0 +1,31 @@
+name: Indeterminate Physical Execution Probe
+
+on:
+  push:
+    branches: [probe/indeterminate-physical-execution]
+    paths:
+      - "scripts/test_indeterminate_physical_execution.cjs"
+      - "scripts/physical_runtime.cjs"
+      - ".github/workflows/indeterminate-physical-execution.yml"
+  pull_request:
+    paths:
+      - "scripts/test_indeterminate_physical_execution.cjs"
+      - "scripts/physical_runtime.cjs"
+      - ".github/workflows/indeterminate-physical-execution.yml"
+  workflow_dispatch:
+
+jobs:
+  effect-before-transport-loss:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Syntax preflight
+        run: |
+          node --check scripts/physical_runtime.cjs
+          node --check scripts/test_indeterminate_physical_execution.cjs
+      - name: Reproduce effect-before-transport-loss ambiguity
+        run: node scripts/test_indeterminate_physical_execution.cjs
