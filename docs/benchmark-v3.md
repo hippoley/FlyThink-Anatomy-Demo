@@ -30,3 +30,23 @@ The design borrows the useful parts of modern agent evaluation: objective final
 state oracles, interactive/long-horizon behavior, holdout generalization and
 repeated-run reliability. It intentionally avoids LLM-as-judge scoring for the
 canonical state-transition claims.
+
+
+## Release refresh policy
+
+A public sealed set is only "sealed" with respect to the current development
+cycle; once published, future models may eventually ingest it. V3 therefore
+accepts a `--release-id YYYY-MM`. The release ID deterministically derives a
+new seed while preserving the generator and validation contract.
+
+Recommended policy:
+
+- freeze one release for a checkpoint-selection cycle;
+- never tune on that release's sealed split;
+- publish its manifest + SHA with results;
+- rotate to a newer release for future external comparisons;
+- keep old releases reproducible for longitudinal regression, but do not treat
+  them as permanently contamination-resistant.
+
+This is intentionally closer to a living benchmark model than a one-time static
+test set.
