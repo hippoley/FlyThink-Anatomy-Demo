@@ -10,7 +10,7 @@ from collections import defaultdict
 from rapidfuzz import fuzz,process
 
 ROOMS=("客厅","主卧","书房","次卧")
-ENTITIES=("空调","灯","窗","窗户")
+ENTITIES=("空调设备","冷气机","空调机","冷气","照明灯","玻璃窗","窗户","灯光","照明","灯具","窗子","外窗","空调","灯","窗")
 NUM=re.compile(r"-?\d+(?:\.\d+)?")
 
 def canonical_surface(text):
