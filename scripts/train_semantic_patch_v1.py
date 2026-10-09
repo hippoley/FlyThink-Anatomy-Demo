@@ -8,7 +8,7 @@ from train_flywire import digest,EXPECTED_SHA256
 from train_flywire_delta import text_features,GRAPH_SHA
 from semantic_context_features import features as context_features
 from flywire_gated_patch_net import FlyWireGatedPatchNet
-from whole_home_patch_corpus_v11 import build
+from whole_home_patch_corpus_v12 import build
 from semantic_patch_contract import OPS,CARD,DIR,encode
 from flywire_topology_ablation import topology,MODES
 
@@ -99,7 +99,7 @@ def train(g,tr,selection,epochs,mode="real",seed=3783):
 def main():
  ap=argparse.ArgumentParser();ap.add_argument("--graph",default="artifacts/flywire/connectome.json");ap.add_argument("--epochs",type=int,default=450);ap.add_argument("--out",type=Path,default=Path("artifacts/semantic-patch-v1"));a=ap.parse_args()
  torch.set_num_threads(2);g=json.loads(Path(a.graph).read_text());assert g["source_sha256"]==EXPECTED_SHA256 and digest(a.graph)==GRAPH_SHA
- d=build();fit,selection=stratified_split(d["train"]);rep={"truth":"semantic_patch_v13_four_topology_ablation","train":len(d["train"]),"fit":len(fit),"selection":len(selection),"dev":len(d["dev"]),"diagnostic":len(d["sealed"]),"family_counts":dict(Counter(r["family"] for r in d["train"])),"runs":{}}
+ d=build();fit,selection=stratified_split(d["train"]);rep={"truth":"semantic_patch_v14_"+d["truth"]+"_four_topology_ablation","train":len(d["train"]),"fit":len(fit),"selection":len(selection),"dev":len(d["dev"]),"diagnostic":len(d["sealed"]),"family_counts":dict(Counter(r["family"] for r in d["train"])),"runs":{}}
  for name in MODES:
   candidates=[];seed_reports=[]
   for seed in [2783,3783,4783]:
