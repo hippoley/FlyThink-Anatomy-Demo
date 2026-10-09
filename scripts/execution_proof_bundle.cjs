@@ -102,6 +102,8 @@ function deriveVerification(artifacts){
       physical_truth_verified:execution.physical_truth_verified,
       physical_completion_verified:execution.physical_completion_verified,
       safe_closeout_verified:execution.safe_closeout_verified,
+      authorization_trust_domain_key_source_verified:
+        execution.authorization_trust_domain_key_source_verified===true,
       authorization_issuer_authenticated_verified:
         execution.authorization_issuer_authenticated_verified===true,
       independent_object_outcome_verified:
@@ -186,7 +188,11 @@ function verifyExecutionProofBundle(bundle={}){
   if(preObjectIndependenceVerification&&preObjectIndependenceVerification.execution){
     delete preObjectIndependenceVerification.execution.independent_object_outcome_verified;
   }
-  const preIssuerAuthVerification=clone(preObjectIndependenceVerification);
+  const preTrustDomainVerification=clone(preObjectIndependenceVerification);
+  if(preTrustDomainVerification&&preTrustDomainVerification.execution){
+    delete preTrustDomainVerification.execution.authorization_trust_domain_key_source_verified;
+  }
+  const preIssuerAuthVerification=clone(preTrustDomainVerification);
   if(preIssuerAuthVerification&&preIssuerAuthVerification.execution){
     delete preIssuerAuthVerification.execution.authorization_issuer_authenticated_verified;
   }
@@ -202,6 +208,7 @@ function verifyExecutionProofBundle(bundle={}){
   const verificationMatches=
     verificationDigest===digestObject(expectedVerification)||
     verificationDigest===digestObject(preObjectIndependenceVerification)||
+    verificationDigest===digestObject(preTrustDomainVerification)||
     verificationDigest===digestObject(preIssuerAuthVerification)||
     verificationDigest===digestObject(completionOnlyVerification)||
     verificationDigest===digestObject(legacyVerification);
@@ -224,6 +231,8 @@ function verifyExecutionProofBundle(bundle={}){
       expectedVerification.execution.physical_completion_verified,
     safe_closeout_verified:
       expectedVerification.execution.safe_closeout_verified,
+    authorization_trust_domain_key_source_verified:
+      expectedVerification.execution.authorization_trust_domain_key_source_verified===true,
     authorization_issuer_authenticated_verified:
       expectedVerification.execution.authorization_issuer_authenticated_verified===true,
     independent_object_outcome_verified:
