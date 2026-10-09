@@ -117,6 +117,41 @@ process.stdout.write(JSON.stringify(result));
   assert.equal(journalNames.filter(name=>name.endsWith(".json")).length,1);
   assert.equal(journalNames.filter(name=>name.startsWith(".tmp-")).length,0);
 
+  // Different authorization IDs must not become false conflicts merely because
+  // their journal/snapshot persistence overlaps. This is the horizontal
+  // concurrency check for normal multi-worker throughput.
+  const parallelFile=path.join(dir,"parallel.json");
+  const parallelGate=path.join(dir,"parallel.gate");
+  const parallelWorkers=[];
+  const parallelReady=[];
+  const parallelIds=[];
+  for(let i=0;i<8;i++){
+    const ready=path.join(dir,"parallel-ready-"+i);
+    const parallelId="auth-parallel-"+i;
+    parallelReady.push(ready);
+    parallelIds.push(parallelId);
+    parallelWorkers.push(runWorker(workerPath,[
+      modulePath,parallelFile,parallelId,ready,parallelGate
+    ]));
+  }
+  await waitUntil(()=>parallelReady.every(p=>fs.existsSync(p)));
+  fs.writeFileSync(parallelGate,"go");
+  const parallelResults=await Promise.all(parallelWorkers);
+  assert.equal(
+    parallelResults.filter(x=>x.ok&&x.consumed===true).length,
+    parallelIds.length,
+    JSON.stringify(parallelResults)
+  );
+  assert.equal(
+    parallelResults.filter(x=>!x.ok).length,
+    0,
+    JSON.stringify(parallelResults)
+  );
+  const parallelLedger=new FileAuthorizationLedger(parallelFile);
+  for(const parallelId of parallelIds){
+    assert.equal(parallelLedger.has(parallelId),true,parallelId);
+  }
+
   const mode=fs.statSync(file).mode & 0o777;
   const reservationDirMode=fs.statSync(file+".reservations").mode & 0o777;
   assert.equal(mode,0o600);
@@ -130,6 +165,8 @@ process.stdout.write(JSON.stringify(result));
     global_stale_lock_dependency:0,
     multiprocess_workers:results.length,
     multiprocess_winners:winners.length,
+    parallel_distinct_authorizations:parallelIds.length,
+    parallel_distinct_failures:0,
     duplicate_consumption:0,
     ledger_mode:mode.toString(8),
     reservation_dir_mode:reservationDirMode.toString(8)
