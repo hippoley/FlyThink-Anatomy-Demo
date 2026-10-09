@@ -74,7 +74,12 @@ function evaluate(){
     errors[msg]=(errors[msg]||0)+1;
     if(msg.startsWith("untouched_state_mutation"))untouched++;
     else if(msg.startsWith("protected_invariant_write")){blocked++;judgementOk++;}
-    else if(msg.includes("requires_existing_value")||msg.includes("not_found")){invalid++;judgementOk++;}
+    else if(
+      msg.includes("requires_existing_value")||
+      msg.includes("not_found")||
+      msg.includes("not_pending")||
+      msg.includes("already_compensated")
+    ){invalid++;judgementOk++;}
     else wrong++;
    }
   }
