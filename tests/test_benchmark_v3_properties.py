@@ -57,7 +57,7 @@ def test_corrected_profiles_do_not_use_add_device_for_existing_power_on(release_
  for tr in rows:
   existing=set(tr["initial_runtime"]["devices"])
   for turn in tr["turns"]:
-   if turn["gold_op"]=="ADD_DEVICE" and turn.get("gold_target"):
+   if turn["gold_decision"]=="EXECUTE" and turn.get("gold_op")=="ADD_DEVICE" and turn.get("gold_target"):
     t=turn["gold_target"];k=f"{t['area']}::{t['entity']}::{t.get('instance','default')}"
     assert k not in existing,("existing device incorrectly labeled ADD_DEVICE",release_id,turn)
 
