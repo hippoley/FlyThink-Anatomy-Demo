@@ -546,6 +546,7 @@ function passAuthorizer(counter=null,transform=null,authorizationId=null,overrid
     let readinessReads=0,stateReads=0;
     const recoveryDriver={
       target:W,
+      expectedHardwareIdentity:"hw-1",
       async readiness(){
         readinessReads++;
         return {

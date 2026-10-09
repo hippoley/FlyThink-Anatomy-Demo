@@ -2,7 +2,6 @@
 
 const {deviceKey}=require("./whole_home_patch_contract.cjs");
 const {
-  clearQuarantine,
   isQuarantined,
   isSafetyReducingPatch,
   reconcileObservation,
@@ -10,12 +9,13 @@ const {
 }=require("./physical_runtime.cjs");
 
 const CONTRACT_VERSION="recovery-transaction.v1";
+const SAFE_RECOVERY_MAX_PCT=0;
 
 function clone(v){return v==null?v:JSON.parse(JSON.stringify(v))}
 function pctFromState(state){
   const value=state&&state.thing_model&&state.thing_model.window_open_pct;
   const pct=Number(value);
-  return Number.isFinite(pct)?pct:null;
+  return Number.isFinite(pct)&&pct>=0&&pct<=100?pct:null;
 }
 function tickFromState(state){
   const tick=Number(state&&state.tick);
@@ -29,6 +29,50 @@ function identityFromReadiness(readiness){
 function recoveryState(runtime,target){
   const key=deviceKey(target);
   return clone((runtime.deviceHealth||{})[key]||null);
+}
+
+function restoreQuarantineAfterVerifiedRecovery(runtime,target,proof){
+  const key=deviceKey(target);
+  const health=runtime&&runtime.deviceHealth&&runtime.deviceHealth[key];
+  if(!health||health.status!=="quarantined"){
+    throw new Error("device_not_quarantined");
+  }
+  const beforeTick=Number(proof&&proof.before_tick);
+  const afterTick=Number(proof&&proof.after_tick);
+  const safePct=Number(proof&&proof.safe_position_pct);
+  const safeMax=Number(proof&&proof.safe_position_max_pct);
+  const valid=
+    proof&&
+    proof.contract_version===CONTRACT_VERSION&&
+    proof.target_key===key&&
+    proof.verified===true&&
+    proof.readiness_verified===true&&
+    proof.hardware_identity_verified===true&&
+    proof.physical_readback_verified===true&&
+    proof.safe_position_verified===true&&
+    typeof proof.expected_identity_sha256==="string"&&
+    proof.expected_identity_sha256.length>0&&
+    typeof proof.identity_sha256==="string"&&proof.identity_sha256.length>0&&
+    proof.identity_sha256===proof.expected_identity_sha256&&
+    Number.isFinite(beforeTick)&&
+    Number.isFinite(afterTick)&&
+    afterTick>beforeTick&&
+    Number.isFinite(safePct)&&
+    safePct>=0&&safePct<=100&&
+    Number.isFinite(safeMax)&&
+    safeMax>=0&&safeMax<=100&&
+    safePct<=safeMax&&
+    typeof proof.execution_receipt_id==="string"&&
+    proof.execution_receipt_id.length>0;
+  if(!valid){
+    throw new Error("recovery_internal_verdict_invalid");
+  }
+  runtime.deviceHealth[key]={
+    status:"healthy",
+    recovered_at_turn_id:proof.turn_id||null,
+    recovery:clone(proof)
+  };
+  return runtime.deviceHealth[key];
 }
 
 async function runRecoveryTransaction(inputRuntime,{
@@ -46,14 +90,36 @@ async function runRecoveryTransaction(inputRuntime,{
   if(driver.target&&deviceKey(driver.target)!==deviceKey(target)){
     throw new Error("recovery_driver_target_mismatch");
   }
+  const driverExpectedIdentity=
+    typeof driver.expectedHardwareIdentity==="string"&&
+    driver.expectedHardwareIdentity.length>0
+      ?driver.expectedHardwareIdentity
+      :null;
+  if(!driverExpectedIdentity){
+    throw new Error("recovery_driver_expected_hardware_identity_required");
+  }
+  if(
+    expected_hardware_identity!=null&&
+    String(expected_hardware_identity)!==driverExpectedIdentity
+  ){
+    throw new Error("recovery_expected_hardware_identity_override_forbidden");
+  }
   if(!safe_patch)throw new Error("recovery_safe_patch_required");
   if(!safe_patch.target||deviceKey(safe_patch.target)!==deviceKey(target)){
     throw new Error("recovery_patch_target_mismatch");
   }
-  const safeLimit=Number(safe_position_max_pct);
-  if(!Number.isFinite(safeLimit)||safeLimit<0||safeLimit>100){
+  const requestedSafeLimit=Number(safe_position_max_pct);
+  if(!Number.isFinite(requestedSafeLimit)||requestedSafeLimit<0||requestedSafeLimit>100){
     throw new Error("recovery_safe_position_limit_invalid");
   }
+  // v1 is a window-recovery contract and its fail-safe state is fully closed.
+  // The request may not weaken that policy by selecting a larger threshold.
+  // A future non-zero threshold must come from a trusted, versioned policy
+  // source rather than from the recovery request itself.
+  if(requestedSafeLimit!==SAFE_RECOVERY_MAX_PCT){
+    throw new Error("recovery_safe_position_policy_override_forbidden");
+  }
+  const safeLimit=SAFE_RECOVERY_MAX_PCT;
 
   let runtime=inputRuntime;
   if(!isQuarantined(runtime,target))throw new Error("device_not_quarantined");
@@ -72,7 +138,7 @@ async function runRecoveryTransaction(inputRuntime,{
   if(!identityBefore){
     return blocked(runtime,"recovery_hardware_identity_missing",trace);
   }
-  if(expected_hardware_identity&&identityBefore!==expected_hardware_identity){
+  if(identityBefore!==driverExpectedIdentity){
     return blocked(runtime,"recovery_hardware_identity_mismatch",trace);
   }
 
@@ -142,18 +208,20 @@ async function runRecoveryTransaction(inputRuntime,{
   if(!identityAfter||identityAfter!==identityBefore){
     return blocked(runtime,"recovery_hardware_identity_changed",trace,{receipt});
   }
-  if(expected_hardware_identity&&identityAfter!==expected_hardware_identity){
+  if(identityAfter!==driverExpectedIdentity){
     return blocked(runtime,"recovery_hardware_identity_mismatch",trace,{receipt});
   }
 
   const proof={
     contract_version:CONTRACT_VERSION,
+    target_key:deviceKey(target),
     verified:true,
     turn_id,
     readiness_verified:true,
     hardware_identity_verified:true,
     physical_readback_verified:true,
     safe_position_verified:true,
+    expected_identity_sha256:driverExpectedIdentity,
     identity_sha256:identityAfter,
     before_tick:beforeTick,
     after_tick:afterTick,
@@ -161,7 +229,7 @@ async function runRecoveryTransaction(inputRuntime,{
     safe_position_max_pct:safeLimit,
     execution_receipt_id:receipt.command_id||null
   };
-  clearQuarantine(runtime,target,proof);
+  restoreQuarantineAfterVerifiedRecovery(runtime,target,proof);
   trace.push({stage:"TRUST_RESTORED",value:clone(proof)});
 
   return {
