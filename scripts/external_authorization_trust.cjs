@@ -114,7 +114,8 @@ function validateExternalAuthorizationTrustVerdict(verdict,binding,{
     trust_domain_key_source_verified_at_runtime:true,
     issuer_authenticated_at_runtime:
       verdict.issuer_authenticated_verified===true,
-    offline_reverifiable:verdict.offline_reverifiable===true
+    provider_declared_offline_reverifiable:
+      verdict.offline_reverifiable===true
   };
 }
 
@@ -150,13 +151,18 @@ function verifyRetainedExternalAuthorizationEvidence(evidence,expectedBinding=nu
     throw new Error("external_authorization_evidence_runtime_trust_required");
   if(typeof evidence.issuer_authenticated_at_runtime!=="boolean")
     throw new Error("external_authorization_evidence_issuer_flag_required");
-  if(typeof evidence.offline_reverifiable!=="boolean")
-    throw new Error("external_authorization_evidence_offline_flag_required");
+  if(typeof evidence.provider_declared_offline_reverifiable!=="boolean")
+    throw new Error("external_authorization_evidence_offline_declaration_required");
 
   return {
     bound:true,
     runtime_enforced_recorded:true,
-    offline_reverifiable:evidence.offline_reverifiable===true
+    // A retained runtime verdict cannot self-upgrade into offline cryptographic
+    // re-verifiability. That stronger claim requires an actual replay verifier
+    // or separately authenticated verifier attestation.
+    offline_reverifiable:false,
+    provider_declared_offline_reverifiable:
+      evidence.provider_declared_offline_reverifiable===true
   };
 }
 
