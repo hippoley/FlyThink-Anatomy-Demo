@@ -7,7 +7,7 @@ const REQUIRED_BASE_CLAIMS=["iat","aud","exp","txn","sub","scope","req_wl"];
 const FLYTHINK_PROFILE_REQUIRED=["tctx"];
 
 function claimLiteralPresent(source,name){
-  const quoted=new RegExp(`["']${name}["']\\\\s*:`);
+  const quoted=new RegExp(String.raw`["']${name}["']\\s*:`);
   return quoted.test(source);
 }
 
