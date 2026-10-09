@@ -48,6 +48,8 @@ jobs:
           path: artifacts/semantic-patch-v1
           github-token: ${{ github.token }}
           run-id: "36372786282"
+      - name: Build immutable capability index
+        run: python scripts/build_capability_index.py
       - name: Build current FlyWire graph
         run: python scripts/train_flywire.py --download --epochs 1 --out artifacts/flywire
       - name: Generate release-scoped V3
