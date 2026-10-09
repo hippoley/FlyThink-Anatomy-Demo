@@ -14,7 +14,7 @@ function clone(v){return v==null?v:JSON.parse(JSON.stringify(v))}
 function pctFromState(state){
   const value=state&&state.thing_model&&state.thing_model.window_open_pct;
   const pct=Number(value);
-  return Number.isFinite(pct)?pct:null;
+  return Number.isFinite(pct)&&pct>=0&&pct<=100?pct:null;
 }
 function tickFromState(state){
   const tick=Number(state&&state.tick);
@@ -54,7 +54,9 @@ function restoreQuarantineAfterVerifiedRecovery(runtime,target,proof){
     Number.isFinite(afterTick)&&
     afterTick>beforeTick&&
     Number.isFinite(safePct)&&
+    safePct>=0&&safePct<=100&&
     Number.isFinite(safeMax)&&
+    safeMax>=0&&safeMax<=100&&
     safePct<=safeMax&&
     typeof proof.execution_receipt_id==="string"&&
     proof.execution_receipt_id.length>0;
