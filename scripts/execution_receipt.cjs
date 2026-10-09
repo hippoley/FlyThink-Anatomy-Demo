@@ -175,6 +175,83 @@ function physicalEvidenceRow(receipt,index){
   };
 }
 
+function verifyCloseoutEvidence(closeout,physicalEvidence=[],logicalTargets=[]){
+  if(!closeout||typeof closeout!=="object"||Array.isArray(closeout))return false;
+  const tolerance=Number(closeout.tolerance_pct);
+  const before=Number(closeout.before_position_pct);
+  const after=Number(closeout.after_position_pct);
+  if(
+    !Number.isFinite(tolerance)||tolerance<0||
+    !Number.isFinite(before)||!Number.isFinite(after)||
+    after<0||after>tolerance
+  )return false;
+
+  if(closeout.already_closed===true){
+    return (
+      closeout.attempted===false&&
+      before<=tolerance&&
+      after===before&&
+      (closeout.receipt==null)
+    );
+  }
+  if(
+    closeout.attempted!==true||
+    closeout.already_closed!==false||
+    !closeout.receipt||
+    typeof closeout.receipt!=="object"
+  )return false;
+
+  let row;
+  try{row=physicalEvidenceRow(closeout.receipt,0)}catch(e){return false}
+  if(
+    row.status!=="applied"||
+    row.checks.target_match!==true||
+    row.checks.ack_verified!==true||
+    row.checks.fresh_readback_verified!==true||
+    row.checks.hardware_identity_stable!==true||
+    row.checks.measured_readback!==true
+  )return false;
+
+  const patch=row.physical_patch||row.semantic_patch;
+  if(
+    !patch||
+    patch.op!=="PATCH_SLOT"||
+    patch.slot!=="opening"||
+    Number(patch.value)!==0
+  )return false;
+
+  const target=patchTarget(patch);
+  const logicalKeys=new Set(
+    (logicalTargets||[]).map(x=>{
+      try{return deviceKey(x)}catch(e){return null}
+    }).filter(Boolean)
+  );
+  try{
+    if(!target||!logicalKeys.has(deviceKey(target)))return false;
+  }catch(e){return false}
+
+  const observed=Number(
+    row.observation&&row.observation.evidence&&
+    row.observation.evidence.position_pct
+  );
+  if(
+    !Number.isFinite(observed)||
+    observed>tolerance||
+    Math.abs(observed-after)>1e-9
+  )return false;
+
+  const original=(physicalEvidence||[]).find(x=>x&&x.status==="applied");
+  const originalHardware=
+    original&&original.hardware_identity&&original.hardware_identity.after;
+  if(
+    originalHardware&&
+    row.hardware_identity&&
+    row.hardware_identity.before!==originalHardware
+  )return false;
+
+  return true;
+}
+
 function authorizationReceiptVerification(
   authorization,
   authorizedActions=[],
@@ -830,7 +907,12 @@ function verifyExecutionReceipt(receipt={},{
     physical_committed:physical.committed===true,
     physical_truth_verified:expectedVerification.physical_truth_verified,
     physical_completion_verified:
-      expectedVerification.physical_completion_verified===true
+      expectedVerification.physical_completion_verified===true,
+    safe_closeout_verified:verifyCloseoutEvidence(
+      receipt.closeout,
+      rebuiltRows,
+      receipt.logical_targets||[]
+    )
   };
 }
 
@@ -840,6 +922,7 @@ module.exports={
   patchTarget,
   authorizationReceiptVerification,
   physicalEvidenceRow,
+  verifyCloseoutEvidence,
   buildExecutionReceipt,
   verifyExecutionReceipt
 };
