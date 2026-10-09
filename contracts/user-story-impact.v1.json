@@ -74,6 +74,10 @@
     "hidden-gold-protocol": [
       "python",
       "tests/test_hidden_benchmark_protocol.py"
+    ],
+    "benchmark-v3-external-quality": [
+      "bash",
+      "scripts/check_benchmark_v3_external_quality.sh"
     ]
   },
   "stories": {
@@ -518,10 +522,16 @@
         "tests/benchmark_v3_teacher_forced.cjs",
         "scripts/run_benchmark_v3_baselines.cjs",
         "scripts/validate_benchmark_v3_baselines.py",
-        "tests/benchmark_v3_baselines.cjs"
+        "tests/benchmark_v3_baselines.cjs",
+        "requirements-benchmark.txt",
+        "scripts/check_benchmark_v3_external_quality.sh",
+        "scripts/check_benchmark_v3_fuzzy_leakage.py",
+        "tests/test_benchmark_v3_properties.py",
+        "tests/test_benchmark_v3_fuzzy_leakage.py"
       ],
       "suites": [
-        "benchmark-v3-quality"
+        "benchmark-v3-quality",
+        "benchmark-v3-external-quality"
       ]
     },
     "benchmark.hidden_gold_protocol": {

@@ -3,6 +3,10 @@ name: benchmark-v3-contract
 on:
   pull_request:
     paths:
+      - "requirements-benchmark.txt"
+      - "scripts/check_benchmark_v3_external_quality.sh"
+      - "scripts/check_benchmark_v3_fuzzy_leakage.py"
+      - "tests/test_benchmark_v3_properties.py"
       - "scripts/generate_long_trajectory_benchmark_v3.py"
       - "scripts/validate_long_trajectory_benchmark_v3.py"
       - "scripts/run_long_checkpoint_e2e_v3.cjs"
@@ -20,6 +24,10 @@ on:
   push:
     branches: [main]
     paths:
+      - "requirements-benchmark.txt"
+      - "scripts/check_benchmark_v3_external_quality.sh"
+      - "scripts/check_benchmark_v3_fuzzy_leakage.py"
+      - "tests/test_benchmark_v3_properties.py"
       - "scripts/generate_long_trajectory_benchmark_v3.py"
       - "scripts/validate_long_trajectory_benchmark_v3.py"
       - "scripts/run_long_checkpoint_e2e_v3.cjs"
@@ -85,6 +93,8 @@ jobs:
           node scripts/run_benchmark_v3_baselines.cjs --benchmark /tmp/long_trajectories_v3.json --split sealed > /tmp/benchmark-v3-baselines.json
           cat /tmp/benchmark-v3-baselines.json
           python scripts/validate_benchmark_v3_baselines.py /tmp/benchmark-v3-baselines.json
+      - name: External-module data quality
+        run: bash scripts/check_benchmark_v3_external_quality.sh
       - name: Reproducibility
         run: |
           python scripts/generate_long_trajectory_benchmark_v3.py --count 180 --out /tmp/long_trajectories_v3_again.json
