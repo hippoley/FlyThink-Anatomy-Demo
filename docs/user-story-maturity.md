@@ -2,7 +2,7 @@
 
 This is the repository truth table for what FlyThink can claim today. It keeps
 research-playground features, deterministic contracts, canonical execution,
-physical evidence and external adoption at different maturity levels.
+physical evidence and adoption at different maturity levels.
 
 ## Maturity levels
 
@@ -11,7 +11,11 @@ physical evidence and external adoption at different maturity levels.
 - **L2 — Canonical runtime:** behavior is wired into the durable execution path.
 - **L3 — Physical evidence:** real driver/readback semantics are exercised fail-closed.
 - **L4 — Retained evidence:** a frozen artifact can be verified independently later.
-- **L5 — External consumption:** a non-FlyThink project, verifier or CI depends on it.
+- **L5a — Cross-repository consumption:** a non-FlyThink repository pins and runs the contract in CI.
+- **L5b — Independent external adoption:** a separately owned third-party project, verifier or CI depends on it.
+
+L5a is evidence that the interface can survive outside this repository. It is
+**not** third-party endorsement. Only L5b counts as independent ecosystem adoption.
 
 ## Whole-home user stories
 
@@ -30,7 +34,7 @@ physical evidence and external adoption at different maturity levels.
 | Pronoun / coreference / correction / clarification | External owner | contextual-state contract consumed here | do not rebuild semantic ownership here |
 | Interruption / resume / long dialogue | L0/L1 here | research/browser corpora | durable semantic ownership remains upstream |
 
-## Execution-truth user stories
+## Execution-truth / conformance user stories
 
 | User story | Current level | Remaining closure |
 | --- | --- | --- |
@@ -40,7 +44,8 @@ physical evidence and external adoption at different maturity levels.
 | Potential side effect with ambiguous transport stays `INDETERMINATE` | L3 | real lost-ACK evidence would strengthen the claim |
 | Completion requires pre-actuation criterion + fresh identified witness | L3 | retained real-hardware Golden Proof |
 | Third party can verify retained evidence offline | L4 for frozen fixtures | real-hardware proof still pending |
-| External system actually consumes verifier/proof bundle | L5 not achieved | non-FlyThink CI/project/verifier needed |
+| Kernel conformance contract is consumable outside FlyThink | L5a | NLUSLOT pins FlyThink commit `d1c3f3619b400153f17731df12a71f0b472ff9fc` and passed cross-repo CI run `37873409257` |
+| Independent external system depends on a FlyThink verifier/conformance rail | L5b not achieved | separately owned project / CI / verifier required |
 
 ## Intentionally blocked
 
@@ -52,11 +57,17 @@ physical evidence and external adoption at different maturity levels.
 ## Current reality gates
 
 1. **Golden Proof:** protected live workflow must retain canonical receipt + proof bundle + safe closeout.
-2. **External consumption:** at least one non-FlyThink implementation or CI must consume the verifier/fixture.
+2. **Independent adoption:** L5a is closed for the kernel conformance rail; L5b still requires a separately owned downstream consumer.
 3. **Standards feedback:** external review/citation/adoption counts; self-authored compatibility claims do not.
 
 ## Priority rule
 
-New work should move an existing story from L0→L1, L1→L2, L2→L3, L3→L4 or
-L4→L5. A new experiment that moves no maturity boundary is lower priority than
-closing an existing reality gate.
+New work should move an existing story across a maturity boundary. A new experiment
+that moves no boundary is lower priority than closing an existing reality gate.
+
+At the current state, the two highest-value transitions are:
+
+```text
+L3 -> L4   retained real-hardware Golden Proof
+L5a -> L5b independently owned downstream consumer
+```
