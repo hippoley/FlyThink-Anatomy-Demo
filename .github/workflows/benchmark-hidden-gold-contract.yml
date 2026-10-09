@@ -42,8 +42,8 @@ jobs:
         run: |
           mkdir -p /tmp/hidden
           python scripts/build_hidden_benchmark_fixture.py --dir /tmp/hidden
-          python scripts/validate_hidden_benchmark_pack.py             --input /tmp/hidden/input.json             --gold /tmp/hidden/gold.json             --predictions /tmp/hidden/predictions.json
-          python scripts/score_hidden_benchmark.py             --input /tmp/hidden/input.json             --gold /tmp/hidden/gold.json             --predictions /tmp/hidden/predictions.json             --out /tmp/hidden/receipt.json
+          python scripts/validate_hidden_benchmark_pack.py --input /tmp/hidden/input.json --gold /tmp/hidden/gold.json --commitment /tmp/hidden/commitment.json --predictions /tmp/hidden/predictions.json
+          python scripts/score_hidden_benchmark.py --input /tmp/hidden/input.json --gold /tmp/hidden/gold.json --commitment /tmp/hidden/commitment.json --predictions /tmp/hidden/predictions.json --out /tmp/hidden/receipt.json
           python - <<'PY'
           import json
           x=json.load(open("/tmp/hidden/receipt.json"))
