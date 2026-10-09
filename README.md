@@ -45,7 +45,7 @@ Already on `main`:
 Still under active reality convergence:
 
 - the protected human-WAV → canonical `runDecisionProposal()` → WindowPilot path is wired and requires physical truth, physical completion and safe closeout to verify before the Golden Proof candidate is retained; the **real-hardware run itself is still pending**;
-- external authorization Trust Domain / signing-key-source verification is not provided by the current self-hashed SpatialRuntime receipt; optional issuer authentication is a separate stronger profile claim. Issue #137 tracks composition with IETF Transaction Tokens / workload identity rather than a FlyThink-specific signature format;
+- authorization issuer authenticity is not provided by the current self-hashed SpatialRuntime receipt; Issue #137 tracks composition with IETF Transaction Tokens / workload identity rather than a FlyThink-specific signature format;
 - cross-repository self-consumption exists, but independently owned L5b adoption is not yet claimed.
 
 Already hardened on `main`: a driver-call exception after possible side effects becomes an explicit indeterminate physical outcome, quarantines the target and forbids unsafe automatic retry until fresh reconciliation.
