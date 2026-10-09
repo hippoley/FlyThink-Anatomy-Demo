@@ -7,7 +7,7 @@ This protocol creates an admission path for future **human**, **independent
 generator**, or **external dataset** cases without exposing gold during model
 development.
 
-## Three separate artifacts
+## Four separate artifacts
 
 1. `benchmark-hidden-input-pack.v1`
    - visible before inference;
@@ -17,13 +17,18 @@ development.
    - produced against the visible input pack;
    - must bind the exact input-pack byte SHA-256;
    - must predict every case exactly once.
-3. `benchmark-hidden-gold-pack.v1`
+3. `benchmark-hidden-gold-commitment.v1`
+   - published/frozen before predictions;
+   - binds both input-pack SHA-256 and the byte SHA-256 of the still-hidden gold pack;
+   - reveals no labels.
+4. `benchmark-hidden-gold-pack.v1`
    - withheld until scoring;
    - binds the same input-pack SHA-256;
+   - must match the earlier commitment SHA;
    - contains gold decision + canonical patch sequence for every case.
 
-The scorer refuses pack-ID mismatch, input-SHA mismatch, duplicate IDs, missing
-cases and extra cases.
+The scorer refuses pack-ID mismatch, input-SHA mismatch, gold-commitment
+mismatch, duplicate IDs, missing cases and extra cases.
 
 ## Claim boundary
 
@@ -31,13 +36,16 @@ The protocol can prove:
 
 - exact input/gold/prediction artifact binding;
 - that prediction coverage cannot alter the scoring denominator;
-- that scoring occurred against a separately supplied gold artifact.
+- that scoring occurred against a separately supplied gold artifact;
+- that the revealed gold bytes match a prior content commitment.
 
-The protocol **cannot** prove that a claimed human or independent generator is
-actually independent. That is an external provenance/reviewer question.
+The protocol **cannot** prove that the commitment was publicly timestamped
+before prediction, nor that a claimed human or independent generator is
+actually independent. Those are external provenance/reviewer questions.
 
 Therefore `benchmark-hidden-score-receipt.v1` always keeps:
 
+- `commitment_pre_prediction_publication_externally_verified = false`
 - `source_independence_externally_verified = false`
 - `external_generalization_claim_eligible = false`
 
