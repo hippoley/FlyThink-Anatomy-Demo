@@ -215,6 +215,7 @@ function buildBundle(){
   assert.equal(verified.physical_truth_verified,true);
   assert.equal(verified.physical_completion_verified,false);
   assert.equal(verified.safe_closeout_verified,false);
+  assert.equal(verified.authorization_issuer_authenticated_verified,false);
   assert.equal(
     verified.decision_proposal_sha256,
     digestDecisionProposal(decisionProposal)
@@ -279,12 +280,23 @@ function buildBundle(){
     let legacy=buildBundle();
     delete legacy.verification.execution.physical_completion_verified;
     delete legacy.verification.execution.safe_closeout_verified;
+    delete legacy.verification.execution.authorization_issuer_authenticated_verified;
     legacy=resealBundle(legacy);
     const checked=verifyExecutionProofBundle(legacy);
     assert.equal(checked.valid,true);
     assert.equal(checked.physical_truth_verified,true);
     assert.equal(checked.physical_completion_verified,false);
     assert.equal(checked.safe_closeout_verified,false);
+    assert.equal(checked.authorization_issuer_authenticated_verified,false);
+  }
+
+  {
+    let preIssuerAuth=buildBundle();
+    delete preIssuerAuth.verification.execution.authorization_issuer_authenticated_verified;
+    preIssuerAuth=resealBundle(preIssuerAuth);
+    const checked=verifyExecutionProofBundle(preIssuerAuth);
+    assert.equal(checked.valid,true);
+    assert.equal(checked.authorization_issuer_authenticated_verified,false);
   }
 
   {

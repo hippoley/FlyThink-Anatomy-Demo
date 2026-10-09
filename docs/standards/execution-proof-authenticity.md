@@ -2,13 +2,14 @@
 
 Status: canonical claim-scope guidance for retained Golden Proof evidence.
 
-FlyThink intentionally separates three independent questions:
+FlyThink intentionally separates four independent questions:
 
 1. **Evidence integrity and semantics** — can the retained proof bundle be re-verified and can its physical-effect claims be recomputed?
-2. **Issuer / workflow provenance** — can a relying party verify which trusted workflow identity produced the retained proof bundle?
-3. **Transparency / non-equivocation** — can a relying party verify that the signed statement was registered in a transparency system with the consistency properties required by that system?
+2. **Authorization issuer authenticity** — was the pre-action allow decision issued by an authority the relying party is configured to trust?
+3. **Proof-artifact issuer / workflow provenance** — can a relying party verify which trusted workflow identity produced the retained proof bundle?
+4. **Transparency / non-equivocation** — can a relying party verify that the signed statement was registered in a transparency system with the consistency properties required by that system?
 
-The three questions must not be collapsed into one "verified" bit.
+These questions must not be collapsed into one "verified" bit. In particular, proof-artifact provenance does not retroactively authenticate the authority that issued the pre-action authorization.
 
 ## Layer 1 — FlyThink proof bundle
 
@@ -20,6 +21,7 @@ The canonical verifier can currently derive, among other fields:
 physical_truth_verified
 physical_completion_verified
 safe_closeout_verified
+authorization_issuer_authenticated_verified = false
 ```
 
 These are evidence/semantic claims. They do not authenticate an issuer merely because all SHA-256 commitments recompute correctly.
@@ -28,6 +30,26 @@ A party that can construct a self-consistent object can also compute its hashes.
 
 ```text
 hash integrity != issuer authenticity
+```
+
+## Authorization issuer boundary
+
+The current `homeai_spatialruntime_authorization_receipt_v1` is self-hashed. FlyThink re-verifies its exact patch, registry, scene/context, source revision, completion criteria, single-use intent and receipt integrity, but that does not authenticate **who was entitled to issue the allow decision**.
+
+Current machine-readable verification therefore reports:
+
+```text
+authorization_issuer_authenticated_verified = false
+```
+
+This is deliberate. A party able to construct a self-consistent authorization body can also recompute its SHA-256 fields.
+
+Issue #137 tracks the higher-value direction: compose the physical-action bindings with an externally validated IETF Transaction Token / workload identity trust layer instead of introducing a FlyThink-specific HMAC or signature protocol.
+
+Therefore:
+
+```text
+authorization binding/integrity != authorization issuer authenticity
 ```
 
 ## Layer 2 — GitHub / Sigstore artifact attestation

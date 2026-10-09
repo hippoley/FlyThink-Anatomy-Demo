@@ -912,7 +912,10 @@ function verifyExecutionReceipt(receipt={},{
       receipt.closeout,
       rebuiltRows,
       receipt.logical_targets||[]
-    )
+    ),
+    // execution-receipt.v1 verifies binding/integrity only. It does not
+    // authenticate the authority that issued the SpatialRuntime allow receipt.
+    authorization_issuer_authenticated_verified:false
   };
 }
 

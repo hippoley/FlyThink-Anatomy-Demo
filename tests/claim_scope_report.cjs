@@ -26,6 +26,7 @@ function base(){
 test("controller ACK never upgrades itself into physical completion",()=>{
   const out=buildClaimScopeReport(base());
   assert.equal(out.claims.execution_authorization.status,"VERIFIED");
+  assert.equal(out.claims.authorization_issuer.status,"UNVERIFIED");
   assert.equal(out.claims.controller_report.status,"VERIFIED");
   assert.equal(out.claims.physical_effect.status,"INDETERMINATE");
 });
@@ -36,6 +37,7 @@ test("authorization can verify while downstream and physical claims fail",()=>{
   v.measured_readback_verified=false;
   const out=buildClaimScopeReport(v);
   assert.equal(out.claims.execution_authorization.status,"VERIFIED");
+  assert.equal(out.claims.authorization_issuer.status,"UNVERIFIED");
   assert.equal(out.claims.controller_report.status,"NOT_VERIFIED");
   assert.equal(out.claims.physical_effect.status,"NOT_VERIFIED");
 });
@@ -49,8 +51,18 @@ test("physical completion is reported only from explicit completion verification
   assert.match(out.claims.physical_effect.proves,/precommitted criterion/);
 });
 
-test("record integrity does not imply named-human approval",()=>{
+test("record integrity does not imply named-human or issuer authentication",()=>{
   const out=buildClaimScopeReport(base());
   assert.ok(out.claims.execution_record.does_not_prove.includes("a named human approved the action"));
   assert.ok(out.claims.execution_authorization.does_not_prove.includes("a named human approved the action"));
+  assert.ok(out.claims.execution_authorization.does_not_prove.includes("the authorization receipt was issued by a trusted external authority"));
+  assert.equal(out.claims.authorization_issuer.status,"UNVERIFIED");
+});
+
+test("caller input cannot mint authorization issuer authenticity",()=>{
+  const v=base();
+  v.authorization_issuer_authenticated_verified=true;
+  const out=buildClaimScopeReport(v);
+  assert.equal(out.claims.execution_authorization.status,"VERIFIED");
+  assert.equal(out.claims.authorization_issuer.status,"UNVERIFIED");
 });

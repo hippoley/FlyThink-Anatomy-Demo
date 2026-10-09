@@ -227,6 +227,7 @@ function buildVerified(){
     assert.equal(verified.valid,true);
     assert.equal(verified.physical_truth_verified,true);
     assert.equal(verified.physical_completion_verified,true);
+    assert.equal(verified.authorization_issuer_authenticated_verified,false);
   }
 
   // 2. Mutating the exact authorized action is detected even if outer receipt is re-sealed.

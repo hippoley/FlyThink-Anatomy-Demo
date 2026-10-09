@@ -3,11 +3,12 @@
 /**
  * Produce a claim-scope-preserving report from FlyThink execution verification.
  *
- * This deliberately keeps four questions separate:
+ * This deliberately keeps five questions separate:
  * 1) was an execution record internally verified?
- * 2) was the exact action authorization bound and verified?
- * 3) did the downstream controller report success?
- * 4) was the intended physical effect independently witnessed?
+ * 2) was the exact action bound to the retained authorization receipt?
+ * 3) was the authorization issuer authenticated by an external trust layer?
+ * 4) did the downstream controller report success?
+ * 5) was the intended physical effect independently witnessed?
  *
  * A stronger claim is never inferred from a weaker one.
  */
@@ -23,7 +24,7 @@ function buildClaimScopeReport(verification={}){
     "logical_target_binding_verified"
   ]);
 
-  const executionAuthorizationVerified=allTrue(verification,[
+  const executionAuthorizationBindingVerified=allTrue(verification,[
     "authorization_receipt_integrity_verified",
     "authorization_receipt_patches_verified",
     "authorization_patch_digest_verified",
@@ -35,6 +36,11 @@ function buildClaimScopeReport(verification={}){
     "authorization_binding_verified",
     "logical_target_binding_verified"
   ]);
+
+  // claim-scope-report.v1 is a projection over FlyThink's current verifier.
+  // No trusted issuer-authentication adapter is wired into that verifier yet,
+  // so caller-supplied JSON must never be allowed to mint this stronger claim.
+  const authorizationIssuerAuthenticated=false;
 
   const controllerReportVerified=allTrue(verification,[
     "target_binding_verified",
@@ -64,11 +70,22 @@ function buildClaimScopeReport(verification={}){
         ]
       },
       execution_authorization:{
-        status:executionAuthorizationVerified?"VERIFIED":"NOT_VERIFIED",
-        proves:"the exact action is bound to FlyThink execution authorization",
+        status:executionAuthorizationBindingVerified?"VERIFIED":"NOT_VERIFIED",
+        proves:"the exact action is internally bound to the retained SpatialRuntime authorization receipt under FlyThink validation semantics",
         does_not_prove:[
+          "the authorization receipt was issued by a trusted external authority",
           "a named human approved the action",
           "a downstream controller succeeded",
+          "the intended physical effect occurred"
+        ]
+      },
+      authorization_issuer:{
+        status:authorizationIssuerAuthenticated?"VERIFIED":"UNVERIFIED",
+        proves:authorizationIssuerAuthenticated
+          ?"the authorization issuer was authenticated by an external trust layer"
+          :"no issuer-authenticity claim is established by execution-receipt.v1",
+        does_not_prove:[
+          "the action was safe, legal or beneficial",
           "the intended physical effect occurred"
         ]
       },
