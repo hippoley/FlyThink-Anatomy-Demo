@@ -36,7 +36,7 @@ assert.match(y,/--require-human-fixture/);
 const dryStart=y.indexOf("DRY_RUN human WAV");
 const applyStart=y.indexOf("APPLY human WAV");
 const verifyStart=y.indexOf("Independently verify canonical execution proof");
-const attestStart=y.indexOf("Attest validated live evidence provenance");
+const attestStart=y.indexOf("Attest Golden Proof bundle provenance");
 assert.ok(dryStart>=0&&applyStart>dryStart&&verifyStart>applyStart&&attestStart>verifyStart);
 
 const dryBlock=y.slice(dryStart,applyStart);
@@ -75,6 +75,9 @@ assert.match(y,/id-token:\s*write/);
 assert.match(y,/attestations:\s*write/);
 assert.match(y,/artifact-metadata:\s*write/);
 assert.match(y,/uses:\s*actions\/attest@v4/);
+assert.match(y,/id:\s*attest_proof/);
+assert.match(y,/subject-path:\s*live-execution-proof-bundle\.json/);
+assert.match(y,/steps\.attest_proof\.outputs\.bundle-path/);
 assert.match(y,/live-execution-receipt\.json/);
 assert.match(y,/live-execution-proof-bundle\.json/);
 assert.match(y,/live-execution-proof-verification\.json/);
@@ -100,5 +103,5 @@ assert.doesNotMatch(
 
 console.log(JSON.stringify({
   ok:true,
-  contract:"manual self-hosted physical-lab acceptance relies on one portable proof-bundle verifier for physical truth, completion, and safe closeout before attesting retained evidence"
+  contract:"manual physical-lab acceptance verifies one portable proof bundle, then retains a separate Sigstore provenance envelope so semantic/physical verification is not confused with issuer authenticity"
 }));

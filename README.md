@@ -2,7 +2,7 @@
 
 **A proof-carrying execution boundary for agents acting on physical systems — with a playable home-intelligence research surface.**
 
-> Agents propose. Reality responds. FlyThink makes the execution evidence independently verifiable.
+> Agents propose. Reality responds. FlyThink separates execution evidence, physical-effect verification, and issuer provenance so each can be checked without borrowing trust from the others.
 
 FlyThink's durable backend responsibility is narrower than "another agent framework":
 
@@ -39,7 +39,7 @@ Already on `main`:
 - World identity is bound as `world_snapshot_revision + world_snapshot_sha256`;
 - SpatialRuntime authorization proofs are independently re-verified at the execution boundary;
 - `execution-receipt.v1` remains the single execution-truth object;
-- `execution-proof-bundle.v1` packages the retained evidence for offline verification.
+- `execution-proof-bundle.v1` packages retained evidence for offline semantic/integrity verification; its SHA-256 binding is not, by itself, issuer authentication.
 
 Still under active reality convergence:
 
@@ -48,6 +48,8 @@ Still under active reality convergence:
 - indeterminate physical outcomes under transport loss are being hardened separately rather than collapsed into ordinary failure.
 
 ### Verify a retained proof bundle
+
+The bundle verifier answers what the retained FlyThink evidence proves under the repository's execution semantics. It does **not** authenticate who issued the JSON merely because its hashes verify. A protected real-hardware Golden Proof therefore retains a separate GitHub/Sigstore attestation bundle over `live-execution-proof-bundle.json`.
 
 A third party does not need to trust a FlyThink success flag. Given a retained bundle:
 
