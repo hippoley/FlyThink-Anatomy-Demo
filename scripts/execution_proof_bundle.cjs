@@ -103,7 +103,9 @@ function deriveVerification(artifacts){
       physical_completion_verified:execution.physical_completion_verified,
       safe_closeout_verified:execution.safe_closeout_verified,
       authorization_issuer_authenticated_verified:
-        execution.authorization_issuer_authenticated_verified===true
+        execution.authorization_issuer_authenticated_verified===true,
+      independent_object_outcome_verified:
+        execution.independent_object_outcome_verified===true
     }
   };
 }
@@ -183,6 +185,7 @@ function verifyExecutionProofBundle(bundle={}){
   const preIssuerAuthVerification=clone(expectedVerification);
   if(preIssuerAuthVerification&&preIssuerAuthVerification.execution){
     delete preIssuerAuthVerification.execution.authorization_issuer_authenticated_verified;
+    delete preIssuerAuthVerification.execution.independent_object_outcome_verified;
   }
   const completionOnlyVerification=clone(preIssuerAuthVerification);
   if(completionOnlyVerification&&completionOnlyVerification.execution){
@@ -203,6 +206,7 @@ function verifyExecutionProofBundle(bundle={}){
 
   return {
     valid:true,
+    verification_source:"flythink-canonical-verifier",
     bundle_sha256:bundle.bundle_sha256,
     execution_receipt_sha256:
       expectedVerification.execution.receipt_sha256,
@@ -218,6 +222,8 @@ function verifyExecutionProofBundle(bundle={}){
       expectedVerification.execution.safe_closeout_verified,
     authorization_issuer_authenticated_verified:
       expectedVerification.execution.authorization_issuer_authenticated_verified===true,
+    independent_object_outcome_verified:
+      expectedVerification.execution.independent_object_outcome_verified===true,
     result:expectedVerification.execution.result
   };
 }
