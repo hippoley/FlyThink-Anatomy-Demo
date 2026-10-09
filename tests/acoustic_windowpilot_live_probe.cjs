@@ -80,6 +80,7 @@ assert.doesNotThrow(()=>assertLiveProbePreconditions({
     assert.equal(out.already_closed,true);
     assert.equal(executeCalls,0);
     assert.equal(out.after_position_pct,0);
+    assert.equal(out.tolerance_pct,1);
   }
 
   {
@@ -108,6 +109,7 @@ assert.doesNotThrow(()=>assertLiveProbePreconditions({
     assert.equal(out.attempted,true);
     assert.equal(executeCalls,1);
     assert.equal(out.after_position_pct,0);
+    assert.equal(out.tolerance_pct,1);
     const key="主卧::窗::default";
     assert.equal(out.runtime.devices[key].slots.opening,0);
     assert.equal(out.runtime.devices[key].slots.power,"OFF");
