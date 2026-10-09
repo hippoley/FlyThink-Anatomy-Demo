@@ -90,6 +90,7 @@ function driver({
     assert.equal(out.status,"RECOVERED");
     assert.equal(out.contract_version,"recovery-transaction.v1");
     assert.equal(out.proof.verified,true);
+    assert.equal(out.proof.target_key,key);
     assert.equal(out.proof.before_tick,10);
     assert.equal(out.proof.after_tick,11);
     assert.equal(out.proof.safe_position_pct,0);
@@ -164,6 +165,27 @@ function driver({
     assert.equal(out.reason,"recovery_readiness_not_verified");
     assert.equal(isQuarantined(out.runtime,target),true);
     assert.equal(out.trace.length,1);
+  }
+
+  {
+    const runtime=baseRuntime();
+    const out=await runRecoveryTransaction(runtime,{
+      target,
+      driver:driver({readyBefore:false}),
+      safe_patch:{op:"PATCH_SLOT",target,slot:"opening",value:0},
+      proof:{
+        verified:true,
+        readiness_verified:true,
+        hardware_identity_verified:true,
+        physical_readback_verified:true,
+        safe_position_verified:true
+      }
+    });
+    assert.equal(out.ok,false);
+    assert.equal(out.reason,"recovery_readiness_not_verified");
+    assert.equal(out.proof,null);
+    assert.equal(isQuarantined(out.runtime,target),true,
+      "caller-asserted recovery booleans must not restore trust");
   }
 
   {
@@ -258,7 +280,7 @@ function driver({
 
   console.log(JSON.stringify({
     ok:true,
-    cases:11,
+    cases:12,
     contract:"RecoveryTransaction restores trust only after readiness, same-target safety action, fresh readback, stable identity, and verified safe position"
   }));
 })().catch(e=>{console.error(e);process.exit(1)});
