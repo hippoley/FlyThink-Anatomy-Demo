@@ -1,0 +1,50 @@
+{
+  "profile": "noa-consumer-semantics-probe.v0",
+  "upstream_revision": "eacb93ce72c7ba00ecd0d5d4477ad2d6f4e4d3c9",
+  "source_selector": {
+    "file": "conformance/action-digest/vectors.json",
+    "vector": "valid",
+    "chain_index": 0
+  },
+  "cases": [
+    {
+      "name": "preserve-valid-source-semantics",
+      "expected_status": "PASS",
+      "expected_code": null
+    },
+    {
+      "name": "reject-action-id-canonical-transposition",
+      "mutation": {"kind": "transpose_action_fields"},
+      "expected_status": "REFUSE",
+      "expected_code": "action_id_mismatch"
+    },
+    {
+      "name": "reject-consumer-params-hash-rederivation",
+      "mutation": {
+        "kind": "set",
+        "path": "action.paramsHash",
+        "value": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      },
+      "expected_status": "REFUSE",
+      "expected_code": "params_hash_mismatch"
+    },
+    {
+      "name": "reject-outcome-normalization",
+      "mutation": {"kind": "set", "path": "outcome", "value": "PASS"},
+      "expected_status": "REFUSE",
+      "expected_code": "outcome_mismatch"
+    },
+    {
+      "name": "reject-invented-controller-report",
+      "mutation": {"kind": "set", "path": "controller_report", "value": "SUCCESS"},
+      "expected_status": "REFUSE",
+      "expected_code": "controller_report_must_be_source_absent"
+    },
+    {
+      "name": "reject-invented-physical-completion",
+      "mutation": {"kind": "set", "path": "physical_completion", "value": "VERIFIED"},
+      "expected_status": "REFUSE",
+      "expected_code": "physical_completion_must_be_source_absent"
+    }
+  ]
+}
