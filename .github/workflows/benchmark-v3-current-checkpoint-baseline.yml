@@ -1,6 +1,12 @@
 name: benchmark-v3-current-checkpoint-baseline
 
 on:
+  pull_request:
+    paths:
+      - ".github/workflows/benchmark-v3-current-checkpoint-baseline.yml"
+      - "scripts/generate_long_trajectory_benchmark_v3.py"
+      - "scripts/validate_long_trajectory_benchmark_v3.py"
+      - "scripts/run_long_checkpoint_e2e_v3.cjs"
   push:
     branches: [main]
     paths:
