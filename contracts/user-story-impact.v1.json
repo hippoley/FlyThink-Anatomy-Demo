@@ -526,7 +526,8 @@
         "requirements-benchmark.txt",
         "scripts/check_benchmark_v3_external_quality.sh",
         "scripts/check_benchmark_v3_fuzzy_leakage.py",
-        "tests/test_benchmark_v3_properties.py"
+        "tests/test_benchmark_v3_properties.py",
+        "tests/test_benchmark_v3_fuzzy_leakage.py"
       ],
       "suites": [
         "benchmark-v3-quality",
