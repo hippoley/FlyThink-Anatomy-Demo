@@ -153,13 +153,16 @@ def make_execute_turn(split,state,rng,focus,family):
  turn["gold_state"]=snapshot(state)
  return turn,(r,e)
 
-def make_clarify(split,state,rng,focus):
+def make_clarify(split,state,rng,focus,basis):
+ if basis not in ("no_prior_focus","multi_referent_set"):
+  raise ValueError("clarify requires explicit ambiguity basis")
  e=rng.choice(["空调","灯","窗"])
  sname,slot,v,word,delta=slot_spec(e,rng)
  text,tid=render(split,"clarify",rng,r="",e=e,s=sname,v=v,word=word,wrong="")
  return {
   "text":text,"surface_template_id":tid,"scenario_family":"ambiguous_clarify",
   "difficulty":4,"context_hint":{},"gold_decision":"CLARIFY",
+  "ambiguity_basis":basis,
   "gold_write_set":[],"gold_state":snapshot(state)
  },focus
 
@@ -195,15 +198,26 @@ def make(i,count,rng):
  split=split_for(i,count)
  state=state_template();initial=initial_runtime(state);turns=[];focus=None
  n=rng.randint(12,28)
- families=["slot","power","relative","correction","multi","clarify"]
- weights=[.27,.15,.2,.14,.12,.12]
- for j in range(n):
+ families=["slot","power","relative","correction","multi"]
+ weights=[.31,.17,.22,.16,.14]
+ j=0
+ # A first-turn ambiguous request is valid because no conversational focus exists.
+ if rng.random()<.25:
+  turn,focus=make_clarify(split,state,rng,focus,"no_prior_focus")
+  turn["turn_id"]=f"{split}-{i:03d}-{j:02d}";j+=1
+  turn["generalization_class"]=generalization_class(turn);turns.append(turn)
+ while j<n:
   fam=rng.choices(families,weights=weights,k=1)[0]
-  if fam=="clarify": turn,focus=make_clarify(split,state,rng,focus)
-  else: turn,focus=make_execute_turn(split,state,rng,focus,fam)
-  turn["turn_id"]=f"{split}-{i:03d}-{j:02d}"
-  turn["generalization_class"]=generalization_class(turn)
-  turns.append(turn)
+  turn,focus=make_execute_turn(split,state,rng,focus,fam)
+  turn["turn_id"]=f"{split}-{i:03d}-{j:02d}";j+=1
+  turn["generalization_class"]=generalization_class(turn);turns.append(turn)
+  # Under the gold history, a multi-target patch leaves no unique focused_target:
+  # runtime_context_adapter exposes the whole targets array as referent_set.
+  # A singular deictic follow-up is therefore genuinely ambiguous.
+  if fam=="multi" and j<n and rng.random()<.65:
+   turn,focus=make_clarify(split,state,rng,focus,"multi_referent_set")
+   turn["turn_id"]=f"{split}-{i:03d}-{j:02d}";j+=1
+   turn["generalization_class"]=generalization_class(turn);turns.append(turn)
  return {"id":f"whole-home-v3-{i:03d}","split":split,"initial_runtime":initial,"turns":turns}
 
 def main():
