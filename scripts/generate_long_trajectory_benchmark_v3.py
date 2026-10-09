@@ -12,7 +12,7 @@ Goals:
 """
 import argparse,copy,hashlib,json,pathlib,random,re
 
-SEED=20261009
+BASE_SEED=20261009
 ROOMS=["客厅","主卧","书房","次卧"]
 DEVICES={
  "空调":{"model_id":"AWGD-ZA01","slots":{"power":"OFF","temperature":24}},
@@ -172,10 +172,16 @@ def assert_template_isolation():
    if overlap: raise ValueError(f"surface_template_overlap:{a}:{b}:{sorted(overlap)}")
 
 def split_for(i,count):
- train_n=round(count*SPLIT_WEIGHTS[0]); dev_n=round(count*SPLIT_WEIGHTS[1])
+ train_n=(count*2)//3
+ remaining=count-train_n
+ dev_n=remaining//2
  if i<train_n:return "train"
  if i<train_n+dev_n:return "dev"
  return "sealed"
+
+def release_seed(release_id):
+ raw=f"{BASE_SEED}:{release_id}".encode()
+ return int.from_bytes(hashlib.sha256(raw).digest()[:8],"big")
 
 def make(i,count,rng):
  split=split_for(i,count)
@@ -195,10 +201,14 @@ def main():
  ap=argparse.ArgumentParser()
  ap.add_argument("--count",type=int,default=180)
  ap.add_argument("--out",default="benchmarks/long_trajectories_v3.json")
+ ap.add_argument("--release-id",default="2026-10")
  a=ap.parse_args()
  if a.count<60: raise SystemExit("count must be >=60")
+ if not re.fullmatch(r"[0-9]{4}-[0-9]{2}",a.release_id):
+  raise SystemExit("release-id must be YYYY-MM")
  assert_template_isolation()
- rng=random.Random(SEED)
+ seed=release_seed(a.release_id)
+ rng=random.Random(seed)
  rows=[make(i,a.count,rng) for i in range(a.count)]
  raw=json.dumps(rows,ensure_ascii=False,separators=(",",":"),sort_keys=True).encode()
  split_counts={s:sum(x["split"]==s for x in rows) for s in SPLITS}
@@ -207,7 +217,8 @@ def main():
   for t in tr["turns"]: family_counts[t["scenario_family"]]=family_counts.get(t["scenario_family"],0)+1
  manifest={
   "truth":"whole_home_long_trajectory_generalization_v3",
-  "seed":SEED,"trajectories":len(rows),"turns":sum(len(x["turns"]) for x in rows),
+  "generator_version":"long-trajectory-v3.1","release_id":a.release_id,
+  "seed":seed,"base_seed":BASE_SEED,"trajectories":len(rows),"turns":sum(len(x["turns"]) for x in rows),
   "split_counts":split_counts,"scenario_family_counts":family_counts,
   "devices_per_home":len(ROOMS)*len(DEVICES),"rooms":ROOMS,"device_types":list(DEVICES),
   "sealed_surface_templates_disjoint":True,
