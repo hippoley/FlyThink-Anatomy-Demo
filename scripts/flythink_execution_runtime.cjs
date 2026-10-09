@@ -28,6 +28,10 @@ const {
   buildExecutionReceipt,
   verifyExecutionReceipt
 }=require("./execution_receipt.cjs");
+const {
+  buildExternalAuthorizationTrustBinding,
+  validateExternalAuthorizationTrustVerdict
+}=require("./external_authorization_trust.cjs");
 
 function clone(v){return v==null?v:JSON.parse(JSON.stringify(v))}
 function runtimeWorldRevision(runtime){
@@ -122,7 +126,8 @@ function buildRuntimeReceipt({
   after_runtime=null,
   source_step=0,
   source_revision=0,
-  closeout=null
+  closeout=null,
+  external_authorization_trust=null
 }={}){
   return buildExecutionReceipt({
     contextual_state,
@@ -139,7 +144,8 @@ function buildRuntimeReceipt({
     physical_committed,
     source_step,
     source_revision,
-    closeout
+    closeout,
+    external_authorization_trust
   });
 }
 
@@ -154,8 +160,12 @@ async function runExecutionProposal({
   expected_spatialruntime_commit_sha=null,
   source_step=0,
   source_revision=0,
+  world_snapshot_sha256=null,
   max_uncertainty=0.35,
-  authorizationLedger=null
+  authorizationLedger=null,
+  externalAuthorizationTrustVerifier=null,
+  require_external_authorization_trust=false,
+  require_external_authorization_issuer=false
 }={}){
   assertContextStateSnapshot(contextual_state);
   validateExecutionRequest(request);
@@ -278,19 +288,108 @@ async function runExecutionProposal({
 
   const authorized=authorization.patches;
   const authReceipt=authorization.receipt;
+
+  let externalAuthorizationTrust=null;
+  if(require_external_authorization_trust===true){
+    if(typeof externalAuthorizationTrustVerifier!=="function"){
+      return {
+        ...noExecution("BLOCKED","external_authorization_trust_verifier_required"),
+        authorization_receipt:clone(authReceipt)
+      };
+    }
+    const transactionToken=
+      rawAuthorization&&typeof rawAuthorization.transaction_token==="string"
+        ?rawAuthorization.transaction_token
+        :"";
+    if(!transactionToken){
+      return {
+        ...noExecution("BLOCKED","external_authorization_transaction_token_required"),
+        authorization_receipt:clone(authReceipt)
+      };
+    }
+
+    let binding;
+    try{
+      binding=buildExternalAuthorizationTrustBinding({
+        authorized_actions:authorized,
+        authorization_receipt:authReceipt,
+        completion_criteria:completionCriteria,
+        world_snapshot_revision:source_revision,
+        world_snapshot_sha256
+      });
+    }catch(err){
+      return {
+        ...noExecution("BLOCKED","external_authorization_binding_invalid"),
+        authorization_error:String(err&&err.message||err),
+        authorization_receipt:clone(authReceipt)
+      };
+    }
+
+    try{
+      const verdict=await externalAuthorizationTrustVerifier({
+        transaction_token:transactionToken,
+        binding:clone(binding)
+      });
+      externalAuthorizationTrust=validateExternalAuthorizationTrustVerdict(
+        verdict,
+        binding,
+        {require_issuer:require_external_authorization_issuer===true}
+      );
+    }catch(err){
+      return {
+        ...noExecution("BLOCKED","external_authorization_trust_denied"),
+        authorization_error:String(err&&err.message||err),
+        authorization_receipt:clone(authReceipt)
+      };
+    }
+  }
+
   if(!authorizationLedger||typeof authorizationLedger.add!=="function"){
     return {
       ...noExecution("BLOCKED","authorization_ledger_required"),
       authorization_receipt:clone(authReceipt)
     };
   }
+  if(externalAuthorizationTrust){
+    let transactionConsumed;
+    try{
+      transactionConsumed=authorizationLedger.add(
+        "txntoken:"+externalAuthorizationTrust.transaction_id,
+        {
+          task_id:request.task_id,
+          token_sha256:externalAuthorizationTrust.token_sha256,
+          trust_anchor_sha256:externalAuthorizationTrust.trust_anchor_sha256,
+          binding_sha256:externalAuthorizationTrust.binding_sha256,
+          provider:externalAuthorizationTrust.provider,
+          provider_revision:externalAuthorizationTrust.provider_revision
+        }
+      );
+    }catch(err){
+      return {
+        ...noExecution("BLOCKED","authorization_ledger_unavailable"),
+        authorization_error:String(err&&err.message||err),
+        authorization_receipt:clone(authReceipt),
+        external_authorization_trust:clone(externalAuthorizationTrust)
+      };
+    }
+    if(transactionConsumed===false){
+      return {
+        ...noExecution("BLOCKED","external_authorization_transaction_replayed"),
+        authorization_receipt:clone(authReceipt),
+        external_authorization_trust:clone(externalAuthorizationTrust)
+      };
+    }
+  }
+
   let consumed;
   try{
     consumed=authorizationLedger.add(authReceipt.authorization_id,{
       task_id:request.task_id,
       receipt_sha256:authReceipt.receipt_sha256||null,
       patch_digest:authReceipt.patch_digest,
-      registry_digest:authReceipt.registry_digest
+      registry_digest:authReceipt.registry_digest,
+      external_transaction_id:
+        externalAuthorizationTrust&&externalAuthorizationTrust.transaction_id||null
     });
   }catch(err){
     return {
@@ -357,7 +456,8 @@ async function runExecutionProposal({
     before_runtime:beforePhysical,
     after_runtime:current,
     source_step,
-    source_revision
+    source_revision,
+    external_authorization_trust:externalAuthorizationTrust
   });
 
   return {
@@ -366,6 +466,7 @@ async function runExecutionProposal({
     reason,
     runtime:current,
     authorization:clone(authorization.receipt),
+    external_authorization_trust:clone(externalAuthorizationTrust),
     authorized_actions:clone(authorized),
     physical_receipts:clone(physical.receipts||[]),
     atomic_batch:atomic,
@@ -385,7 +486,10 @@ async function runDecisionProposal({
   expected_spatialruntime_commit_sha=null,
   source_step=0,
   max_uncertainty=0.35,
-  authorizationLedger=null
+  authorizationLedger=null,
+  externalAuthorizationTrustVerifier=null,
+  require_external_authorization_trust=false,
+  require_external_authorization_issuer=false
 }={}){
   assertContextStateSnapshot(contextual_state);
   validateDecisionProposal(decision_proposal);
@@ -523,9 +627,13 @@ async function runDecisionProposal({
     authorization_context,
     source_step,
     source_revision:decision_proposal.world_snapshot_revision,
+    world_snapshot_sha256:decision_proposal.world_snapshot_sha256,
     max_uncertainty,
     authorizationLedger,
-    expected_spatialruntime_commit_sha
+    expected_spatialruntime_commit_sha,
+    externalAuthorizationTrustVerifier,
+    require_external_authorization_trust,
+    require_external_authorization_issuer
   });
 }
 
@@ -535,13 +643,19 @@ class FlyThinkExecutionRuntime{
     driver,
     physicalAuthorizer,
     maxUncertainty=0.35,
-    authorizationLedger=null
+    authorizationLedger=null,
+    externalAuthorizationTrustVerifier=null,
+    requireExternalAuthorizationTrust=false,
+    requireExternalAuthorizationIssuer=false
   }={}){
     this.runtime=normalizeRuntime(runtime);
     this.driver=driver;
     this.physicalAuthorizer=physicalAuthorizer;
     this.maxUncertainty=maxUncertainty;
     this.authorizationLedger=authorizationLedger;
+    this.externalAuthorizationTrustVerifier=externalAuthorizationTrustVerifier;
+    this.requireExternalAuthorizationTrust=requireExternalAuthorizationTrust===true;
+    this.requireExternalAuthorizationIssuer=requireExternalAuthorizationIssuer===true;
   }
 
   async execute(input={}){
@@ -553,7 +667,12 @@ class FlyThinkExecutionRuntime{
       max_uncertainty:input.max_uncertainty==null
         ?this.maxUncertainty
         :input.max_uncertainty,
-      authorizationLedger:input.authorizationLedger||this.authorizationLedger
+      authorizationLedger:input.authorizationLedger||this.authorizationLedger,
+      // External authorization trust is a deployment/runtime capability.
+      // Per-execution input must not swap the verifier or downgrade the policy.
+      externalAuthorizationTrustVerifier:this.externalAuthorizationTrustVerifier,
+      require_external_authorization_trust:this.requireExternalAuthorizationTrust,
+      require_external_authorization_issuer:this.requireExternalAuthorizationIssuer
     });
     this.runtime=out.runtime;
     return out;
@@ -568,7 +687,12 @@ class FlyThinkExecutionRuntime{
       max_uncertainty:input.max_uncertainty==null
         ?this.maxUncertainty
         :input.max_uncertainty,
-      authorizationLedger:input.authorizationLedger||this.authorizationLedger
+      authorizationLedger:input.authorizationLedger||this.authorizationLedger,
+      // External authorization trust is a deployment/runtime capability.
+      // Per-execution input must not swap the verifier or downgrade the policy.
+      externalAuthorizationTrustVerifier:this.externalAuthorizationTrustVerifier,
+      require_external_authorization_trust:this.requireExternalAuthorizationTrust,
+      require_external_authorization_issuer:this.requireExternalAuthorizationIssuer
     });
     this.runtime=out.runtime;
     return out;
