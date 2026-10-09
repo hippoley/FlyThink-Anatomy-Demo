@@ -50,3 +50,18 @@ Recommended policy:
 
 This is intentionally closer to a living benchmark model than a one-time static
 test set.
+
+
+## Clarification truth rule
+
+A CLARIFY label is only valid when ambiguity is derivable from the gold
+conversation state, not merely because the surface text contains a pronoun.
+
+V3 currently permits two explicit ambiguity bases:
+
+- `no_prior_focus`: the request is the first turn, so there is no focused target;
+- `multi_referent_set`: the immediately previous gold execution targeted two or
+  more devices, which leaves a multi-item referent set and no unique focused
+  target under the canonical runtime context adapter.
+
+The validator rejects CLARIFY rows that do not prove one of these conditions.
