@@ -41,7 +41,8 @@ L5a is evidence that the interface can survive outside this repository. It is
 | Untrusted reasoner proposes without actuator authority | L2 | none |
 | Exact Context + World identities are bound to execution | L2 | none |
 | Authorization receipt integrity + action/context binding are re-verified at execution boundary | L2 | current v1 self-hash proves internal integrity/binding only |
-| Authorization issuer authenticity | External trust layer pending | real Transaction Token/workload-identity validator or equivalent issuer-authenticated mechanism required; current verifier returns `authorization_issuer_authenticated_verified=false` |
+| Authorization Trust Domain / signing-key source | External trust layer pending | real Transaction Token/workload-identity validator bound to trusted deployment/runtime configuration required; current verifier returns `authorization_trust_domain_key_source_verified=false` |
+| Optional authorization issuer authenticity | External trust layer pending | Txn-Token draft-11 makes `iss` optional; only deployments that pin an issuer should ever promote `authorization_issuer_authenticated_verified=true` |
 | Potential side effect with ambiguous transport stays `INDETERMINATE` | L3 | real lost-ACK evidence would strengthen the claim |
 | Completion requires pre-actuation criterion + fresh identified witness | L3 | retained real-hardware Golden Proof |
 | Independent object-level outcome observation | Not established by v1 | current WindowPilot witness is integrated controller/state readback (`witness.independent=false`); `independent_object_outcome_verified=false` until a separately trusted observer path exists |
