@@ -9,8 +9,8 @@ def canon(v):
 
 def exact(a,b):return canon(a)==canon(b)
 
-def score(input_path,gold_path,pred_path):
- validation=validate_triplet(input_path,gold_path,pred_path)
+def score(input_path,gold_path,pred_path,commitment_path):
+ validation=validate_triplet(input_path,gold_path,pred_path,commitment_path)
  inp=json.load(open(input_path,encoding="utf8"))
  gold=json.load(open(gold_path,encoding="utf8"))
  pred=json.load(open(pred_path,encoding="utf8"))
@@ -28,6 +28,7 @@ def score(input_path,gold_path,pred_path):
   "pack_id":inp["pack_id"],
   "input_pack_sha256":validation["input_pack_sha256"],
   "gold_pack_sha256":sha256_file(gold_path),
+  "gold_commitment_sha256":sha256_file(commitment_path),
   "prediction_pack_sha256":sha256_file(pred_path),
   "source":{
    "kind":src["kind"],
@@ -45,17 +46,19 @@ def score(input_path,gold_path,pred_path):
   },
   "claim_scope":{
    "blind_input_gold_separation_verified":True,
+   "gold_content_matches_commitment_verified":True,
+   "commitment_pre_prediction_publication_externally_verified":False,
    "source_independence_externally_verified":False,
    "external_generalization_claim_eligible":False,
-   "reason":"protocol verifies pack separation and binding, not producer independence; fixture/external provenance requires separate review"
+   "reason":"protocol verifies byte binding and gold-content commitment, but not external publication timing or producer independence; both require separately governed provenance"
   },
   "rows":rows
  }
 
 def main():
  ap=argparse.ArgumentParser()
- ap.add_argument("--input",required=True);ap.add_argument("--gold",required=True);ap.add_argument("--predictions",required=True);ap.add_argument("--out",required=True)
- a=ap.parse_args();r=score(a.input,a.gold,a.predictions)
+ ap.add_argument("--input",required=True);ap.add_argument("--gold",required=True);ap.add_argument("--commitment",required=True);ap.add_argument("--predictions",required=True);ap.add_argument("--out",required=True)
+ a=ap.parse_args();r=score(a.input,a.gold,a.predictions,a.commitment)
  pathlib.Path(a.out).write_text(json.dumps(r,ensure_ascii=False,indent=2)+"\n",encoding="utf8")
  print(json.dumps({"pack_id":r["pack_id"],"metrics":r["metrics"],"claim_scope":r["claim_scope"]},ensure_ascii=False))
 
