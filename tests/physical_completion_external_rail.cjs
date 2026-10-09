@@ -120,6 +120,7 @@ function vector(over={}){
   );
   assert.equal(out.verdict,"invalid");
   assert.equal(out.result,null);
+  assert.equal(out.independent_object_outcome_verified,false);
   assert.ok(out.codes.includes("completion-criterion-not-authorization-bound"));
 }
 
