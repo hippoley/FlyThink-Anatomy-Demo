@@ -161,7 +161,7 @@
       ],
       "paths": [
         "scripts/proof_derived_undo.cjs",
-        "tests/proof_derived_undo.cjs"
+        "tests/execution_proof_bundle.cjs"
       ],
       "suites": [
         "execution-runtime",
