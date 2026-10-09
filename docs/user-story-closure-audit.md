@@ -41,7 +41,8 @@ story is not "closed" merely because a deterministic fixture passes.
 | Untrusted reasoner cannot actuate | CODE_CLOSED | proposal is non-authoritative | none |
 | Exact Context + World identity | CODE_CLOSED | external context identity + authoritative WorldSnapshot are bound before execution | none |
 | Authorization receipt integrity + action/context binding | CODE_CLOSED | v1 re-verifies exact receipt, patch, registry, source revision and completion-criterion bindings before driver entry | none at the local-integrity layer |
-| Authorization issuer authenticity | EXTERNAL_TRUST_OPEN | current v1 self-hash cannot authenticate who was entitled to issue the allow decision; verifier explicitly returns `authorization_issuer_authenticated_verified=false` | real Transaction Token/workload-identity validator or equivalent issuer-authenticated trust layer |
+| Authorization trust-domain / configured signing-key-source verification | EXTERNAL_TRUST_OPEN | current v1 self-hash cannot establish an externally governed authorization trust root; verifier explicitly returns `authorization_trust_domain_key_source_verified=false` | real Transaction Token/workload-identity validator bound to trusted runtime/deployment configuration |
+| Optional authorization issuer authentication | EXTERNAL_TRUST_OPEN / PROFILE_OPTIONAL | issuer identity is a separate claim and is not required by every external authorization profile; verifier explicitly returns `authorization_issuer_authenticated_verified=false` | only upgrade when a configured issuer identity is separately authenticated |
 | Ambiguous transport remains INDETERMINATE | REALITY_OPEN | post-dispatch driver ambiguity is quarantined; unsafe automatic retry is blocked | retained real lost-ACK / ambiguous transport evidence |
 | Completion requires precommitted criterion + witness | REALITY_OPEN | criterion/witness binding and verifier exist | retained real Golden Proof |
 | Independent object-level outcome observation | REALITY_OPEN / EXTERNAL_TRUST_OPEN | current WindowPilot completion witness is integrated controller/state readback; canonical verifier returns `independent_object_outcome_verified=false` | separately trusted object-level observer path + retained real run |
@@ -94,7 +95,7 @@ reviewed human WAV
 
 No additional synthetic abstraction work should be credited toward this gate.
 
-### 2. Authorization issuer authenticity
+### 2. External authorization trust: Trust Domain first, issuer only when profiled
 
 The current SpatialRuntime authorization receipt proves internal integrity and
 application binding, not issuer authority.
