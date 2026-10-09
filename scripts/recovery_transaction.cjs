@@ -9,6 +9,7 @@ const {
 }=require("./physical_runtime.cjs");
 
 const CONTRACT_VERSION="recovery-transaction.v1";
+const SAFE_RECOVERY_MAX_PCT=0;
 
 function clone(v){return v==null?v:JSON.parse(JSON.stringify(v))}
 function pctFromState(state){
@@ -90,10 +91,18 @@ async function runRecoveryTransaction(inputRuntime,{
   if(!safe_patch.target||deviceKey(safe_patch.target)!==deviceKey(target)){
     throw new Error("recovery_patch_target_mismatch");
   }
-  const safeLimit=Number(safe_position_max_pct);
-  if(!Number.isFinite(safeLimit)||safeLimit<0||safeLimit>100){
+  const requestedSafeLimit=Number(safe_position_max_pct);
+  if(!Number.isFinite(requestedSafeLimit)||requestedSafeLimit<0||requestedSafeLimit>100){
     throw new Error("recovery_safe_position_limit_invalid");
   }
+  // v1 is a window-recovery contract and its fail-safe state is fully closed.
+  // The request may not weaken that policy by selecting a larger threshold.
+  // A future non-zero threshold must come from a trusted, versioned policy
+  // source rather than from the recovery request itself.
+  if(requestedSafeLimit!==SAFE_RECOVERY_MAX_PCT){
+    throw new Error("recovery_safe_position_policy_override_forbidden");
+  }
+  const safeLimit=SAFE_RECOVERY_MAX_PCT;
 
   let runtime=inputRuntime;
   if(!isQuarantined(runtime,target))throw new Error("device_not_quarantined");
