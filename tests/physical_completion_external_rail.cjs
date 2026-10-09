@@ -90,7 +90,8 @@ function vector(over={}){
   assert.equal(out.verdict,"valid");
   assert.equal(out.result,"PHYSICAL_COMPLETION_PROVEN");
   assert.deepEqual(out.codes,[]);
-  assert.deepEqual(out.tiers,["independent-physical-witness"]);
+  assert.deepEqual(out.tiers,["identified-fresh-physical-witness"]);
+  assert.equal(out.independent_object_outcome_verified,false);
 }
 
 {
@@ -99,7 +100,7 @@ function vector(over={}){
   );
   assert.equal(out.verdict,"valid");
   assert.equal(out.result,"PHYSICAL_COMPLETION_NOT_SATISFIED");
-  assert.deepEqual(out.tiers,["independent-physical-witness"]);
+  assert.deepEqual(out.tiers,["identified-fresh-physical-witness"]);
 }
 
 {
@@ -109,7 +110,8 @@ function vector(over={}){
   assert.equal(out.verdict,"valid");
   assert.equal(out.result,"PHYSICAL_COMPLETION_PROVEN");
   assert.ok(out.codes.includes("ack-not-verified"));
-  assert.deepEqual(out.tiers,["independent-physical-witness"]);
+  assert.deepEqual(out.tiers,["identified-fresh-physical-witness"]);
+  assert.equal(out.independent_object_outcome_verified,false);
 }
 
 {
@@ -132,6 +134,15 @@ function vector(over={}){
 }
 
 {
+  const v=vector();
+  v.physical_receipt.witness.independent=true;
+  const out=appraisePhysicalCompletion(v);
+  assert.equal(out.result,"PHYSICAL_COMPLETION_PROVEN");
+  assert.deepEqual(out.tiers,["identified-fresh-physical-witness"]);
+  assert.equal(out.independent_object_outcome_verified,false);
+}
+
+{
   const dir=fs.mkdtempSync(path.join(os.tmpdir(),"flythink-completion-"));
   const file=path.join(dir,"vector.json");
   fs.writeFileSync(file,JSON.stringify(vector()));
@@ -151,6 +162,7 @@ function vector(over={}){
   assert.equal(out.result,"PHYSICAL_COMPLETION_PROVEN");
   assert.ok(Array.isArray(out.codes));
   assert.ok(Array.isArray(out.tiers));
+  assert.equal(out.independent_object_outcome_verified,false);
 }
 
 console.log(JSON.stringify({
