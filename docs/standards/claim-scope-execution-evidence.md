@@ -155,7 +155,7 @@ Failure of either side must not be hidden by the other.
 
 ### 2. AER-1 observed execution record + FlyThink physical evidence
 
-AER-1 draft-12 keeps a deliberately narrow interoperable core: a receipt records
+AER-1 draft-14 keeps a deliberately narrow interoperable core: a receipt records
 one tool execution as observed by the recording system, binds the exact canonical
 bytes with an output commitment, and carries a provenance class.
 
@@ -190,6 +190,12 @@ The bridge must preserve both claim scopes:
 - FlyThink's Context/World/authorization chain remains independently verified;
 - missing or stale physical evidence may remain `INDETERMINATE` without
   invalidating the AER receipt itself.
+
+This experiment is no longer only proposed: `draft-zambo-aer1-14` records the
+FlyThink four-case fixture in Implementation Status. The same draft also states
+the broader rule that binding records together does not transfer one record's
+claims to another. That is external standards feedback for this research
+boundary; it is not IETF endorsement or downstream dependency on FlyThink.
 
 ### 3. OpenTelemetry trace + FlyThink proof
 
