@@ -997,9 +997,43 @@ function externalTrustVerifier({
     assert.equal(driver.commands.length,0);
   }
 
+  // 25. Per-execution input cannot downgrade a deployment-level trust policy
+  // or inject a replacement verifier.
+  {
+    const action={op:"PATCH_SLOT",target:B,slot:"temperature",value:19};
+    const driver=new MockThingDriver(initial);
+    const runtime=new FlyThinkExecutionRuntime({
+      runtime:initial,
+      driver,
+      physicalAuthorizer:passAuthorizerWithToken(),
+      authorizationLedger:freshLedger(),
+      requireExternalAuthorizationTrust:true,
+      externalAuthorizationTrustVerifier:async()=>{throw new Error("deployment_verifier_denied")}
+    });
+    const p=proposal([action]);
+    p.strategy.world_snapshot_sha256="c".repeat(64);
+    const out=await runtime.execute({
+      contextual_state:context,
+      request:request([action]),
+      proposal:p,
+      source_revision:7,
+      world_snapshot_sha256:"c".repeat(64),
+      // These are deliberately hostile request-time overrides. The facade
+      // must ignore both.
+      require_external_authorization_trust:false,
+      externalAuthorizationTrustVerifier:externalTrustVerifier({
+        transactionId:"txn-attacker-override"
+      })
+    });
+    assert.equal(out.ok,false);
+    assert.equal(out.reason,"external_authorization_trust_denied");
+    assert.match(out.authorization_error,/deployment_verifier_denied/);
+    assert.equal(driver.commands.length,0);
+  }
+
   console.log(JSON.stringify({
     ok:true,
-    cases:25,
+    cases:26,
     contract:"contextual execution proposal -> deterministic authorization -> atomic/single physical execution -> readback, with formal recovery"
   }));
 })().catch(e=>{console.error(e);process.exit(1)});
