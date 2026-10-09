@@ -2,6 +2,8 @@ name: trajectory-safety-gate
 on:
   push:
     paths: ["scripts/whole_home_patch_contract.cjs","scripts/trajectory_gate.cjs",".github/workflows/trajectory-safety-gate.yml"]
+  pull_request:
+    paths: ["scripts/whole_home_patch_contract.cjs","scripts/trajectory_gate.cjs",".github/workflows/trajectory-safety-gate.yml"]
   workflow_dispatch:
 jobs:
  gate:
