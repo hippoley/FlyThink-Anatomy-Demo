@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Build a synthetic fixture ONLY to test the Hidden Gold protocol itself."""
-import argparse,hashlib,json,pathlib
+import argparse,datetime,json,pathlib
 from validate_hidden_benchmark_pack import sha256_file
 
 def main():
@@ -26,6 +26,14 @@ def main():
    {"case_id":"fx-002","decision":"CLARIFY","patches":[]}
   ]}
  gp=out/"gold.json";gp.write_text(json.dumps(gold,ensure_ascii=False,indent=2)+"\n",encoding="utf8")
+ commitment={
+  "schema_version":"benchmark-hidden-gold-commitment.v1",
+  "pack_id":inp["pack_id"],
+  "input_pack_sha256":sha,
+  "gold_pack_sha256":sha256_file(gp),
+  "created_at":"2026-10-09T00:00:00Z"
+ }
+ cp=out/"commitment.json";cp.write_text(json.dumps(commitment,ensure_ascii=False,indent=2)+"\n",encoding="utf8")
  pred={"schema_version":"benchmark-hidden-prediction-pack.v1","pack_id":inp["pack_id"],"input_pack_sha256":sha,
   "producer":{"kind":"fixture-oracle","revision":"fixture"},
   "predictions":[
@@ -33,7 +41,7 @@ def main():
    {"case_id":"fx-002","decision":"CLARIFY","patches":[]}
   ]}
  pp=out/"predictions.json";pp.write_text(json.dumps(pred,ensure_ascii=False,indent=2)+"\n",encoding="utf8")
- print(json.dumps({"input":str(ip),"input_sha256":sha,"gold":str(gp),"predictions":str(pp)}))
+ print(json.dumps({"input":str(ip),"input_sha256":sha,"gold":str(gp),"commitment":str(cp),"predictions":str(pp)}))
 
 if __name__=="__main__":main()
 
