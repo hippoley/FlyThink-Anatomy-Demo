@@ -90,6 +90,15 @@ See [`docs/standards/claim-scope-execution-evidence.md`](docs/standards/claim-sc
 for the current crosswalk across OpenTelemetry GenAI tool spans, AER-1,
 Agent Passport System receipts, SCITT Physical-Site Engagement Receipts, and
 FlyThink's own execution proof boundary.
+
+External standards evidence: `draft-zambo-aer1-14` Implementation Status publicly
+records FlyThink as an independent builder that published a four-case fixture
+binding AER-1 execution receipts to physical-completion claims. This is external
+standards citation/feedback, not IETF endorsement and not evidence that AER-1
+implementations depend on FlyThink.
+
+For the full evidence-backed closure status of every advertised user story, see
+[`docs/user-story-closure-audit.md`](docs/user-story-closure-audit.md).
 ## Repository boundary
 
 FlyThink is a **consumer/backend**, not the canonical owner of Contextual Edge
