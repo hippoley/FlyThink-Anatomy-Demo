@@ -2,6 +2,7 @@
 const assert=require("assert");
 const {normalizeRuntime,applyTurn}=require("./whole_home_patch_contract.cjs");
 const {executeAtomicPhysicalSet}=require("./atomic_physical_set.cjs");
+const {markQuarantined}=require("./physical_runtime.cjs");
 const L={area:"客厅",entity:"空调",instance:"default"},B={area:"主卧",entity:"空调",instance:"default"};
 let initial=normalizeRuntime();
 initial=applyTurn(initial,[
@@ -30,6 +31,28 @@ const patches=[
  const lying={capabilities(){return ["atomic_multi_target_set","readback"];}};
  out=await executeAtomicPhysicalSet(initial,patches,lying);
  assert(!out.ok);assert.equal(out.reason,"physical_atomic_batch_missing_implementation");
+
+ const quarantined=normalizeRuntime(initial);
+ markQuarantined(
+   quarantined,
+   L,
+   {id:"uncertain:1",status:"uncertain",reason:"physical_outcome_indeterminate_after_driver_call"},
+   "turn-uncertain"
+ );
+ let quarantineBatchCalls=0;
+ const quarantineBypassDriver={
+   capabilities(){return ["atomic_multi_target_set","readback"];},
+   executeAtomicBatch(){
+     quarantineBatchCalls++;
+     throw new Error("quarantined atomic batch must not reach driver");
+   }
+ };
+ out=await executeAtomicPhysicalSet(quarantined,patches,quarantineBypassDriver);
+ assert(!out.ok);assert.equal(out.reason,"device_quarantined");
+ assert.equal(quarantineBatchCalls,0);
+ assert.equal(out.runtime.deviceHealth["客厅::空调::default"].status,"quarantined");
+ assert.equal(out.runtime.devices["客厅::空调::default"].slots.temperature,24);
+ assert.equal(out.runtime.devices["主卧::空调::default"].slots.temperature,25);
 
  const rejecting={capabilities(){return ["atomic_multi_target_set","readback"];},executeAtomicBatch(){return [
    {id:"b:1",status:"applied",observation:{target:L,exists:true,slots:{power:"ON",temperature:22}}},
@@ -71,6 +94,7 @@ const patches=[
    undeclared_atomic_execution:0,
    unverified_readback_commit:0,
    partial_runtime_commit:0,
-   wrong_target_readback_commit:0
+   wrong_target_readback_commit:0,
+   quarantined_atomic_driver_calls:0
  }));
 })().catch(e=>{console.error(e);process.exit(1);});
