@@ -32,7 +32,8 @@ const {
   decisionProposalToExecutionContracts
 }=require("./decision_proposal_contract.cjs");
 const {
-  runDecisionProposal
+  runDecisionProposal,
+  buildExecutionReceipt
 }=require("./flythink_execution_runtime.cjs");
 const {
   buildExecutionProofBundle,
@@ -200,6 +201,7 @@ async function closeout(driver,runtime,target,tolerancePct){
       already_closed:true,
       before_position_pct:beforePct,
       after_position_pct:beforePct,
+      tolerance_pct:tolerancePct,
       receipt:null,
       runtime
     };
@@ -224,6 +226,7 @@ async function closeout(driver,runtime,target,tolerancePct){
     already_closed:false,
     before_position_pct:beforePct,
     after_position_pct:afterPct,
+    tolerance_pct:tolerancePct,
     receipt:clone(receipt),
     runtime:next
   };
@@ -336,6 +339,7 @@ async function main(){
   let proofBundle=null;
   let proofVerification=null;
   let executionContracts=null;
+  let executionBeforeRuntime=null;
 
   try{
     for await(const line of input){
@@ -378,6 +382,7 @@ async function main(){
         decisionProposal
       );
       const beforeRuntime=normalizeRuntime(session.runtime);
+      executionBeforeRuntime=beforeRuntime;
       canonicalExecution=await runDecisionProposal({
         runtime:beforeRuntime,
         contextual_state:contextualState,
@@ -407,30 +412,6 @@ async function main(){
         throw new Error("canonical_live_apply_requires_exactly_one_probe_write");
       }
 
-      proofBundle=buildExecutionProofBundle({
-        decision_proposal:decisionProposal,
-        contextual_state:contextualState,
-        request:executionContracts.request,
-        internal_proposal:executionContracts.internal_proposal,
-        before_runtime:beforeRuntime,
-        after_runtime:canonicalExecution.runtime,
-        execution_receipt:canonicalExecution.receipt
-      });
-      proofVerification=verifyExecutionProofBundle(proofBundle);
-      if(
-        !proofVerification.valid||
-        proofVerification.physical_truth_verified!==true
-      ){
-        throw new Error("canonical_live_apply_proof_verification_failed");
-      }
-      fs.writeFileSync(
-        receiptPath,
-        JSON.stringify(canonicalExecution.receipt,null,2)+"\n"
-      );
-      fs.writeFileSync(
-        proofBundlePath,
-        JSON.stringify(proofBundle,null,2)+"\n"
-      );
     }
   }catch(e){
     processingError=e;
@@ -459,6 +440,71 @@ async function main(){
   if(events===0)throw new Error("no_asr_events_received");
   if(finals===0)throw new Error("no_final_asr_event_received");
 
+  const closeoutPublic=closeoutEvidence?{
+    attempted:closeoutEvidence.attempted,
+    already_closed:closeoutEvidence.already_closed,
+    before_position_pct:closeoutEvidence.before_position_pct,
+    after_position_pct:closeoutEvidence.after_position_pct,
+    tolerance_pct:closeoutEvidence.tolerance_pct,
+    receipt:closeoutEvidence.receipt
+  }:null;
+
+  if(apply){
+    if(
+      !canonicalExecution||
+      !executionContracts||
+      !executionBeforeRuntime||
+      !decisionProposal||
+      !closeoutPublic
+    ){
+      throw new Error("canonical_live_apply_missing_retained_evidence");
+    }
+    const sealedReceipt=buildExecutionReceipt({
+      contextual_state:contextualState,
+      request:executionContracts.request,
+      proposal:executionContracts.internal_proposal,
+      authorization:canonicalExecution.authorization,
+      authorized_actions:canonicalExecution.authorized_actions,
+      physical_receipts:canonicalExecution.physical_receipts,
+      before_runtime:executionBeforeRuntime,
+      after_runtime:canonicalExecution.runtime,
+      status:canonicalExecution.status,
+      reason:canonicalExecution.reason,
+      atomic_batch:canonicalExecution.atomic_batch===true,
+      physical_committed:canonicalExecution.ok===true,
+      source_step:0,
+      source_revision:decisionProposal.world_snapshot_revision,
+      closeout:closeoutPublic
+    });
+    canonicalExecution.receipt=sealedReceipt;
+    proofBundle=buildExecutionProofBundle({
+      decision_proposal:decisionProposal,
+      contextual_state:contextualState,
+      request:executionContracts.request,
+      internal_proposal:executionContracts.internal_proposal,
+      before_runtime:executionBeforeRuntime,
+      after_runtime:canonicalExecution.runtime,
+      execution_receipt:sealedReceipt
+    });
+    proofVerification=verifyExecutionProofBundle(proofBundle);
+    if(
+      !proofVerification.valid||
+      proofVerification.physical_truth_verified!==true||
+      proofVerification.physical_completion_verified!==true||
+      proofVerification.safe_closeout_verified!==true
+    ){
+      throw new Error("canonical_live_apply_proof_verification_failed");
+    }
+    fs.writeFileSync(
+      receiptPath,
+      JSON.stringify(sealedReceipt,null,2)+"\n"
+    );
+    fs.writeFileSync(
+      proofBundlePath,
+      JSON.stringify(proofBundle,null,2)+"\n"
+    );
+  }
+
   const speculativePhysical=session.trace
     .filter(x=>!x.asr.is_final)
     .reduce((n,x)=>n+(
@@ -468,14 +514,6 @@ async function main(){
     .filter(x=>x.asr.is_final&&x.committed).length;
   const semanticHandoffs=session.trace
     .filter(x=>x.asr.is_final&&x.handoff_ready).length;
-
-  const closeoutPublic=closeoutEvidence?{
-    attempted:closeoutEvidence.attempted,
-    already_closed:closeoutEvidence.already_closed,
-    before_position_pct:closeoutEvidence.before_position_pct,
-    after_position_pct:closeoutEvidence.after_position_pct,
-    receipt:closeoutEvidence.receipt
-  }:null;
 
   // Acoustic trace is retained as upstream provenance only.
   // Canonical APPLY success is owned by execution-receipt.v1 and the proof bundle.
@@ -525,8 +563,12 @@ async function main(){
   if(apply){
     if(finals!==1||semanticHandoffs!==1||semanticCommands!==0)process.exitCode=2;
     if(!canonicalExecution||canonicalExecution.ok!==true)process.exitCode=2;
-    if(!proofVerification||proofVerification.physical_truth_verified!==true)
-      process.exitCode=2;
+    if(
+      !proofVerification||
+      proofVerification.physical_truth_verified!==true||
+      proofVerification.physical_completion_verified!==true||
+      proofVerification.safe_closeout_verified!==true
+    )process.exitCode=2;
     if(!closeoutEvidence)process.exitCode=2;
     if(driver.commands.length!==2)process.exitCode=2;
   }
