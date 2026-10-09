@@ -21,6 +21,7 @@ The canonical verifier can currently derive, among other fields:
 physical_truth_verified
 physical_completion_verified
 safe_closeout_verified
+authorization_issuer_authenticated_verified = false
 ```
 
 These are evidence/semantic claims. They do not authenticate an issuer merely because all SHA-256 commitments recompute correctly.
