@@ -63,20 +63,11 @@ function runWorker(workerPath,args){
   assert.equal(snapshotLost.has(id),true);
   assert.equal(snapshotLost.add(id,{turn_id:"must-not-replay"}),false);
 
-  // A held writer lock blocks before reservation/dispatch.
-  const blockedId="auth-lock-contention";
-  fs.writeFileSync(
-    file+".lock",
-    JSON.stringify({version:1,pid:999999,acquired_at:"test"})+"\n",
-    {encoding:"utf8",mode:0o600}
-  );
-  assert.throws(
-    ()=>snapshotLost.add(blockedId,{turn_id:"blocked"}),
-    /authorization_ledger_locked/
-  );
-  assert.equal(snapshotLost.has(blockedId),false);
-  fs.unlinkSync(file+".lock");
-  assert.equal(snapshotLost.add(blockedId,{turn_id:"after-lock-release"}),true);
+  // A second, different ID remains consumable without a global writer lock.
+  // The append-only per-ID journal avoids stale-lock availability debt.
+  const independentId="auth-independent";
+  assert.equal(snapshotLost.add(independentId,{turn_id:"parallel-safe"}),true);
+  assert.equal(snapshotLost.has(independentId),true);
 
   // True multi-process race: every worker constructs its ledger before a common
   // gate opens. Exactly one process may consume the same ID.
@@ -133,7 +124,7 @@ process.stdout.write(JSON.stringify(result));
     replay_after_process_restart:0,
     stale_snapshot_double_consume:0,
     snapshot_loss_replay:0,
-    lock_contention_fail_open:0,
+    global_stale_lock_dependency:0,
     multiprocess_workers:results.length,
     multiprocess_winners:winners.length,
     duplicate_consumption:0,
