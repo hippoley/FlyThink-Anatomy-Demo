@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
-import copy
+import copy,pathlib,sys
 from collections import Counter
+
+ROOT=pathlib.Path(__file__).resolve().parents[1]
+sys.path.insert(0,str(ROOT/"scripts"))
 
 from benchmark_v3_training_adapter import judgement_rows,semantic_rows
 from context_judgement_corpus_v3 import build as judgement_v3
