@@ -2,7 +2,6 @@
 
 const {deviceKey}=require("./whole_home_patch_contract.cjs");
 const {
-  clearQuarantine,
   isQuarantined,
   isSafetyReducingPatch,
   reconcileObservation,
@@ -29,6 +28,45 @@ function identityFromReadiness(readiness){
 function recoveryState(runtime,target){
   const key=deviceKey(target);
   return clone((runtime.deviceHealth||{})[key]||null);
+}
+
+function restoreQuarantineAfterVerifiedRecovery(runtime,target,proof){
+  const key=deviceKey(target);
+  const health=runtime&&runtime.deviceHealth&&runtime.deviceHealth[key];
+  if(!health||health.status!=="quarantined"){
+    throw new Error("device_not_quarantined");
+  }
+  const beforeTick=Number(proof&&proof.before_tick);
+  const afterTick=Number(proof&&proof.after_tick);
+  const safePct=Number(proof&&proof.safe_position_pct);
+  const safeMax=Number(proof&&proof.safe_position_max_pct);
+  const valid=
+    proof&&
+    proof.contract_version===CONTRACT_VERSION&&
+    proof.target_key===key&&
+    proof.verified===true&&
+    proof.readiness_verified===true&&
+    proof.hardware_identity_verified===true&&
+    proof.physical_readback_verified===true&&
+    proof.safe_position_verified===true&&
+    typeof proof.identity_sha256==="string"&&proof.identity_sha256.length>0&&
+    Number.isFinite(beforeTick)&&
+    Number.isFinite(afterTick)&&
+    afterTick>beforeTick&&
+    Number.isFinite(safePct)&&
+    Number.isFinite(safeMax)&&
+    safePct<=safeMax&&
+    typeof proof.execution_receipt_id==="string"&&
+    proof.execution_receipt_id.length>0;
+  if(!valid){
+    throw new Error("recovery_internal_verdict_invalid");
+  }
+  runtime.deviceHealth[key]={
+    status:"healthy",
+    recovered_at_turn_id:proof.turn_id||null,
+    recovery:clone(proof)
+  };
+  return runtime.deviceHealth[key];
 }
 
 async function runRecoveryTransaction(inputRuntime,{
@@ -148,6 +186,7 @@ async function runRecoveryTransaction(inputRuntime,{
 
   const proof={
     contract_version:CONTRACT_VERSION,
+    target_key:deviceKey(target),
     verified:true,
     turn_id,
     readiness_verified:true,
@@ -161,7 +200,7 @@ async function runRecoveryTransaction(inputRuntime,{
     safe_position_max_pct:safeLimit,
     execution_receipt_id:receipt.command_id||null
   };
-  clearQuarantine(runtime,target,proof);
+  restoreQuarantineAfterVerifiedRecovery(runtime,target,proof);
   trace.push({stage:"TRUST_RESTORED",value:clone(proof)});
 
   return {
