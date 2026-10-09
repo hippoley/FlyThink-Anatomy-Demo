@@ -34,7 +34,13 @@ jobs:
           go-version-file: "_kontxt/go.mod"
           cache: false
 
+      - name: Verify Go module lock is complete
+        working-directory: interop/kontxt-txntoken-trust
+        run: |
+          go mod tidy
+          git diff --exit-code -- go.mod go.sum
+
       - name: Run FlyThink profile over real Kontxt sdk/verify
         working-directory: interop/kontxt-txntoken-trust
         run: |
-          go test -v ./...
+          go test -mod=readonly -v ./...
