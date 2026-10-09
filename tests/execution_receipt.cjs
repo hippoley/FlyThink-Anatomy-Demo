@@ -228,7 +228,10 @@ function buildVerified(){
     assert.equal(verified.valid,true);
     assert.equal(verified.physical_truth_verified,true);
     assert.equal(verified.physical_completion_verified,true);
-    assert.equal(verified.authorization_trust_domain_key_source_verified,false);
+    assert.equal(
+      verified.authorization_trust_domain_key_source_verified,
+      false
+    );
     assert.equal(verified.authorization_issuer_authenticated_verified,false);
     assert.equal(verified.independent_object_outcome_verified,false);
   }
