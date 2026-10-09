@@ -1,0 +1,40 @@
+name: kontxt-txntoken-trust-interop
+
+on:
+  pull_request:
+    paths:
+      - "interop/kontxt-txntoken-trust/**"
+      - "docs/standards/kontxt-txntoken-trust.md"
+      - ".github/workflows/kontxt-txntoken-trust-interop.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  real-external-verifier:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Checkout pinned Kontxt verifier
+        uses: actions/checkout@v4
+        with:
+          repository: aramase/kontxt
+          ref: d23ebb50121a650af57c9e34e8227d54db324f9d
+          path: _kontxt
+
+      - name: Verify pinned Kontxt revision
+        shell: bash
+        run: |
+          test "$(git -C _kontxt rev-parse HEAD)" =             "d23ebb50121a650af57c9e34e8227d54db324f9d"
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: "_kontxt/go.mod"
+          cache: false
+
+      - name: Run FlyThink profile over real Kontxt sdk/verify
+        working-directory: interop/kontxt-txntoken-trust
+        run: |
+          go test -v ./...
