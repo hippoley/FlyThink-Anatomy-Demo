@@ -80,6 +80,7 @@ jobs:
             worst_family_full_patch_exact:r.worst_family_full_patch_exact,
             strict_trajectory_rate:r.strict_trajectory_rate,
             pass_pow_k:r.pass_pow_k,
+            causal_prefix_diagnostics:r.causal_prefix_diagnostics,
             by_scenario_family:r.by_scenario_family,
             by_difficulty:r.by_difficulty,
             by_generalization_class:r.by_generalization_class,
