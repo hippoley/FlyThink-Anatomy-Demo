@@ -53,6 +53,7 @@ Dimensions:
 | Untrusted reasoner cannot actuate | V | V | V | V | N | V | V | V | V | V | none |
 | Exact Context + World identity | V | V | V | V | N | V | V | V | V | V | none |
 | Authorization receipt integrity + action/context binding | V | V | V | V | N | V | V | V | V | V | none at local-integrity scope |
+| Authorization single-use / replay barrier | V | V | V | V | V | V | V | V | V | V | cross-process O_EXCL reservation + fail-closed ledger contention; multi-process race regression is canonical |
 | Authorization Trust Domain / signing-key source | P | N | P | P | N | V | V | P | P | P | external verifier + non-request-controlled trust configuration must reach canonical boundary |
 | Optional authorization issuer identity | P | N | P | P | N | V | V | P | P | P | only applicable when deployment pins issuer; must not be required by default |
 | Ambiguous transport remains INDETERMINATE | V | V | V | V | P | V | V | V | P | V | retained real lost-ACK / ambiguity evidence |
@@ -113,7 +114,7 @@ re-run:
 2. proof-bundle backward compatibility;
 3. claim-scope anti-laundering tests;
 4. canonical live APPLY boundary tests;
-5. authorization single-use / replay protection;
+5. authorization single-use / replay protection, including the multi-process ledger race;
 6. wrong audience / wrong key / expired token negative cases;
 7. optional-issuer behavior;
 8. exact tctx action/world/completion bindings;
