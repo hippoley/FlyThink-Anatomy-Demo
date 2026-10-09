@@ -2,7 +2,7 @@
 
 **A proof-carrying execution boundary for agents acting on physical systems — with a playable home-intelligence research surface.**
 
-> Agents propose. Reality responds. FlyThink separates execution evidence, completion evidence, authorization-issuer authenticity, proof provenance, and independent object-level observation so one claim cannot borrow trust from another.
+> Agents propose. Reality responds. FlyThink separates execution evidence, completion evidence, authorization trust-domain/key-source verification, optional issuer authentication, proof provenance, and independent object-level observation so one claim cannot borrow trust from another.
 
 FlyThink's durable backend responsibility is narrower than "another agent framework":
 
@@ -45,14 +45,14 @@ Already on `main`:
 Still under active reality convergence:
 
 - the protected human-WAV → canonical `runDecisionProposal()` → WindowPilot path is wired and requires physical truth, physical completion and safe closeout to verify before the Golden Proof candidate is retained; the **real-hardware run itself is still pending**;
-- authorization issuer authenticity is not provided by the current self-hashed SpatialRuntime receipt; Issue #137 tracks composition with IETF Transaction Tokens / workload identity rather than a FlyThink-specific signature format;
+- external authorization trust-domain/key-source verification is not provided by the current self-hashed SpatialRuntime receipt; optional issuer authentication is a separate stronger profile claim. Issue #137 tracks composition with IETF Transaction Tokens / workload identity rather than a FlyThink-specific signature format;
 - cross-repository self-consumption exists, but independently owned L5b adoption is not yet claimed.
 
 Already hardened on `main`: a driver-call exception after possible side effects becomes an explicit indeterminate physical outcome, quarantines the target and forbids unsafe automatic retry until fresh reconciliation.
 
 ### Verify a retained proof bundle
 
-The bundle verifier answers what the retained FlyThink evidence proves under the repository's execution semantics. It does **not** authenticate who issued the JSON merely because its hashes verify. Current verifier output therefore keeps `authorization_issuer_authenticated_verified=false` unless a future external trust adapter establishes that claim. A protected real-hardware Golden Proof therefore retains a separate GitHub/Sigstore attestation bundle over `live-execution-proof-bundle.json`.
+The bundle verifier answers what the retained FlyThink evidence proves under the repository's execution semantics. It does **not** authenticate who issued the JSON merely because its hashes verify. Current verifier output therefore keeps both `authorization_trust_domain_key_source_verified=false` and `authorization_issuer_authenticated_verified=false` until an external trust adapter establishes each claim at its own scope. A protected real-hardware Golden Proof therefore retains a separate GitHub/Sigstore attestation bundle over `live-execution-proof-bundle.json`.
 
 A third party does not need to trust a FlyThink success flag. Given a retained bundle:
 
