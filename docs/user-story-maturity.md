@@ -28,7 +28,7 @@ L5a is evidence that the interface can survive outside this repository. It is
 | Remove from persistent control state | L2 | `REMOVE_DEVICE` | keep distinct from physical close semantics |
 | Replace a target after correction | L2 | `REPLACE_TARGET`, explicit-replacement acceptance | semantic interpretation belongs upstream |
 | Cancel a pending action | L2 | `CANCEL_PENDING`; pending namespace separate from device state | semantic trigger remains upstream-owned |
-| Undo an already executed action | L2/L3 | `UNDO_EXECUTED` requires explicit compensation | real compensated hardware proof if physically claimed |
+| Undo an already executed action | L3 | proof-derived compensation from verified execution bundle + current-state divergence guard + fresh authorization; unsupported inverses fail closed | retained real-hardware compensated-run proof |
 | Protect keep-unchanged state | L2 | `PROTECT` + invariant enforcement | semantic detection remains upstream |
 | Multi-target / set operation | L3 | atomic write-set enforcement + readback | real atomic multi-device evidence |
 | Pronoun / coreference / correction / clarification | External owner | contextual-state contract consumed here | do not rebuild semantic ownership here |
@@ -45,6 +45,7 @@ L5a is evidence that the interface can survive outside this repository. It is
 | Completion requires pre-actuation criterion + fresh identified witness | L3 | retained real-hardware Golden Proof |
 | Third party can verify retained evidence offline | L4 for frozen fixtures | real-hardware proof still pending; bundle integrity alone is not issuer authentication |
 | Kernel conformance contract is consumable outside FlyThink | L5a | NLUSLOT pins FlyThink commit `d1c3f3619b400153f17731df12a71f0b472ff9fc` and passed cross-repo CI run `37873409257` |
+| EVC host can spawn FlyThink as an external physical-completion verifier | L4/L5a-ready interface | EVC-02-style fd-isolated subprocess verifier is canonical; independent host consumption still required for L5b |
 | Independent external system depends on a FlyThink verifier/conformance rail | L5b not achieved | separately owned project / CI / verifier required |
 
 ## Intentionally blocked
@@ -56,9 +57,10 @@ L5a is evidence that the interface can survive outside this repository. It is
 
 ## Current reality gates
 
-1. **Golden Proof:** protected live workflow must retain canonical receipt + proof bundle + safe closeout + a separately verifiable Sigstore provenance envelope for the exact proof-bundle artifact.
-2. **Independent adoption:** L5a is closed for the kernel conformance rail; L5b still requires a separately owned downstream consumer.
-3. **Standards feedback:** external review/citation/adoption counts; self-authored compatibility claims do not.
+1. **Golden Proof:** execute the protected human-WAV → canonical runtime → real WindowPilot workflow and retain a bundle where physical truth, completion and safe closeout verify, plus the separate Sigstore provenance envelope.
+2. **Independent adoption:** L5a is closed for the kernel conformance rail; L5b still requires a separately owned downstream repository/host/verifier to pin and run FlyThink.
+3. **Authorization authenticity / standards node:** the old project-specific HMAC authorization direction is retired. Issue #137 tracks an experimental physical-action binding profile over IETF Transaction Tokens / workload identity; only real validator/TTS integration or external review advances this gate.
+4. **Standards feedback:** NOA/EVC/SCITT compatibility probes are self-authored evidence until an upstream maintainer, independent implementation or public conformance package consumes/reviews them.
 
 ## Priority rule
 
@@ -69,5 +71,7 @@ At the current state, the two highest-value transitions are:
 
 ```text
 L3 -> L4   retained real-hardware Golden Proof with separate proof + provenance verification
+L3 -> L4   retained real-hardware proof-derived compensation (only if Undo is publicly claimed)
 L5a -> L5b independently owned downstream consumer
+draft probe -> external feedback/consumption for EVC/NOA/Transaction-Token bindings
 ```
