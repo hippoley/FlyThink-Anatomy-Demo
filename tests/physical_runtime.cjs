@@ -1,11 +1,11 @@
 "use strict";
 const assert = require("assert");
+const physicalRuntime = require("../scripts/physical_runtime.cjs");
 const {
   MockThingDriver,
   executePhysicalTurn,
-  isQuarantined,
-  clearQuarantine
-} = require("../scripts/physical_runtime.cjs");
+  isQuarantined
+} = physicalRuntime;
 const {normalizeRuntime} = require("../scripts/whole_home_patch_contract.cjs");
 const {
   physicalReceiptsApplied,
@@ -127,20 +127,17 @@ const initial = normalizeRuntime({devices:{
     assert.equal(isQuarantined(closed.runtime,W),true,
       "safe close must not silently clear quarantine");
 
-    assert.throws(
-      ()=>clearQuarantine(closed.runtime,W,{verified:false}),
-      /quarantine_recovery_proof_required/
+    assert.equal(
+      typeof physicalRuntime.clearQuarantine,
+      "undefined",
+      "physical runtime must not export a caller-asserted quarantine-clear escape hatch"
     );
-    clearQuarantine(closed.runtime,W,{
-      verified:true,
-      turn_id:"turn-recovery",
-      readiness_verified:true,
-      hardware_identity_verified:true,
-      physical_readback_verified:true,
-      safe_position_verified:true
-    });
-    assert.equal(isQuarantined(closed.runtime,W),false);
-    assert.equal(closed.runtime.deviceHealth[wk].status,"healthy");
+    assert.equal(
+      isQuarantined(closed.runtime,W),
+      true,
+      "a caller cannot restore trust by presenting self-asserted recovery booleans"
+    );
+    assert.equal(closed.runtime.deviceHealth[wk].status,"quarantined");
   }
 
   // A driver may not redirect a receipt/readback onto another device.
