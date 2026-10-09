@@ -5,6 +5,7 @@ SHA_RE=re.compile(r"^[0-9a-f]{64}$")
 INPUT_VER="benchmark-hidden-input-pack.v1"
 GOLD_VER="benchmark-hidden-gold-pack.v1"
 PRED_VER="benchmark-hidden-prediction-pack.v1"
+COMMIT_VER="benchmark-hidden-gold-commitment.v1"
 
 def sha256_file(path):
  h=hashlib.sha256()
@@ -48,6 +49,14 @@ def validate_gold(x):
   if not isinstance(row.get("patches"),list):raise ValueError("gold_patches")
  return True
 
+def validate_commitment(x):
+ if x.get("schema_version")!=COMMIT_VER:raise ValueError("commitment_schema_version")
+ if not x.get("pack_id"):raise ValueError("commitment_pack_id")
+ if not SHA_RE.fullmatch(str(x.get("input_pack_sha256",""))):raise ValueError("commitment_input_sha")
+ if not SHA_RE.fullmatch(str(x.get("gold_pack_sha256",""))):raise ValueError("commitment_gold_sha")
+ if not isinstance(x.get("created_at"),str) or not x["created_at"]:raise ValueError("commitment_created_at")
+ return True
+
 def validate_prediction(x):
  if x.get("schema_version")!=PRED_VER:raise ValueError("prediction_schema_version")
  if not x.get("pack_id"):raise ValueError("prediction_pack_id")
@@ -61,17 +70,24 @@ def validate_prediction(x):
   if not isinstance(row.get("patches"),list):raise ValueError("prediction_patches")
  return True
 
-def validate_triplet(input_path,gold_path=None,pred_path=None):
+def validate_triplet(input_path,gold_path=None,pred_path=None,commitment_path=None):
  inp=json.load(open(input_path,encoding="utf8"));validate_input(inp)
  input_sha=sha256_file(input_path)
  out={"input_valid":True,"input_pack_sha256":input_sha,"pack_id":inp["pack_id"],"cases":len(inp["cases"])}
  input_ids=unique_ids(inp["cases"],"input")
+ gold=None
  if gold_path:
   gold=json.load(open(gold_path,encoding="utf8"));validate_gold(gold)
   if gold["pack_id"]!=inp["pack_id"]:raise ValueError("gold_pack_id_mismatch")
   if gold["input_pack_sha256"]!=input_sha:raise ValueError("gold_input_sha_mismatch")
   if set(unique_ids(gold["gold"],"gold"))!=set(input_ids):raise ValueError("gold_case_set_mismatch")
   out["gold_valid"]=True
+ if commitment_path:
+  cm=json.load(open(commitment_path,encoding="utf8"));validate_commitment(cm)
+  if cm["pack_id"]!=inp["pack_id"]:raise ValueError("commitment_pack_id_mismatch")
+  if cm["input_pack_sha256"]!=input_sha:raise ValueError("commitment_input_sha_mismatch")
+  if gold_path and cm["gold_pack_sha256"]!=sha256_file(gold_path):raise ValueError("commitment_gold_sha_mismatch")
+  out["commitment_valid"]=True
  if pred_path:
   pred=json.load(open(pred_path,encoding="utf8"));validate_prediction(pred)
   if pred["pack_id"]!=inp["pack_id"]:raise ValueError("prediction_pack_id_mismatch")
@@ -82,9 +98,9 @@ def validate_triplet(input_path,gold_path=None,pred_path=None):
 
 def main():
  ap=argparse.ArgumentParser()
- ap.add_argument("--input",required=True);ap.add_argument("--gold");ap.add_argument("--predictions")
+ ap.add_argument("--input",required=True);ap.add_argument("--gold");ap.add_argument("--predictions");ap.add_argument("--commitment")
  a=ap.parse_args()
- print(json.dumps(validate_triplet(a.input,a.gold,a.predictions),ensure_ascii=False))
+ print(json.dumps(validate_triplet(a.input,a.gold,a.predictions,a.commitment),ensure_ascii=False))
 
 if __name__=="__main__":
  try:main()
