@@ -6,6 +6,9 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"net"
+	"net/url"
+	"strings"
 
 	"github.com/aramase/kontxt/pkg/token"
 	"github.com/aramase/kontxt/sdk/verify"
@@ -133,6 +136,17 @@ func validateTrustAnchor(trust TrustAnchor) error {
 	if trust.JWKSURL == "" {
 		return fmt.Errorf("configured JWKS URL missing")
 	}
+	jwksURL, err := url.Parse(trust.JWKSURL)
+	if err != nil || jwksURL.Host == "" {
+		return fmt.Errorf("configured JWKS URL invalid")
+	}
+	if jwksURL.User != nil {
+		return fmt.Errorf("configured JWKS URL must not contain userinfo")
+	}
+	if jwksURL.Scheme != "https" &&
+		!(jwksURL.Scheme == "http" && isLoopbackHost(jwksURL.Hostname())) {
+		return fmt.Errorf("configured remote JWKS URL must use https")
+	}
 	if trust.Audience == "" {
 		return fmt.Errorf("configured audience missing")
 	}
@@ -140,6 +154,14 @@ func validateTrustAnchor(trust TrustAnchor) error {
 		return fmt.Errorf("trust-anchor provenance source missing")
 	}
 	return nil
+}
+
+func isLoopbackHost(host string) bool {
+	if strings.EqualFold(host, "localhost") {
+		return true
+	}
+	ip := net.ParseIP(host)
+	return ip != nil && ip.IsLoopback()
 }
 
 func trustAnchorDigest(trust TrustAnchor) string {
