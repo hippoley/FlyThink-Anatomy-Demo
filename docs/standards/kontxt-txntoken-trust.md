@@ -40,6 +40,11 @@ configured JWKS endpoint
 
 and constructs the Kontxt verifier internally from that configuration.
 
+Remote JWKS endpoints must use HTTPS. Plain HTTP is accepted only for loopback
+hosts so isolated tests and local sidecars can exercise the real external
+verifier without weakening remote trust configuration. JWKS URLs with embedded
+userinfo are rejected before any token verification attempt.
+
 An issuer may additionally be pinned by the FlyThink deployment profile. When
 it is configured, the token must carry the exact matching `iss`, and the
 adapter may report:
