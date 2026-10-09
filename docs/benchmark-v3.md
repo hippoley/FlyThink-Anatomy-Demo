@@ -91,3 +91,26 @@ Canonical reporting should show both stateful and teacher-forced metrics. A
 higher teacher-forced score with a low stateful score indicates trajectory
 stability/context propagation problems; low values in both indicate local
 semantic capability gaps.
+
+
+## Baseline discrimination validity gate
+
+A benchmark can be objectively scored and still be invalid if a trivial policy
+receives a high score. V3 therefore ships deterministic, capability-bounded
+validity baselines:
+
+- `clarify_only`: never mutates state;
+- `surface_direct`: handles only explicit one-target surface forms;
+- `context_rule`: adds bounded focused-target relative actions, explicit
+  corrections and simple two-target sets;
+- `gold_oracle`: emits the benchmark's exact gold transition.
+
+The validity gate requires the oracle to reproduce 100% patch/state/trajectory
+truth and requires a material margin between the oracle and the strongest
+non-oracle baseline. Weak baselines must not strict-pass a large fraction of
+trajectories.
+
+These baselines are benchmark diagnostics, not model competitors. Their purpose
+is to catch scoring loopholes and distribution artifacts such as a benchmark
+where doing nothing, always clarifying or shallow keyword rules receive
+misleadingly high scores.
