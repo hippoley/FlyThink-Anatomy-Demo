@@ -59,10 +59,10 @@ test("record integrity does not imply named-human or issuer authentication",()=>
   assert.equal(out.claims.authorization_issuer.status,"UNVERIFIED");
 });
 
-test("issuer authenticity upgrades only from an explicit external verification signal",()=>{
+test("caller input cannot mint authorization issuer authenticity",()=>{
   const v=base();
   v.authorization_issuer_authenticated_verified=true;
   const out=buildClaimScopeReport(v);
   assert.equal(out.claims.execution_authorization.status,"VERIFIED");
-  assert.equal(out.claims.authorization_issuer.status,"VERIFIED");
+  assert.equal(out.claims.authorization_issuer.status,"UNVERIFIED");
 });
