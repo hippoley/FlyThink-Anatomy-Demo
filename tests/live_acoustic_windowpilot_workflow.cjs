@@ -51,10 +51,19 @@ assert.match(applyBlock,/--contextual-state/);
 assert.match(applyBlock,/--authorization-ledger/);
 assert.match(applyBlock,/--proof-bundle/);
 assert.match(verifyBlock,/verify_execution_proof_bundle_cli\.cjs/);
-assert.match(verifyBlock,/verifyExecutionReceipt/);
+assert.doesNotMatch(
+  verifyBlock,
+  /verifyExecutionReceipt/,
+  "portable proof bundle must be the only verification entrypoint"
+);
+assert.match(verifyBlock,/physical_truth_verified/);
 assert.match(verifyBlock,/physical_completion_verified/);
-assert.match(verifyBlock,/bundle\.artifacts\.contextual_state/);
-assert.match(verifyBlock,/bundle\.artifacts\.before_runtime/);
+assert.match(verifyBlock,/safe_closeout_verified/);
+assert.doesNotMatch(
+  verifyBlock,
+  /bundle\.artifacts\./,
+  "physical-lab workflow must not reopen bundle internals for a second verifier path"
+);
 
 assert.match(y,/probe_open_pct must be in \(0,5\]/);
 assert.match(y,/tolerance_pct must be in \[0,2\]/);
@@ -76,7 +85,7 @@ assert.match(y,/context_state_sha256_mismatch|contextStateIdentity/);
 assert.match(y,/authorization_ledger_path must be absolute/);
 assert.match(y,/authorization ledger parent must be writable/);
 
-const artifactBlock=y.slice(y.indexOf("name: live-acoustic-windowpilot-evidence"));
+const artifactBlock=y.slice(y.indexOf("name: live-canonical-windowpilot-golden-proof-candidate"));
 assert.ok(artifactBlock.length>0,"evidence artifact block missing");
 assert.doesNotMatch(
   artifactBlock,
@@ -91,5 +100,5 @@ assert.doesNotMatch(
 
 console.log(JSON.stringify({
   ok:true,
-  contract:"manual self-hosted physical-lab acceptance produces a canonical execution receipt and proof bundle, verifies physical completion, and Sigstore-attests the candidate evidence"
+  contract:"manual self-hosted physical-lab acceptance relies on one portable proof-bundle verifier for physical truth, completion, and safe closeout before attesting retained evidence"
 }));
