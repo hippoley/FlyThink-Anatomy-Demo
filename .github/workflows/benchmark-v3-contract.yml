@@ -7,6 +7,7 @@ on:
       - "scripts/validate_long_trajectory_benchmark_v3.py"
       - "scripts/run_long_checkpoint_e2e_v3.cjs"
       - "scripts/check_benchmark_v3_contract.py"
+      - "scripts/validate_benchmark_v3_oracle_runner.cjs"
       - "tests/benchmark_v3_metrics.cjs"
       - "docs/benchmark-v3.md"
       - ".github/workflows/benchmark-v3-contract.yml"
@@ -41,10 +42,13 @@ jobs:
           python -m py_compile scripts/generate_long_trajectory_benchmark_v3.py scripts/validate_long_trajectory_benchmark_v3.py
           node --check scripts/run_long_checkpoint_e2e_v3.cjs
           node --check tests/benchmark_v3_metrics.cjs
+          node --check scripts/validate_benchmark_v3_oracle_runner.cjs
       - name: Generate frozen-shape V3 corpus
         run: python scripts/generate_long_trajectory_benchmark_v3.py --count 180 --out /tmp/long_trajectories_v3.json
       - name: Validate split isolation, oracle integrity and coverage
         run: python scripts/validate_long_trajectory_benchmark_v3.py /tmp/long_trajectories_v3.json
+      - name: Prove gold oracle is executable by canonical stateful runner
+        run: node scripts/validate_benchmark_v3_oracle_runner.cjs /tmp/long_trajectories_v3.json
       - name: Validate stratified evaluator metrics
         run: node tests/benchmark_v3_metrics.cjs
       - name: Reproducibility
