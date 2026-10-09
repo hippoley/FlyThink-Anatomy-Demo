@@ -1,0 +1,102 @@
+name: benchmark-v3-current-checkpoint-baseline
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/benchmark-v3-current-checkpoint-baseline.yml"
+      - "scripts/generate_long_trajectory_benchmark_v3.py"
+      - "scripts/validate_long_trajectory_benchmark_v3.py"
+      - "scripts/run_long_checkpoint_e2e_v3.cjs"
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/benchmark-v3-current-checkpoint-baseline.yml"
+      - "scripts/generate_long_trajectory_benchmark_v3.py"
+      - "scripts/validate_long_trajectory_benchmark_v3.py"
+      - "scripts/run_long_checkpoint_e2e_v3.cjs"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  sealed-baseline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: Install CPU torch
+        run: python -m pip install --index-url https://download.pytorch.org/whl/cpu torch
+      - name: Download frozen judgement checkpoint
+        uses: actions/download-artifact@v4
+        with:
+          name: context-judgement-v3
+          path: artifacts/context-judgement-v3
+          github-token: ${{ github.token }}
+          run-id: "36372167785"
+      - name: Download frozen semantic checkpoint
+        uses: actions/download-artifact@v4
+        with:
+          name: semantic-patch-v1
+          path: artifacts/semantic-patch-v1
+          github-token: ${{ github.token }}
+          run-id: "36372786282"
+      - name: Build immutable capability index
+        run: python scripts/build_capability_index.py
+      - name: Build current FlyWire graph
+        run: python scripts/train_flywire.py --download --epochs 1 --out artifacts/flywire
+      - name: Generate release-scoped V3
+        run: |
+          python scripts/generate_long_trajectory_benchmark_v3.py             --count 180             --release-id 2026-10             --out artifacts/long_trajectories_v3.json
+          python scripts/validate_long_trajectory_benchmark_v3.py artifacts/long_trajectories_v3.json
+      - name: Evaluate sealed split with pre-V3 frozen checkpoints
+        shell: bash
+        run: |
+          set +e
+          node scripts/run_long_checkpoint_e2e_v3.cjs             --benchmark artifacts/long_trajectories_v3.json             --split sealed             --repeats 1             --graph artifacts/flywire/connectome.json             --judgement artifacts/context-judgement-v3/model.pt             --semantic artifacts/semantic-patch-v1/model.pt             > artifacts/benchmark-v3-sealed-baseline.json
+          status=$?
+          set -e
+          test -s artifacts/benchmark-v3-sealed-baseline.json
+          cat artifacts/benchmark-v3-sealed-baseline.json
+          if [ "$status" -ne 0 ] && [ "$status" -ne 2 ]; then exit "$status"; fi
+          echo "$status" > artifacts/benchmark-v3-runner-exit-code.txt
+      - name: Summarize diagnostic baseline
+        run: |
+          node - <<'NODE'
+          const fs=require("fs");
+          const r=JSON.parse(fs.readFileSync("artifacts/benchmark-v3-sealed-baseline.json","utf8"));
+          const summary={
+            benchmark:r.benchmark_truth,
+            split:r.split,
+            trajectories:r.trajectories,
+            overall:r.overall,
+            worst_family_full_patch_exact:r.worst_family_full_patch_exact,
+            strict_trajectory_rate:r.strict_trajectory_rate,
+            pass_pow_k:r.pass_pow_k,
+            by_scenario_family:r.by_scenario_family,
+            by_difficulty:r.by_difficulty,
+            by_generalization_class:r.by_generalization_class,
+            unsafe_execute:r.unsafe_execute,
+            wrong_device:r.wrong_device,
+            untouched_state_violation:r.untouched_state_violation
+          };
+          fs.writeFileSync("artifacts/benchmark-v3-sealed-summary.json",JSON.stringify(summary,null,2)+"\n");
+          console.log(JSON.stringify(summary,null,2));
+          NODE
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: benchmark-v3-current-checkpoint-baseline
+          path: |
+            artifacts/benchmark-v3-sealed-baseline.json
+            artifacts/benchmark-v3-sealed-summary.json
+            artifacts/benchmark-v3-runner-exit-code.txt
+            artifacts/long_trajectories_v3.json
+          if-no-files-found: error
