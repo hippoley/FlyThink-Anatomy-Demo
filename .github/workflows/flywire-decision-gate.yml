@@ -1,0 +1,62 @@
+name: flywire-decision-gate
+
+on:
+  push:
+    paths:
+      - "scripts/benchmark_flywire_decision_gate.py"
+      - "tests/test_flywire_decision_gate.py"
+      - ".github/workflows/flywire-decision-gate.yml"
+      - "FLYWIRE_DELTA_TRAINING.md"
+  pull_request:
+    paths:
+      - "scripts/benchmark_flywire_decision_gate.py"
+      - "tests/test_flywire_decision_gate.py"
+      - ".github/workflows/flywire-decision-gate.yml"
+      - "FLYWIRE_DELTA_TRAINING.md"
+  workflow_dispatch:
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m py_compile scripts/benchmark_flywire_decision_gate.py
+      - run: pip install pytest
+      - run: pip install --index-url https://download.pytorch.org/whl/cpu torch
+      - run: python -m pytest -q tests/test_flywire_decision_gate.py
+      - name: One-seed smoke comparison
+        run: >
+          python scripts/benchmark_flywire_decision_gate.py
+          --epochs 2
+          --seeds 1783
+          --out artifacts/flywire-decision-gate-smoke/report.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: flywire-decision-gate-smoke
+          path: artifacts/flywire-decision-gate-smoke/
+
+  full:
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.head_ref == 'flywire-decision-gate-baselines')
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install --index-url https://download.pytorch.org/whl/cpu torch
+      - name: Three-seed decision gate
+        run: >
+          python scripts/benchmark_flywire_decision_gate.py
+          --epochs 30
+          --seeds 1783 2783 3783
+          --out artifacts/flywire-decision-gate/report.json
+      - run: cat artifacts/flywire-decision-gate/report.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: flywire-decision-gate
+          path: artifacts/flywire-decision-gate/

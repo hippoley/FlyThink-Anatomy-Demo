@@ -111,6 +111,23 @@ sample, one seed and one small synthetic blind suite, while disconnected also
 wins some component metrics (notably development retraction). Multi-seed and
 multi-subgraph confidence intervals remain required.
 
+
+### Later evidence is mixed
+
+Later v15-v18 experiments do **not** reproduce a monotonic advantage for
+connected FlyWire recurrence. In stored development results, disconnecting the
+recurrent graph at inference is slightly worse in v15 but slightly better in
+v16, v17 and v18. Those runs are not a drop-in replacement for the v14 blind-v5
+matched-topology table, but together they make one conclusion mandatory:
+
+> the biological topology remains an unproven hypothesis, not a product claim.
+
+Issue #120 and PR #121 therefore define a stronger decision gate: real FlyWire,
+rewired, disconnected, same-budget MLP, GRU and tiny Transformer must be
+compared on identical structured inputs/outputs across multiple seeds. Further
+v19/v20-style tuning is not evidence of topology value unless it moves that
+gate.
+
 For auditability, v13's earlier post-freeze blind-v4 failure is preserved:
 operation 73.33%, complete Delta 70.00%, and OOD routing 50.00%. v4 was then
 treated as development evidence, v14 fixed the observed operation-language
