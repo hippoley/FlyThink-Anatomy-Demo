@@ -919,7 +919,9 @@ function verifyExecutionReceipt(receipt={},{
       receipt.logical_targets||[]
     ),
     // execution-receipt.v1 verifies binding/integrity only. It does not
-    // authenticate the authority that issued the SpatialRuntime allow receipt.
+    // establish a trusted Transaction Token trust-domain/signing-key source,
+    // nor does it authenticate an optional issuer identity.
+    authorization_trust_domain_key_source_verified:false,
     authorization_issuer_authenticated_verified:false,
     independent_object_outcome_verified:false
   };
