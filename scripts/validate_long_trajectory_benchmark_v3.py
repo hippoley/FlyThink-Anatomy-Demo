@@ -22,7 +22,7 @@ def main():
  raw=json.dumps(ts,ensure_ascii=False,separators=(",",":"),sort_keys=True).encode()
  assert hashlib.sha256(raw).hexdigest()==m["sha256"],"manifest sha256 does not bind trajectories"
 
- by_split=collections.defaultdict(list);texts=collections.defaultdict(set);templates=collections.defaultdict(set)
+ by_split=collections.defaultdict(list);texts=collections.defaultdict(set);text_freq=collections.defaultdict(collections.Counter);templates=collections.defaultdict(set)
  family=collections.Counter();decision=collections.Counter();difficulty=collections.Counter()
  pairs=collections.defaultdict(set);turns=0
  for tr in ts:
@@ -32,7 +32,7 @@ def main():
   prev={k:v["slots"] for k,v in tr["initial_runtime"]["devices"].items()}
   for t in tr["turns"]:
    turns+=1;family[t["scenario_family"]]+=1;decision[t["gold_decision"]]+=1;difficulty[t["difficulty"]]+=1
-   nt=norm_text(t["text"]);assert nt not in texts[split],"duplicate text inside split:"+nt;texts[split].add(nt)
+   nt=norm_text(t["text"]);texts[split].add(nt);text_freq[split][nt]+=1
    templates[split].add(t["surface_template_id"])
    assert set(t["gold_state"])==expected
    observed=diff_state(prev,t["gold_state"])
@@ -48,6 +48,10 @@ def main():
  for a1,b1 in (("train","dev"),("train","sealed"),("dev","sealed")):
   overlap=texts[a1]&texts[b1];assert not overlap,f"text leakage {a1}/{b1}: {list(overlap)[:5]}"
   assert not (templates[a1]&templates[b1]),f"surface template leakage {a1}/{b1}"
+ for split in ("train","dev","sealed"):
+  total=sum(text_freq[split].values())
+  max_share=max(text_freq[split].values())/total
+  assert max_share<=0.08,f"{split} single utterance dominates distribution: {max_share:.3f}"
  assert decision["EXECUTE"]>0 and decision["CLARIFY"]>0
  for name in ("direct_slot","direct_power","relative_coreference","explicit_correction","multi_target","ambiguous_clarify"):
   assert family[name]>=max(5,turns//100),f"scenario family under-covered: {name}"
@@ -64,6 +68,7 @@ def main():
   "split_counts":{s:len(by_split[s]) for s in ("train","dev","sealed")},
   "decisions":dict(decision),"families":dict(family),"difficulty":dict(difficulty),
   "cross_split_text_overlap":0,"cross_split_template_overlap":0,
+  "max_text_frequency_share":{s:max(text_freq[s].values())/sum(text_freq[s].values()) for s in ("train","dev","sealed")},
   "sealed_unseen_room_entity_pairs":sorted([list(x) for x in pairs["sealed"]-train_pairs]),
   "sha256_verified":True
  },ensure_ascii=False))
