@@ -2,7 +2,7 @@
 
 **A proof-carrying execution boundary for agents acting on physical systems — with a playable home-intelligence research surface.**
 
-> Agents propose. Reality responds. FlyThink separates execution evidence, physical-effect verification, and issuer provenance so each can be checked without borrowing trust from the others.
+> Agents propose. Reality responds. FlyThink separates execution evidence, completion evidence, authorization-issuer authenticity, proof provenance, and independent object-level observation so one claim cannot borrow trust from another.
 
 FlyThink's durable backend responsibility is narrower than "another agent framework":
 
@@ -39,7 +39,7 @@ Already on `main`:
 - semantic Context identity is bound as `context_revision + context_sha256`;
 - World identity is bound as `world_snapshot_revision + world_snapshot_sha256`;
 - SpatialRuntime authorization receipt integrity and exact patch/registry/context/completion-criterion binding are independently re-verified at the execution boundary; `execution-receipt.v1` does **not** authenticate the authorization issuer;
-- `execution-receipt.v1` remains the single execution-truth object;
+- `execution-receipt.v1` remains the single execution-truth object; its current WindowPilot completion evidence is based on identified fresh controller/state readback and does **not** establish independent object-level observation;
 - `execution-proof-bundle.v1` packages retained evidence for offline semantic/integrity verification; its SHA-256 binding is not, by itself, issuer authentication.
 
 Still under active reality convergence:
