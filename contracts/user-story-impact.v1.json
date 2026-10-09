@@ -61,6 +61,11 @@
     "context-identity": [
       "node",
       "tests/contextual_edge_slu_adapter.cjs"
+    ],
+    "kernel-conformance": [
+      "python",
+      "-c",
+      "import runpy; x=runpy.run_path('tests/test_kernel_conformance.py'); [x[n]() for n in ['test_calibration_selects_largest_real_threshold_group','test_equal_confidence_tie_cannot_be_split','test_sealed_uses_frozen_calibration_threshold']]; print('kernel-conformance PASS')"
     ]
   },
   "stories": {
@@ -386,6 +391,101 @@
         "execution-runtime",
         "execution-receipt",
         "proof-bundle"
+      ]
+    },
+    "execution.context_world_identity": {
+      "depends_on": [
+        "context.identity"
+      ],
+      "paths": [
+        "scripts/contextual_edge_slu_adapter.cjs",
+        "scripts/spatialruntime_world_context.cjs",
+        "scripts/decision_proposal_contract.cjs"
+      ],
+      "suites": [
+        "context-identity",
+        "decision-proposal"
+      ]
+    },
+    "execution.authorization_trust_domain": {
+      "depends_on": [
+        "execution.transaction_trust"
+      ],
+      "paths": [
+        "interop/kontxt-txntoken-trust/**",
+        "docs/standards/kontxt-txntoken-trust.md",
+        "scripts/claim_scope_report.cjs"
+      ],
+      "suites": [
+        "claim-scope"
+      ]
+    },
+    "execution.authorization_issuer": {
+      "depends_on": [
+        "execution.authorization_trust_domain"
+      ],
+      "paths": [
+        "interop/kontxt-txntoken-trust/**",
+        "docs/standards/kontxt-txntoken-trust.md",
+        "scripts/claim_scope_report.cjs"
+      ],
+      "suites": [
+        "claim-scope"
+      ]
+    },
+    "execution.ambiguous_transport": {
+      "depends_on": [
+        "execution.quarantine"
+      ],
+      "paths": [
+        "scripts/physical_runtime.cjs",
+        "scripts/test_indeterminate_physical_execution.cjs"
+      ],
+      "suites": [
+        "physical-runtime",
+        "physical-recovery"
+      ]
+    },
+    "execution.offline_verification": {
+      "depends_on": [
+        "execution.proof_bundle"
+      ],
+      "paths": [
+        "scripts/execution_proof_bundle.cjs",
+        "contracts/execution-proof-bundle.v1.schema.json",
+        "tests/execution_proof_bundle.cjs"
+      ],
+      "suites": [
+        "proof-bundle",
+        "claim-scope"
+      ]
+    },
+    "execution.kernel_conformance": {
+      "depends_on": [],
+      "paths": [
+        "scripts/kernel_conformance.py",
+        "tests/test_kernel_conformance.py",
+        "contracts/state-transition-kernel-conformance-row-v1.schema.json",
+        ".github/actions/kernel-conformance/**",
+        ".github/workflows/kernel-conformance-contract.yml"
+      ],
+      "suites": [
+        "kernel-conformance"
+      ]
+    },
+    "execution.external_standards_feedback": {
+      "depends_on": [
+        "execution.claim_scope",
+        "execution.external_completion_rail"
+      ],
+      "paths": [
+        "interop/aer1-physical-completion/**",
+        "docs/standards/**",
+        "docs/adoption-evidence.md"
+      ],
+      "suites": [
+        "claim-scope",
+        "external-completion"
       ]
     }
   }
