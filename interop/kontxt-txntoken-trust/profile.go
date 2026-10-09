@@ -12,17 +12,22 @@ import (
 )
 
 const (
-	SchemaVersion      = "flythink.kontxt-txntoken-trust.v2"
+	SchemaVersion      = "flythink.kontxt-txntoken-trust.v3"
 	PinnedKontxtCommit = "d23ebb50121a650af57c9e34e8227d54db324f9d"
 	ExternalVerifier   = "github.com/aramase/kontxt/sdk/verify"
 )
 
 // TrustAnchor is execution-boundary configuration. It must come from trusted
 // deployment/runtime configuration, never from the proposal or token being
-// authorized. The adapter binds issuer identity to one configured JWKS source
-// and audience before it asks Kontxt to verify the token.
+// authorized.
+//
+// Transaction Tokens draft-11 makes iss optional. Audience/trust-domain and a
+// predetermined signing-key source are therefore the core trust anchor.
+// Issuer is an optional stricter FlyThink profile pin: when configured, a token
+// must carry that exact issuer; when omitted, issuer authentication is not
+// claimed and does not block an otherwise valid Txn-Token.
 type TrustAnchor struct {
-	Issuer   string `json:"issuer"`
+	Issuer   string `json:"issuer,omitempty"`
 	JWKSURL  string `json:"jwks_url"`
 	Audience string `json:"audience"`
 	Source   string `json:"source"`
@@ -41,19 +46,20 @@ type ExpectedBinding struct {
 }
 
 type Verdict struct {
-	SchemaVersion                                  string `json:"schema_version"`
-	ExternalVerifier                               string `json:"external_verifier"`
-	ExternalVerifierCommit                         string `json:"external_verifier_commit"`
-	TokenSHA256                                    string `json:"token_sha256"`
-	TrustAnchorSHA256                              string `json:"trust_anchor_sha256,omitempty"`
-	TrustAnchorSource                              string `json:"trust_anchor_source,omitempty"`
-	CryptographicValidationVerified                bool   `json:"cryptographic_validation_verified"`
+	SchemaVersion                                   string `json:"schema_version"`
+	ExternalVerifier                                string `json:"external_verifier"`
+	ExternalVerifierCommit                          string `json:"external_verifier_commit"`
+	TokenSHA256                                     string `json:"token_sha256"`
+	TrustAnchorSHA256                               string `json:"trust_anchor_sha256,omitempty"`
+	TrustAnchorSource                               string `json:"trust_anchor_source,omitempty"`
+	CryptographicValidationVerified                 bool   `json:"cryptographic_validation_verified"`
+	TrustDomainKeySourceVerified                    bool   `json:"trust_domain_key_source_verified"`
 	IssuerAuthenticatedAgainstConfiguredTrustAnchor bool   `json:"issuer_authenticated_against_configured_trust_anchor"`
-	RequiredClaimsVerified                         bool   `json:"required_claims_verified"`
-	FlyThinkProfileBindingVerified                 bool   `json:"flythink_profile_binding_verified"`
-	ReadyForCanonicalTrustIntegration              bool   `json:"ready_for_canonical_trust_integration"`
-	FailureStage                                   string `json:"failure_stage,omitempty"`
-	FailureReason                                  string `json:"failure_reason,omitempty"`
+	RequiredClaimsVerified                          bool   `json:"required_claims_verified"`
+	FlyThinkProfileBindingVerified                  bool   `json:"flythink_profile_binding_verified"`
+	ReadyForCanonicalTrustIntegration               bool   `json:"ready_for_canonical_trust_integration"`
+	FailureStage                                    string `json:"failure_stage,omitempty"`
+	FailureReason                                   string `json:"failure_reason,omitempty"`
 }
 
 func VerifyAndBind(
@@ -80,7 +86,7 @@ func VerifyAndBind(
 
 	// Construct the external verifier inside the adapter from the configured
 	// trust anchor. Callers cannot hand us a verifier pointed at a different
-	// JWKS endpoint while still claiming the declared issuer binding.
+	// JWKS endpoint while still claiming the declared trust-domain binding.
 	verifier := verify.New(trust.JWKSURL, trust.Audience)
 	claims, err := verifier.Verify(ctx, tokenString)
 	if err != nil {
@@ -89,17 +95,22 @@ func VerifyAndBind(
 		return out
 	}
 	out.CryptographicValidationVerified = true
+	out.TrustDomainKeySourceVerified = true
 
-	if claims.Issuer != trust.Issuer {
-		out.FailureStage = "issuer_binding"
-		out.FailureReason = fmt.Sprintf(
-			"issuer mismatch: got=%q configured=%q",
-			claims.Issuer,
-			trust.Issuer,
-		)
-		return out
+	// iss is OPTIONAL in Transaction Tokens draft-11. FlyThink only requires
+	// and authenticates it when the deployment's trust profile pins one.
+	if trust.Issuer != "" {
+		if claims.Issuer != trust.Issuer {
+			out.FailureStage = "issuer_binding"
+			out.FailureReason = fmt.Sprintf(
+				"issuer mismatch: got=%q configured=%q",
+				claims.Issuer,
+				trust.Issuer,
+			)
+			return out
+		}
+		out.IssuerAuthenticatedAgainstConfiguredTrustAnchor = true
 	}
-	out.IssuerAuthenticatedAgainstConfiguredTrustAnchor = true
 
 	if err := validateRequiredClaims(claims, trust, expected); err != nil {
 		out.FailureStage = "required_claims"
@@ -119,9 +130,6 @@ func VerifyAndBind(
 }
 
 func validateTrustAnchor(trust TrustAnchor) error {
-	if trust.Issuer == "" {
-		return fmt.Errorf("configured issuer missing")
-	}
 	if trust.JWKSURL == "" {
 		return fmt.Errorf("configured JWKS URL missing")
 	}
