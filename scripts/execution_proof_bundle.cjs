@@ -210,6 +210,7 @@ function verifyExecutionProofBundle(bundle={}){
 
   return {
     valid:true,
+    verification_source:"flythink-canonical-verifier",
     bundle_sha256:bundle.bundle_sha256,
     execution_receipt_sha256:
       expectedVerification.execution.receipt_sha256,
