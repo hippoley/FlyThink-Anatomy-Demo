@@ -357,12 +357,118 @@ async function executeSinglePhysicalPatch(inputRuntime, expanded, driver, option
   }],reason:null};
 }
 
+function physicalReceiptsApplied(receipts) {
+  return Array.isArray(receipts) && receipts.length > 0 &&
+    receipts.every(item => item && (item.local_only === true || item.status === "applied"));
+}
+
+async function executePhysicalUndo(inputRuntime, undoPatch, driver, options = {}) {
+  let runtime=normalizeRuntime(inputRuntime);
+  const executionId=undoPatch&&undoPatch.execution_id;
+  if(!executionId) throw new Error("undo_requires_execution_id");
+
+  const prior=runtime.executionLedger.find(item=>item&&item.id===executionId);
+  if(!prior) throw new Error("undo_execution_not_found");
+  if(prior.kind!=="physical"||prior.status!=="applied"){
+    throw new Error("undo_physical_prior_not_applied");
+  }
+  if(
+    runtime.executionLedger.some(
+      item=>item&&item.kind==="compensation"&&item.compensates===executionId
+    )
+  ){
+    throw new Error("undo_execution_already_compensated");
+  }
+
+  const compensation=clone(undoPatch.compensation);
+  if(!compensation) throw new Error("undo_requires_explicit_compensation");
+  if(["CANCEL_PENDING","PROTECT","UNDO_EXECUTED"].includes(compensation.op)){
+    throw new Error("undo_compensation_must_be_physical_patch");
+  }
+
+  // Validate the compensation against the deterministic state contract before
+  // crossing the side-effecting driver boundary. The returned runtime is
+  // intentionally discarded; measured readback remains authoritative.
+  applyPatch(runtime,compensation);
+
+  const turnId=undoPatch.turn_id||options.turn_id||null;
+  const result=await executeSinglePhysicalPatch(
+    runtime,
+    {...compensation,turn_id:compensation.turn_id||turnId},
+    driver,
+    options
+  );
+  if(!result.ok){
+    return {
+      ok:false,
+      runtime:result.runtime,
+      receipts:result.receipts,
+      reason:result.reason
+    };
+  }
+  if(!physicalReceiptsApplied(result.receipts)){
+    const statuses=(result.receipts||[]).map(item=>item&&item.status||"unknown").join(",");
+    return {
+      ok:false,
+      runtime:result.runtime,
+      receipts:result.receipts,
+      reason:"undo_compensation_not_applied:"+statuses
+    };
+  }
+
+  runtime=normalizeRuntime(result.runtime);
+  const markerRecord={
+    id:"undo:"+executionId+":"+String(runtime.executionLedger.length+1),
+    turn_id:turnId,
+    kind:"compensation",
+    status:"applied",
+    compensates:executionId,
+    patch:clone(compensation),
+    physical_execution_ids:(result.receipts||[])
+      .map(item=>item&&item.command_id)
+      .filter(Boolean)
+  };
+  runtime.executionLedger.push(markerRecord);
+  runtime.revisions.push({
+    op:"UNDO_EXECUTED",
+    turn_id:turnId,
+    receipt:{
+      execution_id:executionId,
+      compensation:clone(compensation),
+      compensation_marker_id:markerRecord.id
+    }
+  });
+  return {
+    ok:true,
+    runtime,
+    receipts:(result.receipts||[]).map(item=>({
+      ...clone(item),
+      undo_execution_id:executionId,
+      compensation:true
+    })),
+    reason:null,
+    compensation_marker:clone(markerRecord)
+  };
+}
+
 async function executePhysicalTurn(inputRuntime, patches, driver, options = {}) {
   let runtime=normalizeRuntime(inputRuntime);
   const receipts=[];
   const {executePhysicalTransaction}=require("./physical_transaction_router.cjs");
   for(const proposed of patches || []){
     const expanded=expandSetPatch(proposed);
+    if(expanded.length===1&&expanded[0].op==="UNDO_EXECUTED"){
+      const undo=await executePhysicalUndo(runtime,expanded[0],driver,options);
+      if(!undo.ok) return {
+        runtime:undo.runtime,
+        receipts:undo.receipts,
+        ok:false,
+        reason:undo.reason
+      };
+      runtime=undo.runtime;
+      receipts.push(...undo.receipts);
+      continue;
+    }
     if(expanded.every(p=>["CANCEL_PENDING","PROTECT"].includes(p.op))){
       for(const localPatch of expanded){
         const local=applyPatch(runtime,localPatch);
@@ -391,5 +497,7 @@ module.exports = {
   clearQuarantine,
   evaluateQuarantinePreflight,
   executeSinglePhysicalPatch,
+  executePhysicalUndo,
+  physicalReceiptsApplied,
   executePhysicalTurn
 };

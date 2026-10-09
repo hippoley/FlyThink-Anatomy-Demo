@@ -194,9 +194,165 @@ const initial = normalizeRuntime({devices:{
     );
   }
 
+  // Generic physical UNDO executes the explicit compensation, never the semantic UNDO op.
+  {
+    const undoRuntime=normalizeRuntime({
+      devices:{
+        "主卧::空调::default":{
+          key:"主卧::空调::default",
+          area:"主卧",
+          entity:"空调",
+          instance:"default",
+          slots:{power:"ON",temperature:25}
+        }
+      },
+      executionLedger:[{
+        id:"exec:temp-25",
+        kind:"physical",
+        status:"applied",
+        semantic_patch:{op:"PATCH_SLOT",target:B,slot:"temperature",value:25},
+        physical_patch:{op:"PATCH_SLOT",target:B,slot:"temperature",value:25},
+        observation:{target:B,exists:true,slots:{power:"ON",temperature:25}}
+      }]
+    });
+    const driver=new MockThingDriver(undoRuntime);
+    const out=await executePhysicalTurn(undoRuntime,[{
+      op:"UNDO_EXECUTED",
+      execution_id:"exec:temp-25",
+      compensation:{op:"PATCH_SLOT",target:B,slot:"temperature",value:24}
+    }],driver,{turn_id:"undo-1"});
+    assert.equal(out.ok,true);
+    assert.equal(driver.commands.length,1);
+    assert.equal(driver.commands[0].patch.op,"PATCH_SLOT");
+    assert.equal(driver.commands[0].patch.value,24);
+    assert.equal(out.runtime.devices["主卧::空调::default"].slots.temperature,24);
+    assert.equal(out.receipts[0].compensation,true);
+    assert.equal(out.receipts[0].undo_execution_id,"exec:temp-25");
+    assert.ok(out.runtime.executionLedger.some(
+      item=>item.kind==="compensation"&&item.compensates==="exec:temp-25"
+    ));
+  }
+
+  // Rejected compensation must not be promoted to a successful undo.
+  {
+    const undoRuntime=normalizeRuntime({
+      devices:{
+        "主卧::空调::default":{
+          key:"主卧::空调::default",
+          area:"主卧",
+          entity:"空调",
+          instance:"default",
+          slots:{power:"ON",temperature:25}
+        }
+      },
+      executionLedger:[{
+        id:"exec:reject-test",
+        kind:"physical",
+        status:"applied",
+        semantic_patch:{op:"PATCH_SLOT",target:B,slot:"temperature",value:25}
+      }]
+    });
+    const driver=new MockThingDriver(undoRuntime,{reject:()=>true});
+    const out=await executePhysicalTurn(undoRuntime,[{
+      op:"UNDO_EXECUTED",
+      execution_id:"exec:reject-test",
+      compensation:{op:"PATCH_SLOT",target:B,slot:"temperature",value:24}
+    }],driver);
+    assert.equal(out.ok,false);
+    assert.equal(out.reason,"undo_compensation_not_applied:rejected");
+    assert.equal(out.runtime.devices["主卧::空调::default"].slots.temperature,25);
+    assert.equal(out.runtime.executionLedger.some(
+      item=>item.kind==="compensation"&&item.compensates==="exec:reject-test"
+    ),false);
+  }
+
+  // Physical undo requires an actually-applied physical execution and is single-use.
+  {
+    const undoRuntime=normalizeRuntime({
+      devices:{
+        "主卧::空调::default":{
+          key:"主卧::空调::default",
+          area:"主卧",
+          entity:"空调",
+          instance:"default",
+          slots:{power:"ON",temperature:25}
+        }
+      },
+      executionLedger:[{
+        id:"exec:single-use",
+        kind:"physical",
+        status:"applied",
+        semantic_patch:{op:"PATCH_SLOT",target:B,slot:"temperature",value:25}
+      }]
+    });
+    const driver=new MockThingDriver(undoRuntime);
+    const first=await executePhysicalTurn(undoRuntime,[{
+      op:"UNDO_EXECUTED",
+      execution_id:"exec:single-use",
+      compensation:{op:"PATCH_SLOT",target:B,slot:"temperature",value:24}
+    }],driver);
+    await assert.rejects(
+      ()=>executePhysicalTurn(first.runtime,[{
+        op:"UNDO_EXECUTED",
+        execution_id:"exec:single-use",
+        compensation:{op:"PATCH_SLOT",target:B,slot:"temperature",value:23}
+      }],driver),
+      /undo_execution_already_compensated/
+    );
+    assert.equal(driver.commands.length,1);
+
+    const rejectedPrior=normalizeRuntime(undoRuntime);
+    rejectedPrior.executionLedger[0].status="rejected";
+    const untouchedDriver=new MockThingDriver(rejectedPrior);
+    await assert.rejects(
+      ()=>executePhysicalTurn(rejectedPrior,[{
+        op:"UNDO_EXECUTED",
+        execution_id:"exec:single-use",
+        compensation:{op:"PATCH_SLOT",target:B,slot:"temperature",value:24}
+      }],untouchedDriver),
+      /undo_physical_prior_not_applied/
+    );
+    assert.equal(untouchedDriver.commands.length,0);
+  }
+
+  // Invalid compensation is refused before the side-effecting driver boundary.
+  {
+    const undoRuntime=normalizeRuntime({
+      devices:{
+        "主卧::空调::default":{
+          key:"主卧::空调::default",
+          area:"主卧",
+          entity:"空调",
+          instance:"default",
+          slots:{power:"ON",temperature:25}
+        }
+      },
+      executionLedger:[{
+        id:"exec:preflight",
+        kind:"physical",
+        status:"applied"
+      }]
+    });
+    const driver=new MockThingDriver(undoRuntime);
+    await assert.rejects(
+      ()=>executePhysicalTurn(undoRuntime,[{
+        op:"UNDO_EXECUTED",
+        execution_id:"exec:preflight",
+        compensation:{
+          op:"PATCH_SLOT",
+          target:{area:"书房",entity:"空调",instance:"missing"},
+          slot:"temperature",
+          value:24
+        }
+      }],driver),
+      /patch_target_not_found/
+    );
+    assert.equal(driver.commands.length,0);
+  }
+
   console.log(JSON.stringify({
     ok:true,
-    cases:6,
-    contract:"patch->execute->observe->reconcile + persistent quarantine + non-applied receipts never commit"
+    cases:10,
+    contract:"patch->execute->observe->reconcile + persistent quarantine + fail-closed physical compensation"
   }));
 })().catch(err=>{console.error(err);process.exit(1)});
