@@ -215,6 +215,10 @@ function buildBundle(){
   assert.equal(verified.physical_truth_verified,true);
   assert.equal(verified.physical_completion_verified,false);
   assert.equal(verified.safe_closeout_verified,false);
+  assert.equal(
+    verified.authorization_trust_domain_key_source_verified,
+    false
+  );
   assert.equal(verified.authorization_issuer_authenticated_verified,false);
   assert.equal(verified.independent_object_outcome_verified,false);
   assert.equal(
@@ -281,6 +285,7 @@ function buildBundle(){
     let legacy=buildBundle();
     delete legacy.verification.execution.physical_completion_verified;
     delete legacy.verification.execution.safe_closeout_verified;
+    delete legacy.verification.execution.authorization_trust_domain_key_source_verified;
     delete legacy.verification.execution.authorization_issuer_authenticated_verified;
     delete legacy.verification.execution.independent_object_outcome_verified;
     legacy=resealBundle(legacy);
@@ -289,19 +294,41 @@ function buildBundle(){
     assert.equal(checked.physical_truth_verified,true);
     assert.equal(checked.physical_completion_verified,false);
     assert.equal(checked.safe_closeout_verified,false);
+    assert.equal(
+      checked.authorization_trust_domain_key_source_verified,
+      false
+    );
     assert.equal(checked.authorization_issuer_authenticated_verified,false);
     assert.equal(checked.independent_object_outcome_verified,false);
   }
 
   {
     let preIssuerAuth=buildBundle();
+    delete preIssuerAuth.verification.execution.authorization_trust_domain_key_source_verified;
     delete preIssuerAuth.verification.execution.authorization_issuer_authenticated_verified;
     delete preIssuerAuth.verification.execution.independent_object_outcome_verified;
     preIssuerAuth=resealBundle(preIssuerAuth);
     const checked=verifyExecutionProofBundle(preIssuerAuth);
     assert.equal(checked.valid,true);
+    assert.equal(
+      checked.authorization_trust_domain_key_source_verified,
+      false
+    );
     assert.equal(checked.authorization_issuer_authenticated_verified,false);
     assert.equal(checked.independent_object_outcome_verified,false);
+  }
+
+  {
+    let preTrustDomain=buildBundle();
+    delete preTrustDomain.verification.execution.authorization_trust_domain_key_source_verified;
+    preTrustDomain=resealBundle(preTrustDomain);
+    const checked=verifyExecutionProofBundle(preTrustDomain);
+    assert.equal(checked.valid,true);
+    assert.equal(
+      checked.authorization_trust_domain_key_source_verified,
+      false
+    );
+    assert.equal(checked.authorization_issuer_authenticated_verified,false);
   }
 
   {
@@ -311,6 +338,16 @@ function buildBundle(){
     const checked=verifyExecutionProofBundle(preObjectIndependence);
     assert.equal(checked.valid,true);
     assert.equal(checked.independent_object_outcome_verified,false);
+  }
+
+  {
+    let forged=buildBundle();
+    forged.verification.execution.authorization_trust_domain_key_source_verified=true;
+    forged=resealBundle(forged);
+    assert.throws(
+      ()=>verifyExecutionProofBundle(forged),
+      /execution_proof_bundle_verification_mismatch/
+    );
   }
 
   {
