@@ -215,7 +215,8 @@ function buildBundle(){
   assert.equal(verified.physical_truth_verified,true);
   assert.equal(verified.physical_completion_verified,false);
   assert.equal(verified.safe_closeout_verified,false);
-  assert.equal(verified.authorization_issuer_authenticated_verified,false);
+  assert.equal(verified.authorization_trust_domain_key_source_verified,false);
+    assert.equal(verified.authorization_issuer_authenticated_verified,false);
   assert.equal(verified.independent_object_outcome_verified,false);
   assert.equal(
     verified.decision_proposal_sha256,
@@ -281,6 +282,7 @@ function buildBundle(){
     let legacy=buildBundle();
     delete legacy.verification.execution.physical_completion_verified;
     delete legacy.verification.execution.safe_closeout_verified;
+    delete legacy.verification.execution.authorization_trust_domain_key_source_verified;
     delete legacy.verification.execution.authorization_issuer_authenticated_verified;
     delete legacy.verification.execution.independent_object_outcome_verified;
     legacy=resealBundle(legacy);
