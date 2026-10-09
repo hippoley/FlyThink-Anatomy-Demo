@@ -24,23 +24,25 @@ function directPatch(text){
   const rooms=extractRoom(text),entities=extractEntity(text);
   if(rooms.length!==1||entities.length!==1)return null;
   const area=rooms[0],entity=entities[0],t=target(area,entity),n=number(text);
-  if(/更正|不是|不要|同时|和|跟|两处/.test(text))return null;
+  if(/不是|不要|和/.test(text))return null;
   if(entity==="空调"&&/温度/.test(text)&&n!=null)
     return {op:"PATCH_SLOT",target:t,slot:"temperature",value:n};
   if(entity==="灯"&&/亮度/.test(text)&&n!=null)
     return {op:"PATCH_SLOT",target:t,slot:"brightness",value:n};
   if(entity==="窗"&&/开度/.test(text)&&n!=null)
     return {op:"PATCH_SLOT",target:t,slot:"opening",value:n};
-  if(/启动|打开|开启|给我开|开起来|开始工作/.test(text))
+  // Frozen to TRAIN surface vocabulary only. Do not add dev/sealed aliases here.
+  if(/打开|开起来/.test(text))
     return {op:"ADD_DEVICE",target:t,slots:{power:"ON"}};
-  if(/停用|关闭|关掉|停掉|停止|停了/.test(text))
+  if(/关闭|关掉/.test(text))
     return {op:"CLOSE_DEVICE",target:t};
   return null;
 }
 function relativePatch(text,context){
   const t=context&&context.focused_target;
   if(!t)return null;
-  const relative=/再|继续|接着|刚才|上一个|维持|别换|沿用|基础/.test(text);
+  // Only TRAIN relative cues: 再/继续/刚才/不用换/接着.
+  const relative=/再|继续|刚才|不用换|接着/.test(text);
   if(!relative)return null;
   if(t.entity==="空调"&&/低/.test(text))
     return {op:"PATCH_RELATIVE",target:clone(t),slot:"temperature",delta:-1};
@@ -51,7 +53,8 @@ function relativePatch(text,context){
   return null;
 }
 function correctionPatch(text){
-  if(!/更正|不是|不要|说错/.test(text))return null;
+  // TRAIN correction template begins with "不是...是...".
+  if(!/^不是/.test(text))return null;
   const rooms=extractRoom(text),entities=extractEntity(text),n=number(text);
   if(!entities.length||rooms.length<2||n==null)return null;
   const entity=entities[entities.length-1];
@@ -63,7 +66,8 @@ function correctionPatch(text){
   return null;
 }
 function multiPatch(text){
-  if(!/同时|和|跟|两处/.test(text))return null;
+  // TRAIN multi-target template uses "和"; dev/sealed use other conjunctions.
+  if(!/和/.test(text))return null;
   const rooms=extractRoom(text),entities=extractEntity(text),n=number(text);
   if(rooms.length!==2||entities.length!==1||n==null)return null;
   const entity=entities[0],targets=rooms.map(r=>target(r,entity));
@@ -125,7 +129,17 @@ async function evaluate(file,split="sealed"){
   const d=JSON.parse(fs.readFileSync(file,"utf8"));
   const rows=d.trajectories.filter(x=>split==="all"||x.split===split);
   const names=["clarify_only","surface_direct","context_rule","gold_oracle"];
-  const out={schema_version:"benchmark-v3-baseline-discrimination-v1",benchmark_release_id:d.manifest.release_id,split,baselines:{}};
+  const out={
+    schema_version:"benchmark-v3-baseline-discrimination-v1",
+    benchmark_release_id:d.manifest.release_id,
+    split,
+    protocol:{
+      weak_baseline_surface_source:"train_only",
+      sealed_surface_vocabulary_forbidden:true,
+      purpose:"detect trivial-policy or scoring exploits without training the baseline on sealed wording"
+    },
+    baselines:{}
+  };
   for(const name of names){
     const agg=aggregateInit();
     for(const tr of rows){
