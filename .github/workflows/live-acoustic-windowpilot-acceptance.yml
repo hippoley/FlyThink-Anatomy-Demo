@@ -279,7 +279,6 @@ jobs:
           cat live-execution-proof-verification.json
           node - <<'NODE'
           const fs=require("fs");
-          const {verifyExecutionReceipt}=require("./scripts/execution_receipt.cjs");
           const bundleVerdict=JSON.parse(fs.readFileSync("live-execution-proof-verification.json","utf8"));
           if(bundleVerdict.verdict!=="VERIFIED"||bundleVerdict.valid!==true){
             throw new Error("canonical proof bundle invalid");
@@ -287,22 +286,17 @@ jobs:
           if(bundleVerdict.physical_truth_verified!==true){
             throw new Error("canonical proof did not verify physical truth");
           }
-          const bundle=JSON.parse(fs.readFileSync("live-execution-proof-bundle.json","utf8"));
-          const receipt=JSON.parse(fs.readFileSync("live-execution-receipt.json","utf8"));
-          const verified=verifyExecutionReceipt(receipt,{
-            contextual_state:bundle.artifacts.contextual_state,
-            request:bundle.artifacts.request,
-            proposal:bundle.artifacts.internal_proposal,
-            before_runtime:bundle.artifacts.before_runtime,
-            after_runtime:bundle.artifacts.after_runtime
-          });
-          if(verified.physical_completion_verified!==true){
-            throw new Error("physical completion criterion/witness verification failed");
+          if(bundleVerdict.physical_completion_verified!==true){
+            throw new Error("canonical proof did not verify physical completion");
+          }
+          if(bundleVerdict.safe_closeout_verified!==true){
+            throw new Error("canonical proof did not verify safe closeout");
           }
           console.log({
-            receipt_sha256:verified.receipt_sha256,
-            physical_truth_verified:verified.physical_truth_verified,
-            physical_completion_verified:verified.physical_completion_verified,
+            execution_receipt_sha256:bundleVerdict.execution_receipt_sha256,
+            physical_truth_verified:bundleVerdict.physical_truth_verified,
+            physical_completion_verified:bundleVerdict.physical_completion_verified,
+            safe_closeout_verified:bundleVerdict.safe_closeout_verified,
             bundle_sha256:bundleVerdict.bundle_sha256
           });
           NODE
