@@ -18,6 +18,8 @@ on:
       - "scripts/execution_proof_bundle.cjs"
       - "scripts/run_acoustic_windowpilot_e2e.cjs"
       - "scripts/verify_physical_completion_vector_cli.cjs"
+      - "scripts/evc_physical_completion_verifier.cjs"
+      - "scripts/evc_physical_completion_worker.cjs"
       - "scripts/execution_reasoning_contract.cjs"
       - "scripts/decision_proposal_contract.cjs"
       - "scripts/contextual_edge_slu_adapter.cjs"
@@ -33,12 +35,14 @@ on:
       - "tests/golden_proof_closeout.cjs"
       - "tests/acoustic_windowpilot_live_probe.cjs"
       - "tests/physical_completion_external_rail.cjs"
+      - "tests/evc_physical_completion_verifier.cjs"
       - ".github/workflows/execution-trust-boundary.yml"
       - "benchmarks/execution_reasoning_contract_cases.json"
       - "contracts/decision-proposal.v1.schema.json"
       - "contracts/execution-proof-bundle.v1.schema.json"
       - "interop/claim-scope/claim-scope-cases.v0.1.json"
       - "interop/physical-completion/**"
+      - "interop/evc-physical-completion/**"
       - "interop/aer1-physical-completion/**"
       - "tests/claim_scope_interop.cjs"
       - "tests/execution_reasoning_contract.cjs"
@@ -59,6 +63,9 @@ on:
       - "scripts/execution_receipt.cjs"
       - "scripts/execution_proof_bundle.cjs"
       - "scripts/run_acoustic_windowpilot_e2e.cjs"
+      - "scripts/verify_physical_completion_vector_cli.cjs"
+      - "scripts/evc_physical_completion_verifier.cjs"
+      - "scripts/evc_physical_completion_worker.cjs"
       - "scripts/execution_reasoning_contract.cjs"
       - "scripts/decision_proposal_contract.cjs"
       - "scripts/contextual_edge_slu_adapter.cjs"
@@ -73,6 +80,10 @@ on:
       - "tests/execution_proof_bundle.cjs"
       - "tests/golden_proof_closeout.cjs"
       - "tests/acoustic_windowpilot_live_probe.cjs"
+      - "tests/physical_completion_external_rail.cjs"
+      - "tests/evc_physical_completion_verifier.cjs"
+      - "interop/physical-completion/**"
+      - "interop/evc-physical-completion/**"
       - ".github/workflows/execution-trust-boundary.yml"
       - "benchmarks/execution_reasoning_contract_cases.json"
       - "contracts/decision-proposal.v1.schema.json"
@@ -111,7 +122,10 @@ jobs:
           node --check scripts/execution_proof_bundle.cjs
           node --check scripts/run_acoustic_windowpilot_e2e.cjs
           node --check scripts/verify_physical_completion_vector_cli.cjs
+          node --check scripts/evc_physical_completion_verifier.cjs
+          node --check scripts/evc_physical_completion_worker.cjs
           node --check tests/physical_completion_external_rail.cjs
+          node --check tests/evc_physical_completion_verifier.cjs
           node --check tests/flythink_execution_runtime.cjs
           node --check tests/execution_receipt.cjs
           node --check tests/execution_proof_bundle.cjs
@@ -166,6 +180,8 @@ jobs:
         run: node tests/acoustic_windowpilot_live_probe.cjs
       - name: Prove external physical completion verifier rail
         run: node tests/physical_completion_external_rail.cjs
+      - name: Prove EVC-02 external verifier fd isolation
+        run: node tests/evc_physical_completion_verifier.cjs
       - name: Smoke external rail on public sample vector
         run: node scripts/verify_physical_completion_vector_cli.cjs interop/physical-completion/sample-proven.json
       - name: Verify AER-1 claim-scope interop fixture
