@@ -69,6 +69,38 @@ function runWorker(workerPath,args){
   assert.equal(snapshotLost.add(independentId,{turn_id:"parallel-safe"}),true);
   assert.equal(snapshotLost.has(independentId),true);
 
+  // Durability failure must fail closed before dispatch. Once the final
+  // reservation name was published, the authorization stays consumed even
+  // though directory fsync failed and add() reports an error.
+  {
+    const durabilityFile=path.join(dir,"durability.json");
+    const durabilityLedger=new FileAuthorizationLedger(durabilityFile);
+    const originalFsyncSync=fs.fsyncSync;
+    fs.fsyncSync=(fd)=>{
+      if(fs.fstatSync(fd).isDirectory()){
+        throw new Error("injected_reservation_directory_fsync_failure");
+      }
+      return originalFsyncSync(fd);
+    };
+    try{
+      assert.throws(
+        ()=>durabilityLedger.add("auth-dir-fsync-failure",{turn_id:"durability"}),
+        /injected_reservation_directory_fsync_failure/
+      );
+    }finally{
+      fs.fsyncSync=originalFsyncSync;
+    }
+    assert.equal(
+      durabilityLedger.has("auth-dir-fsync-failure"),
+      true,
+      "a failed durability acknowledgement must never resurrect the authorization"
+    );
+    assert.equal(
+      durabilityLedger.add("auth-dir-fsync-failure",{turn_id:"retry"}),
+      false
+    );
+  }
+
   // True multi-process race: every worker constructs its ledger before a common
   // gate opens. Exactly one process may consume the same ID.
   const raceFile=path.join(dir,"race.json");
@@ -162,6 +194,7 @@ process.stdout.write(JSON.stringify(result));
     replay_after_process_restart:0,
     stale_snapshot_double_consume:0,
     snapshot_loss_replay:0,
+    directory_fsync_fail_open:0,
     global_stale_lock_dependency:0,
     multiprocess_workers:results.length,
     multiprocess_winners:winners.length,
