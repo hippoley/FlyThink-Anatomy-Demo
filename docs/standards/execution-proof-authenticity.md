@@ -2,12 +2,13 @@
 
 Status: canonical claim-scope guidance for retained Golden Proof evidence.
 
-FlyThink intentionally separates four independent questions:
+FlyThink intentionally separates five independent questions:
 
 1. **Evidence integrity and semantics** — can the retained proof bundle be re-verified and can its physical-effect claims be recomputed?
-2. **Authorization issuer authenticity** — was the pre-action allow decision issued by an authority the relying party is configured to trust?
-3. **Proof-artifact issuer / workflow provenance** — can a relying party verify which trusted workflow identity produced the retained proof bundle?
-4. **Transparency / non-equivocation** — can a relying party verify that the signed statement was registered in a transparency system with the consistency properties required by that system?
+2. **Authorization Trust Domain / signing-key source** — was the authorization token verified against a Trust Domain and key source supplied by trusted deployment/runtime configuration?
+3. **Optional authorization issuer authenticity** — when an issuer identity is asserted or pinned, was that issuer identity authenticated?
+4. **Proof-artifact issuer / workflow provenance** — can a relying party verify which trusted workflow identity produced the retained proof bundle?
+5. **Transparency / non-equivocation** — can a relying party verify that the signed statement was registered in a transparency system with the consistency properties required by that system?
 
 These questions must not be collapsed into one "verified" bit. In particular, proof-artifact provenance does not retroactively authenticate the authority that issued the pre-action authorization.
 
@@ -21,6 +22,7 @@ The canonical verifier can currently derive, among other fields:
 physical_truth_verified
 physical_completion_verified
 safe_closeout_verified
+authorization_trust_domain_key_source_verified = false
 authorization_issuer_authenticated_verified = false
 ```
 
@@ -32,24 +34,29 @@ A party that can construct a self-consistent object can also compute its hashes.
 hash integrity != issuer authenticity
 ```
 
-## Authorization issuer boundary
+## Authorization transaction-trust boundary
 
-The current `homeai_spatialruntime_authorization_receipt_v1` is self-hashed. FlyThink re-verifies its exact patch, registry, scene/context, source revision, completion criteria, single-use intent and receipt integrity, but that does not authenticate **who was entitled to issue the allow decision**.
+The current `homeai_spatialruntime_authorization_receipt_v1` is self-hashed. FlyThink re-verifies its exact patch, registry, scene/context, source revision, completion criteria, single-use intent and receipt integrity, but that does not establish **external transaction trust**.
 
-Current machine-readable verification therefore reports:
+Transaction Tokens draft-11 makes `iss` optional. The primary token boundary is the Trust Domain identified by `aud`, together with the signing keys trusted by the deployment. FlyThink therefore keeps two machine-readable non-claims separate:
 
 ```text
+authorization_trust_domain_key_source_verified = false
 authorization_issuer_authenticated_verified = false
 ```
 
+The first may only become true after a real external verifier validates the token against a non-request-controlled Trust Domain / signing-key configuration. The second is optional and may only become true when the deployment actually pins an issuer and the token proves that identity under the same trusted key boundary.
+
 This is deliberate. A party able to construct a self-consistent authorization body can also recompute its SHA-256 fields.
 
-Issue #137 tracks the higher-value direction: compose the physical-action bindings with an externally validated IETF Transaction Token / workload identity trust layer instead of introducing a FlyThink-specific HMAC or signature protocol.
+Issue #137 tracks the higher-value direction: compose the physical-action bindings with an externally governed IETF Transaction Token / workload-identity trust layer instead of introducing a FlyThink-specific HMAC or signature protocol.
 
 Therefore:
 
 ```text
-authorization binding/integrity != authorization issuer authenticity
+authorization binding/integrity
+  != Trust Domain / signing-key-source verification
+  != optional issuer authentication
 ```
 
 ## Layer 2 — GitHub / Sigstore artifact attestation
