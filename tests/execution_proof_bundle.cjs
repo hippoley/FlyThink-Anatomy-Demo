@@ -208,14 +208,19 @@ function buildBundle(){
     assert.equal(cli.status,0);
     const row=JSON.parse(cli.stdout.trim());
     assert.equal(row.verdict,"VERIFIED");
+    assert.equal(row.verification_source,"flythink-canonical-verifier");
     assert.equal(row.bundle_sha256,bundle.bundle_sha256);
+    assert.equal(row.authorization_issuer_authenticated_verified,false);
+    assert.equal(row.independent_object_outcome_verified,false);
   }
   assert.equal(verified.valid,true);
+  assert.equal(verified.verification_source,"flythink-canonical-verifier");
   assert.equal(verified.physical_committed,true);
   assert.equal(verified.physical_truth_verified,true);
   assert.equal(verified.physical_completion_verified,false);
   assert.equal(verified.safe_closeout_verified,false);
   assert.equal(verified.authorization_issuer_authenticated_verified,false);
+  assert.equal(verified.independent_object_outcome_verified,false);
   assert.equal(
     verified.decision_proposal_sha256,
     digestDecisionProposal(decisionProposal)
