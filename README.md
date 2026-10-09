@@ -41,11 +41,11 @@ Already on `main`:
 - `execution-receipt.v1` remains the single execution-truth object;
 - `execution-proof-bundle.v1` packages retained evidence for offline semantic/integrity verification; its SHA-256 binding is not, by itself, issuer authentication.
 
-Still under active reality convergence:
+Current reality boundary:
 
-- the flagship human-WAV → WindowPilot APPLY path must cross the canonical `runDecisionProposal()` boundary before the first actuator write;
-- a retained real-hardware Golden Proof Bundle is not claimed until that run exists and verifies independently;
-- indeterminate physical outcomes under transport loss are being hardened separately rather than collapsed into ordinary failure.
+- the flagship human-WAV → WindowPilot APPLY path now crosses the canonical `runDecisionProposal()` boundary before the first actuator write;
+- a retained real-hardware Golden Proof Bundle is still **not** claimed until the protected physical-lab run exists and its retained bundle verifies physical truth, physical completion and safe closeout independently;
+- transport-loss ambiguity remains `INDETERMINATE`; retained real lost-ACK evidence would strengthen that claim.
 
 ### Verify a retained proof bundle
 
@@ -87,6 +87,11 @@ See [`docs/standards/claim-scope-execution-evidence.md`](docs/standards/claim-sc
 for the current crosswalk across OpenTelemetry GenAI tool spans, AER-1,
 Agent Passport System receipts, SCITT Physical-Site Engagement Receipts, and
 FlyThink's own execution proof boundary.
+
+External standards evidence: `draft-zambo-aer1-14` records FlyThink's four-case
+AER-1 / physical-completion interoperability fixture in its Implementation
+Status. This is a public interoperability citation, not IETF endorsement and
+not evidence that AER-1 implementations depend on FlyThink.
 ## Repository boundary
 
 FlyThink is a **consumer/backend**, not the canonical owner of Contextual Edge
