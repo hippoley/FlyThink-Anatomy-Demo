@@ -97,7 +97,7 @@ function appraisePhysicalCompletion(vector={}){
     row.checks.observation_method_verified===true&&
     row.checks.observation_window_verified===true;
 
-  const tiers=witnessTier?["independent-physical-witness"]:["physical-evidence-unresolved"];
+  const tiers=witnessTier?["identified-fresh-physical-witness"]:["physical-evidence-unresolved"];
 
   const prerequisiteCodes=codes.filter(code=>
     code!=="ack-not-verified"
@@ -117,8 +117,9 @@ function appraisePhysicalCompletion(vector={}){
     prerequisiteCodes.length===0&&
     row.checks.ack_verified!==true
   ){
-    // A missing/ambiguous ACK does not prove non-execution. Fresh independent
-    // witness evidence may still resolve completion.
+    // A missing/ambiguous ACK does not prove non-execution. Fresh identified
+    // measured readback may still resolve completion under the precommitted
+    // criterion. This does not establish observer independence.
     result=row.checks.completion_criterion_satisfied===true&&witnessTier
       ?"PHYSICAL_COMPLETION_PROVEN"
       :"PHYSICAL_COMPLETION_INDETERMINATE";
@@ -129,6 +130,7 @@ function appraisePhysicalCompletion(vector={}){
     codes,
     result,
     tiers,
+    independent_object_outcome_verified:false,
     checks:row.checks
   };
 }
