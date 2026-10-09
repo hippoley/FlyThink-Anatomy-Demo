@@ -49,6 +49,8 @@ jobs:
           x=json.load(open("/tmp/hidden/receipt.json"))
           assert x["metrics"]["full_exact"]==1
           assert x["source"]["kind"]=="fixture"
+          assert x["claim_scope"]["gold_content_matches_commitment_verified"] is True
+          assert x["claim_scope"]["commitment_pre_prediction_publication_externally_verified"] is False
           assert x["claim_scope"]["external_generalization_claim_eligible"] is False
           assert x["claim_scope"]["source_independence_externally_verified"] is False
           print("hidden-gold-protocol: PASS_WITHOUT_EXTERNAL_CLAIM")
