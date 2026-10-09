@@ -47,7 +47,7 @@ TEMPLATES={
   "power_on":["开启{r}{e}","让{r}{e}开始工作"],
   "power_off":["停掉{r}{e}","让{r}{e}停止"],
   "relative":["在刚才基础上{word}一点","接着{word}一点","保持对象不变再{word}些","还是上一个，再{word}一点","沿用前项继续{word}","目标不变，往{word}调"],
-  "clarify":["再调一下","弄小一点","改一下那个","稍微变化一点","把它调整下","再来一点"],
+  "clarify":["再调整下","弄小一点","改一下那个","稍微变化一点","把它调整下","再来一点"],
   "correction":["刚说错了，不要{wrong}，改成{r}{e}{s}{v}"],
   "multi":["同时把{r}、{r2}{e}的{s}设为{v}"],
  },
@@ -163,6 +163,14 @@ def make_clarify(split,state,rng,focus):
   "gold_write_set":[],"gold_state":snapshot(state)
  },focus
 
+def assert_template_isolation():
+ for i,a in enumerate(SPLITS):
+  sa={x for xs in TEMPLATES[a].values() for x in xs}
+  for b in SPLITS[i+1:]:
+   sb={x for xs in TEMPLATES[b].values() for x in xs}
+   overlap=sa&sb
+   if overlap: raise ValueError(f"surface_template_overlap:{a}:{b}:{sorted(overlap)}")
+
 def split_for(i,count):
  train_n=round(count*SPLIT_WEIGHTS[0]); dev_n=round(count*SPLIT_WEIGHTS[1])
  if i<train_n:return "train"
@@ -189,6 +197,7 @@ def main():
  ap.add_argument("--out",default="benchmarks/long_trajectories_v3.json")
  a=ap.parse_args()
  if a.count<60: raise SystemExit("count must be >=60")
+ assert_template_isolation()
  rng=random.Random(SEED)
  rows=[make(i,a.count,rng) for i in range(a.count)]
  raw=json.dumps(rows,ensure_ascii=False,separators=(",",":"),sort_keys=True).encode()
