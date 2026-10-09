@@ -35,6 +35,12 @@ PAIR_ALLOW={
    ("客厅","空调"),("书房","空调"),("主卧","灯"),("次卧","灯"),("客厅","窗"),("书房","窗")
  },
 }
+ENTITY_ALIASES={
+ "train":{"空调":["空调"],"灯":["灯"],"窗":["窗"]},
+ "dev":{"空调":["空调机","冷气机"],"灯":["灯光","照明灯"],"窗":["窗户","玻璃窗"]},
+ "sealed":{"空调":["冷气","空调设备"],"灯":["照明","灯具"],"窗":["窗子","外窗"]},
+}
+
 TEMPLATES={
  "train":{
   "slot":["{r}{e}的{s}设成{v}","把{r}{e}{s}调到{v}"],
@@ -89,6 +95,24 @@ def render(split,family,rng,**kw):
  idx=rng.randrange(len(ts))
  return ts[idx].format(**kw),f"{split}.{family}.{idx}"
 
+def surface_entity(split,canonical,rng,profile):
+ if profile=="legacy_v3_1" or split=="train":
+  return canonical,"canonical"
+ # New profiles intentionally hold out device naming variants by split.
+ # Keep a canonical path so naming OOD is a slice, not the whole benchmark.
+ if rng.random()<0.35:
+  return rng.choice(ENTITY_ALIASES[split][canonical]),"non_standard_alias"
+ return canonical,"canonical"
+
+def annotate_robustness(turn,naming_class):
+ turn["surface_naming_class"]=naming_class
+ fam=turn["scenario_family"]
+ if fam=="multi_target":turn["instruction_shape"]="multi_intent"
+ elif fam=="relative_coreference":turn["instruction_shape"]="omitted_attribute"
+ elif fam=="ambiguous_clarify":turn["instruction_shape"]="underspecified_target"
+ else:turn["instruction_shape"]="single_intent"
+ return turn
+
 def changed_paths(before,after):
  out=[]
  for k in sorted(before):
@@ -109,23 +133,26 @@ def make_execute_turn(split,state,rng,focus,family,profile):
   else:
    (r,_),(r2,_)=rng.sample(pairs,2)
    sname,slot,v,word,delta=slot_spec(e,rng)
-   text,tid=render(split,"multi",rng,r=r,r2=r2,e=e,s=sname,v=v,word=word,wrong="")
+   se,naming=surface_entity(split,e,rng,profile)
+   text,tid=render(split,"multi",rng,r=r,r2=r2,e=se,s=sname,v=v,word=word,wrong="")
    targets=[target(r,e),target(r2,e)]
    for rr in (r,r2): state[key(rr,e)]["slots"][slot]=v
-   return {
+   turn={
     "text":text,"surface_template_id":tid,"scenario_family":"multi_target",
     "difficulty":4,"context_hint":{},"gold_decision":"EXECUTE","gold_op":"PATCH_SLOT",
     "gold_target":targets,"gold_slot":slot,"gold_value":v,
     "gold_write_set":changed_paths(before,state),"gold_state":snapshot(state)
-   },(r2,e)
+   }
+   return annotate_robustness(turn,naming),(r2,e)
 
  r,e=choose_pair(split,rng)
  sname,slot,v,word,delta=slot_spec(e,rng)
  t=target(r,e)
+ se,naming=surface_entity(split,e,rng,profile)
  if family=="power":
   on=rng.random()<.5
   fname="power_on" if on else "power_off"
-  text,tid=render(split,fname,rng,r=r,e=e,s=sname,v=v,word=word,wrong="")
+  text,tid=render(split,fname,rng,r=r,e=se,s=sname,v=v,word=word,wrong="")
   op="ADD_DEVICE" if (on and profile=="legacy_v3_1") else ("PATCH_SLOT" if on else "CLOSE_DEVICE")
   state[key(r,e)]["slots"]["power"]="ON" if on else "OFF"
   turn={"text":text,"surface_template_id":tid,"scenario_family":"direct_power","difficulty":1,
@@ -140,27 +167,28 @@ def make_execute_turn(split,state,rng,focus,family,profile):
   elif e=="空调": slot="temperature";word="低";delta=-1
   else: slot="brightness";word="亮";delta=10
   text,tid=render(split,"relative",rng,r=r,e=e,s=slot,v="",word=word,wrong="")
+  naming="not_mentioned"
   state[key(r,e)]["slots"][slot]+=delta
   turn={"text":text,"surface_template_id":tid,"scenario_family":"relative_coreference","difficulty":3,
     "context_hint":{"focused_target":t},"gold_decision":"EXECUTE","gold_op":"PATCH_RELATIVE",
     "gold_target":t,"gold_slot":slot,"gold_delta":delta}
  elif family=="correction":
   wrong=rng.choice([x for x in ROOMS if x!=r])
-  text,tid=render(split,"correction",rng,r=r,e=e,s=sname,v=v,word=word,wrong=wrong)
+  text,tid=render(split,"correction",rng,r=r,e=se,s=sname,v=v,word=word,wrong=wrong)
   state[key(r,e)]["slots"][slot]=v
   turn={"text":text,"surface_template_id":tid,"scenario_family":"explicit_correction","difficulty":3,
     "context_hint":{"focused_target":target(wrong,e)},"gold_decision":"EXECUTE","gold_op":"PATCH_SLOT",
     "gold_target":t,"gold_slot":slot,"gold_value":v,
     "counterfactual_from":target(wrong,e)}
  else:
-  text,tid=render(split,"slot",rng,r=r,e=e,s=sname,v=v,word=word,wrong="")
+  text,tid=render(split,"slot",rng,r=r,e=se,s=sname,v=v,word=word,wrong="")
   state[key(r,e)]["slots"][slot]=v
   turn={"text":text,"surface_template_id":tid,"scenario_family":"direct_slot","difficulty":1,
     "context_hint":{"focused_target":t},"gold_decision":"EXECUTE","gold_op":"PATCH_SLOT",
     "gold_target":t,"gold_slot":slot,"gold_value":v}
  turn["gold_write_set"]=changed_paths(before,state)
  turn["gold_state"]=snapshot(state)
- return turn,(r,e)
+ return annotate_robustness(turn,naming),(r,e)
 
 def make_clarify(split,state,rng,focus,basis):
  if basis not in ("no_prior_focus","multi_referent_set"):
@@ -168,12 +196,13 @@ def make_clarify(split,state,rng,focus,basis):
  e=rng.choice(["空调","灯","窗"])
  sname,slot,v,word,delta=slot_spec(e,rng)
  text,tid=render(split,"clarify",rng,r="",e=e,s=sname,v=v,word=word,wrong="")
- return {
+ turn={
   "text":text,"surface_template_id":tid,"scenario_family":"ambiguous_clarify",
   "difficulty":4,"context_hint":{},"gold_decision":"CLARIFY",
   "ambiguity_basis":basis,
   "gold_write_set":[],"gold_state":snapshot(state)
- },focus
+ }
+ return annotate_robustness(turn,"not_applicable"),focus
 
 def assert_template_isolation():
  for i,a in enumerate(SPLITS):
@@ -245,11 +274,13 @@ def main():
  rows=[make(i,a.count,rng,profile) for i in range(a.count)]
  raw=json.dumps(rows,ensure_ascii=False,separators=(",",":"),sort_keys=True).encode()
  split_counts={s:sum(x["split"]==s for x in rows) for s in SPLITS}
- family_counts={};generalization_counts={}
+ family_counts={};generalization_counts={};naming_counts={};shape_counts={}
  for tr in rows:
   for t in tr["turns"]:
    family_counts[t["scenario_family"]]=family_counts.get(t["scenario_family"],0)+1
    generalization_counts[t["generalization_class"]]=generalization_counts.get(t["generalization_class"],0)+1
+   if "surface_naming_class" in t:naming_counts[t["surface_naming_class"]]=naming_counts.get(t["surface_naming_class"],0)+1
+   if "instruction_shape" in t:shape_counts[t["instruction_shape"]]=shape_counts.get(t["instruction_shape"],0)+1
  manifest={
   "truth":"whole_home_long_trajectory_generalization_v3",
   "generator_version":"long-trajectory-v3.1" if profile=="legacy_v3_1" else "long-trajectory-v3.2",
@@ -263,6 +294,8 @@ def main():
  }
  if profile!="legacy_v3_1":
   manifest["semantic_profile"]=profile
+  manifest["surface_naming_class_counts"]=naming_counts
+  manifest["instruction_shape_counts"]=shape_counts
  if a.release_id in LEGACY_RELEASE_SHA256 and manifest["sha256"]!=LEGACY_RELEASE_SHA256[a.release_id]:
   raise RuntimeError("legacy_release_sha_drift:"+a.release_id+":"+manifest["sha256"])
  p=pathlib.Path(a.out);p.parent.mkdir(parents=True,exist_ok=True)
