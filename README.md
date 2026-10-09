@@ -52,7 +52,7 @@ Already hardened on `main`: a driver-call exception after possible side effects 
 
 ### Verify a retained proof bundle
 
-The bundle verifier answers what the retained FlyThink evidence proves under the repository's execution semantics. It does **not** authenticate who issued the JSON merely because its hashes verify. Current verifier output therefore keeps `authorization_issuer_authenticated_verified=false` unless a future external trust adapter establishes that claim. A protected real-hardware Golden Proof therefore retains a separate GitHub/Sigstore attestation bundle over `live-execution-proof-bundle.json`.
+The bundle verifier answers what the retained FlyThink evidence proves under the repository's execution semantics. It does **not** establish external transaction trust merely because hashes verify. Current verifier output therefore keeps both `authorization_trust_domain_key_source_verified=false` and `authorization_issuer_authenticated_verified=false`. These are intentionally separate: Transaction Tokens draft-11 makes `iss` optional, while `aud` identifies the Trust Domain. A protected real-hardware Golden Proof separately retains a GitHub/Sigstore attestation bundle over `live-execution-proof-bundle.json`.
 
 A third party does not need to trust a FlyThink success flag. Given a retained bundle:
 
@@ -319,6 +319,8 @@ Every push to `main` runs:
 - static public build publication to `gh-pages`
 
 ## Status
+
+For the current cross-story closure state and the 10-dimension horizontal audit, see [docs/user-story-closure-audit.md](docs/user-story-closure-audit.md) and [docs/horizontal-completeness-audit.md](docs/horizontal-completeness-audit.md).
 
 This repository is the **public playable surface**.
 
