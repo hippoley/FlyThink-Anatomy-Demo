@@ -41,7 +41,8 @@ L5a is evidence that the interface can survive outside this repository. It is
 | Untrusted reasoner proposes without actuator authority | L2 | none |
 | Exact Context + World identities are bound to execution | L2 | none |
 | Authorization receipt integrity + action/context binding are re-verified at execution boundary | L2 | current v1 self-hash proves internal integrity/binding only |
-| Authorization issuer authenticity | External trust layer pending | real Transaction Token/workload-identity validator or equivalent issuer-authenticated mechanism required; current verifier returns `authorization_issuer_authenticated_verified=false` |
+| Authorization trust-domain / configured signing-key-source verification | External trust layer pending | real Transaction Token/workload-identity validator or equivalent externally governed trust layer required; current verifier returns `authorization_trust_domain_key_source_verified=false` |
+| Optional authorization issuer authentication | External trust layer pending / profile-optional | only applicable when the deployment profile pins an issuer identity; current verifier returns `authorization_issuer_authenticated_verified=false` |
 | Potential side effect with ambiguous transport stays `INDETERMINATE` | L3 | real lost-ACK evidence would strengthen the claim |
 | Completion requires pre-actuation criterion + fresh identified witness | L3 | retained real-hardware Golden Proof |
 | Independent object-level outcome observation | Not established by v1 | current WindowPilot witness is integrated controller/state readback (`witness.independent=false`); `independent_object_outcome_verified=false` until a separately trusted observer path exists |
@@ -57,7 +58,8 @@ L5a is evidence that the interface can survive outside this repository. It is
 - Event capabilities are not commands.
 - FlyThink does not own persistent semantic conversation/task truth.
 - Authorization success is not physical completion.
-- Authorization receipt integrity/binding is not authorization issuer authenticity.
+- Authorization receipt integrity/binding is not external trust-domain/key-source verification.
+- Trust-domain/key-source verification is not optional issuer authentication.
 - Identified fresh controller/state readback is not independent object-level observation.
 
 ## Current reality gates
