@@ -2,7 +2,7 @@
 """Audit whether an objective actually has supervision before spending a training run."""
 import sys,json
 sys.path.insert(0,"scripts")
-from whole_home_patch_corpus_v11 import build as semantic_build
+from whole_home_patch_corpus_v12 import build as semantic_build
 from contextual_state_transition_corpus_v1 import build as transition_build
 from training_objectives import semantic_contrast_pairs,semantic_invariance_pairs,resolution_contrast_groups
 s=semantic_build()["train"];t=transition_build()["examples"]
