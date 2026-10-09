@@ -284,12 +284,21 @@ async function runExecutionProposal({
       authorization_receipt:clone(authReceipt)
     };
   }
-  const consumed=authorizationLedger.add(authReceipt.authorization_id,{
-    task_id:request.task_id,
-    receipt_sha256:authReceipt.receipt_sha256||null,
-    patch_digest:authReceipt.patch_digest,
-    registry_digest:authReceipt.registry_digest
-  });
+  let consumed;
+  try{
+    consumed=authorizationLedger.add(authReceipt.authorization_id,{
+      task_id:request.task_id,
+      receipt_sha256:authReceipt.receipt_sha256||null,
+      patch_digest:authReceipt.patch_digest,
+      registry_digest:authReceipt.registry_digest
+    });
+  }catch(err){
+    return {
+      ...noExecution("BLOCKED","authorization_ledger_unavailable"),
+      authorization_error:String(err&&err.message||err),
+      authorization_receipt:clone(authReceipt)
+    };
+  }
   if(consumed===false){
     return {
       ...noExecution("BLOCKED","physical_authorization_replayed"),
