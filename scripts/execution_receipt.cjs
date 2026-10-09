@@ -901,6 +901,7 @@ function verifyExecutionReceipt(receipt={},{
 
   return {
     valid:true,
+    verification_source:"flythink-canonical-verifier",
     receipt_sha256:receipt.receipt_sha256,
     evidence_digest:receipt.evidence_digest,
     result:receipt.result,
