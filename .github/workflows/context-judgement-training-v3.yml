@@ -1,6 +1,15 @@
 name: context-judgement-training-v3
 on:
   workflow_dispatch:
+  pull_request:
+    paths:
+      - "scripts/generate_long_trajectory_benchmark_v3.py"
+      - "scripts/benchmark_v3_training_adapter.py"
+      - "scripts/context_judgement_corpus_v3.py"
+      - "scripts/context_judgement_corpus_v4.py"
+      - "tests/test_benchmark_v3_training_adapter.py"
+      - "scripts/train_context_judgement_v3.py"
+      - ".github/workflows/context-judgement-training-v3.yml"
   push:
     paths:
       - "scripts/generate_long_trajectory_benchmark_v3.py"
