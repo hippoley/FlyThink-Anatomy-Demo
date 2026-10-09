@@ -9,4 +9,6 @@ with tempfile.TemporaryDirectory(prefix="flythink-bench-v3-") as td:
    "--count","180","--out",str(out)],check=True,cwd=root)
  subprocess.run([sys.executable,str(root/"scripts/validate_long_trajectory_benchmark_v3.py"),
    str(out)],check=True,cwd=root)
+ subprocess.run(["node","tests/benchmark_v3_metrics.cjs"],check=True,cwd=root)
+ subprocess.run(["node","tests/benchmark_v3_teacher_forced.cjs"],check=True,cwd=root)
 print("benchmark-v3-contract PASS")
