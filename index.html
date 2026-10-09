@@ -69,7 +69,7 @@ details{margin-top:14px;border:1px solid #202b38;border-radius:14px;background:#
 .heroAction{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:0 13px;border-radius:10px;border:1px solid #30445a;background:#0d151e;color:#dce8f3;text-decoration:none;font-size:11px}
 .heroAction.primary{background:#e7eef8;color:#0b1017;border-color:#e7eef8;font-weight:760}
 .heroAction:hover{border-color:#6689af}
-.truthRail{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin:0 0 26px}
+.truthRail{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;margin:0 0 26px}
 .truthCell{border:1px solid #253646;border-radius:13px;background:linear-gradient(180deg,#0d151e,#090e14);padding:12px 13px;min-width:0}
 .truthCell .truthKey{font-size:8.5px;letter-spacing:.1em;text-transform:uppercase;color:#70869c}
 .truthCell strong{display:block;font-size:12px;margin-top:5px;color:#dce7f1}
@@ -129,6 +129,7 @@ details{margin-top:14px;border:1px solid #202b38;border-radius:14px;background:#
   <div class="truthCell ok"><div class="truthKey">Context + World</div><strong>IDENTITY BOUND</strong><span>revision + SHA are independently verified before execution.</span></div>
   <div class="truthCell ok"><div class="truthKey">Receipt + Bundle</div><strong>INTEGRITY VERIFIABLE</strong><span>proof semantics can be recomputed offline; artifact provenance remains a separate attestation layer.</span></div>
   <div class="truthCell warn"><div class="truthKey">Authorization issuer</div><strong>UNVERIFIED</strong><span>current v1 proves binding/integrity, not who was authorized to issue the allow receipt; external workload identity / Transaction Token integration is pending.</span></div>
+  <div class="truthCell warn"><div class="truthKey">Independent outcome</div><strong>UNVERIFIED</strong><span>current completion witness is integrated WindowPilot controller/state readback; it does not prove an independent object-level observer.</span></div>
   <div class="truthCell ok"><div class="truthKey">Unknown outcome</div><strong>INDETERMINATE</strong><span>driver-call ambiguity quarantines the target and requires reconciliation.</span></div>
   <div class="truthCell warn"><div class="truthKey">Real hardware golden</div><strong>PENDING</strong><span>the canonical proof rail is wired; one protected real-device run and retained proof + provenance artifact are still required.</span></div>
 </section>
