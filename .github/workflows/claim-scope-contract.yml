@@ -1,0 +1,25 @@
+name: claim-scope-contract
+
+on:
+  push:
+    paths:
+      - "scripts/claim_scope_report.cjs"
+      - "tests/claim_scope_report.cjs"
+      - "docs/standards/scitt-action-claim-separation.md"
+      - ".github/workflows/claim-scope-contract.yml"
+  pull_request:
+    paths:
+      - "scripts/claim_scope_report.cjs"
+      - "tests/claim_scope_report.cjs"
+      - "docs/standards/scitt-action-claim-separation.md"
+      - ".github/workflows/claim-scope-contract.yml"
+
+jobs:
+  claim-scope:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: node --test tests/claim_scope_report.cjs
