@@ -20,7 +20,7 @@ node scripts/verify_physical_completion_vector_cli.cjs interop/physical-completi
 The final stdout line is a single JSON object shaped for external verifier harnesses:
 
 ```json
-{"verdict":"valid","codes":[],"result":"PHYSICAL_COMPLETION_PROVEN","tiers":["independent-physical-witness"]}
+{"verdict":"valid","codes":[],"result":"PHYSICAL_COMPLETION_PROVEN","tiers":["identified-fresh-physical-witness"],"independent_object_outcome_verified":false}
 ```
 
 `verdict` answers whether the evidence package is internally valid. `result` answers what can be established about real-world completion. These are intentionally separate: valid-but-insufficient evidence can produce `PHYSICAL_COMPLETION_INDETERMINATE`.
@@ -33,4 +33,6 @@ Current result vocabulary:
 
 Important boundary: this rail does not verify the whole FlyThink execution chain, delegation policy, legal/safety policy, or model correctness. It appraises only the completion-criterion/witness slice. Full execution truth remains `execution-receipt.v1` / `execution-proof-bundle.v1`.
 
-Design motivation: existing observed-effect suites already cover retry duplication, effect-not-yet-witnessed, timeout-not-equal-no-write, observer commitments and independent-observation tiers. This rail focuses on the narrower additional question: **did the independently observed state satisfy the exact completion criterion fixed before actuation?**
+Design motivation: existing observed-effect suites already cover retry duplication, effect-not-yet-witnessed, timeout-not-equal-no-write and observer commitments. This rail focuses on the narrower question: **did identified fresh measured readback satisfy the exact completion criterion fixed before actuation?**
+
+Current v0.1 does **not** establish observer independence or an independently separated object-level outcome. The current WindowPilot-style witness is a controller/state readback path. Therefore the rail always returns `independent_object_outcome_verified=false`, and a caller-supplied `witness.independent=true` cannot upgrade that claim.

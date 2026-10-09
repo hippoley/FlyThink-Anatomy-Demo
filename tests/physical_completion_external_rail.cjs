@@ -90,7 +90,8 @@ function vector(over={}){
   assert.equal(out.verdict,"valid");
   assert.equal(out.result,"PHYSICAL_COMPLETION_PROVEN");
   assert.deepEqual(out.codes,[]);
-  assert.deepEqual(out.tiers,["independent-physical-witness"]);
+  assert.deepEqual(out.tiers,["identified-fresh-physical-witness"]);
+  assert.equal(out.independent_object_outcome_verified,false);
 }
 
 {
@@ -99,7 +100,7 @@ function vector(over={}){
   );
   assert.equal(out.verdict,"valid");
   assert.equal(out.result,"PHYSICAL_COMPLETION_NOT_SATISFIED");
-  assert.deepEqual(out.tiers,["independent-physical-witness"]);
+  assert.deepEqual(out.tiers,["identified-fresh-physical-witness"]);
 }
 
 {
@@ -109,7 +110,8 @@ function vector(over={}){
   assert.equal(out.verdict,"valid");
   assert.equal(out.result,"PHYSICAL_COMPLETION_PROVEN");
   assert.ok(out.codes.includes("ack-not-verified"));
-  assert.deepEqual(out.tiers,["independent-physical-witness"]);
+  assert.deepEqual(out.tiers,["identified-fresh-physical-witness"]);
+  assert.equal(out.independent_object_outcome_verified,false);
 }
 
 {
@@ -118,6 +120,7 @@ function vector(over={}){
   );
   assert.equal(out.verdict,"invalid");
   assert.equal(out.result,null);
+  assert.equal(out.independent_object_outcome_verified,false);
   assert.ok(out.codes.includes("completion-criterion-not-authorization-bound"));
 }
 
@@ -129,6 +132,15 @@ function vector(over={}){
   assert.equal(out.result,"PHYSICAL_COMPLETION_INDETERMINATE");
   assert.ok(out.codes.includes("fresh-readback-not-verified"));
   assert.deepEqual(out.tiers,["physical-evidence-unresolved"]);
+}
+
+{
+  const v=vector();
+  v.physical_receipt.witness.independent=true;
+  const out=appraisePhysicalCompletion(v);
+  assert.equal(out.result,"PHYSICAL_COMPLETION_PROVEN");
+  assert.deepEqual(out.tiers,["identified-fresh-physical-witness"]);
+  assert.equal(out.independent_object_outcome_verified,false);
 }
 
 {
@@ -151,6 +163,7 @@ function vector(over={}){
   assert.equal(out.result,"PHYSICAL_COMPLETION_PROVEN");
   assert.ok(Array.isArray(out.codes));
   assert.ok(Array.isArray(out.tiers));
+  assert.equal(out.independent_object_outcome_verified,false);
 }
 
 console.log(JSON.stringify({

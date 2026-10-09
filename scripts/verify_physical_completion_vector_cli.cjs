@@ -38,7 +38,8 @@ function appraisePhysicalCompletion(vector={}){
       verdict:"invalid",
       codes:["physical-completion-vector-schema-invalid"],
       result:null,
-      tiers:[]
+      tiers:[],
+      independent_object_outcome_verified:false
     };
   }
   const receipt=vector.physical_receipt;
@@ -48,7 +49,8 @@ function appraisePhysicalCompletion(vector={}){
       verdict:"invalid",
       codes:["physical-completion-vector-required-member-missing"],
       result:null,
-      tiers:[]
+      tiers:[],
+      independent_object_outcome_verified:false
     };
   }
 
@@ -60,7 +62,8 @@ function appraisePhysicalCompletion(vector={}){
       verdict:"invalid",
       codes:["physical-completion-vector-evidence-malformed"],
       result:null,
-      tiers:[]
+      tiers:[],
+      independent_object_outcome_verified:false
     };
   }
 
@@ -86,7 +89,8 @@ function appraisePhysicalCompletion(vector={}){
       verdict:"invalid",
       codes,
       result:null,
-      tiers:[]
+      tiers:[],
+      independent_object_outcome_verified:false
     };
   }
 
@@ -97,7 +101,7 @@ function appraisePhysicalCompletion(vector={}){
     row.checks.observation_method_verified===true&&
     row.checks.observation_window_verified===true;
 
-  const tiers=witnessTier?["independent-physical-witness"]:["physical-evidence-unresolved"];
+  const tiers=witnessTier?["identified-fresh-physical-witness"]:["physical-evidence-unresolved"];
 
   const prerequisiteCodes=codes.filter(code=>
     code!=="ack-not-verified"
@@ -117,8 +121,9 @@ function appraisePhysicalCompletion(vector={}){
     prerequisiteCodes.length===0&&
     row.checks.ack_verified!==true
   ){
-    // A missing/ambiguous ACK does not prove non-execution. Fresh independent
-    // witness evidence may still resolve completion.
+    // A missing/ambiguous ACK does not prove non-execution. Fresh identified
+    // measured readback may still resolve completion under the precommitted
+    // criterion. This does not establish observer independence.
     result=row.checks.completion_criterion_satisfied===true&&witnessTier
       ?"PHYSICAL_COMPLETION_PROVEN"
       :"PHYSICAL_COMPLETION_INDETERMINATE";
@@ -129,6 +134,7 @@ function appraisePhysicalCompletion(vector={}){
     codes,
     result,
     tiers,
+    independent_object_outcome_verified:false,
     checks:row.checks
   };
 }
@@ -140,7 +146,8 @@ function main(argv=process.argv.slice(2)){
       verdict:"invalid",
       codes:["physical-completion-vector-path-required"],
       result:null,
-      tiers:[]
+      tiers:[],
+      independent_object_outcome_verified:false
     })+"\n");
     return 2;
   }
@@ -154,7 +161,8 @@ function main(argv=process.argv.slice(2)){
       verdict:"invalid",
       codes:["physical-completion-vector-unreadable"],
       result:null,
-      tiers:[]
+      tiers:[],
+      independent_object_outcome_verified:false
     })+"\n");
     return 1;
   }
