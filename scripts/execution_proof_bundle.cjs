@@ -184,8 +184,11 @@ function verifyExecutionProofBundle(bundle={}){
   const expectedVerification=deriveVerification(bundle.artifacts);
   // Additive v1 evolution: accept older stored verification blocks, but
   // recompute the current verdicts from the retained artifacts before return.
-  // Additive chronology is newest-first. The immediately previous generation
-  // had issuer + independent-object claims but not the new trust-domain claim.
+  // Additive chronology is newest-first. The immediately previous
+  // generation had issuer + independent-object claims but not the new
+  // trust-domain/key-source claim. Each older candidate is derived from that
+  // predecessor so we accept real historical shapes without accepting
+  // arbitrary field omission combinations.
   const preTrustDomainVerification=clone(expectedVerification);
   if(preTrustDomainVerification&&preTrustDomainVerification.execution){
     delete preTrustDomainVerification.execution.authorization_trust_domain_key_source_verified;
@@ -209,8 +212,8 @@ function verifyExecutionProofBundle(bundle={}){
   const verificationDigest=digestObject(bundle.verification);
   const verificationMatches=
     verificationDigest===digestObject(expectedVerification)||
-    verificationDigest===digestObject(preTrustDomainVerification)||
     verificationDigest===digestObject(preObjectIndependenceVerification)||
+    verificationDigest===digestObject(preTrustDomainVerification)||
     verificationDigest===digestObject(preIssuerAuthVerification)||
     verificationDigest===digestObject(completionOnlyVerification)||
     verificationDigest===digestObject(legacyVerification);
@@ -219,7 +222,6 @@ function verifyExecutionProofBundle(bundle={}){
 
   return {
     valid:true,
-    verification_source:"flythink-canonical-verifier",
     bundle_sha256:bundle.bundle_sha256,
     execution_receipt_sha256:
       expectedVerification.execution.receipt_sha256,
