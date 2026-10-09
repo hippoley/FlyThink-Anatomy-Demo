@@ -6,6 +6,7 @@ on:
       - "scripts/generate_long_trajectory_benchmark_v3.py"
       - "scripts/validate_long_trajectory_benchmark_v3.py"
       - "scripts/run_long_checkpoint_e2e_v3.cjs"
+      - "scripts/check_benchmark_v3_contract.py"
       - "tests/benchmark_v3_metrics.cjs"
       - "docs/benchmark-v3.md"
       - ".github/workflows/benchmark-v3-contract.yml"
@@ -15,6 +16,7 @@ on:
       - "scripts/generate_long_trajectory_benchmark_v3.py"
       - "scripts/validate_long_trajectory_benchmark_v3.py"
       - "scripts/run_long_checkpoint_e2e_v3.cjs"
+      - "scripts/check_benchmark_v3_contract.py"
       - "tests/benchmark_v3_metrics.cjs"
       - "docs/benchmark-v3.md"
   workflow_dispatch:
