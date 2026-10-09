@@ -3,11 +3,12 @@
 /**
  * Produce a claim-scope-preserving report from FlyThink execution verification.
  *
- * This deliberately keeps four questions separate:
+ * This deliberately keeps five questions separate:
  * 1) was an execution record internally verified?
- * 2) was the exact action authorization bound and verified?
- * 3) did the downstream controller report success?
- * 4) was the intended physical effect independently witnessed?
+ * 2) was the exact action bound to the retained authorization receipt?
+ * 3) was the authorization issuer authenticated by an external trust layer?
+ * 4) did the downstream controller report success?
+ * 5) was the intended physical effect independently witnessed?
  *
  * A stronger claim is never inferred from a weaker one.
  */
