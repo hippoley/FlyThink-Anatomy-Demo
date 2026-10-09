@@ -43,7 +43,8 @@ story is not "closed" merely because a deterministic fixture passes.
 | Authorization receipt integrity + action/context binding | CODE_CLOSED | v1 re-verifies exact receipt, patch, registry, source revision and completion-criterion bindings before driver entry | none at the local-integrity layer |
 | Authorization issuer authenticity | EXTERNAL_TRUST_OPEN | current v1 self-hash cannot authenticate who was entitled to issue the allow decision; verifier explicitly returns `authorization_issuer_authenticated_verified=false` | real Transaction Token/workload-identity validator or equivalent issuer-authenticated trust layer |
 | Ambiguous transport remains INDETERMINATE | REALITY_OPEN | post-dispatch driver ambiguity is quarantined; unsafe automatic retry is blocked | retained real lost-ACK / ambiguous transport evidence |
-| Completion requires precommitted criterion + witness | REALITY_OPEN | criterion/witness binding and verifier exist | retained real Golden Proof |
+| Completion requires precommitted criterion + witness | REALITY_OPEN | criterion/witness binding and verifier exist; current witness is integrated WindowPilot controller/state readback | retained real Golden Proof |
+| Independent object-level outcome observation | EXTERNAL_TRUST_OPEN | current witness explicitly has `independent=false`; verifier returns `independent_object_outcome_verified=false` | separately trusted observer / independent failure-domain evidence |
 | Offline third-party verification | CODE_CLOSED for frozen fixtures / REALITY_OPEN for live hardware | proof bundle is portable; Sigstore provenance is separate | retained real-hardware bundle + provenance |
 | Kernel conformance outside repo | CODE_CLOSED at L5a | NLUSLOT pins/runs FlyThink kernel contract | separately owned consumer for L5b |
 | External physical-completion verifier rail | CODE_CLOSED at interface level | EVC-02-style isolated verifier rail exists | independently owned host consumes it |
@@ -60,6 +61,7 @@ These must not be "completed" by guessing:
 - FlyThink minting persistent semantic conversation/task identity;
 - authorization evidence being promoted into physical-completion evidence;
 - authorization receipt self-hashes being promoted into issuer authentication;
+- identified fresh controller/state readback being promoted into independent object-level observation;
 - proof-bundle integrity being promoted into Sigstore/SCITT provenance.
 
 For these stories, rejection or an explicit `UNVERIFIED` claim is the feature until
@@ -109,19 +111,28 @@ externally validated short-lived transaction/workload identity
 FlyThink must not create `flythink-signature-v1` or revive a project-specific HMAC
 scheme merely to make this row look closed.
 
-### 3. Real compensation proof
+### 3. Independent object-level observation
+
+The current completion witness is an identified, fresh WindowPilot controller/state
+readback and explicitly carries `independent=false`. It can establish the existing
+completion criterion under FlyThink semantics, but not observer independence.
+
+The next valid transition requires a separately trusted observer or evidence source
+with an independent failure domain. No caller-supplied flag may upgrade this claim.
+
+### 4. Real compensation proof
 
 Undo is code-closed at L3. Promotion requires a real execution bundle from which
 compensation is derived, a fresh authorization, a physical compensating write,
 and retained verification of the resulting state.
 
-### 4. Real multi-device atomic proof
+### 5. Real multi-device atomic proof
 
 The runtime contract is closed. Promotion requires a retained physical run showing
 all intended writes/readbacks and no partial-success claim when the atomic set
 cannot be established.
 
-### 5. L5b independent dependency
+### 6. L5b independent dependency
 
 Cross-repository consumption under the same owner is L5a, not L5b. AER-1 citation
 is external standards feedback, but citation is still not dependency.
