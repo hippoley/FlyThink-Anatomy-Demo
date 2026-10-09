@@ -74,6 +74,10 @@
     "hidden-gold-protocol": [
       "python",
       "tests/test_hidden_benchmark_protocol.py"
+    ],
+    "benchmark-v3-training-adapter": [
+      "python",
+      "tests/test_benchmark_v3_training_adapter.py"
     ]
   },
   "stories": {
@@ -545,6 +549,25 @@
       ],
       "suites": [
         "hidden-gold-protocol"
+      ]
+    },
+    "benchmark.v3_train_dev_checkpoint_adapter": {
+      "depends_on": [
+        "benchmark.long_trajectory_v3",
+        "context.identity"
+      ],
+      "paths": [
+        "scripts/benchmark_v3_training_adapter.py",
+        "scripts/context_judgement_corpus_v4.py",
+        "scripts/whole_home_patch_corpus_v12.py",
+        "tests/test_benchmark_v3_training_adapter.py",
+        "scripts/train_context_judgement_v3.py",
+        "scripts/train_semantic_patch_v1.py",
+        ".github/workflows/context-judgement-training-v3.yml",
+        ".github/workflows/semantic-patch-training-v1.yml"
+      ],
+      "suites": [
+        "benchmark-v3-training-adapter"
       ]
     }
   }
