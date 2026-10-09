@@ -2,12 +2,13 @@
 
 Status: canonical claim-scope guidance for retained Golden Proof evidence.
 
-FlyThink intentionally separates four independent questions:
+FlyThink intentionally separates five independent questions:
 
 1. **Evidence integrity and semantics** — can the retained proof bundle be re-verified and can its physical-effect claims be recomputed?
 2. **Authorization issuer authenticity** — was the pre-action allow decision issued by an authority the relying party is configured to trust?
-3. **Proof-artifact issuer / workflow provenance** — can a relying party verify which trusted workflow identity produced the retained proof bundle?
-4. **Transparency / non-equivocation** — can a relying party verify that the signed statement was registered in a transparency system with the consistency properties required by that system?
+3. **Independent object-level observation** — was the physical object outcome observed through a separately trusted failure domain rather than only the integrated controller/readback path?
+4. **Proof-artifact issuer / workflow provenance** — can a relying party verify which trusted workflow identity produced the retained proof bundle?
+5. **Transparency / non-equivocation** — can a relying party verify that the signed statement was registered in a transparency system with the consistency properties required by that system?
 
 These questions must not be collapsed into one "verified" bit. In particular, proof-artifact provenance does not retroactively authenticate the authority that issued the pre-action authorization.
 
@@ -22,6 +23,7 @@ physical_truth_verified
 physical_completion_verified
 safe_closeout_verified
 authorization_issuer_authenticated_verified = false
+independent_object_outcome_verified = false
 ```
 
 These are evidence/semantic claims. They do not authenticate an issuer merely because all SHA-256 commitments recompute correctly.
@@ -51,6 +53,23 @@ Therefore:
 ```text
 authorization binding/integrity != authorization issuer authenticity
 ```
+
+## Independent object-observation boundary
+
+The current WindowPilot completion witness is an identified, fresh controller/state
+readback and explicitly carries `independent=false`.
+
+Therefore:
+
+```text
+physical_completion_verified = true
+!=
+independent_object_outcome_verified = true
+```
+
+The current verifier returns `independent_object_outcome_verified=false`. A stronger
+claim requires a separately trusted observer or evidence path with an independent
+failure domain. Caller-supplied JSON cannot promote this claim.
 
 ## Layer 2 — GitHub / Sigstore artifact attestation
 
