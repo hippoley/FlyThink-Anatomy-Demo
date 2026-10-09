@@ -1,0 +1,61 @@
+name: tokenetes-draft11-admission
+
+on:
+  pull_request:
+    paths:
+      - "scripts/probe_tokenetes_draft11.cjs"
+      - "tests/tokenetes_draft11_admission.cjs"
+      - "docs/standards/tokenetes-draft11-admission.md"
+      - ".github/workflows/tokenetes-draft11-admission.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  pinned-upstream-admission:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Unit-test admission semantics
+        run: node --test tests/tokenetes_draft11_admission.cjs
+
+      - name: Fetch pinned Tokenetes issuer source
+        run: |
+          curl -fsSL --retry 3 --retry-delay 1 \
+            -o /tmp/tokenetes-service.go \
+            https://raw.githubusercontent.com/tokenetes/tokenetes/f9b7acf60f2df60acbe9749e570a502aa0193fb6/service/pkg/service/service.go
+
+      - name: Probe pinned external issuer surface
+        run: |
+          node scripts/probe_tokenetes_draft11.cjs \
+            /tmp/tokenetes-service.go \
+            f9b7acf60f2df60acbe9749e570a502aa0193fb6 \
+            > /tmp/tokenetes-admission.json
+          cat /tmp/tokenetes-admission.json
+          node - <<'NODE'
+          const fs=require("fs");
+          const out=JSON.parse(fs.readFileSync("/tmp/tokenetes-admission.json","utf8"));
+          if(out.verdict!=="BLOCKED_CURRENT_DRAFT_SURFACE"){
+            throw new Error(
+              "Pinned Tokenetes surface changed; re-evaluate FlyThink trust-adapter admission instead of preserving the old verdict."
+            );
+          }
+          if(out.flythink_trust_adapter_candidate!==false){
+            throw new Error("Blocked upstream surface was unexpectedly promoted.");
+          }
+          if(!out.missing_required_current_draft_claims.includes("scope")){
+            throw new Error("Expected pinned snapshot to lack current-draft scope claim.");
+          }
+          if(!out.missing_required_current_draft_claims.includes("req_wl")){
+            throw new Error("Expected pinned snapshot to lack current-draft req_wl claim.");
+          }
+          if(!out.missing_flythink_profile_claims.includes("tctx")){
+            throw new Error("Expected pinned snapshot to lack FlyThink-required tctx surface.");
+          }
+          NODE
