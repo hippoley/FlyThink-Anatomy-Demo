@@ -96,6 +96,7 @@ function removeDevice(runtime, target) {
   assertNotProtected(runtime, target, "*");
   const key = deviceKey(target);
   const before = clone(runtime.devices[key]);
+  if (!before) throw new Error("remove_target_not_found");
   delete runtime.devices[key];
   return {path: key, before, after: undefined};
 }
@@ -151,6 +152,7 @@ function replaceTarget(runtime, patch) {
   if (!patch.from || !patch.to) throw new Error("replace_requires_from_and_to");
   const fromKey = deviceKey(patch.from);
   const before = clone(runtime.devices[fromKey]);
+  if (!before) throw new Error("replace_source_not_found");
   if (patch.remove_old === true) removeDevice(runtime, patch.from);
   const target = ensureDevice(runtime, patch.to);
   if (patch.slots) {
@@ -161,6 +163,7 @@ function replaceTarget(runtime, patch) {
 
 function protect(runtime, patch) {
   if (!patch.target) throw new Error("protect_requires_target");
+  if (!activeDevice(runtime, patch.target)) throw new Error("protect_target_not_found");
   const slot = patch.slot || "*";
   const key = slotKey(patch.target, slot);
   runtime.protectedInvariants[key] = {
