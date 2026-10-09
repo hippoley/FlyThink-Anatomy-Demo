@@ -1,0 +1,14 @@
+{
+  "$schema":"https://json-schema.org/draft/2020-12/schema",
+  "$id":"https://flythink.dev/contracts/benchmark-hidden-gold-commitment.v1.schema.json",
+  "title":"FlyThink Hidden Gold Commitment v1",
+  "type":"object","additionalProperties":false,
+  "required":["schema_version","pack_id","input_pack_sha256","gold_pack_sha256","created_at"],
+  "properties":{
+    "schema_version":{"const":"benchmark-hidden-gold-commitment.v1"},
+    "pack_id":{"type":"string","minLength":1},
+    "input_pack_sha256":{"type":"string","pattern":"^[0-9a-f]{64}$"},
+    "gold_pack_sha256":{"type":"string","pattern":"^[0-9a-f]{64}$"},
+    "created_at":{"type":"string","minLength":1}
+  }
+}
