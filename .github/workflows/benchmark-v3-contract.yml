@@ -62,8 +62,17 @@ jobs:
       - name: Prove corrected semantic profile without rewriting legacy release
         run: |
           python scripts/generate_long_trajectory_benchmark_v3.py --count 180 --release-id 2026-10-r2 --out /tmp/long_trajectories_v3_r2.json
-          python scripts/validate_long_trajectory_benchmark_v3.py /tmp/long_trajectories_v3_r2.json
+          python scripts/validate_long_trajectory_benchmark_v3.py /tmp/long_trajectories_v3_r2.json | tee /tmp/benchmark-v3-r2-validation.json
           node scripts/validate_benchmark_v3_oracle_runner.cjs /tmp/long_trajectories_v3_r2.json
+          python - <<'PY'
+          import json
+          x=json.load(open("/tmp/benchmark-v3-r2-validation.json"))
+          assert x["surface_naming_classes"]["non_standard_alias"]>0
+          assert x["instruction_shapes"]["multi_intent"]>0
+          assert x["instruction_shapes"]["omitted_attribute"]>0
+          assert x["instruction_shapes"]["underspecified_target"]>0
+          print({"v3_2_robustness_slices":"PASS","naming":x["surface_naming_classes"],"shapes":x["instruction_shapes"]})
+          PY
       - name: Prove gold oracle is executable by canonical stateful runner
         run: node scripts/validate_benchmark_v3_oracle_runner.cjs /tmp/long_trajectories_v3.json
       - name: Validate stratified evaluator metrics
