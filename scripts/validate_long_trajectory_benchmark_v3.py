@@ -32,7 +32,7 @@ def main():
   expected=set(tr["initial_runtime"]["devices"])
   assert len(expected)==m["devices_per_home"]
   prev={k:v["slots"] for k,v in tr["initial_runtime"]["devices"].items()}
-  for t in tr["turns"]:
+  for idx,t in enumerate(tr["turns"]):
    turns+=1;family[t["scenario_family"]]+=1;decision[t["gold_decision"]]+=1;difficulty[t["difficulty"]]+=1
    generalization[t["generalization_class"]]+=1
    if split=="sealed":sealed_generalization[t["generalization_class"]]+=1
@@ -43,6 +43,16 @@ def main():
    assert sorted(observed)==sorted(t["gold_write_set"]),(t["turn_id"],observed,t["gold_write_set"])
    if t["gold_decision"]!="EXECUTE":
     assert not observed and not t["gold_write_set"],"non-execute turn mutated state"
+    basis=t.get("ambiguity_basis")
+    if basis=="no_prior_focus":
+     assert idx==0,"no_prior_focus CLARIFY must be first turn"
+    elif basis=="multi_referent_set":
+     assert idx>0,"multi_referent_set requires prior turn"
+     prev_turn=tr["turns"][idx-1]
+     assert prev_turn["gold_decision"]=="EXECUTE"
+     assert isinstance(prev_turn.get("gold_target"),list) and len(prev_turn["gold_target"])>=2
+    else:
+     raise AssertionError("CLARIFY missing provable ambiguity basis")
    if t.get("gold_target"):
     targets=t["gold_target"] if isinstance(t["gold_target"],list) else [t["gold_target"]]
     for x in targets:pairs[split].add((x["area"],x["entity"]))
