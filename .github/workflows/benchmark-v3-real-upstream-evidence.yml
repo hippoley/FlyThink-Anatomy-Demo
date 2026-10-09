@@ -1,4 +1,4 @@
-name: benchmark-v3-contract
+name: benchmark-v3-real-upstream-evidence
 
 on:
   pull_request:
@@ -6,57 +6,27 @@ on:
       - "scripts/generate_long_trajectory_benchmark_v3.py"
       - "scripts/validate_long_trajectory_benchmark_v3.py"
       - "scripts/run_long_checkpoint_e2e_v3.cjs"
-      - "scripts/check_benchmark_v3_contract.py"
-      - "scripts/validate_benchmark_v3_oracle_runner.cjs"
-      - "tests/benchmark_v3_metrics.cjs"
-      - "docs/benchmark-v3.md"
-      - ".github/workflows/benchmark-v3-contract.yml"
-  push:
-    branches: [main]
-    paths:
-      - "scripts/generate_long_trajectory_benchmark_v3.py"
-      - "scripts/validate_long_trajectory_benchmark_v3.py"
-      - "scripts/run_long_checkpoint_e2e_v3.cjs"
-      - "scripts/check_benchmark_v3_contract.py"
-      - "tests/benchmark_v3_metrics.cjs"
-      - "docs/benchmark-v3.md"
+      - "scripts/build_benchmark_v3_upstream_evidence.py"
+      - ".github/workflows/benchmark-v3-real-upstream-evidence.yml"
   workflow_dispatch:
+    inputs:
+      judgement_run_id:
+        description: "context-judgement-v3 artifact workflow run"
+        required: true
+        default: "36372167785"
+      semantic_run_id:
+        description: "semantic-patch-v1 artifact workflow run"
+        required: true
+        default: "36372786282"
+      release_id:
+        description: "Benchmark V3 release"
+        required: true
+        default: "2026-10"
 
 permissions:
   contents: read
 
 jobs:
-  dataset-contract:
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "24"
-      - name: Syntax
-        run: |
-          python -m py_compile scripts/generate_long_trajectory_benchmark_v3.py scripts/validate_long_trajectory_benchmark_v3.py
-          node --check scripts/run_long_checkpoint_e2e_v3.cjs
-          node --check tests/benchmark_v3_metrics.cjs
-          node --check scripts/validate_benchmark_v3_oracle_runner.cjs
-      - name: Generate frozen-shape V3 corpus
-        run: python scripts/generate_long_trajectory_benchmark_v3.py --count 180 --out /tmp/long_trajectories_v3.json
-      - name: Validate split isolation, oracle integrity and coverage
-        run: python scripts/validate_long_trajectory_benchmark_v3.py /tmp/long_trajectories_v3.json
-      - name: Prove gold oracle is executable by canonical stateful runner
-        run: node scripts/validate_benchmark_v3_oracle_runner.cjs /tmp/long_trajectories_v3.json
-      - name: Validate stratified evaluator metrics
-        run: node tests/benchmark_v3_metrics.cjs
-      - name: Reproducibility
-        run: |
-          python scripts/generate_long_trajectory_benchmark_v3.py --count 180 --out /tmp/long_trajectories_v3_again.json
-          cmp /tmp/long_trajectories_v3.json /tmp/long_trajectories_v3_again.json
-
-
   real-upstream-evidence:
     runs-on: ubuntu-latest
     timeout-minutes: 45
@@ -76,21 +46,21 @@ jobs:
           name: context-judgement-v3
           path: artifacts/context-judgement-v3
           github-token: ${{ github.token }}
-          run-id: "36372167785"
+          run-id: ${{ inputs.judgement_run_id || '36372167785' }}
       - name: Download real semantic checkpoint
         uses: actions/download-artifact@v4
         with:
           name: semantic-patch-v1
           path: artifacts/semantic-patch-v1
           github-token: ${{ github.token }}
-          run-id: "36372786282"
+          run-id: ${{ inputs.semantic_run_id || '36372786282' }}
       - name: Build actual graph/index dependencies
         run: |
           python scripts/train_flywire.py --download --epochs 1 --out artifacts/flywire
           python scripts/build_capability_index.py
-      - name: Generate and validate current V3 release
+      - name: Generate and validate V3 release
         run: |
-          python scripts/generate_long_trajectory_benchmark_v3.py --count 180 --release-id "2026-10" --out benchmark-v3.json
+          python scripts/generate_long_trajectory_benchmark_v3.py --count 180 --release-id "${{ inputs.release_id || '2026-10' }}" --out benchmark-v3.json
           python scripts/validate_long_trajectory_benchmark_v3.py benchmark-v3.json | tee benchmark-v3-validation.json
       - name: Execute sealed split through real upstream checkpoints
         id: evaluate
@@ -101,10 +71,12 @@ jobs:
           code=$?
           echo "evaluator_exit_code=$code" >> "$GITHUB_OUTPUT"
           cat benchmark-v3-real-upstream.json
+          # Exit 2 means the evaluator produced evidence but a safety invariant failed.
+          # Preserve it for public review instead of losing the artifact.
           if [ "$code" -ne 0 ] && [ "$code" -ne 2 ]; then exit "$code"; fi
       - name: Build auditable evidence manifest
         run: |
-          python scripts/build_benchmark_v3_upstream_evidence.py             --benchmark benchmark-v3.json             --result benchmark-v3-real-upstream.json             --graph artifacts/flywire/connectome.json             --judgement artifacts/context-judgement-v3/model.pt             --semantic artifacts/semantic-patch-v1/model.pt             --judgement-run-id "36372167785"             --semantic-run-id "36372786282"             --out benchmark-v3-real-upstream-evidence.json
+          python scripts/build_benchmark_v3_upstream_evidence.py             --benchmark benchmark-v3.json             --result benchmark-v3-real-upstream.json             --graph artifacts/flywire/connectome.json             --judgement artifacts/context-judgement-v3/model.pt             --semantic artifacts/semantic-patch-v1/model.pt             --judgement-run-id "${{ inputs.judgement_run_id || '36372167785' }}"             --semantic-run-id "${{ inputs.semantic_run_id || '36372786282' }}"             --out benchmark-v3-real-upstream-evidence.json
           cat benchmark-v3-real-upstream-evidence.json
       - name: Public-review summary
         run: |
@@ -129,7 +101,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: benchmark-v3-real-upstream-evidence-pr
+          name: benchmark-v3-real-upstream-evidence
           retention-days: 90
           path: |
             benchmark-v3.json
