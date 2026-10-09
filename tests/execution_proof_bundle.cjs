@@ -216,6 +216,7 @@ function buildBundle(){
   assert.equal(verified.physical_completion_verified,false);
   assert.equal(verified.safe_closeout_verified,false);
   assert.equal(verified.authorization_issuer_authenticated_verified,false);
+  assert.equal(verified.independent_object_outcome_verified,false);
   assert.equal(
     verified.decision_proposal_sha256,
     digestDecisionProposal(decisionProposal)
@@ -288,6 +289,7 @@ function buildBundle(){
     assert.equal(checked.physical_completion_verified,false);
     assert.equal(checked.safe_closeout_verified,false);
     assert.equal(checked.authorization_issuer_authenticated_verified,false);
+    assert.equal(checked.independent_object_outcome_verified,false);
   }
 
   {
@@ -297,6 +299,16 @@ function buildBundle(){
     const checked=verifyExecutionProofBundle(preIssuerAuth);
     assert.equal(checked.valid,true);
     assert.equal(checked.authorization_issuer_authenticated_verified,false);
+    assert.equal(checked.independent_object_outcome_verified,false);
+  }
+
+  {
+    let preObjectIndependence=buildBundle();
+    delete preObjectIndependence.verification.execution.independent_object_outcome_verified;
+    preObjectIndependence=resealBundle(preObjectIndependence);
+    const checked=verifyExecutionProofBundle(preObjectIndependence);
+    assert.equal(checked.valid,true);
+    assert.equal(checked.independent_object_outcome_verified,false);
   }
 
   {
