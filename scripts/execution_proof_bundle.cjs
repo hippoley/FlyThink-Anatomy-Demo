@@ -184,15 +184,19 @@ function verifyExecutionProofBundle(bundle={}){
   const expectedVerification=deriveVerification(bundle.artifacts);
   // Additive v1 evolution: accept older stored verification blocks, but
   // recompute the current verdicts from the retained artifacts before return.
-  const preObjectIndependenceVerification=clone(expectedVerification);
-  if(preObjectIndependenceVerification&&preObjectIndependenceVerification.execution){
-    delete preObjectIndependenceVerification.execution.independent_object_outcome_verified;
-  }
-  const preTrustDomainVerification=clone(preObjectIndependenceVerification);
+  // Additive v1 chronology matters. The immediately previous verifier had
+  // issuer + independent-object claims but not the new trust-domain claim.
+  // Remove fields newest-first so every retained historical generation remains
+  // independently verifiable instead of accidentally skipping one shape.
+  const preTrustDomainVerification=clone(expectedVerification);
   if(preTrustDomainVerification&&preTrustDomainVerification.execution){
     delete preTrustDomainVerification.execution.authorization_trust_domain_key_source_verified;
   }
-  const preIssuerAuthVerification=clone(preTrustDomainVerification);
+  const preObjectIndependenceVerification=clone(preTrustDomainVerification);
+  if(preObjectIndependenceVerification&&preObjectIndependenceVerification.execution){
+    delete preObjectIndependenceVerification.execution.independent_object_outcome_verified;
+  }
+  const preIssuerAuthVerification=clone(preObjectIndependenceVerification);
   if(preIssuerAuthVerification&&preIssuerAuthVerification.execution){
     delete preIssuerAuthVerification.execution.authorization_issuer_authenticated_verified;
   }
@@ -207,8 +211,8 @@ function verifyExecutionProofBundle(bundle={}){
   const verificationDigest=digestObject(bundle.verification);
   const verificationMatches=
     verificationDigest===digestObject(expectedVerification)||
-    verificationDigest===digestObject(preObjectIndependenceVerification)||
     verificationDigest===digestObject(preTrustDomainVerification)||
+    verificationDigest===digestObject(preObjectIndependenceVerification)||
     verificationDigest===digestObject(preIssuerAuthVerification)||
     verificationDigest===digestObject(completionOnlyVerification)||
     verificationDigest===digestObject(legacyVerification);
