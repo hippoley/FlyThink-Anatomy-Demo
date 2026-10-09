@@ -1,29 +1,207 @@
 "use strict";
 const assert=require("assert");
+const {spawn}=require("child_process");
 const fs=require("fs");
 const os=require("os");
 const path=require("path");
 const {FileAuthorizationLedger}=require("./authorization_ledger.cjs");
 
-const dir=fs.mkdtempSync(path.join(os.tmpdir(),"flythink-auth-ledger-"));
-const file=path.join(dir,"consumed.json");
-const id="auth-restart-proof";
+function sleep(ms){return new Promise(resolve=>setTimeout(resolve,ms))}
+async function waitUntil(predicate,{timeoutMs=5000,intervalMs=10}={}){
+  const started=Date.now();
+  while(!predicate()){
+    if(Date.now()-started>timeoutMs)throw new Error("authorization_ledger_test_timeout");
+    await sleep(intervalMs);
+  }
+}
+function runWorker(workerPath,args){
+  return new Promise((resolve,reject)=>{
+    const child=spawn(process.execPath,[workerPath,...args],{
+      stdio:["ignore","pipe","pipe"]
+    });
+    let stdout="",stderr="";
+    child.stdout.on("data",c=>stdout+=c);
+    child.stderr.on("data",c=>stderr+=c);
+    child.on("error",reject);
+    child.on("close",code=>{
+      if(code!==0){
+        reject(new Error("worker_failed:"+code+":"+stderr));
+        return;
+      }
+      resolve(JSON.parse(stdout.trim()));
+    });
+  });
+}
 
-const first=new FileAuthorizationLedger(file);
-assert.equal(first.has(id),false);
-assert.equal(first.add(id,{turn_id:"turn-1"}),true);
-assert.equal(first.has(id),true);
+(async()=>{
+  const dir=fs.mkdtempSync(path.join(os.tmpdir(),"flythink-auth-ledger-"));
+  const file=path.join(dir,"consumed.json");
+  const id="auth-restart-proof";
 
-const restarted=new FileAuthorizationLedger(file);
-assert.equal(restarted.has(id),true);
-assert.equal(restarted.add(id,{turn_id:"turn-1"}),false);
+  const first=new FileAuthorizationLedger(file);
+  assert.equal(first.has(id),false);
 
-const mode=fs.statSync(file).mode & 0o777;
-assert.equal(mode,0o600);
+  // Construct a second instance before the first consumption. This reproduces
+  // the stale-snapshot shape that previously allowed two processes to return true.
+  const stalePeer=new FileAuthorizationLedger(file);
+  assert.equal(first.add(id,{turn_id:"turn-1"}),true);
+  assert.equal(stalePeer.add(id,{turn_id:"turn-1-race"}),false);
+  assert.equal(first.has(id),true);
 
-console.log(JSON.stringify({
- durable_authorization_ledger:"PASS",
- replay_after_process_restart:0,
- duplicate_consumption:0,
- ledger_mode:mode.toString(8)
-}));
+  const restarted=new FileAuthorizationLedger(file);
+  assert.equal(restarted.has(id),true);
+  assert.equal(restarted.add(id,{turn_id:"turn-1"}),false);
+
+  // Reservation is authoritative. Losing the JSON snapshot must not resurrect
+  // an already-consumed authorization after restart.
+  fs.writeFileSync(
+    file,
+    JSON.stringify({version:1,consumed:{}},null,2)+"\n",
+    {encoding:"utf8",mode:0o600}
+  );
+  const snapshotLost=new FileAuthorizationLedger(file);
+  assert.equal(snapshotLost.has(id),true);
+  assert.equal(snapshotLost.add(id,{turn_id:"must-not-replay"}),false);
+
+  // A second, different ID remains consumable without a global writer lock.
+  // The append-only per-ID journal avoids stale-lock availability debt.
+  const independentId="auth-independent";
+  assert.equal(snapshotLost.add(independentId,{turn_id:"parallel-safe"}),true);
+  assert.equal(snapshotLost.has(independentId),true);
+
+  // Durability failure must fail closed before dispatch. Once the final
+  // reservation name was published, the authorization stays consumed even
+  // though directory fsync failed and add() reports an error.
+  {
+    const durabilityFile=path.join(dir,"durability.json");
+    const durabilityLedger=new FileAuthorizationLedger(durabilityFile);
+    const originalFsyncSync=fs.fsyncSync;
+    fs.fsyncSync=(fd)=>{
+      if(fs.fstatSync(fd).isDirectory()){
+        throw new Error("injected_reservation_directory_fsync_failure");
+      }
+      return originalFsyncSync(fd);
+    };
+    try{
+      assert.throws(
+        ()=>durabilityLedger.add("auth-dir-fsync-failure",{turn_id:"durability"}),
+        /injected_reservation_directory_fsync_failure/
+      );
+    }finally{
+      fs.fsyncSync=originalFsyncSync;
+    }
+    assert.equal(
+      durabilityLedger.has("auth-dir-fsync-failure"),
+      true,
+      "a failed durability acknowledgement must never resurrect the authorization"
+    );
+    assert.equal(
+      durabilityLedger.add("auth-dir-fsync-failure",{turn_id:"retry"}),
+      false
+    );
+  }
+
+  // True multi-process race: every worker constructs its ledger before a common
+  // gate opens. Exactly one process may consume the same ID.
+  const raceFile=path.join(dir,"race.json");
+  const gate=path.join(dir,"race.gate");
+  const workerPath=path.join(dir,"ledger-worker.cjs");
+  const modulePath=path.resolve(__dirname,"authorization_ledger.cjs");
+  fs.writeFileSync(workerPath,`
+"use strict";
+const fs=require("fs");
+const {FileAuthorizationLedger}=require(process.argv[2]);
+const file=process.argv[3],id=process.argv[4],ready=process.argv[5],gate=process.argv[6];
+const ledger=new FileAuthorizationLedger(file);
+fs.writeFileSync(ready,"ready");
+const cell=new Int32Array(new SharedArrayBuffer(4));
+while(!fs.existsSync(gate))Atomics.wait(cell,0,0,5);
+let result;
+try{
+  result={ok:true,consumed:ledger.add(id,{worker:process.pid})};
+}catch(err){
+  result={ok:false,error:String(err&&err.message||err)};
+}
+process.stdout.write(JSON.stringify(result));
+`);
+
+  const raceId="auth-real-concurrency";
+  const workers=[];
+  const readyPaths=[];
+  for(let i=0;i<8;i++){
+    const ready=path.join(dir,"ready-"+i);
+    readyPaths.push(ready);
+    workers.push(runWorker(workerPath,[
+      modulePath,raceFile,raceId,ready,gate
+    ]));
+  }
+  await waitUntil(()=>readyPaths.every(p=>fs.existsSync(p)));
+  fs.writeFileSync(gate,"go");
+  const results=await Promise.all(workers);
+  const winners=results.filter(x=>x.ok&&x.consumed===true);
+  const duplicates=results.filter(x=>x.ok&&x.consumed===false);
+  const unexpectedErrors=results.filter(x=>!x.ok);
+  assert.equal(winners.length,1,JSON.stringify(results));
+  assert.equal(duplicates.length,7,JSON.stringify(results));
+  assert.equal(unexpectedErrors.length,0,JSON.stringify(results));
+  assert.equal(new FileAuthorizationLedger(raceFile).has(raceId),true);
+  const journalNames=fs.readdirSync(raceFile+".reservations");
+  assert.equal(journalNames.filter(name=>name.endsWith(".json")).length,1);
+  assert.equal(journalNames.filter(name=>name.startsWith(".tmp-")).length,0);
+
+  // Different authorization IDs must not become false conflicts merely because
+  // their journal/snapshot persistence overlaps. This is the horizontal
+  // concurrency check for normal multi-worker throughput.
+  const parallelFile=path.join(dir,"parallel.json");
+  const parallelGate=path.join(dir,"parallel.gate");
+  const parallelWorkers=[];
+  const parallelReady=[];
+  const parallelIds=[];
+  for(let i=0;i<8;i++){
+    const ready=path.join(dir,"parallel-ready-"+i);
+    const parallelId="auth-parallel-"+i;
+    parallelReady.push(ready);
+    parallelIds.push(parallelId);
+    parallelWorkers.push(runWorker(workerPath,[
+      modulePath,parallelFile,parallelId,ready,parallelGate
+    ]));
+  }
+  await waitUntil(()=>parallelReady.every(p=>fs.existsSync(p)));
+  fs.writeFileSync(parallelGate,"go");
+  const parallelResults=await Promise.all(parallelWorkers);
+  assert.equal(
+    parallelResults.filter(x=>x.ok&&x.consumed===true).length,
+    parallelIds.length,
+    JSON.stringify(parallelResults)
+  );
+  assert.equal(
+    parallelResults.filter(x=>!x.ok).length,
+    0,
+    JSON.stringify(parallelResults)
+  );
+  const parallelLedger=new FileAuthorizationLedger(parallelFile);
+  for(const parallelId of parallelIds){
+    assert.equal(parallelLedger.has(parallelId),true,parallelId);
+  }
+
+  const mode=fs.statSync(file).mode & 0o777;
+  const reservationDirMode=fs.statSync(file+".reservations").mode & 0o777;
+  assert.equal(mode,0o600);
+  assert.equal(reservationDirMode,0o700);
+
+  console.log(JSON.stringify({
+    durable_authorization_ledger:"PASS",
+    replay_after_process_restart:0,
+    stale_snapshot_double_consume:0,
+    snapshot_loss_replay:0,
+    directory_fsync_fail_open:0,
+    global_stale_lock_dependency:0,
+    multiprocess_workers:results.length,
+    multiprocess_winners:winners.length,
+    parallel_distinct_authorizations:parallelIds.length,
+    parallel_distinct_failures:0,
+    duplicate_consumption:0,
+    ledger_mode:mode.toString(8),
+    reservation_dir_mode:reservationDirMode.toString(8)
+  }));
+})().catch(e=>{console.error(e);process.exit(1)});
