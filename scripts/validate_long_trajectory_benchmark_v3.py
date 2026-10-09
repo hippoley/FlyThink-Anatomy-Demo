@@ -18,6 +18,8 @@ def main():
  a=ap.parse_args()
  d=json.load(open(a.path,encoding="utf8"));m=d["manifest"];ts=d["trajectories"]
  assert m["truth"]=="whole_home_long_trajectory_generalization_v3"
+ assert m.get("generator_version")=="long-trajectory-v3.1"
+ assert re.fullmatch(r"[0-9]{4}-[0-9]{2}",m.get("release_id",""))
  assert len(ts)>=60 and set(x["split"] for x in ts)=={"train","dev","sealed"}
  raw=json.dumps(ts,ensure_ascii=False,separators=(",",":"),sort_keys=True).encode()
  assert hashlib.sha256(raw).hexdigest()==m["sha256"],"manifest sha256 does not bind trajectories"
@@ -45,6 +47,9 @@ def main():
    prev=t["gold_state"]
 
  assert turns==m["turns"]
+ actual_split_counts={s:len(by_split[s]) for s in ("train","dev","sealed")}
+ assert actual_split_counts==m["split_counts"],"manifest split_counts mismatch"
+ assert abs(actual_split_counts["dev"]-actual_split_counts["sealed"])<=1
  for a1,b1 in (("train","dev"),("train","sealed"),("dev","sealed")):
   overlap=texts[a1]&texts[b1];assert not overlap,f"text leakage {a1}/{b1}: {list(overlap)[:5]}"
   assert not (templates[a1]&templates[b1]),f"surface template leakage {a1}/{b1}"
@@ -65,7 +70,7 @@ def main():
 
  print(json.dumps({
   "valid":True,"trajectories":len(ts),"turns":turns,
-  "split_counts":{s:len(by_split[s]) for s in ("train","dev","sealed")},
+  "release_id":m["release_id"],"split_counts":actual_split_counts,
   "decisions":dict(decision),"families":dict(family),"difficulty":dict(difficulty),
   "cross_split_text_overlap":0,"cross_split_template_overlap":0,
   "max_text_frequency_share":{s:max(text_freq[s].values())/sum(text_freq[s].values()) for s in ("train","dev","sealed")},
