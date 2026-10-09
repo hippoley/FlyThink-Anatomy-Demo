@@ -122,3 +122,76 @@ test("集合指代展开为多个独立 patch，不覆盖集合外设备",()=>{
 test("集合 patch 禁止同时声明 target 和 targets，避免歧义写入",()=>{
   assert.throws(()=>applyTurn(base(),[{op:"PATCH_SLOT",target:living,targets:[bedroom],slot:"temperature",value:21}]),/set_patch_cannot_mix/);
 });
+
+
+test("只有 ADD_DEVICE 可以创建缺失目标",()=>{
+  const missing={area:"书房",entity:"climate",instance:"ac-9"};
+  assert.throws(
+    ()=>applyPatch(base(),{op:"PATCH_SLOT",target:missing,slot:"temperature",value:22}),
+    /patch_target_not_found/
+  );
+  assert.throws(
+    ()=>applyPatch(base(),{op:"CLOSE_DEVICE",target:missing}),
+    /patch_target_not_found/
+  );
+  const {runtime}=applyPatch(base(),{
+    op:"ADD_DEVICE",
+    target:missing,
+    slots:{power:"ON",temperature:22}
+  });
+  assert.equal(runtime.devices["书房::climate::ac-9"].slots.temperature,22);
+});
+
+test("取消只允许命中真实 pending，不能静默吞掉错误 id",()=>{
+  assert.throws(
+    ()=>applyPatch(base(),{op:"CANCEL_PENDING",pending_id:"missing"}),
+    /cancel_pending_not_found/
+  );
+  const cancelled=applyPatch(base(),{
+    op:"CANCEL_PENDING",
+    pending_id:"p1"
+  }).runtime;
+  assert.throws(
+    ()=>applyPatch(cancelled,{op:"CANCEL_PENDING",pending_id:"p1"}),
+    /cancel_pending_not_pending/
+  );
+});
+
+test("同一个 execution 只能补偿一次",()=>{
+  const first=applyPatch(base(),{
+    op:"UNDO_EXECUTED",
+    execution_id:"e1",
+    compensation:{op:"PATCH_SLOT",target:living,slot:"temperature",value:26}
+  }).runtime;
+  assert.throws(
+    ()=>applyPatch(first,{
+      op:"UNDO_EXECUTED",
+      execution_id:"e1",
+      compensation:{op:"PATCH_SLOT",target:living,slot:"temperature",value:25}
+    }),
+    /undo_execution_already_compensated/
+  );
+  assert.equal(first.devices["客厅::climate::ac-1"].slots.temperature,26);
+});
+
+test("REMOVE REPLACE PROTECT 不能把不存在目标伪装成成功",()=>{
+  const missing={area:"书房",entity:"climate",instance:"ac-9"};
+  assert.throws(
+    ()=>applyPatch(base(),{op:"REMOVE_DEVICE",target:missing}),
+    /remove_target_not_found/
+  );
+  assert.throws(
+    ()=>applyPatch(base(),{
+      op:"REPLACE_TARGET",
+      from:missing,
+      to:bedroom,
+      remove_old:true,
+      slots:{power:"ON"}
+    }),
+    /replace_source_not_found/
+  );
+  assert.throws(
+    ()=>applyPatch(base(),{op:"PROTECT",target:missing,slot:"temperature"}),
+    /protect_target_not_found/
+  );
+});

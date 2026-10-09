@@ -76,7 +76,8 @@ function assertNotProtected(runtime, target, slot) {
 function writeSlot(runtime, target, slot, value) {
   if (!slot) throw new Error("patch_requires_slot");
   assertNotProtected(runtime, target, slot);
-  const device = ensureDevice(runtime, target);
+  const device = activeDevice(runtime, target);
+  if (!device) throw new Error("patch_target_not_found");
   const before = Object.prototype.hasOwnProperty.call(device.slots, slot) ? clone(device.slots[slot]) : undefined;
   device.slots[slot] = clone(value);
   return {path: slotKey(target, slot), before, after: clone(value)};
@@ -95,6 +96,7 @@ function removeDevice(runtime, target) {
   assertNotProtected(runtime, target, "*");
   const key = deviceKey(target);
   const before = clone(runtime.devices[key]);
+  if (!before) throw new Error("remove_target_not_found");
   delete runtime.devices[key];
   return {path: key, before, after: undefined};
 }
@@ -107,9 +109,12 @@ function closeDevice(runtime, patch) {
 function cancelPending(runtime, patch) {
   const id = patch.pending_id || patch.task_id;
   if (!id) throw new Error("cancel_pending_requires_id");
-  const before = clone(runtime.pending[id]);
-  if (runtime.pending[id]) runtime.pending[id].status = "cancelled";
-  return {path: "pending::" + id, before, after: clone(runtime.pending[id])};
+  const current = runtime.pending[id];
+  if (!current) throw new Error("cancel_pending_not_found");
+  if (current.status !== "pending") throw new Error("cancel_pending_not_pending");
+  const before = clone(current);
+  current.status = "cancelled";
+  return {path: "pending::" + id, before, after: clone(current)};
 }
 
 function undoExecuted(runtime, patch) {
@@ -117,6 +122,11 @@ function undoExecuted(runtime, patch) {
   if (!id) throw new Error("undo_requires_execution_id");
   const prior = runtime.executionLedger.find(x => x.id === id);
   if (!prior) throw new Error("undo_execution_not_found");
+  if (
+    runtime.executionLedger.some(
+      x => x && x.kind === "compensation" && x.compensates === id
+    )
+  ) throw new Error("undo_execution_already_compensated");
   if (!patch.compensation) throw new Error("undo_requires_explicit_compensation");
   const nested = applyPatch(runtime, patch.compensation, {skipInvariantCheck: true});
   // applyPatch is intentionally pure/clone-based; an undo must adopt the
@@ -142,6 +152,7 @@ function replaceTarget(runtime, patch) {
   if (!patch.from || !patch.to) throw new Error("replace_requires_from_and_to");
   const fromKey = deviceKey(patch.from);
   const before = clone(runtime.devices[fromKey]);
+  if (!before) throw new Error("replace_source_not_found");
   if (patch.remove_old === true) removeDevice(runtime, patch.from);
   const target = ensureDevice(runtime, patch.to);
   if (patch.slots) {
@@ -152,6 +163,7 @@ function replaceTarget(runtime, patch) {
 
 function protect(runtime, patch) {
   if (!patch.target) throw new Error("protect_requires_target");
+  if (!activeDevice(runtime, patch.target)) throw new Error("protect_target_not_found");
   const slot = patch.slot || "*";
   const key = slotKey(patch.target, slot);
   runtime.protectedInvariants[key] = {
