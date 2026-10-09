@@ -15,7 +15,8 @@ WorldSnapshot exact identity
         ↓
 FlyThink execution boundary
         ↓
-SpatialRuntime authorization proof
+SpatialRuntime authorization binding
+(issuer authentication is external)
         ↓
 physical driver
         ↓
@@ -37,19 +38,21 @@ Already on `main`:
 - `decision-proposal.v1` is an untrusted external proposal boundary;
 - semantic Context identity is bound as `context_revision + context_sha256`;
 - World identity is bound as `world_snapshot_revision + world_snapshot_sha256`;
-- SpatialRuntime authorization proofs are independently re-verified at the execution boundary;
+- SpatialRuntime authorization receipt integrity and exact patch/registry/context/completion-criterion binding are independently re-verified at the execution boundary; `execution-receipt.v1` does **not** authenticate the authorization issuer;
 - `execution-receipt.v1` remains the single execution-truth object;
 - `execution-proof-bundle.v1` packages retained evidence for offline semantic/integrity verification; its SHA-256 binding is not, by itself, issuer authentication.
 
 Still under active reality convergence:
 
-- the flagship human-WAV → WindowPilot APPLY path must cross the canonical `runDecisionProposal()` boundary before the first actuator write;
-- a retained real-hardware Golden Proof Bundle is not claimed until that run exists and verifies independently;
-- indeterminate physical outcomes under transport loss are being hardened separately rather than collapsed into ordinary failure.
+- the protected human-WAV → canonical `runDecisionProposal()` → WindowPilot path is wired and requires physical truth, physical completion and safe closeout to verify before the Golden Proof candidate is retained; the **real-hardware run itself is still pending**;
+- authorization issuer authenticity is not provided by the current self-hashed SpatialRuntime receipt; Issue #137 tracks composition with IETF Transaction Tokens / workload identity rather than a FlyThink-specific signature format;
+- cross-repository self-consumption exists, but independently owned L5b adoption is not yet claimed.
+
+Already hardened on `main`: a driver-call exception after possible side effects becomes an explicit indeterminate physical outcome, quarantines the target and forbids unsafe automatic retry until fresh reconciliation.
 
 ### Verify a retained proof bundle
 
-The bundle verifier answers what the retained FlyThink evidence proves under the repository's execution semantics. It does **not** authenticate who issued the JSON merely because its hashes verify. A protected real-hardware Golden Proof therefore retains a separate GitHub/Sigstore attestation bundle over `live-execution-proof-bundle.json`.
+The bundle verifier answers what the retained FlyThink evidence proves under the repository's execution semantics. It does **not** authenticate who issued the JSON merely because its hashes verify. Current verifier output therefore keeps `authorization_issuer_authenticated_verified=false` unless a future external trust adapter establishes that claim. A protected real-hardware Golden Proof therefore retains a separate GitHub/Sigstore attestation bundle over `live-execution-proof-bundle.json`.
 
 A third party does not need to trust a FlyThink success flag. Given a retained bundle:
 
