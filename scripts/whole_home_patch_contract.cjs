@@ -121,6 +121,11 @@ function undoExecuted(runtime, patch) {
   if (!id) throw new Error("undo_requires_execution_id");
   const prior = runtime.executionLedger.find(x => x.id === id);
   if (!prior) throw new Error("undo_execution_not_found");
+  if (
+    runtime.executionLedger.some(
+      x => x && x.kind === "compensation" && x.compensates === id
+    )
+  ) throw new Error("undo_execution_already_compensated");
   if (!patch.compensation) throw new Error("undo_requires_explicit_compensation");
   const nested = applyPatch(runtime, patch.compensation, {skipInvariantCheck: true});
   // applyPatch is intentionally pure/clone-based; an undo must adopt the
