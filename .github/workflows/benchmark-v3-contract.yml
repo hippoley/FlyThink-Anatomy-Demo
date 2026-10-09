@@ -9,6 +9,9 @@ on:
       - "scripts/check_benchmark_v3_contract.py"
       - "scripts/validate_benchmark_v3_oracle_runner.cjs"
       - "tests/benchmark_v3_metrics.cjs"
+      - "tests/benchmark_v3_baselines.cjs"
+      - "scripts/run_benchmark_v3_baselines.cjs"
+      - "scripts/validate_benchmark_v3_baselines.py"
       - "tests/benchmark_v3_teacher_forced.cjs"
       - "scripts/run_benchmark_v3_teacher_forced.cjs"
       - "scripts/build_benchmark_v3_first_failure_ledger.py"
@@ -45,6 +48,9 @@ jobs:
           python -m py_compile scripts/generate_long_trajectory_benchmark_v3.py scripts/validate_long_trajectory_benchmark_v3.py
           node --check scripts/run_long_checkpoint_e2e_v3.cjs
           node --check tests/benchmark_v3_metrics.cjs
+          node --check tests/benchmark_v3_baselines.cjs
+          node --check scripts/run_benchmark_v3_baselines.cjs
+          python -m py_compile scripts/validate_benchmark_v3_baselines.py
           node --check tests/benchmark_v3_teacher_forced.cjs
           node --check scripts/run_benchmark_v3_teacher_forced.cjs
           python -m py_compile scripts/build_benchmark_v3_first_failure_ledger.py
@@ -59,6 +65,12 @@ jobs:
         run: node tests/benchmark_v3_metrics.cjs
       - name: Validate teacher-forced causal evaluator
         run: node tests/benchmark_v3_teacher_forced.cjs
+      - name: Validate deterministic baseline discrimination
+        run: |
+          node tests/benchmark_v3_baselines.cjs
+          node scripts/run_benchmark_v3_baselines.cjs --benchmark /tmp/long_trajectories_v3.json --split sealed > /tmp/benchmark-v3-baselines.json
+          cat /tmp/benchmark-v3-baselines.json
+          python scripts/validate_benchmark_v3_baselines.py /tmp/benchmark-v3-baselines.json
       - name: Reproducibility
         run: |
           python scripts/generate_long_trajectory_benchmark_v3.py --count 180 --out /tmp/long_trajectories_v3_again.json
