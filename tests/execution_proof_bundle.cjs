@@ -18,6 +18,16 @@ const {
   verifyExecutionProofBundle
 }=require("../scripts/execution_proof_bundle.cjs");
 const {normalizeRuntime}=require("../scripts/whole_home_patch_contract.cjs");
+const {MockThingDriver}=require("../scripts/physical_runtime.cjs");
+const {
+  RECEIPT_SCHEMA,
+  runtimeRegistryDigest,
+  sha256Object:authorizationSha256Object
+}=require("../scripts/spatialruntime_authorizer.cjs");
+const {
+  deriveProofUndoPlan,
+  runProofDerivedUndo
+}=require("../scripts/proof_derived_undo.cjs");
 const {
   CONTEXT_CANONICALIZATION,
   contextStateDigest
@@ -179,7 +189,7 @@ function buildBundle(){
   });
 }
 
-(()=>{
+(async()=>{
   const bundle=buildBundle();
   const verified=verifyExecutionProofBundle(bundle);
 
@@ -287,8 +297,140 @@ function buildBundle(){
     );
   }
 
+  {
+    const source=buildBundle();
+    const current=normalizeRuntime(source.artifacts.after_runtime);
+    current.executionLedger.push({
+      id:"windowpilot:1",
+      kind:"physical",
+      status:"applied",
+      semantic_patch:clone(action),
+      physical_patch:clone(action),
+      observation:clone(source.artifacts.execution_receipt.physical.evidence[0].observation)
+    });
+
+    const plan=deriveProofUndoPlan(source,current);
+    assert.equal(plan.execution_id,"windowpilot:1");
+    assert.equal(plan.compensation.op,"PATCH_SLOT");
+    assert.equal(plan.compensation.slot,"opening");
+    assert.equal(plan.compensation.value,0);
+    assert.equal(plan.expected_current_value,5);
+    assert.equal(plan.proof_basis.bundle_sha256,source.bundle_sha256);
+
+    const seen=new Set();
+    const ledger={
+      add(id){
+        if(seen.has(id))return false;
+        seen.add(id);
+        return true;
+      }
+    };
+    let authCalls=0;
+    const authorizer=async({
+      patches,runtime,event,source_step,source_revision
+    })=>{
+      authCalls++;
+      const registryDigest=runtimeRegistryDigest(runtime);
+      const authorized=clone(patches);
+      const base={
+        schema:RECEIPT_SCHEMA,
+        canonicalization:"sorted-json-number-normalized-v1",
+        allow:true,
+        case_id:String(event.turn_id),
+        source_step:Number(source_step||0),
+        source_revision:Number(source_revision||0),
+        spatialruntime_commit_sha:null,
+        requested_patch_count:authorized.length,
+        authorized_patches:authorized,
+        patch_digest:authorizationSha256Object(authorized),
+        registry_digest:registryDigest,
+        authorization_id:null,
+        single_use:true,
+        blocked:[],
+        rain:"dry",
+        exterior_window_keys:[],
+        scene_evidence:null,
+        trace_status:"completed",
+        trace_hash:"a".repeat(64),
+        safety_graph_fingerprint:"b".repeat(64),
+        safety_forced_entities:[],
+        commit_summary:{ready_to_dispatch:true}
+      };
+      base.authorization_id=authorizationSha256Object({
+        case_id:base.case_id,
+        source_step:base.source_step,
+        source_revision:base.source_revision,
+        patch_digest:base.patch_digest,
+        registry_digest:base.registry_digest,
+        spatialruntime_commit_sha:base.spatialruntime_commit_sha,
+        trace_hash:base.trace_hash
+      });
+      return {
+        allow:true,
+        patches:authorized,
+        receipt:{...base,receipt_sha256:authorizationSha256Object(base)}
+      };
+    };
+
+    const driver=new MockThingDriver(current);
+    const undone=await runProofDerivedUndo({
+      runtime:current,
+      proof_bundle:source,
+      driver,
+      physicalAuthorizer:authorizer,
+      authorizationLedger:ledger
+    });
+    assert.equal(undone.ok,true);
+    assert.equal(undone.status,"COMPENSATED");
+    assert.equal(authCalls,1);
+    assert.equal(driver.commands.length,1);
+    assert.equal(driver.commands[0].patch.op,"PATCH_SLOT");
+    assert.equal(driver.commands[0].patch.value,0);
+    assert.equal(
+      undone.runtime.devices["客厅::窗::default"].slots.opening,
+      0
+    );
+    const marker=undone.runtime.executionLedger.find(
+      item=>item.kind==="compensation"&&item.compensates==="windowpilot:1"
+    );
+    assert.ok(marker);
+    assert.equal(marker.proof_basis.bundle_sha256,source.bundle_sha256);
+    assert.equal(marker.authorization_id,undone.authorization.authorization_id);
+
+    const diverged=normalizeRuntime(current);
+    diverged.devices["客厅::窗::default"].slots.opening=3;
+    assert.throws(
+      ()=>deriveProofUndoPlan(source,diverged),
+      /undo_current_state_diverged/
+    );
+
+    let mutatedCalls=0;
+    const mutatedAuthorizer=async(args)=>{
+      mutatedCalls++;
+      const out=await authorizer(args);
+      out.patches[0].value=1;
+      out.receipt.authorized_patches[0].value=1;
+      out.receipt.patch_digest=authorizationSha256Object(out.receipt.authorized_patches);
+      const base=clone(out.receipt);
+      delete base.receipt_sha256;
+      out.receipt.receipt_sha256=authorizationSha256Object(base);
+      return out;
+    };
+    await assert.rejects(
+      ()=>runProofDerivedUndo({
+        runtime:current,
+        proof_bundle:source,
+        driver:new MockThingDriver(current),
+        physicalAuthorizer:mutatedAuthorizer,
+        authorizationLedger:{add(){return true}}
+      }),
+      /undo_authorization_changed_derived_compensation|patch_digest_mismatch/
+    );
+    assert.equal(mutatedCalls,1);
+  }
+
   console.log(JSON.stringify({
     ok:true,
-    contract:"execution-proof-bundle.v1 binds decision-proposal.v1 to canonical execution-receipt.v1 without creating a second execution-truth authority"
+    contract:"execution-proof-bundle.v1 binds execution truth and can drive exact proof-derived reauthorization without claim or compensation invention"
   }));
-})();
+})().catch(err=>{console.error(err);process.exit(1)});
