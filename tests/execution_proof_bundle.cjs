@@ -333,6 +333,7 @@ function buildBundle(){
 
   {
     let preObjectIndependence=buildBundle();
+    delete preObjectIndependence.verification.execution.authorization_trust_domain_key_source_verified;
     delete preObjectIndependence.verification.execution.independent_object_outcome_verified;
     preObjectIndependence=resealBundle(preObjectIndependence);
     const checked=verifyExecutionProofBundle(preObjectIndependence);
