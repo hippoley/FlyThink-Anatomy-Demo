@@ -32,6 +32,7 @@ on:
       - "tests/flythink_execution_runtime.cjs"
       - "tests/execution_receipt.cjs"
       - "tests/execution_proof_bundle.cjs"
+      - "tests/claim_scope_report.cjs"
       - "tests/golden_proof_closeout.cjs"
       - "tests/acoustic_windowpilot_live_probe.cjs"
       - "tests/physical_completion_external_rail.cjs"
@@ -78,6 +79,7 @@ on:
       - "tests/flythink_execution_runtime.cjs"
       - "tests/execution_receipt.cjs"
       - "tests/execution_proof_bundle.cjs"
+      - "tests/claim_scope_report.cjs"
       - "tests/golden_proof_closeout.cjs"
       - "tests/acoustic_windowpilot_live_probe.cjs"
       - "tests/physical_completion_external_rail.cjs"
@@ -129,6 +131,7 @@ jobs:
           node --check tests/flythink_execution_runtime.cjs
           node --check tests/execution_receipt.cjs
           node --check tests/execution_proof_bundle.cjs
+          node --check tests/claim_scope_report.cjs
           node --check tests/golden_proof_closeout.cjs
           node --check tests/acoustic_windowpilot_live_probe.cjs
           node --check tests/execution_reasoning_contract.cjs
@@ -174,6 +177,8 @@ jobs:
         run: node tests/execution_receipt.cjs
       - name: Prove portable execution proof bundle binding
         run: node tests/execution_proof_bundle.cjs
+      - name: Prove authorization binding cannot launder issuer authenticity
+        run: node --test tests/claim_scope_report.cjs
       - name: Prove Golden Proof safe closeout semantics
         run: node tests/golden_proof_closeout.cjs
       - name: Prove live acoustic closeout behavior
