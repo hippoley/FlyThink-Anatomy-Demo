@@ -6,7 +6,7 @@ import torch
 from train_flywire import digest,EXPECTED_SHA256
 from train_flywire_delta import text_features,GRAPH_SHA
 from flywire_gated_patch_net import FlyWireGatedPatchNet
-from context_judgement_corpus_v3 import build
+from context_judgement_corpus_v4 import build
 DECISIONS=["EXECUTE","CLARIFY","BLOCK","NOOP","CANCEL_PENDING","UNDO_EXECUTED"]
 CTX=64
 def bucket(s,n=CTX):return int(hashlib.sha256(s.encode()).hexdigest()[:8],16)%n
