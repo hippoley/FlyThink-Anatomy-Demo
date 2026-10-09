@@ -4,6 +4,7 @@ const fs=require("fs");
 const assert=require("assert");
 
 const html=fs.readFileSync("index.html","utf8");
+const publishWorkflow=fs.readFileSync(".github/workflows/publish-static.yml","utf8");
 
 for(const token of [
   "Execution Truth for Physical AI",
@@ -39,6 +40,15 @@ assert.ok(
 assert.ok(
   !html.includes("issues/93") && !html.includes("converging in #93"),
   "public page must not advertise a superseded convergence issue"
+);
+
+assert.ok(
+  publishWorkflow.includes("'Authorization trust','UNVERIFIED'"),
+  "static publish gate must require the same authorization-trust identity token as the public page"
+);
+assert.ok(
+  !publishWorkflow.includes("'Authorization issuer','UNVERIFIED'"),
+  "static publish gate must not retain the superseded issuer-only identity token"
 );
 
 console.log(JSON.stringify({
