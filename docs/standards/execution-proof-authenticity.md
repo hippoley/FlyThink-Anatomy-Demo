@@ -23,7 +23,6 @@ physical_truth_verified
 physical_completion_verified
 safe_closeout_verified
 authorization_trust_domain_key_source_verified = false
-authorization_trust_domain_key_source_verified = false
 authorization_issuer_authenticated_verified = false
 ```
 
@@ -32,7 +31,7 @@ These are evidence/semantic claims. They do not authenticate an issuer merely be
 A party that can construct a self-consistent object can also compute its hashes. Therefore:
 
 ```text
-hash integrity != issuer authenticity
+hash integrity != trust-domain key-source verification != optional issuer authenticity
 ```
 
 ## External authorization trust boundary
@@ -42,6 +41,7 @@ The current `homeai_spatialruntime_authorization_receipt_v1` is self-hashed. Fly
 Current machine-readable verification therefore reports:
 
 ```text
+authorization_trust_domain_key_source_verified = false
 authorization_issuer_authenticated_verified = false
 ```
 
@@ -52,7 +52,8 @@ Issue #137 tracks the higher-value direction: compose the physical-action bindin
 Therefore:
 
 ```text
-authorization binding/integrity != authorization issuer authenticity
+authorization binding/integrity != trust-domain key-source verification
+trust-domain key-source verification != optional issuer authentication
 ```
 
 ## Layer 2 — GitHub / Sigstore artifact attestation
