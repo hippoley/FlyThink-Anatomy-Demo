@@ -12,7 +12,7 @@ for(const token of [
   "Reality responds.",
   "IDENTITY BOUND",
   "INTEGRITY VERIFIABLE",
-  "Authorization issuer",
+  "Authorization trust",
   "UNVERIFIED",
   "INDETERMINATE",
   "Real hardware golden",
@@ -33,8 +33,8 @@ assert.ok(
   "public page must preserve the real-hardware non-claim"
 );
 assert.ok(
-  html.includes("current v1 proves binding/integrity, not who was authorized to issue the allow receipt"),
-  "public page must separate authorization binding from issuer authenticity"
+  html.includes("current v1 proves binding/integrity, not an externally governed Trust Domain or signing-key source"),
+  "public page must separate local authorization binding from external trust-domain verification"
 );
 assert.ok(
   !html.includes("issues/93") && !html.includes("converging in #93"),
@@ -43,5 +43,5 @@ assert.ok(
 
 console.log(JSON.stringify({
   ok:true,
-  contract:"public first screen separates authorization authenticity from binding and keeps only the real-device Golden Proof run pending"
+  contract:"public first screen separates local authorization binding, external trust-domain verification and optional issuer identity while keeping the real-device Golden Proof run pending"
 }));
