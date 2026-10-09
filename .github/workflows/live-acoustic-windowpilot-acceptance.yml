@@ -301,15 +301,11 @@ jobs:
           });
           NODE
 
-      - name: Attest validated live evidence provenance
+      - name: Attest Golden Proof bundle provenance
+        id: attest_proof
         uses: actions/attest@v4
         with:
-          subject-path: |
-            live-acoustic-dry-run.json
-            live-acoustic-windowpilot-result.json
-            live-execution-receipt.json
-            live-execution-proof-bundle.json
-            live-execution-proof-verification.json
+          subject-path: live-execution-proof-bundle.json
 
       - uses: actions/upload-artifact@v4
         if: always()
@@ -322,4 +318,5 @@ jobs:
             live-execution-receipt.json
             live-execution-proof-bundle.json
             live-execution-proof-verification.json
+            ${{ steps.attest_proof.outputs.bundle-path }}
           retention-days: 90
