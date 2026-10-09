@@ -24,6 +24,10 @@ on:
   push:
     branches: [main]
     paths:
+      - "requirements-benchmark.txt"
+      - "scripts/check_benchmark_v3_external_quality.sh"
+      - "scripts/check_benchmark_v3_fuzzy_leakage.py"
+      - "tests/test_benchmark_v3_properties.py"
       - "scripts/generate_long_trajectory_benchmark_v3.py"
       - "scripts/validate_long_trajectory_benchmark_v3.py"
       - "scripts/run_long_checkpoint_e2e_v3.cjs"
