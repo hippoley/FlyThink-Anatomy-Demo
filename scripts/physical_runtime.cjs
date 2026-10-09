@@ -424,6 +424,8 @@ async function executePhysicalUndo(inputRuntime, undoPatch, driver, options = {}
     status:"applied",
     compensates:executionId,
     patch:clone(compensation),
+    proof_basis:clone(undoPatch.proof_basis||null),
+    authorization_id:undoPatch.authorization_id||null,
     physical_execution_ids:(result.receipts||[])
       .map(item=>item&&item.command_id)
       .filter(Boolean)
@@ -435,6 +437,8 @@ async function executePhysicalUndo(inputRuntime, undoPatch, driver, options = {}
     receipt:{
       execution_id:executionId,
       compensation:clone(compensation),
+      proof_basis:clone(undoPatch.proof_basis||null),
+      authorization_id:undoPatch.authorization_id||null,
       compensation_marker_id:markerRecord.id
     }
   });
