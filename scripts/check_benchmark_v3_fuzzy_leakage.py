@@ -2,7 +2,7 @@
 """Cross-split near-duplicate scanner using RapidFuzz.
 
 Exact overlap is already forbidden by the canonical validator. This adds a
-surface-similarity check after masking room/entity/value tokens so superficial
+surface-similarity check after removing room/entity/value tokens so superficial
 substitutions cannot hide template leakage.
 """
 import argparse,json,re
@@ -15,9 +15,12 @@ NUM=re.compile(r"-?\d+(?:\.\d+)?")
 
 def canonical_surface(text):
  s=re.sub(r"\s+","",str(text)).lower()
- for r in ROOMS:s=s.replace(r,"<ROOM>")
- for e in sorted(ENTITIES,key=len,reverse=True):s=s.replace(e,"<ENTITY>")
- s=NUM.sub("<NUM>",s)
+ # Compare the remaining language skeleton. Shared placeholder strings would
+ # dominate edit similarity and turn legitimate synonyms into false positives.
+ for r in ROOMS:s=s.replace(r,"")
+ for e in sorted(ENTITIES,key=len,reverse=True):s=s.replace(e,"")
+ s=NUM.sub("",s)
+ s=re.sub(r"[\W_]+","",s,flags=re.UNICODE)
  return s
 
 def collect(data):
