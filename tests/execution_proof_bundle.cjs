@@ -296,23 +296,52 @@ function buildBundle(){
   }
 
   {
-    let preIssuerAuth=buildBundle();
-    delete preIssuerAuth.verification.execution.authorization_issuer_authenticated_verified;
-    delete preIssuerAuth.verification.execution.independent_object_outcome_verified;
-    preIssuerAuth=resealBundle(preIssuerAuth);
-    const checked=verifyExecutionProofBundle(preIssuerAuth);
+    // Immediately previous main generation: issuer + independent-object claims
+    // existed, but the trust-domain/key-source claim did not.
+    let preTrustDomain=buildBundle();
+    delete preTrustDomain.verification.execution.authorization_trust_domain_key_source_verified;
+    preTrustDomain=resealBundle(preTrustDomain);
+    const checked=verifyExecutionProofBundle(preTrustDomain);
     assert.equal(checked.valid,true);
+    assert.equal(checked.authorization_trust_domain_key_source_verified,false);
     assert.equal(checked.authorization_issuer_authenticated_verified,false);
     assert.equal(checked.independent_object_outcome_verified,false);
   }
 
   {
     let preObjectIndependence=buildBundle();
+    delete preObjectIndependence.verification.execution.authorization_trust_domain_key_source_verified;
     delete preObjectIndependence.verification.execution.independent_object_outcome_verified;
     preObjectIndependence=resealBundle(preObjectIndependence);
     const checked=verifyExecutionProofBundle(preObjectIndependence);
     assert.equal(checked.valid,true);
+    assert.equal(checked.authorization_trust_domain_key_source_verified,false);
     assert.equal(checked.independent_object_outcome_verified,false);
+  }
+
+  {
+    let preIssuerAuth=buildBundle();
+    delete preIssuerAuth.verification.execution.authorization_trust_domain_key_source_verified;
+    delete preIssuerAuth.verification.execution.authorization_issuer_authenticated_verified;
+    delete preIssuerAuth.verification.execution.independent_object_outcome_verified;
+    preIssuerAuth=resealBundle(preIssuerAuth);
+    const checked=verifyExecutionProofBundle(preIssuerAuth);
+    assert.equal(checked.valid,true);
+    assert.equal(checked.authorization_trust_domain_key_source_verified,false);
+    assert.equal(checked.authorization_issuer_authenticated_verified,false);
+    assert.equal(checked.independent_object_outcome_verified,false);
+  }
+
+  {
+    // Arbitrary field deletion is not a historical generation and must not be
+    // accepted merely because all remaining fields look self-consistent.
+    let skippedGeneration=buildBundle();
+    delete skippedGeneration.verification.execution.authorization_issuer_authenticated_verified;
+    skippedGeneration=resealBundle(skippedGeneration);
+    assert.throws(
+      ()=>verifyExecutionProofBundle(skippedGeneration),
+      /execution_proof_bundle_verification_mismatch/
+    );
   }
 
   {
