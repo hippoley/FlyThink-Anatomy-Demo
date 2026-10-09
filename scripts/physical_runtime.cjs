@@ -48,29 +48,6 @@ function markQuarantined(runtime,target,command,turnId){
   return runtime.deviceHealth[key];
 }
 
-function clearQuarantine(runtime,target,recoveryProof){
-  const key=deviceKey(target);
-  if(!runtime.deviceHealth[key]||runtime.deviceHealth[key].status!=="quarantined"){
-    throw new Error("device_not_quarantined");
-  }
-  const validProof=
-    recoveryProof&&
-    recoveryProof.verified===true&&
-    recoveryProof.readiness_verified===true&&
-    recoveryProof.hardware_identity_verified===true&&
-    recoveryProof.physical_readback_verified===true&&
-    recoveryProof.safe_position_verified===true;
-  if(!validProof){
-    throw new Error("quarantine_recovery_proof_required");
-  }
-  runtime.deviceHealth[key]={
-    status:"healthy",
-    recovered_at_turn_id:recoveryProof.turn_id||null,
-    recovery:clone(recoveryProof)
-  };
-  return runtime.deviceHealth[key];
-}
-
 function evaluateQuarantinePreflight(runtime,patches){
   const normalized=normalizeRuntime(runtime);
   const violations=[];
@@ -498,7 +475,6 @@ module.exports = {
   isQuarantined,
   isSafetyReducingPatch,
   markQuarantined,
-  clearQuarantine,
   evaluateQuarantinePreflight,
   executeSinglePhysicalPatch,
   executePhysicalUndo,
