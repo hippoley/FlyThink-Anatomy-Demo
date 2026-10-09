@@ -12,11 +12,12 @@ def main():
  t=json.load(open(a.teacher_forced,encoding="utf8"))
  tf={(x["trajectory"],x["turn"]):x for x in t.get("failures",[])}
  first={}
- for x in s.get("failures",[]):
-  k=x["trajectory"]
+ source=s.get("first_failures") or s.get("failures",[])
+ for x in source:
+  k=(x["trajectory"],x.get("repeat",1))
   if k not in first or x["turn"]<first[k]["turn"]:first[k]=x
  rows=[];taxonomy=collections.Counter();families=collections.Counter()
- for traj,x in sorted(first.items()):
+ for (traj,repeat),x in sorted(first.items()):
   local=tf.get((traj,x["turn"]))
   if local:
    kind="local_capability_failure"
@@ -26,7 +27,7 @@ def main():
    primary="cascade_or_runtime_context"
   taxonomy[primary]+=1;families[x.get("family","unknown")]+=1
   rows.append({
-   "trajectory":traj,"turn":x["turn"],"text":x["text"],
+   "trajectory":traj,"repeat":repeat,"turn":x["turn"],"text":x["text"],
    "family":x.get("family"),"difficulty":x.get("difficulty"),
    "stateful_outcome":x.get("outcome"),"stateful_error":x.get("error"),
    "failure_kind":kind,"primary_failure":primary,
