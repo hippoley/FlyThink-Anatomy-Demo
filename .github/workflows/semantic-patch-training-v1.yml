@@ -1,5 +1,16 @@
 name: semantic-patch-training-v1
 on:
+  pull_request:
+    paths:
+      - scripts/semantic_patch_contract.py
+      - scripts/train_semantic_patch_v1.py
+      - scripts/semantic_context_features.py
+      - scripts/generate_long_trajectory_benchmark_v3.py
+      - scripts/benchmark_v3_training_adapter.py
+      - scripts/whole_home_patch_corpus_v11.py
+      - scripts/whole_home_patch_corpus_v12.py
+      - tests/test_benchmark_v3_training_adapter.py
+      - .github/workflows/semantic-patch-training-v1.yml
   push:
     paths:
       - scripts/semantic_patch_contract.py
