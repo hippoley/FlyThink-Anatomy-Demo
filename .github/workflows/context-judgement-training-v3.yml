@@ -3,7 +3,11 @@ on:
   workflow_dispatch:
   push:
     paths:
+      - "scripts/generate_long_trajectory_benchmark_v3.py"
+      - "scripts/benchmark_v3_training_adapter.py"
       - "scripts/context_judgement_corpus_v3.py"
+      - "scripts/context_judgement_corpus_v4.py"
+      - "tests/test_benchmark_v3_training_adapter.py"
       - "scripts/train_context_judgement_v3.py"
       - ".github/workflows/context-judgement-training-v3.yml"
 jobs:
@@ -14,6 +18,8 @@ jobs:
    - uses: actions/checkout@v4
    - uses: actions/setup-python@v5
      with: {python-version: "3.12"}
+   - name: Validate V3.2 training adapter
+     run: python tests/test_benchmark_v3_training_adapter.py
    - run: pip install --index-url https://download.pytorch.org/whl/cpu torch
    - run: python scripts/train_context_judgement_v3.py --epochs 400
    - run: cat artifacts/context-judgement-v3/report.json
