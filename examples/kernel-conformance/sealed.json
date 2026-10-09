@@ -1,0 +1,6 @@
+[
+  {"id":"sealed-001","confidence":0.997,"exact":true,"wrong_target":false,"untouched_state_corruption":false},
+  {"id":"sealed-002","confidence":0.980,"exact":true,"wrong_target":false,"untouched_state_corruption":false},
+  {"id":"sealed-003","confidence":0.970,"exact":false,"wrong_target":true,"untouched_state_corruption":false},
+  {"id":"sealed-004","confidence":0.500,"exact":true,"wrong_target":false,"untouched_state_corruption":false}
+]

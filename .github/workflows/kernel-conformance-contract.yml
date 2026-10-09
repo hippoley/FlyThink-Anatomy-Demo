@@ -1,0 +1,40 @@
+name: kernel-conformance-contract
+
+on:
+  push:
+    paths:
+      - "scripts/kernel_conformance.py"
+      - "tests/test_kernel_conformance.py"
+      - "contracts/state-transition-kernel-conformance-row-v1.schema.json"
+      - ".github/actions/kernel-conformance/**"
+      - ".github/workflows/kernel-conformance-contract.yml"
+      - "examples/kernel-conformance/**"
+  pull_request:
+    paths:
+      - "scripts/kernel_conformance.py"
+      - "tests/test_kernel_conformance.py"
+      - "contracts/state-transition-kernel-conformance-row-v1.schema.json"
+      - ".github/actions/kernel-conformance/**"
+      - ".github/workflows/kernel-conformance-contract.yml"
+      - "examples/kernel-conformance/**"
+
+jobs:
+  conformance:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install --disable-pip-version-check pytest
+      - uses: ./.github/actions/kernel-conformance
+        with:
+          calibration: examples/kernel-conformance/calibration.json
+          sealed: examples/kernel-conformance/sealed.json
+          target-precision: "0.99"
+          out: artifacts/kernel-conformance-example.json
+      - run: python -m pytest -q tests/test_kernel_conformance.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kernel-conformance-example
+          path: artifacts/kernel-conformance-example.json

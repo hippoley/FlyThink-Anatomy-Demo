@@ -1,0 +1,6 @@
+[
+  {"id":"cal-001","confidence":0.995,"exact":true,"wrong_target":false,"untouched_state_corruption":false},
+  {"id":"cal-002","confidence":0.990,"exact":true,"wrong_target":false,"untouched_state_corruption":false},
+  {"id":"cal-003","confidence":0.960,"exact":true,"wrong_target":false,"untouched_state_corruption":false},
+  {"id":"cal-004","confidence":0.700,"exact":false,"wrong_target":true,"untouched_state_corruption":false}
+]

@@ -1,0 +1,27 @@
+name: "FlyThink Kernel Conformance"
+description: "Evaluate a bounded state-transition kernel using calibration-only threshold selection and sealed risk/coverage reporting."
+inputs:
+  calibration:
+    description: "Path to calibration JSON rows in the caller repository."
+    required: true
+  sealed:
+    description: "Path to sealed JSON rows in the caller repository."
+    required: true
+  target-precision:
+    description: "Minimum commit precision required on calibration rows."
+    required: false
+    default: "0.99"
+  out:
+    description: "Path for the generated conformance report."
+    required: false
+    default: "kernel-conformance-report.json"
+outputs:
+  report:
+    description: "Path to the generated conformance report."
+    value: ${{ inputs.out }}
+runs:
+  using: "composite"
+  steps:
+    - shell: bash
+      run: |
+        python "$GITHUB_ACTION_PATH/../../../scripts/kernel_conformance.py"           --calibration "${{ inputs.calibration }}"           --sealed "${{ inputs.sealed }}"           --target-precision "${{ inputs.target-precision }}"           --out "${{ inputs.out }}"
