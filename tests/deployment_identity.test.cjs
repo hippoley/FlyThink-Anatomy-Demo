@@ -13,6 +13,7 @@ for(const token of [
   "IDENTITY BOUND",
   "INTEGRITY VERIFIABLE",
   "Authorization issuer",
+  "Independent outcome",
   "UNVERIFIED",
   "INDETERMINATE",
   "Real hardware golden",
@@ -37,11 +38,15 @@ assert.ok(
   "public page must separate authorization binding from issuer authenticity"
 );
 assert.ok(
+  html.includes("it does not prove an independent object-level observer"),
+  "public page must separate completion readback from observer independence"
+);
+assert.ok(
   !html.includes("issues/93") && !html.includes("converging in #93"),
   "public page must not advertise a superseded convergence issue"
 );
 
 console.log(JSON.stringify({
   ok:true,
-  contract:"public first screen separates authorization authenticity from binding and keeps only the real-device Golden Proof run pending"
+  contract:"public first screen separates authorization authenticity and object-observer independence from completion evidence"
 }));
