@@ -31,4 +31,11 @@ const tr={
 assert.equal(runtimeAtGoldPrefix(tr,1).devices["客厅::窗::default"].slots.opening,40);
 const h=goldHistoryPrefix(tr,1);
 assert.equal(h.length,1);assert.equal(h[0].committed,true);assert.equal(h[0].applied_patches[0].op,"PATCH_SLOT");
-console.log(JSON.stringify({ok:true,contract:"teacher-forced evaluation uses gold runtime/history prefix and dimension-level failure taxonomy"}));
+{
+ const aliasTurn={...turn,text:"客厅外窗开度40",surface_naming_class:"non_standard_alias",instruction_shape:"single_intent"};
+ const cls=classify(aliasTurn,{decision:"EXECUTE",patches:[{
+  op:"PATCH_SLOT",target:{area:"客厅",entity:"窗",instance:"default"},slot:"opening",value:40
+ }]});
+ assert.equal(cls.ok,true);
+}
+console.log(JSON.stringify({ok:true,contract:"teacher-forced evaluation uses canonical gold targets across surface aliases and exposes robustness slices"}));
