@@ -668,16 +668,11 @@ class FlyThinkExecutionRuntime{
         ?this.maxUncertainty
         :input.max_uncertainty,
       authorizationLedger:input.authorizationLedger||this.authorizationLedger,
-      externalAuthorizationTrustVerifier:
-        input.externalAuthorizationTrustVerifier||this.externalAuthorizationTrustVerifier,
-      require_external_authorization_trust:
-        input.require_external_authorization_trust==null
-          ?this.requireExternalAuthorizationTrust
-          :input.require_external_authorization_trust===true,
-      require_external_authorization_issuer:
-        input.require_external_authorization_issuer==null
-          ?this.requireExternalAuthorizationIssuer
-          :input.require_external_authorization_issuer===true
+      // External authorization trust is a deployment/runtime capability.
+      // Per-execution input must not swap the verifier or downgrade the policy.
+      externalAuthorizationTrustVerifier:this.externalAuthorizationTrustVerifier,
+      require_external_authorization_trust:this.requireExternalAuthorizationTrust,
+      require_external_authorization_issuer:this.requireExternalAuthorizationIssuer
     });
     this.runtime=out.runtime;
     return out;
@@ -693,16 +688,11 @@ class FlyThinkExecutionRuntime{
         ?this.maxUncertainty
         :input.max_uncertainty,
       authorizationLedger:input.authorizationLedger||this.authorizationLedger,
-      externalAuthorizationTrustVerifier:
-        input.externalAuthorizationTrustVerifier||this.externalAuthorizationTrustVerifier,
-      require_external_authorization_trust:
-        input.require_external_authorization_trust==null
-          ?this.requireExternalAuthorizationTrust
-          :input.require_external_authorization_trust===true,
-      require_external_authorization_issuer:
-        input.require_external_authorization_issuer==null
-          ?this.requireExternalAuthorizationIssuer
-          :input.require_external_authorization_issuer===true
+      // External authorization trust is a deployment/runtime capability.
+      // Per-execution input must not swap the verifier or downgrade the policy.
+      externalAuthorizationTrustVerifier:this.externalAuthorizationTrustVerifier,
+      require_external_authorization_trust:this.requireExternalAuthorizationTrust,
+      require_external_authorization_issuer:this.requireExternalAuthorizationIssuer
     });
     this.runtime=out.runtime;
     return out;
