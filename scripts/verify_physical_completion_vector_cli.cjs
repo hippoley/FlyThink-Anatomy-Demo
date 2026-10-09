@@ -38,7 +38,8 @@ function appraisePhysicalCompletion(vector={}){
       verdict:"invalid",
       codes:["physical-completion-vector-schema-invalid"],
       result:null,
-      tiers:[]
+      tiers:[],
+      independent_object_outcome_verified:false
     };
   }
   const receipt=vector.physical_receipt;
@@ -48,7 +49,8 @@ function appraisePhysicalCompletion(vector={}){
       verdict:"invalid",
       codes:["physical-completion-vector-required-member-missing"],
       result:null,
-      tiers:[]
+      tiers:[],
+      independent_object_outcome_verified:false
     };
   }
 
@@ -60,7 +62,8 @@ function appraisePhysicalCompletion(vector={}){
       verdict:"invalid",
       codes:["physical-completion-vector-evidence-malformed"],
       result:null,
-      tiers:[]
+      tiers:[],
+      independent_object_outcome_verified:false
     };
   }
 
@@ -86,7 +89,8 @@ function appraisePhysicalCompletion(vector={}){
       verdict:"invalid",
       codes,
       result:null,
-      tiers:[]
+      tiers:[],
+      independent_object_outcome_verified:false
     };
   }
 
@@ -142,7 +146,8 @@ function main(argv=process.argv.slice(2)){
       verdict:"invalid",
       codes:["physical-completion-vector-path-required"],
       result:null,
-      tiers:[]
+      tiers:[],
+      independent_object_outcome_verified:false
     })+"\n");
     return 2;
   }
@@ -156,7 +161,8 @@ function main(argv=process.argv.slice(2)){
       verdict:"invalid",
       codes:["physical-completion-vector-unreadable"],
       result:null,
-      tiers:[]
+      tiers:[],
+      independent_object_outcome_verified:false
     })+"\n");
     return 1;
   }
