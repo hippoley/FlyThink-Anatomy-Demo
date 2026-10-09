@@ -105,6 +105,25 @@ Trust Domain/key-source verification separate from optional issuer authenticatio
 The current Kontxt experiment is only an interoperability candidate until its CI
 passes and the trust anchor is bound at the canonical boundary.
 
+## Machine-enforced dependency and impact graph
+
+The human-readable matrix above is paired with
+`contracts/user-story-impact.v1.json`.
+
+`scripts/user_story_impact.cjs` maps changed repository paths to directly
+affected User Stories, expands transitive dependents, selects deterministic
+fast regression suites, and fails closed when an impacted suite fails.
+
+The `user-story-horizontal-impact` workflow derives the changed-file set from
+the actual pull-request base/head diff and runs the resulting suites. Existing
+heavy acceptance and external interoperability workflows remain authoritative
+for tests that are intentionally outside the fast impact runner.
+
+This automation is a guard against **missed sideways regressions**, not a claim
+that every non-code reality gate can be automated. Real hardware, independent
+external consumers, external trust roots and upstream standards decisions remain
+explicit reality/external-owner gates.
+
 ## Cross-story regression set required for every trust-layer change
 
 A trust-layer change is not horizontally closed unless all of the following are

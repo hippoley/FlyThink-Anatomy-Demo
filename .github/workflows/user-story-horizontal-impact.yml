@@ -1,0 +1,37 @@
+name: user-story-horizontal-impact
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  impact:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Verify impact engine
+        run: node tests/user_story_impact.cjs
+      - name: Collect changed paths
+        if: github.event_name == 'pull_request'
+        shell: bash
+        run: |
+          git diff --name-only "${{ github.event.pull_request.base.sha }}" "${{ github.event.pull_request.head.sha }}" > /tmp/changed-files.txt
+          cat /tmp/changed-files.txt
+      - name: Run impacted fast regression suites
+        if: github.event_name == 'pull_request'
+        run: node scripts/user_story_impact.cjs --files-from /tmp/changed-files.txt --run
+      - name: Smoke graph on workflow dispatch
+        if: github.event_name == 'workflow_dispatch'
+        run: node scripts/user_story_impact.cjs --file scripts/authorization_ledger.cjs
