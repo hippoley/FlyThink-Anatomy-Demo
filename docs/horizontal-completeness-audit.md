@@ -53,7 +53,7 @@ Dimensions:
 | Untrusted reasoner cannot actuate | V | V | V | V | N | V | V | V | V | V | none |
 | Exact Context + World identity | V | V | V | V | N | V | V | V | V | V | none |
 | Authorization receipt integrity + action/context binding | V | V | V | V | N | V | V | V | V | V | none at local-integrity scope |
-| Authorization single-use / replay barrier | V | V | V | V | V | V | V | V | V | V | append-only per-authorization O_EXCL reservation journal; snapshot is reconstructable; multi-process race regression is canonical |
+| Authorization single-use / replay barrier | V | V | V | V | P | V | V | V | V | N | append-only per-authorization reservation journal closes correctness/replay races; 8-process contention is a correctness regression, not a target-scale throughput benchmark |
 | Authorization Trust Domain / signing-key source | P | N | P | P | N | V | V | P | P | P | external verifier + non-request-controlled trust configuration must reach canonical boundary |
 | Optional authorization issuer identity | P | N | P | P | N | V | V | P | P | P | only applicable when deployment pins issuer; must not be required by default |
 | Ambiguous transport remains INDETERMINATE | V | V | V | V | P | V | V | V | P | V | retained real lost-ACK / ambiguity evidence |
