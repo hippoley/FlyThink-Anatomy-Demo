@@ -66,6 +66,10 @@
       "python",
       "-c",
       "import runpy; x=runpy.run_path('tests/test_kernel_conformance.py'); [x[n]() for n in ['test_calibration_selects_largest_real_threshold_group','test_equal_confidence_tie_cannot_be_split','test_sealed_uses_frozen_calibration_threshold']]; print('kernel-conformance PASS')"
+    ],
+    "benchmark-v3-quality": [
+      "python",
+      "scripts/check_benchmark_v3_contract.py"
     ]
   },
   "stories": {
@@ -486,6 +490,28 @@
       "suites": [
         "claim-scope",
         "external-completion"
+      ]
+    },
+    "benchmark.long_trajectory_v3": {
+      "depends_on": [
+        "home.patch_slot",
+        "home.patch_relative",
+        "home.multi_target_set",
+        "home.coreference_clarification",
+        "context.identity"
+      ],
+      "paths": [
+        "scripts/generate_long_trajectory_benchmark_v3.py",
+        "scripts/validate_long_trajectory_benchmark_v3.py",
+        "scripts/run_long_checkpoint_e2e_v3.cjs",
+        "scripts/check_benchmark_v3_contract.py",
+        "tests/benchmark_v3_metrics.cjs",
+        "docs/benchmark-v3.md",
+        ".github/workflows/benchmark-v3-contract.yml",
+        "scripts/validate_benchmark_v3_oracle_runner.cjs"
+      ],
+      "suites": [
+        "benchmark-v3-quality"
       ]
     }
   }
