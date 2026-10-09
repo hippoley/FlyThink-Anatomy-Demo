@@ -1,0 +1,49 @@
+name: txn-token-physical-action-profile
+
+on:
+  push:
+    paths:
+      - "scripts/txn_token_physical_action_profile.py"
+      - "tests/test_txn_token_physical_action_profile.py"
+      - "docs/standards/txn-token-physical-action-profile.md"
+      - ".github/workflows/txn-token-physical-action-profile.yml"
+  pull_request:
+    paths:
+      - "scripts/txn_token_physical_action_profile.py"
+      - "tests/test_txn_token_physical_action_profile.py"
+      - "docs/standards/txn-token-physical-action-profile.md"
+      - ".github/workflows/txn-token-physical-action-profile.yml"
+
+jobs:
+  interop:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Checkout pinned external Transaction Token implementation
+        uses: actions/checkout@v4
+        with:
+          repository: authgent/authgent
+          ref: 8341cf932c9816dc666f2a6577b6776bd6f3b978
+          path: _authgent
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Verify external source identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C _authgent rev-parse HEAD)" = "8341cf932c9816dc666f2a6577b6776bd6f3b978"
+          grep -F 'draft-ietf-oauth-transaction-tokens (rev -11)' _authgent/STANDARDS.md
+
+      - name: Install pinned external validator SDK
+        run: |
+          python -m pip install --disable-pip-version-check pytest
+          python -m pip install -e "_authgent/sdks/python"
+
+      - name: Run external-validator-backed physical binding vectors
+        env:
+          AUTHGENT_SOURCE_COMMIT: 8341cf932c9816dc666f2a6577b6776bd6f3b978
+        run: python -m pytest -q tests/test_txn_token_physical_action_profile.py
