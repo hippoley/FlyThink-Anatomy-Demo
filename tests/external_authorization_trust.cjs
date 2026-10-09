@@ -56,11 +56,27 @@ function verdict(overrides={}){
   assert.equal(evidence.runtime_enforced,true);
   assert.equal(evidence.trust_domain_key_source_verified_at_runtime,true);
   assert.equal(evidence.issuer_authenticated_at_runtime,false);
-  assert.equal(evidence.offline_reverifiable,false);
+  assert.equal(evidence.provider_declared_offline_reverifiable,false);
   const retained=verifyRetainedExternalAuthorizationEvidence(evidence,b);
   assert.equal(retained.bound,true);
   assert.equal(retained.runtime_enforced_recorded,true);
   assert.equal(retained.offline_reverifiable,false);
+}
+
+{
+  const b=binding();
+  const evidence=validateExternalAuthorizationTrustVerdict(
+    verdict({offline_reverifiable:true}),
+    b
+  );
+  assert.equal(evidence.provider_declared_offline_reverifiable,true);
+  const retained=verifyRetainedExternalAuthorizationEvidence(evidence,b);
+  assert.equal(
+    retained.offline_reverifiable,
+    false,
+    "provider declaration must not self-mint offline cryptographic re-verifiability"
+  );
+  assert.equal(retained.provider_declared_offline_reverifiable,true);
 }
 
 {
