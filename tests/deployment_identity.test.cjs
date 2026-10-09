@@ -11,7 +11,7 @@ for(const token of [
   "Agents propose.",
   "Reality responds.",
   "IDENTITY BOUND",
-  "OFFLINE VERIFIABLE",
+  "INTEGRITY VERIFIABLE",
   "INDETERMINATE",
   "Real hardware golden",
   "PENDING",
