@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 
 	"github.com/aramase/kontxt/pkg/token"
@@ -11,14 +12,23 @@ import (
 )
 
 const (
-	SchemaVersion       = "flythink.kontxt-txntoken-trust.v1"
-	PinnedKontxtCommit  = "d23ebb50121a650af57c9e34e8227d54db324f9d"
-	ExternalVerifier    = "github.com/aramase/kontxt/sdk/verify"
+	SchemaVersion      = "flythink.kontxt-txntoken-trust.v2"
+	PinnedKontxtCommit = "d23ebb50121a650af57c9e34e8227d54db324f9d"
+	ExternalVerifier   = "github.com/aramase/kontxt/sdk/verify"
 )
 
+// TrustAnchor is execution-boundary configuration. It must come from trusted
+// deployment/runtime configuration, never from the proposal or token being
+// authorized. The adapter binds issuer identity to one configured JWKS source
+// and audience before it asks Kontxt to verify the token.
+type TrustAnchor struct {
+	Issuer   string `json:"issuer"`
+	JWKSURL  string `json:"jwks_url"`
+	Audience string `json:"audience"`
+	Source   string `json:"source"`
+}
+
 type ExpectedBinding struct {
-	Issuer                   string
-	Audience                 string
 	Subject                  string
 	Scope                    string
 	RequestingWorkload       string
@@ -31,23 +41,25 @@ type ExpectedBinding struct {
 }
 
 type Verdict struct {
-	SchemaVersion                     string `json:"schema_version"`
-	ExternalVerifier                  string `json:"external_verifier"`
-	ExternalVerifierCommit            string `json:"external_verifier_commit"`
-	TokenSHA256                       string `json:"token_sha256"`
-	CryptographicValidationVerified   bool   `json:"cryptographic_validation_verified"`
-	IssuerAuthenticatedVerified       bool   `json:"issuer_authenticated_verified"`
-	RequiredClaimsVerified            bool   `json:"required_claims_verified"`
-	FlyThinkProfileBindingVerified    bool   `json:"flythink_profile_binding_verified"`
-	ReadyForAuthorizationTrust        bool   `json:"ready_for_authorization_trust"`
-	FailureStage                      string `json:"failure_stage,omitempty"`
-	FailureReason                     string `json:"failure_reason,omitempty"`
+	SchemaVersion                                  string `json:"schema_version"`
+	ExternalVerifier                               string `json:"external_verifier"`
+	ExternalVerifierCommit                         string `json:"external_verifier_commit"`
+	TokenSHA256                                    string `json:"token_sha256"`
+	TrustAnchorSHA256                              string `json:"trust_anchor_sha256,omitempty"`
+	TrustAnchorSource                              string `json:"trust_anchor_source,omitempty"`
+	CryptographicValidationVerified                bool   `json:"cryptographic_validation_verified"`
+	IssuerAuthenticatedAgainstConfiguredTrustAnchor bool   `json:"issuer_authenticated_against_configured_trust_anchor"`
+	RequiredClaimsVerified                         bool   `json:"required_claims_verified"`
+	FlyThinkProfileBindingVerified                 bool   `json:"flythink_profile_binding_verified"`
+	ReadyForCanonicalTrustIntegration              bool   `json:"ready_for_canonical_trust_integration"`
+	FailureStage                                   string `json:"failure_stage,omitempty"`
+	FailureReason                                  string `json:"failure_reason,omitempty"`
 }
 
 func VerifyAndBind(
 	ctx context.Context,
-	verifier *verify.Verifier,
 	tokenString string,
+	trust TrustAnchor,
 	expected ExpectedBinding,
 ) Verdict {
 	sum := sha256.Sum256([]byte(tokenString))
@@ -58,6 +70,18 @@ func VerifyAndBind(
 		TokenSHA256:            hex.EncodeToString(sum[:]),
 	}
 
+	if err := validateTrustAnchor(trust); err != nil {
+		out.FailureStage = "trust_anchor_configuration"
+		out.FailureReason = err.Error()
+		return out
+	}
+	out.TrustAnchorSHA256 = trustAnchorDigest(trust)
+	out.TrustAnchorSource = trust.Source
+
+	// Construct the external verifier inside the adapter from the configured
+	// trust anchor. Callers cannot hand us a verifier pointed at a different
+	// JWKS endpoint while still claiming the declared issuer binding.
+	verifier := verify.New(trust.JWKSURL, trust.Audience)
 	claims, err := verifier.Verify(ctx, tokenString)
 	if err != nil {
 		out.FailureStage = "external_token_verification"
@@ -66,18 +90,18 @@ func VerifyAndBind(
 	}
 	out.CryptographicValidationVerified = true
 
-	if claims.Issuer != expected.Issuer {
+	if claims.Issuer != trust.Issuer {
 		out.FailureStage = "issuer_binding"
 		out.FailureReason = fmt.Sprintf(
-			"issuer mismatch: got=%q expected=%q",
+			"issuer mismatch: got=%q configured=%q",
 			claims.Issuer,
-			expected.Issuer,
+			trust.Issuer,
 		)
 		return out
 	}
-	out.IssuerAuthenticatedVerified = true
+	out.IssuerAuthenticatedAgainstConfiguredTrustAnchor = true
 
-	if err := validateRequiredClaims(claims, expected); err != nil {
+	if err := validateRequiredClaims(claims, trust, expected); err != nil {
 		out.FailureStage = "required_claims"
 		out.FailureReason = err.Error()
 		return out
@@ -90,11 +114,37 @@ func VerifyAndBind(
 		return out
 	}
 	out.FlyThinkProfileBindingVerified = true
-	out.ReadyForAuthorizationTrust = true
+	out.ReadyForCanonicalTrustIntegration = true
 	return out
 }
 
-func validateRequiredClaims(claims *token.Claims, expected ExpectedBinding) error {
+func validateTrustAnchor(trust TrustAnchor) error {
+	if trust.Issuer == "" {
+		return fmt.Errorf("configured issuer missing")
+	}
+	if trust.JWKSURL == "" {
+		return fmt.Errorf("configured JWKS URL missing")
+	}
+	if trust.Audience == "" {
+		return fmt.Errorf("configured audience missing")
+	}
+	if trust.Source == "" {
+		return fmt.Errorf("trust-anchor provenance source missing")
+	}
+	return nil
+}
+
+func trustAnchorDigest(trust TrustAnchor) string {
+	payload, _ := json.Marshal(trust)
+	sum := sha256.Sum256(payload)
+	return hex.EncodeToString(sum[:])
+}
+
+func validateRequiredClaims(
+	claims *token.Claims,
+	trust TrustAnchor,
+	expected ExpectedBinding,
+) error {
 	if claims == nil {
 		return fmt.Errorf("claims missing")
 	}
@@ -113,8 +163,8 @@ func validateRequiredClaims(claims *token.Claims, expected ExpectedBinding) erro
 	if expected.Subject != "" && claims.Subject != expected.Subject {
 		return fmt.Errorf("sub mismatch")
 	}
-	if claims.Audience == "" || claims.Audience != expected.Audience {
-		return fmt.Errorf("aud mismatch")
+	if claims.Audience == "" || claims.Audience != trust.Audience {
+		return fmt.Errorf("aud missing or mismatch")
 	}
 	if claims.Scope == "" || claims.Scope != expected.Scope {
 		return fmt.Errorf("scope missing or mismatch")
