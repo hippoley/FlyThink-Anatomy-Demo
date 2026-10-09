@@ -41,7 +41,8 @@ story is not "closed" merely because a deterministic fixture passes.
 | Untrusted reasoner cannot actuate | CODE_CLOSED | proposal is non-authoritative | none |
 | Exact Context + World identity | CODE_CLOSED | external context identity + authoritative WorldSnapshot are bound before execution | none |
 | Authorization receipt integrity + action/context binding | CODE_CLOSED | v1 re-verifies exact receipt, patch, registry, source revision and completion-criterion bindings before driver entry | none at the local-integrity layer |
-| Authorization issuer authenticity | EXTERNAL_TRUST_OPEN | current v1 self-hash cannot authenticate who was entitled to issue the allow decision; verifier explicitly returns `authorization_issuer_authenticated_verified=false` | real Transaction Token/workload-identity validator or equivalent issuer-authenticated trust layer |
+| Authorization Trust Domain / signing-key source | EXTERNAL_TRUST_OPEN | current v1 self-hash cannot establish that authorization was verified against a trusted Txn-Token Trust Domain or predetermined signing-key source; verifier now exposes `authorization_trust_domain_key_source_verified=false` | real external Txn-Token/workload-identity verifier bound to non-request-controlled trust configuration |
+| Optional authorization issuer authenticity | EXTERNAL_TRUST_OPEN | Txn-Token draft-11 makes `iss` optional; current verifier therefore keeps issuer identity separate and `authorization_issuer_authenticated_verified=false` | only promote when deployment explicitly pins an issuer and external verification authenticates it |
 | Ambiguous transport remains INDETERMINATE | REALITY_OPEN | post-dispatch driver ambiguity is quarantined; non-safety single, atomic multi-target and UNDO compensation paths all preserve the quarantine boundary; quarantine exit is only performed inside `RecoveryTransaction` after readiness, stable hardware identity, fresh in-range readback and safe-position checks—there is no caller-asserted boolean clear API | retained real lost-ACK / ambiguous transport evidence |
 | Completion requires precommitted criterion + witness | REALITY_OPEN | criterion/witness binding and verifier exist | retained real Golden Proof |
 | Independent object-level outcome observation | REALITY_OPEN / EXTERNAL_TRUST_OPEN | current WindowPilot completion witness is integrated controller/state readback; canonical verifier returns `independent_object_outcome_verified=false` | separately trusted object-level observer path + retained real run |
@@ -60,7 +61,7 @@ These must not be "completed" by guessing:
 - event capabilities treated as commands;
 - FlyThink minting persistent semantic conversation/task identity;
 - authorization evidence being promoted into physical-completion evidence;
-- authorization receipt self-hashes being promoted into issuer authentication;
+- authorization receipt self-hashes being promoted into Trust Domain/key-source verification or issuer authentication;
 - proof-bundle integrity being promoted into Sigstore/SCITT provenance;
 - identified controller/state readback being promoted into independent object-level observation.
 
@@ -94,22 +95,35 @@ reviewed human WAV
 
 No additional synthetic abstraction work should be credited toward this gate.
 
-### 2. Authorization issuer authenticity
+### 2. Authorization Trust Domain and optional issuer identity
 
 The current SpatialRuntime authorization receipt proves internal integrity and
-application binding, not issuer authority.
+application binding, not external transaction-token trust.
 
-The next valid transition is:
+Transaction Tokens draft-11 makes `iss` optional and binds a token primarily to
+the Trust Domain identified by `aud`, with signing keys predetermined by the
+deployment when available. FlyThink therefore treats these as two separate
+maturity claims:
 
 ```text
-externally validated short-lived transaction/workload identity
+trusted deployment/runtime configuration
+-> Trust Domain + signing-key/JWKS source
+-> external Transaction Token verification
 -> immutable validated-claims envelope
 -> FlyThink physical-action binding profile
 -> execution boundary
 ```
 
-FlyThink must not create `flythink-signature-v1` or revive a project-specific HMAC
-scheme merely to make this row look closed.
+Optional stronger profile:
+
+```text
+configured issuer identity
++ verified token iss
+-> authorization_issuer_authenticated_verified = true
+```
+
+FlyThink must not create `flythink-signature-v1`, revive a project-specific HMAC
+scheme, or require `iss` merely to make a maturity row look closed.
 
 ### 3. Independent object-level observation
 
