@@ -1,0 +1,4 @@
+# Benchmark/data-quality only; not part of physical execution runtime.
+# RapidFuzz: MIT; Hypothesis: MPL-2.0.
+rapidfuzz==3.14.6
+hypothesis==6.168.5
