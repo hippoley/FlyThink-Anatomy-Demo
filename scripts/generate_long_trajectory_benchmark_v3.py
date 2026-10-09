@@ -183,6 +183,14 @@ def release_seed(release_id):
  raw=f"{BASE_SEED}:{release_id}".encode()
  return int.from_bytes(hashlib.sha256(raw).digest()[:8],"big")
 
+def generalization_class(turn):
+ if turn["gold_decision"]!="EXECUTE": return "ambiguity_holdout"
+ targets=turn.get("gold_target")
+ if not targets:return "other"
+ if not isinstance(targets,list):targets=[targets]
+ pairs={(t["area"],t["entity"]) for t in targets}
+ return "compositional_holdout" if any(p not in PAIR_ALLOW["train"] for p in pairs) else "seen_combo"
+
 def make(i,count,rng):
  split=split_for(i,count)
  state=state_template();initial=initial_runtime(state);turns=[];focus=None
@@ -194,6 +202,7 @@ def make(i,count,rng):
   if fam=="clarify": turn,focus=make_clarify(split,state,rng,focus)
   else: turn,focus=make_execute_turn(split,state,rng,focus,fam)
   turn["turn_id"]=f"{split}-{i:03d}-{j:02d}"
+  turn["generalization_class"]=generalization_class(turn)
   turns.append(turn)
  return {"id":f"whole-home-v3-{i:03d}","split":split,"initial_runtime":initial,"turns":turns}
 
@@ -212,14 +221,17 @@ def main():
  rows=[make(i,a.count,rng) for i in range(a.count)]
  raw=json.dumps(rows,ensure_ascii=False,separators=(",",":"),sort_keys=True).encode()
  split_counts={s:sum(x["split"]==s for x in rows) for s in SPLITS}
- family_counts={}
+ family_counts={};generalization_counts={}
  for tr in rows:
-  for t in tr["turns"]: family_counts[t["scenario_family"]]=family_counts.get(t["scenario_family"],0)+1
+  for t in tr["turns"]:
+   family_counts[t["scenario_family"]]=family_counts.get(t["scenario_family"],0)+1
+   generalization_counts[t["generalization_class"]]=generalization_counts.get(t["generalization_class"],0)+1
  manifest={
   "truth":"whole_home_long_trajectory_generalization_v3",
   "generator_version":"long-trajectory-v3.1","release_id":a.release_id,
   "seed":seed,"base_seed":BASE_SEED,"trajectories":len(rows),"turns":sum(len(x["turns"]) for x in rows),
   "split_counts":split_counts,"scenario_family_counts":family_counts,
+  "generalization_class_counts":generalization_counts,
   "devices_per_home":len(ROOMS)*len(DEVICES),"rooms":ROOMS,"device_types":list(DEVICES),
   "sealed_surface_templates_disjoint":True,
   "sha256":hashlib.sha256(raw).hexdigest()
