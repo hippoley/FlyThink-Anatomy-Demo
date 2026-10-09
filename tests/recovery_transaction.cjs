@@ -117,6 +117,22 @@ function driver({
 
   {
     const runtime=baseRuntime();
+    const out=await runRecoveryTransaction(runtime,{
+      target,
+      driver:driver({afterPct:-1}),
+      safe_patch:{op:"PATCH_SLOT",target,slot:"opening",value:0},
+      expected_hardware_identity:"hw-1",
+      safe_position_max_pct:0
+    });
+    assert.equal(out.ok,false);
+    assert.equal(out.reason,"recovery_safe_position_not_verified");
+    assert.equal(out.proof,null);
+    assert.equal(isQuarantined(out.runtime,target),true,
+      "out-of-range physical readback must not be interpreted as a safer position");
+  }
+
+  {
+    const runtime=baseRuntime();
     const d=driver({afterPct:0});
     d.execute=async(patch)=>({
       id:"recovery-cmd-stale-observation",
@@ -280,7 +296,7 @@ function driver({
 
   console.log(JSON.stringify({
     ok:true,
-    cases:12,
+    cases:13,
     contract:"RecoveryTransaction restores trust only after readiness, same-target safety action, fresh readback, stable identity, and verified safe position"
   }));
 })().catch(e=>{console.error(e);process.exit(1)});
