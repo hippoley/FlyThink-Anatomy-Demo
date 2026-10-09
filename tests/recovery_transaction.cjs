@@ -294,9 +294,31 @@ function driver({
     );
   }
 
+  {
+    const runtime=baseRuntime();
+    let boundaryCalls=0;
+    const mustNotReach={
+      async readiness(){boundaryCalls++;throw new Error("must_not_reach_readiness");},
+      async state(){boundaryCalls++;throw new Error("must_not_reach_state");},
+      async execute(){boundaryCalls++;throw new Error("must_not_reach_execute");}
+    };
+    await assert.rejects(
+      ()=>runRecoveryTransaction(runtime,{
+        target,
+        driver:mustNotReach,
+        safe_patch:{op:"PATCH_SLOT",target,slot:"opening",value:0},
+        safe_position_max_pct:100
+      }),
+      /recovery_safe_position_policy_override_forbidden/
+    );
+    assert.equal(boundaryCalls,0,
+      "caller-controlled safe threshold must be rejected before any physical/readiness boundary");
+    assert.equal(isQuarantined(runtime,target),true);
+  }
+
   console.log(JSON.stringify({
     ok:true,
-    cases:13,
+    cases:14,
     contract:"RecoveryTransaction restores trust only after readiness, same-target safety action, fresh readback, stable identity, and verified safe position"
   }));
 })().catch(e=>{console.error(e);process.exit(1)});
