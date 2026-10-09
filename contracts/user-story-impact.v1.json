@@ -70,6 +70,10 @@
     "benchmark-v3-quality": [
       "python",
       "scripts/check_benchmark_v3_contract.py"
+    ],
+    "external-authorization-trust": [
+      "node",
+      "tests/external_authorization_trust.cjs"
     ]
   },
   "stories": {
@@ -290,11 +294,19 @@
       ],
       "paths": [
         "interop/kontxt-txntoken-trust/**",
-        "docs/standards/kontxt-txntoken-trust.md"
+        "docs/standards/kontxt-txntoken-trust.md",
+        "scripts/external_authorization_trust.cjs",
+        "tests/external_authorization_trust.cjs",
+        "scripts/flythink_execution_runtime.cjs",
+        "scripts/execution_receipt.cjs"
       ],
       "suites": [
         "execution-runtime",
-        "claim-scope"
+        "claim-scope",
+        "external-authorization-trust",
+        "execution-receipt",
+        "proof-bundle",
+        "authorization-ledger"
       ]
     },
     "execution.quarantine": {
@@ -418,10 +430,19 @@
       "paths": [
         "interop/kontxt-txntoken-trust/**",
         "docs/standards/kontxt-txntoken-trust.md",
-        "scripts/claim_scope_report.cjs"
+        "scripts/claim_scope_report.cjs",
+        "scripts/external_authorization_trust.cjs",
+        "tests/external_authorization_trust.cjs",
+        "scripts/flythink_execution_runtime.cjs",
+        "scripts/execution_receipt.cjs"
       ],
       "suites": [
-        "claim-scope"
+        "claim-scope",
+        "external-authorization-trust",
+        "execution-runtime",
+        "execution-receipt",
+        "proof-bundle",
+        "authorization-ledger"
       ]
     },
     "execution.authorization_issuer": {
@@ -431,10 +452,19 @@
       "paths": [
         "interop/kontxt-txntoken-trust/**",
         "docs/standards/kontxt-txntoken-trust.md",
-        "scripts/claim_scope_report.cjs"
+        "scripts/claim_scope_report.cjs",
+        "scripts/external_authorization_trust.cjs",
+        "tests/external_authorization_trust.cjs",
+        "scripts/flythink_execution_runtime.cjs",
+        "scripts/execution_receipt.cjs"
       ],
       "suites": [
-        "claim-scope"
+        "claim-scope",
+        "external-authorization-trust",
+        "execution-runtime",
+        "execution-receipt",
+        "proof-bundle",
+        "authorization-ledger"
       ]
     },
     "execution.ambiguous_transport": {

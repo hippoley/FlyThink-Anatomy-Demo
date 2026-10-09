@@ -18,6 +18,9 @@ const {
   verifyExecutionReceipt,
   sha256Object
 }=require("../scripts/flythink_execution_runtime.cjs");
+const {
+  digestObject:externalTrustDigestObject
+}=require("../scripts/external_authorization_trust.cjs");
 
 const L={area:"客厅",entity:"空调",instance:"default"};
 const B={area:"主卧",entity:"空调",instance:"default"};
@@ -119,6 +122,42 @@ function passAuthorizer(counter=null,transform=null,authorizationId=null,overrid
       receipt_sha256:authorizationSha256Object(base)
     };
     return {allow:true,patches:out,receipt};
+  };
+}
+function passAuthorizerWithToken(token="tx-token",...args){
+  const authorizer=passAuthorizer(...args);
+  return async input=>({
+    ...(await authorizer(input)),
+    transaction_token:token
+  });
+}
+function externalTrustVerifier({
+  transactionId="txn-1",
+  issuerAuthenticated=false,
+  offlineReverifiable=false,
+  mutateVerdict=null
+}={}){
+  return async({transaction_token,binding})=>{
+    assert.equal(typeof transaction_token,"string");
+    assert.ok(transaction_token.length>0);
+    const base={
+      schema_version:"flythink-external-authorization-trust-verdict.v1",
+      provider:"test-external-txntoken-verifier",
+      provider_revision:"test-v1",
+      transaction_id:transactionId,
+      token_sha256:"1".repeat(64),
+      trust_anchor_sha256:"2".repeat(64),
+      trust_anchor_source:"deployment:test",
+      binding_sha256:externalTrustDigestObject(binding),
+      cryptographic_validation_verified:true,
+      trust_domain_key_source_verified:true,
+      issuer_authenticated_verified:issuerAuthenticated===true,
+      required_claims_verified:true,
+      flythink_profile_binding_verified:true,
+      ready_for_canonical_execution:true,
+      offline_reverifiable:offlineReverifiable===true
+    };
+    return mutateVerdict?mutateVerdict(base,binding):base;
   };
 }
 
@@ -795,9 +834,206 @@ function passAuthorizer(counter=null,transform=null,authorizationId=null,overrid
     assert.equal(driver.commands.length,0);
   }
 
+  // 20. Required external transaction trust gates execution before dispatch
+  // and retained evidence is bound without upgrading offline trust claims.
+  {
+    const action={op:"PATCH_SLOT",target:B,slot:"temperature",value:19};
+    const driver=new MockThingDriver(initial);
+    const ledger=freshLedger();
+    const p=proposal([action]);
+    p.strategy.world_snapshot_sha256="c".repeat(64);
+    const out=await runExecutionProposal({
+      runtime:initial,
+      contextual_state:context,
+      request:request([action]),
+      proposal:p,
+      driver,
+      physicalAuthorizer:passAuthorizerWithToken(),
+      authorizationLedger:ledger,
+      source_revision:7,
+      world_snapshot_sha256:"c".repeat(64),
+      require_external_authorization_trust:true,
+      externalAuthorizationTrustVerifier:externalTrustVerifier({
+        transactionId:"txn-runtime-pass"
+      })
+    });
+    assert.equal(out.ok,true);
+    assert.equal(driver.commands.length,1);
+    assert.equal(out.external_authorization_trust.runtime_enforced,true);
+    assert.equal(
+      ledger.has("txntoken:txn-runtime-pass"),
+      true
+    );
+    const verified=verifyExecutionReceipt(out.receipt,{
+      contextual_state:context,
+      request:request([action]),
+      proposal:p,
+      before_runtime:initial,
+      after_runtime:out.runtime
+    });
+    assert.equal(
+      verified.authorization_external_trust_evidence_bound_verified,
+      true
+    );
+    assert.equal(
+      verified.authorization_external_trust_offline_reverifiable,
+      false
+    );
+    assert.equal(
+      verified.authorization_trust_domain_key_source_verified,
+      false
+    );
+  }
+
+  // 21. Required trust with no configured verifier fails before driver dispatch.
+  {
+    const action={op:"PATCH_SLOT",target:B,slot:"temperature",value:19};
+    const driver=new MockThingDriver(initial);
+    const p=proposal([action]);
+    p.strategy.world_snapshot_sha256="c".repeat(64);
+    const out=await runExecutionProposal({
+      runtime:initial,
+      contextual_state:context,
+      request:request([action]),
+      proposal:p,
+      driver,
+      physicalAuthorizer:passAuthorizerWithToken(),
+      authorizationLedger:freshLedger(),
+      source_revision:7,
+      world_snapshot_sha256:"c".repeat(64),
+      require_external_authorization_trust:true
+    });
+    assert.equal(out.ok,false);
+    assert.equal(out.reason,"external_authorization_trust_verifier_required");
+    assert.equal(driver.commands.length,0);
+  }
+
+  // 22. A verifier verdict bound to anything other than the exact execution
+  // input cannot authorize a physical call.
+  {
+    const action={op:"PATCH_SLOT",target:B,slot:"temperature",value:19};
+    const driver=new MockThingDriver(initial);
+    const p=proposal([action]);
+    p.strategy.world_snapshot_sha256="c".repeat(64);
+    const out=await runExecutionProposal({
+      runtime:initial,
+      contextual_state:context,
+      request:request([action]),
+      proposal:p,
+      driver,
+      physicalAuthorizer:passAuthorizerWithToken(),
+      authorizationLedger:freshLedger(),
+      source_revision:7,
+      world_snapshot_sha256:"c".repeat(64),
+      require_external_authorization_trust:true,
+      externalAuthorizationTrustVerifier:externalTrustVerifier({
+        mutateVerdict:v=>({...v,binding_sha256:"f".repeat(64)})
+      })
+    });
+    assert.equal(out.ok,false);
+    assert.equal(out.reason,"external_authorization_trust_denied");
+    assert.match(out.authorization_error,/binding_mismatch/);
+    assert.equal(driver.commands.length,0);
+  }
+
+  // 23. The externally validated transaction id is single-use independently
+  // of the local authorization receipt id.
+  {
+    const action={op:"PATCH_SLOT",target:B,slot:"temperature",value:19};
+    const driver=new MockThingDriver(initial);
+    const ledger=freshLedger();
+    const p=proposal([action]);
+    p.strategy.world_snapshot_sha256="c".repeat(64);
+    const authorizer=passAuthorizerWithToken("same-token");
+    const args={
+      runtime:initial,
+      contextual_state:context,
+      request:request([action]),
+      proposal:p,
+      driver,
+      physicalAuthorizer:authorizer,
+      authorizationLedger:ledger,
+      source_revision:7,
+      world_snapshot_sha256:"c".repeat(64),
+      require_external_authorization_trust:true,
+      externalAuthorizationTrustVerifier:externalTrustVerifier({
+        transactionId:"txn-single-use"
+      })
+    };
+    const first=await runExecutionProposal(args);
+    assert.equal(first.ok,true);
+    const second=await runExecutionProposal(args);
+    assert.equal(second.ok,false);
+    assert.equal(second.reason,"external_authorization_transaction_replayed");
+    assert.equal(driver.commands.length,1);
+  }
+
+  // 24. Issuer authentication is an optional stricter profile, not implied by
+  // Trust Domain/key-source verification.
+  {
+    const action={op:"PATCH_SLOT",target:B,slot:"temperature",value:19};
+    const driver=new MockThingDriver(initial);
+    const p=proposal([action]);
+    p.strategy.world_snapshot_sha256="c".repeat(64);
+    const out=await runExecutionProposal({
+      runtime:initial,
+      contextual_state:context,
+      request:request([action]),
+      proposal:p,
+      driver,
+      physicalAuthorizer:passAuthorizerWithToken(),
+      authorizationLedger:freshLedger(),
+      source_revision:7,
+      world_snapshot_sha256:"c".repeat(64),
+      require_external_authorization_trust:true,
+      require_external_authorization_issuer:true,
+      externalAuthorizationTrustVerifier:externalTrustVerifier({
+        issuerAuthenticated:false
+      })
+    });
+    assert.equal(out.ok,false);
+    assert.equal(out.reason,"external_authorization_trust_denied");
+    assert.match(out.authorization_error,/issuer_unverified/);
+    assert.equal(driver.commands.length,0);
+  }
+
+  // 25. Per-execution input cannot downgrade a deployment-level trust policy
+  // or inject a replacement verifier.
+  {
+    const action={op:"PATCH_SLOT",target:B,slot:"temperature",value:19};
+    const driver=new MockThingDriver(initial);
+    const runtime=new FlyThinkExecutionRuntime({
+      runtime:initial,
+      driver,
+      physicalAuthorizer:passAuthorizerWithToken(),
+      authorizationLedger:freshLedger(),
+      requireExternalAuthorizationTrust:true,
+      externalAuthorizationTrustVerifier:async()=>{throw new Error("deployment_verifier_denied")}
+    });
+    const p=proposal([action]);
+    p.strategy.world_snapshot_sha256="c".repeat(64);
+    const out=await runtime.execute({
+      contextual_state:context,
+      request:request([action]),
+      proposal:p,
+      source_revision:7,
+      world_snapshot_sha256:"c".repeat(64),
+      // These are deliberately hostile request-time overrides. The facade
+      // must ignore both.
+      require_external_authorization_trust:false,
+      externalAuthorizationTrustVerifier:externalTrustVerifier({
+        transactionId:"txn-attacker-override"
+      })
+    });
+    assert.equal(out.ok,false);
+    assert.equal(out.reason,"external_authorization_trust_denied");
+    assert.match(out.authorization_error,/deployment_verifier_denied/);
+    assert.equal(driver.commands.length,0);
+  }
+
   console.log(JSON.stringify({
     ok:true,
-    cases:20,
+    cases:26,
     contract:"contextual execution proposal -> deterministic authorization -> atomic/single physical execution -> readback, with formal recovery"
   }));
 })().catch(e=>{console.error(e);process.exit(1)});

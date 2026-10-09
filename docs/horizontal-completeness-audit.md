@@ -54,7 +54,7 @@ Dimensions:
 | Exact Context + World identity | V | V | V | V | N | V | V | V | V | V | none |
 | Authorization receipt integrity + action/context binding | V | V | V | V | N | V | V | V | V | V | none at local-integrity scope |
 | Authorization single-use / replay barrier | V | V | V | V | P | V | V | V | V | N | single-host/local-filesystem multi-process atomicity is the verified scope; 8-process same-ID/different-ID contention is a correctness regression, not a throughput benchmark; multi-host/cluster deployment requires an external transactional/unique-constraint store |
-| Authorization Trust Domain / signing-key source | P | N | P | P | N | V | V | P | P | P | external verifier + non-request-controlled trust configuration must reach canonical boundary |
+| Authorization Trust Domain / signing-key source | P | V | P | P | N | V | V | P | P | P | provider-neutral canonical runtime gate + durable transaction replay reservation exist; live path still needs a real provider configured from non-request-controlled deployment trust, and retained evidence is not yet independently cryptographically re-verifiable |
 | Optional authorization issuer identity | P | N | P | P | N | V | V | P | P | P | only applicable when deployment pins issuer; must not be required by default |
 | Ambiguous transport remains INDETERMINATE | V | V | V | V | P | V | V | V | P | V | retained real lost-ACK / ambiguity evidence |
 | Completion requires precommitted criterion + witness | V | V | V | V | P | V | V | V | P | V | retained real Golden Proof |

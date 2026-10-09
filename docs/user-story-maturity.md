@@ -41,7 +41,7 @@ L5a is evidence that the interface can survive outside this repository. It is
 | Untrusted reasoner proposes without actuator authority | L2 | none |
 | Exact Context + World identities are bound to execution | L2 | none |
 | Authorization receipt integrity + action/context binding are re-verified at execution boundary | L2 | current v1 self-hash proves internal integrity/binding only |
-| Authorization Trust Domain / signing-key source | External trust layer pending | real Transaction Token/workload-identity validator bound to trusted deployment/runtime configuration required; current verifier returns `authorization_trust_domain_key_source_verified=false` |
+| Authorization Trust Domain / signing-key source | Canonical gate coded; external provider/live proof pending | provider-neutral runtime gate binds exact execution input and durable transaction replay before dispatch; offline verifier still returns `authorization_trust_domain_key_source_verified=false` until retained cryptographic trust can be independently re-verified |
 | Optional authorization issuer authenticity | External trust layer pending | Txn-Token draft-11 makes `iss` optional; only deployments that pin an issuer should ever promote `authorization_issuer_authenticated_verified=true` |
 | Potential side effect with ambiguous transport stays `INDETERMINATE` | L3 | real lost-ACK evidence would strengthen the claim |
 | Completion requires pre-actuation criterion + fresh identified witness | L3 | retained real-hardware Golden Proof |
