@@ -9,13 +9,10 @@ import (
 
 	"github.com/aramase/kontxt/pkg/keys"
 	"github.com/aramase/kontxt/pkg/token"
-	"github.com/aramase/kontxt/sdk/verify"
 )
 
 func expected() ExpectedBinding {
 	return ExpectedBinding{
-		Issuer:                   "https://tts.example.test",
-		Audience:                 "homeai.example.test",
 		Subject:                  "operator-42",
 		Scope:                    "window:actuate",
 		RequestingWorkload:       "spiffe://example.test/ns/home/sa/flythink",
@@ -28,10 +25,10 @@ func expected() ExpectedBinding {
 	}
 }
 
-func txClaims(e ExpectedBinding) token.Claims {
+func txClaims(trust TrustAnchor, e ExpectedBinding) token.Claims {
 	return token.Claims{
-		Issuer:             e.Issuer,
-		Audience:           e.Audience,
+		Issuer:             trust.Issuer,
+		Audience:           trust.Audience,
 		Subject:            e.Subject,
 		Scope:              e.Scope,
 		RequestingWorkload: e.RequestingWorkload,
@@ -48,7 +45,7 @@ func txClaims(e ExpectedBinding) token.Claims {
 	}
 }
 
-func setup(t *testing.T, audience string) (*keys.Manager, *verify.Verifier) {
+func setupTrust(t *testing.T, issuer, audience string) (*keys.Manager, TrustAnchor) {
 	t.Helper()
 	manager, err := keys.NewManager(2048, 24*time.Hour)
 	if err != nil {
@@ -56,7 +53,12 @@ func setup(t *testing.T, audience string) (*keys.Manager, *verify.Verifier) {
 	}
 	server := httptest.NewServer(manager.JWKSHandler())
 	t.Cleanup(server.Close)
-	return manager, verify.New(server.URL, audience)
+	return manager, TrustAnchor{
+		Issuer:   issuer,
+		JWKSURL:  server.URL,
+		Audience: audience,
+		Source:   "test-pinned-runtime-config",
+	}
 }
 
 func issue(t *testing.T, manager *keys.Manager, claims token.Claims, lifetime time.Duration) string {
@@ -71,36 +73,48 @@ func issue(t *testing.T, manager *keys.Manager, claims token.Claims, lifetime ti
 
 func TestRealKontxtVerifierPlusFlyThinkBindingPasses(t *testing.T) {
 	e := expected()
-	manager, verifier := setup(t, e.Audience)
-	raw := issue(t, manager, txClaims(e), time.Minute)
+	manager, trust := setupTrust(
+		t,
+		"https://tts.example.test",
+		"homeai.example.test",
+	)
+	raw := issue(t, manager, txClaims(trust, e), time.Minute)
 
-	out := VerifyAndBind(context.Background(), verifier, raw, e)
+	out := VerifyAndBind(context.Background(), raw, trust, e)
 
 	if !out.CryptographicValidationVerified ||
-		!out.IssuerAuthenticatedVerified ||
+		!out.IssuerAuthenticatedAgainstConfiguredTrustAnchor ||
 		!out.RequiredClaimsVerified ||
 		!out.FlyThinkProfileBindingVerified ||
-		!out.ReadyForAuthorizationTrust {
+		!out.ReadyForCanonicalTrustIntegration {
 		t.Fatalf("unexpected verdict: %+v", out)
 	}
-	if out.TokenSHA256 == "" {
-		t.Fatal("token hash missing")
+	if out.TokenSHA256 == "" || out.TrustAnchorSHA256 == "" {
+		t.Fatalf("evidence digests missing: %+v", out)
+	}
+	if out.TrustAnchorSource != trust.Source {
+		t.Fatalf("trust-anchor provenance missing: %+v", out)
 	}
 }
 
 func TestKontxtCryptoSuccessDoesNotBypassIssuerBinding(t *testing.T) {
 	e := expected()
-	manager, verifier := setup(t, e.Audience)
-	claims := txClaims(e)
+	manager, trust := setupTrust(
+		t,
+		"https://tts.example.test",
+		"homeai.example.test",
+	)
+	claims := txClaims(trust, e)
 	claims.Issuer = "https://other-issuer.example.test"
 	raw := issue(t, manager, claims, time.Minute)
 
-	out := VerifyAndBind(context.Background(), verifier, raw, e)
+	out := VerifyAndBind(context.Background(), raw, trust, e)
 
 	if !out.CryptographicValidationVerified {
 		t.Fatalf("expected Kontxt crypto verification to pass: %+v", out)
 	}
-	if out.IssuerAuthenticatedVerified || out.ReadyForAuthorizationTrust {
+	if out.IssuerAuthenticatedAgainstConfiguredTrustAnchor ||
+		out.ReadyForCanonicalTrustIntegration {
 		t.Fatalf("issuer mismatch was promoted: %+v", out)
 	}
 	if out.FailureStage != "issuer_binding" {
@@ -108,20 +122,52 @@ func TestKontxtCryptoSuccessDoesNotBypassIssuerBinding(t *testing.T) {
 	}
 }
 
+func TestForgedExpectedIssuerSignedByUntrustedKeyIsBlocked(t *testing.T) {
+	e := expected()
+	_, trust := setupTrust(
+		t,
+		"https://tts.example.test",
+		"homeai.example.test",
+	)
+
+	attacker, err := keys.NewManager(2048, 24*time.Hour)
+	if err != nil {
+		t.Fatal(err)
+	}
+	raw := issue(t, attacker, txClaims(trust, e), time.Minute)
+
+	out := VerifyAndBind(context.Background(), raw, trust, e)
+
+	if out.CryptographicValidationVerified ||
+		out.IssuerAuthenticatedAgainstConfiguredTrustAnchor ||
+		out.ReadyForCanonicalTrustIntegration {
+		t.Fatalf("rogue signer minted configured issuer authenticity: %+v", out)
+	}
+	if out.FailureStage != "external_token_verification" {
+		t.Fatalf("wrong failure stage: %+v", out)
+	}
+}
+
 func TestKontxtCryptoSuccessDoesNotBypassFlyThinkTctxBinding(t *testing.T) {
 	e := expected()
-	manager, verifier := setup(t, e.Audience)
-	claims := txClaims(e)
+	manager, trust := setupTrust(
+		t,
+		"https://tts.example.test",
+		"homeai.example.test",
+	)
+	claims := txClaims(trust, e)
 	claims.TransactionContext["flythink"].(map[string]any)["patch_digest"] =
 		strings.Repeat("f", 64)
 	raw := issue(t, manager, claims, time.Minute)
 
-	out := VerifyAndBind(context.Background(), verifier, raw, e)
+	out := VerifyAndBind(context.Background(), raw, trust, e)
 
-	if !out.CryptographicValidationVerified || !out.IssuerAuthenticatedVerified {
+	if !out.CryptographicValidationVerified ||
+		!out.IssuerAuthenticatedAgainstConfiguredTrustAnchor {
 		t.Fatalf("external verification unexpectedly failed: %+v", out)
 	}
-	if out.FlyThinkProfileBindingVerified || out.ReadyForAuthorizationTrust {
+	if out.FlyThinkProfileBindingVerified ||
+		out.ReadyForCanonicalTrustIntegration {
 		t.Fatalf("tctx mismatch was promoted: %+v", out)
 	}
 	if out.FailureStage != "flythink_tctx_binding" {
@@ -131,31 +177,42 @@ func TestKontxtCryptoSuccessDoesNotBypassFlyThinkTctxBinding(t *testing.T) {
 
 func TestMissingTctxRemainsBlockedAfterValidSignature(t *testing.T) {
 	e := expected()
-	manager, verifier := setup(t, e.Audience)
-	claims := txClaims(e)
+	manager, trust := setupTrust(
+		t,
+		"https://tts.example.test",
+		"homeai.example.test",
+	)
+	claims := txClaims(trust, e)
 	claims.TransactionContext = nil
 	raw := issue(t, manager, claims, time.Minute)
 
-	out := VerifyAndBind(context.Background(), verifier, raw, e)
+	out := VerifyAndBind(context.Background(), raw, trust, e)
 
-	if !out.CryptographicValidationVerified || !out.IssuerAuthenticatedVerified {
+	if !out.CryptographicValidationVerified ||
+		!out.IssuerAuthenticatedAgainstConfiguredTrustAnchor {
 		t.Fatalf("external verification unexpectedly failed: %+v", out)
 	}
-	if out.ReadyForAuthorizationTrust || out.FailureStage != "flythink_tctx_binding" {
+	if out.ReadyForCanonicalTrustIntegration ||
+		out.FailureStage != "flythink_tctx_binding" {
 		t.Fatalf("missing tctx was promoted: %+v", out)
 	}
 }
 
 func TestWrongAudienceFailsInKontxtBeforeFlyThinkProfile(t *testing.T) {
 	e := expected()
-	manager, verifier := setup(t, e.Audience)
-	claims := txClaims(e)
+	manager, trust := setupTrust(
+		t,
+		"https://tts.example.test",
+		"homeai.example.test",
+	)
+	claims := txClaims(trust, e)
 	claims.Audience = "other.example.test"
 	raw := issue(t, manager, claims, time.Minute)
 
-	out := VerifyAndBind(context.Background(), verifier, raw, e)
+	out := VerifyAndBind(context.Background(), raw, trust, e)
 
-	if out.CryptographicValidationVerified || out.ReadyForAuthorizationTrust {
+	if out.CryptographicValidationVerified ||
+		out.ReadyForCanonicalTrustIntegration {
 		t.Fatalf("wrong audience passed external verifier: %+v", out)
 	}
 	if out.FailureStage != "external_token_verification" {
@@ -165,15 +222,37 @@ func TestWrongAudienceFailsInKontxtBeforeFlyThinkProfile(t *testing.T) {
 
 func TestExpiredTokenFailsInKontxtBeforeFlyThinkProfile(t *testing.T) {
 	e := expected()
-	manager, verifier := setup(t, e.Audience)
-	raw := issue(t, manager, txClaims(e), -time.Second)
+	manager, trust := setupTrust(
+		t,
+		"https://tts.example.test",
+		"homeai.example.test",
+	)
+	raw := issue(t, manager, txClaims(trust, e), -time.Second)
 
-	out := VerifyAndBind(context.Background(), verifier, raw, e)
+	out := VerifyAndBind(context.Background(), raw, trust, e)
 
-	if out.CryptographicValidationVerified || out.ReadyForAuthorizationTrust {
+	if out.CryptographicValidationVerified ||
+		out.ReadyForCanonicalTrustIntegration {
 		t.Fatalf("expired token passed external verifier: %+v", out)
 	}
 	if out.FailureStage != "external_token_verification" {
 		t.Fatalf("wrong failure stage: %+v", out)
+	}
+}
+
+func TestTrustAnchorMustBeConfiguredBeforeVerification(t *testing.T) {
+	e := expected()
+	trust := TrustAnchor{
+		Issuer:   "https://tts.example.test",
+		JWKSURL:  "https://jwks.example.test",
+		Audience: "homeai.example.test",
+	}
+
+	out := VerifyAndBind(context.Background(), "not-a-token", trust, e)
+
+	if out.FailureStage != "trust_anchor_configuration" ||
+		out.CryptographicValidationVerified ||
+		out.ReadyForCanonicalTrustIntegration {
+		t.Fatalf("unproven trust anchor was accepted: %+v", out)
 	}
 }
