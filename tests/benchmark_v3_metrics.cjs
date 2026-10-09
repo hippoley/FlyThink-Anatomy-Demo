@@ -28,4 +28,9 @@ assert.equal(strictSuccess({strict_trajectory_exact:true,unsafe_execute:1,wrong_
   clean_prefix_fraction:1/3
  });
 }
-console.log(JSON.stringify({ok:true,contract:"v3 metrics expose decision, patch, state, scenario, difficulty, generalization class, causal clean-prefix safety and repeated strict+safety reliability"}));
+{
+ const b=bucket();
+ addTurn(b,{gold_decision:"EXECUTE",surface_naming_class:"non_standard_alias",instruction_shape:"single_intent"},{outcome:"EXECUTE",ok:true,state_ok:true});
+ assert.deepEqual(finish(b),{turns:1,decision_exact:1,full_patch_exact:1,state_after_turn_exact:1});
+}
+console.log(JSON.stringify({ok:true,contract:"v3 metrics expose decision, patch, state, scenario, difficulty, generalization, robustness slices, causal clean-prefix safety and repeated strict+safety reliability"}));

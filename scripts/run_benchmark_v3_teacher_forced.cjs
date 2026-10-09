@@ -82,7 +82,7 @@ async function evaluate(file,args={}){
   const rows=d.trajectories.filter(x=>split==="all"||x.split===split);
   if(!rows.length)throw new Error("benchmark_split_empty:"+split);
   const client=createCheckpointClient(args);
-  const overall=bucket(),families={},generalization={},difficulty={},taxonomy={},rowsOut=[];
+  const overall=bucket(),families={},generalization={},difficulty={},naming={},shapes={},taxonomy={},rowsOut=[];
   try{
     for(const tr of rows){
       for(let i=0;i<tr.turns.length;i++){
@@ -97,8 +97,10 @@ async function evaluate(file,args={}){
         const fam=turn.scenario_family||"unknown";
         const gen=turn.generalization_class||"unknown";
         const diff=String(turn.difficulty??"unknown");
-        families[fam]??=bucket();generalization[gen]??=bucket();difficulty[diff]??=bucket();
-        add(families[fam],cls.ok);add(generalization[gen],cls.ok);add(difficulty[diff],cls.ok);
+        const nc=turn.surface_naming_class||"legacy_unlabelled";
+        const sh=turn.instruction_shape||"legacy_unlabelled";
+        families[fam]??=bucket();generalization[gen]??=bucket();difficulty[diff]??=bucket();naming[nc]??=bucket();shapes[sh]??=bucket();
+        add(families[fam],cls.ok);add(generalization[gen],cls.ok);add(difficulty[diff],cls.ok);add(naming[nc],cls.ok);add(shapes[sh],cls.ok);
         if(!cls.ok){
           taxonomy[cls.primary]=(taxonomy[cls.primary]||0)+1;
           rowsOut.push({
@@ -122,6 +124,8 @@ async function evaluate(file,args={}){
     by_scenario_family:Object.fromEntries(Object.entries(families).map(([k,v])=>[k,finish(v)])),
     by_generalization_class:Object.fromEntries(Object.entries(generalization).map(([k,v])=>[k,finish(v)])),
     by_difficulty:Object.fromEntries(Object.entries(difficulty).map(([k,v])=>[k,finish(v)])),
+    by_surface_naming_class:Object.fromEntries(Object.entries(naming).map(([k,v])=>[k,finish(v)])),
+    by_instruction_shape:Object.fromEntries(Object.entries(shapes).map(([k,v])=>[k,finish(v)])),
     primary_failure_taxonomy:taxonomy,
     failures:rowsOut
   };

@@ -138,3 +138,34 @@ Starting with revision-style releases such as `2026-10-r2`, V3 uses
 
 This intentionally does **not** rewrite the historical `2026-10` evidence.
 Comparisons must report the release ID and generator/semantic profile together.
+
+
+## Robustness taxonomy for v3.2+
+
+V3.2 adds **surface-only** robustness slices without changing canonical device
+identity or write-set truth.
+
+The taxonomy deliberately separates:
+
+- `single_intent`: one explicit target/action;
+- `multi_intent`: one utterance producing a multi-target write set;
+- `omitted_attribute`: relative/coreference commands whose target/slot must be
+  recovered from gold conversational context;
+- `underspecified_target`: requests whose gold state proves clarification is
+  required;
+- `non_standard_alias`: a non-canonical device surface name mapped to the same
+  canonical target.
+
+Alias vocabularies are split-disjoint. Train uses canonical device names only;
+dev and sealed use different held-out Chinese aliases. The alias changes only
+the utterance surface. `gold_target`, device registry identity and write-set
+oracle remain canonical.
+
+This taxonomy is informed by mature smart-home parsing benchmarks that separate
+multi-intent, omitted-attribute and non-standard naming robustness. FlyThink
+does **not** mix an external English ontology into its canonical score; it
+reuses the evaluation dimension while preserving its own Chinese runtime
+contract.
+
+The published `2026-10` legacy release remains byte-compatible and receives no
+new robustness metadata.

@@ -72,7 +72,7 @@ async function main(){
   graph:arg("--graph"),judgement:arg("--judgement"),semantic:arg("--semantic"),
   physical:arg("--physical")
  });
- const overall=bucket(),families={},difficulties={},generalization={},failures=[],firstFailures=[];
+ const overall=bucket(),families={},difficulties={},generalization={},naming={},shapes={},failures=[],firstFailures=[];
  let unsafe=0,wrong=0,untouched=0,strictTrajectories=0,passAllRepeats=0,totalRuns=0;
  let cleanPrefixTurns=0,cleanPrefixUnsafe=0,cleanPrefixWrong=0,prefixFractionSum=0,noFailureRuns=0;
  const firstFailureTurns=[];
@@ -114,8 +114,10 @@ async function main(){
       const f=turn.scenario_family||"unknown";
       const q=String(turn.difficulty==null?"unknown":turn.difficulty);
       const g=turn.generalization_class||"unknown";
-      families[f]??=bucket();difficulties[q]??=bucket();generalization[g]??=bucket();
-      addTurn(families[f],turn,row);addTurn(difficulties[q],turn,row);addTurn(generalization[g],turn,row);
+      const n=turn.surface_naming_class||"legacy_unlabelled";
+      const sh=turn.instruction_shape||"legacy_unlabelled";
+      families[f]??=bucket();difficulties[q]??=bucket();generalization[g]??=bucket();naming[n]??=bucket();shapes[sh]??=bucket();
+      addTurn(families[f],turn,row);addTurn(difficulties[q],turn,row);addTurn(generalization[g],turn,row);addTurn(naming[n],turn,row);addTurn(shapes[sh],turn,row);
       if((!row.ok||!row.state_ok)&&failures.length<100){
         failures.push({trajectory:tr.id,repeat:rep+1,turn:i+1,split:tr.split,
           family:f,difficulty:turn.difficulty,text:turn.text,gold_decision:turn.gold_decision,
@@ -131,6 +133,8 @@ async function main(){
  const familyMetrics=Object.fromEntries(Object.entries(families).map(([k,v])=>[k,finish(v)]));
  const difficultyMetrics=Object.fromEntries(Object.entries(difficulties).map(([k,v])=>[k,finish(v)]));
  const generalizationMetrics=Object.fromEntries(Object.entries(generalization).map(([k,v])=>[k,finish(v)]));
+ const namingMetrics=Object.fromEntries(Object.entries(naming).map(([k,v])=>[k,finish(v)]));
+ const shapeMetrics=Object.fromEntries(Object.entries(shapes).map(([k,v])=>[k,finish(v)]));
  const familyPatch=Object.values(familyMetrics).filter(x=>x.turns).map(x=>x.full_patch_exact);
  firstFailureTurns.sort((a,b)=>a-b);
  const medianFirstFailure=firstFailureTurns.length
@@ -143,6 +147,8 @@ async function main(){
   by_scenario_family:familyMetrics,
   by_difficulty:difficultyMetrics,
   by_generalization_class:generalizationMetrics,
+  by_surface_naming_class:namingMetrics,
+  by_instruction_shape:shapeMetrics,
   worst_family_full_patch_exact:familyPatch.length?Math.min(...familyPatch):null,
   strict_trajectory_rate:strictTrajectories/totalRuns,
   pass_pow_k:{k:repeats,value:passAllRepeats/rows.length,
