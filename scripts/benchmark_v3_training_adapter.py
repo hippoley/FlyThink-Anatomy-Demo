@@ -20,7 +20,7 @@ def benchmark_rows(release_id=RELEASE_ID,count=COUNT):
   raise ValueError("training_adapter_requires_corrected_v3_profile")
  rng=random.Random(v3.release_seed(release_id))
  rows=[v3.make(i,count,rng,profile) for i in range(count)]
- assert not any(x["split"]=="sealed" for x in rows if x["split"] not in ("train","dev","sealed"))
+ assert set(x["split"] for x in rows)=={"train","dev","sealed"}
  return rows
 
 def context_before(tr,index):
