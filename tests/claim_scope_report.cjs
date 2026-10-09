@@ -63,14 +63,13 @@ test("record integrity does not imply named-human or issuer authentication",()=>
   const out=buildClaimScopeReport(base());
   assert.ok(out.claims.execution_record.does_not_prove.includes("a named human approved the action"));
   assert.ok(out.claims.execution_authorization.does_not_prove.includes("a named human approved the action"));
-  assert.ok(out.claims.execution_authorization.does_not_prove.includes("the authorization trust domain or configured signing-key source was externally verified"));
+  assert.ok(out.claims.execution_authorization.does_not_prove.includes("the authorization receipt was issued by a trusted external authority"));
   assert.equal(out.claims.authorization_trust_domain.status,"UNVERIFIED");
   assert.equal(out.claims.authorization_issuer.status,"UNVERIFIED");
 });
 
-test("caller input cannot mint authorization trust-domain key-source verification",()=>{
+test("caller input cannot mint authorization Trust Domain verification",()=>{
   const v=base();
-  v.verification_source="flythink-canonical-verifier";
   v.authorization_trust_domain_key_source_verified=true;
   const out=buildClaimScopeReport(v);
   assert.equal(out.claims.execution_authorization.status,"VERIFIED");
@@ -80,10 +79,10 @@ test("caller input cannot mint authorization trust-domain key-source verificatio
 
 test("caller input cannot mint authorization issuer authenticity",()=>{
   const v=base();
-  v.verification_source="flythink-canonical-verifier";
   v.authorization_issuer_authenticated_verified=true;
   const out=buildClaimScopeReport(v);
   assert.equal(out.claims.execution_authorization.status,"VERIFIED");
+  assert.equal(out.claims.authorization_trust_domain.status,"UNVERIFIED");
   assert.equal(out.claims.authorization_issuer.status,"UNVERIFIED");
 });
 
