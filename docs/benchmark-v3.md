@@ -169,3 +169,25 @@ contract.
 
 The published `2026-10` legacy release remains byte-compatible and receives no
 new robustness metadata.
+
+
+## External data-quality modules
+
+Benchmark V3 uses two development-only external libraries. Neither is imported
+by the physical execution runtime.
+
+- **RapidFuzz 3.14.6 (MIT)** scans cross-split utterances after masking room,
+  device-name aliases and numeric values. Exact overlap remains prohibited by
+  the core validator; RapidFuzz adds a near-duplicate gate so superficial token
+  substitutions cannot hide template leakage.
+- **Hypothesis 6.168.5 (MPL-2.0)** exercises release-seed determinism, split
+  partition balance, generated gold write-set/state consistency, non-mutating
+  non-EXECUTE turns and corrected existing-device power semantics across
+  generated release IDs and corpus sizes.
+
+Versions are pinned in `requirements-benchmark.txt`. The
+`benchmark-v3-external-quality` suite installs and executes these modules as
+part of the machine-readable User Story impact graph.
+
+They are intentionally kept outside production dependencies: their role is to
+falsify benchmark/data assumptions, not participate in inference or actuation.
