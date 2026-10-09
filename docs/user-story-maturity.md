@@ -40,7 +40,8 @@ L5a is evidence that the interface can survive outside this repository. It is
 | --- | --- | --- |
 | Untrusted reasoner proposes without actuator authority | L2 | none |
 | Exact Context + World identities are bound to execution | L2 | none |
-| Authorization is re-verified at execution boundary | L2 | none |
+| Authorization receipt integrity + action/context binding are re-verified at execution boundary | L2 | current v1 self-hash proves internal integrity/binding only |
+| Authorization issuer authenticity | External trust layer pending | real Transaction Token/workload-identity validator or equivalent issuer-authenticated mechanism required; current verifier returns `authorization_issuer_authenticated_verified=false` |
 | Potential side effect with ambiguous transport stays `INDETERMINATE` | L3 | real lost-ACK evidence would strengthen the claim |
 | Completion requires pre-actuation criterion + fresh identified witness | L3 | retained real-hardware Golden Proof |
 | Third party can verify retained evidence offline | L4 for frozen fixtures | real-hardware proof still pending; bundle integrity alone is not issuer authentication |
@@ -54,6 +55,7 @@ L5a is evidence that the interface can survive outside this repository. It is
 - Event capabilities are not commands.
 - FlyThink does not own persistent semantic conversation/task truth.
 - Authorization success is not physical completion.
+- Authorization receipt integrity/binding is not authorization issuer authenticity.
 
 ## Current reality gates
 
