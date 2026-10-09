@@ -38,7 +38,7 @@ def test_split_partition_is_total_and_balanced(count):
 def test_generated_gold_write_set_matches_state_delta(release_id,count):
  rng=random.Random(g.release_seed(release_id))
  for i in range(count):
-  tr=g.make(i,count,rng,release_id=release_id)
+  tr=g.make(i,count,rng,g.semantic_profile(release_id))
   prev={k:copy.deepcopy(v["slots"]) for k,v in tr["initial_runtime"]["devices"].items()}
   for turn in tr["turns"]:
    after={k:{"slots":copy.deepcopy(v)} for k,v in turn["gold_state"].items()}
@@ -53,7 +53,7 @@ def test_generated_gold_write_set_matches_state_delta(release_id,count):
 @given(release_ids)
 def test_corrected_profiles_do_not_use_add_device_for_existing_power_on(release_id):
  rng=random.Random(g.release_seed(release_id))
- rows=[g.make(i,60,rng,release_id=release_id) for i in range(60)]
+ rows=[g.make(i,60,rng,g.semantic_profile(release_id)) for i in range(60)]
  for tr in rows:
   existing=set(tr["initial_runtime"]["devices"])
   for turn in tr["turns"]:
