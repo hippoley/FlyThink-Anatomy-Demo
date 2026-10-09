@@ -76,7 +76,8 @@ function assertNotProtected(runtime, target, slot) {
 function writeSlot(runtime, target, slot, value) {
   if (!slot) throw new Error("patch_requires_slot");
   assertNotProtected(runtime, target, slot);
-  const device = ensureDevice(runtime, target);
+  const device = activeDevice(runtime, target);
+  if (!device) throw new Error("patch_target_not_found");
   const before = Object.prototype.hasOwnProperty.call(device.slots, slot) ? clone(device.slots[slot]) : undefined;
   device.slots[slot] = clone(value);
   return {path: slotKey(target, slot), before, after: clone(value)};
