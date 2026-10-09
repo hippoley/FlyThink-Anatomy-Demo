@@ -2,9 +2,9 @@
 """Frozen whole-home incremental-patch supervision.
 
 This suite teaches/evaluates the semantic distinction between adding another
-device, patching a slot, replacing a target, closing, removing, cancelling a
-pending action, undoing an executed action, protecting an invariant and
-operating on an explicit set.
+device, patching a slot, applying a relative patch, replacing a target,
+closing, removing, cancelling a pending action, undoing an executed action,
+protecting an invariant and operating on an explicit set.
 
 Gold labels are patches, never regenerated whole-home snapshots.
 """
@@ -31,6 +31,10 @@ FAMILIES={
   ("客厅空调打开，温度24度，制冷模式", [patch("ADD_DEVICE",target=LIVING_AC,slots={"power":"ON","temperature":24,"mode":"COOL"})]),
   ("温度调到22度", [patch("PATCH_SLOT",target=LIVING_AC,slot="temperature",value=22)]),
  ],
+ "relative_patch":[
+  ("客厅空调温度现在24度", [patch("ADD_DEVICE",target=LIVING_AC,slots={"power":"ON","temperature":24})]),
+  ("再低一点", [patch("PATCH_RELATIVE",target=LIVING_AC,slot="temperature",delta=-1)]),
+ ],
  "explicit_replace":[
   ("打开客厅空调", [patch("ADD_DEVICE",target=LIVING_AC,slots={"power":"ON"})]),
   ("不是客厅，是卧室", [patch("REPLACE_TARGET",**{"from":LIVING_AC,"to":BEDROOM_AC,"remove_old":True},slots={"power":"ON"})]),
@@ -53,7 +57,7 @@ FAMILIES={
  ],
  "protect_invariant":[
   ("客厅空调保持不变", [patch("PROTECT",target=LIVING_AC,slot="*",reason="explicit_keep_unchanged")]),
-  ("卧室空调调低一点", [patch("PATCH_SLOT",target=BEDROOM_AC,slot="temperature",value={"relative":"lower"})]),
+  ("卧室空调调低一点", [patch("PATCH_RELATIVE",target=BEDROOM_AC,slot="temperature",delta=-1)]),
  ],
  "set_operation":[
   ("打开客厅空调和卧室空调", [
@@ -67,7 +71,7 @@ FAMILIES={
   ("客厅窗户开一半，同时打开卧室灯", [
     patch("ADD_DEVICE",target=LIVING_WINDOW,slots={"opening":50}),
     patch("ADD_DEVICE",target=BEDROOM_LIGHT,slots={"power":"ON"})]),
-  ("这个也调低一点", [patch("PATCH_SLOT",target=LIVING_WINDOW,slot="opening",value={"relative":"lower"})]),
+  ("这个也调低一点", [patch("PATCH_RELATIVE",target=LIVING_WINDOW,slot="opening",delta=-1)]),
  ],
 }
 
@@ -82,8 +86,9 @@ def build():
               "executed_ids": ["exec:living-ac-temp"] if family=="undo_executed" and index==2 else [],
               "referent_set": [LIVING_AC, BEDROOM_AC] if family=="set_operation" and index==2 else [],
               "focused_target": (
-                LIVING_AC if family in {"slot_minimality","explicit_replace","close_not_remove","undo_executed"} and index==2
+                LIVING_AC if family in {"slot_minimality","relative_patch","explicit_replace","close_not_remove","undo_executed"} and index==2
                 else LIVING_WINDOW if family=="cross_device_preservation" and index==2
+                else BEDROOM_AC if family=="protect_invariant" and index==2
                 else None
               ),
             }
@@ -103,7 +108,7 @@ def build():
       "semantic_unit":"minimal_patch_not_full_state_regeneration",
       "families":len(episodes),
       "turns":sum(len(x["turns"]) for x in episodes),
-      "required_operations":["ADD_DEVICE","PATCH_SLOT","CLOSE_DEVICE","REMOVE_DEVICE","REPLACE_TARGET","CANCEL_PENDING","UNDO_EXECUTED","PROTECT"],
+      "required_operations":["ADD_DEVICE","PATCH_SLOT","PATCH_RELATIVE","CLOSE_DEVICE","REMOVE_DEVICE","REPLACE_TARGET","CANCEL_PENDING","UNDO_EXECUTED","PROTECT"],
       "hard_invariant":"untouched_state_preservation_100_percent",
       "episodes":episodes,
     }
