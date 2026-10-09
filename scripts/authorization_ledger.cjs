@@ -151,10 +151,15 @@ class FileAuthorizationLedger{
         if(err&&err.code==="EEXIST")return false;
         throw err;
       }
+      let reservationDirFd;
       try{
-        const dirFd=fs.openSync(this.reservationsDir,"r");
-        try{fs.fsyncSync(dirFd)}finally{fs.closeSync(dirFd)}
-      }catch(_){}
+        reservationDirFd=fs.openSync(this.reservationsDir,"r");
+        fs.fsyncSync(reservationDirFd);
+      }finally{
+        if(reservationDirFd!=null){
+          try{fs.closeSync(reservationDirFd)}catch(_){}
+        }
+      }
     }finally{
       if(reservationFd!=null){
         try{fs.closeSync(reservationFd)}catch(_){}
