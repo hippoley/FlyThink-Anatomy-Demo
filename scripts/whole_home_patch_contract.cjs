@@ -108,9 +108,12 @@ function closeDevice(runtime, patch) {
 function cancelPending(runtime, patch) {
   const id = patch.pending_id || patch.task_id;
   if (!id) throw new Error("cancel_pending_requires_id");
-  const before = clone(runtime.pending[id]);
-  if (runtime.pending[id]) runtime.pending[id].status = "cancelled";
-  return {path: "pending::" + id, before, after: clone(runtime.pending[id])};
+  const current = runtime.pending[id];
+  if (!current) throw new Error("cancel_pending_not_found");
+  if (current.status !== "pending") throw new Error("cancel_pending_not_pending");
+  const before = clone(current);
+  current.status = "cancelled";
+  return {path: "pending::" + id, before, after: clone(current)};
 }
 
 function undoExecuted(runtime, patch) {
