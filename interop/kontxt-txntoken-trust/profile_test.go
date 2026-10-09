@@ -330,3 +330,42 @@ func TestTrustAnchorMustBeConfiguredBeforeVerification(t *testing.T) {
 		t.Fatalf("unproven trust anchor was accepted: %+v", out)
 	}
 }
+
+func TestRemoteHTTPJWKSIsRejectedBeforeExternalVerification(t *testing.T) {
+	e := expected()
+	trust := TrustAnchor{
+		JWKSURL:  "http://jwks.example.test/keys",
+		Audience: "homeai.example.test",
+		Source:   "runtime-config",
+	}
+
+	out := VerifyAndBind(context.Background(), "not-a-token", trust, e)
+
+	if out.FailureStage != "trust_anchor_configuration" ||
+		out.CryptographicValidationVerified ||
+		out.TrustDomainKeySourceVerified ||
+		out.ReadyForCanonicalTrustIntegration {
+		t.Fatalf("remote plaintext JWKS trust anchor was accepted: %+v", out)
+	}
+	if !strings.Contains(out.FailureReason, "must use https") {
+		t.Fatalf("unexpected failure reason: %+v", out)
+	}
+}
+
+func TestJWKSURLWithUserinfoIsRejected(t *testing.T) {
+	e := expected()
+	trust := TrustAnchor{
+		JWKSURL:  "https://user:secret@jwks.example.test/keys",
+		Audience: "homeai.example.test",
+		Source:   "runtime-config",
+	}
+
+	out := VerifyAndBind(context.Background(), "not-a-token", trust, e)
+
+	if out.FailureStage != "trust_anchor_configuration" ||
+		out.CryptographicValidationVerified ||
+		out.TrustDomainKeySourceVerified ||
+		out.ReadyForCanonicalTrustIntegration {
+		t.Fatalf("JWKS URL with embedded credentials was accepted: %+v", out)
+	}
+}
