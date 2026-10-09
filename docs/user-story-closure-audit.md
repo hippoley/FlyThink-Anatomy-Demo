@@ -98,13 +98,17 @@ No additional synthetic abstraction work should be credited toward this gate.
 ### 2. External authorization trust: Trust Domain first, issuer only when profiled
 
 The current SpatialRuntime authorization receipt proves internal integrity and
-application binding, not issuer authority.
+application binding. It does **not** establish an externally governed Trust Domain
+or configured signing-key source, and it does not authenticate an optional issuer
+identity merely because an `iss` string is present.
 
 The next valid transition is:
 
 ```text
-externally validated short-lived transaction/workload identity
+trusted deployment/runtime Trust Domain + signing-key source
+-> externally validated short-lived Transaction Token / workload identity
 -> immutable validated-claims envelope
+-> optional issuer check only when the profile pins an issuer
 -> FlyThink physical-action binding profile
 -> execution boundary
 ```
