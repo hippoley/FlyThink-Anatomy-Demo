@@ -102,6 +102,8 @@ function deriveVerification(artifacts){
       physical_truth_verified:execution.physical_truth_verified,
       physical_completion_verified:execution.physical_completion_verified,
       safe_closeout_verified:execution.safe_closeout_verified,
+      authorization_trust_domain_key_source_verified:
+        execution.authorization_trust_domain_key_source_verified===true,
       authorization_issuer_authenticated_verified:
         execution.authorization_issuer_authenticated_verified===true,
       independent_object_outcome_verified:
@@ -182,7 +184,13 @@ function verifyExecutionProofBundle(bundle={}){
   const expectedVerification=deriveVerification(bundle.artifacts);
   // Additive v1 evolution: accept older stored verification blocks, but
   // recompute the current verdicts from the retained artifacts before return.
-  const preObjectIndependenceVerification=clone(expectedVerification);
+  // Additive chronology is newest-first. The immediately previous generation
+  // had issuer + independent-object claims but not the new trust-domain claim.
+  const preTrustDomainVerification=clone(expectedVerification);
+  if(preTrustDomainVerification&&preTrustDomainVerification.execution){
+    delete preTrustDomainVerification.execution.authorization_trust_domain_key_source_verified;
+  }
+  const preObjectIndependenceVerification=clone(preTrustDomainVerification);
   if(preObjectIndependenceVerification&&preObjectIndependenceVerification.execution){
     delete preObjectIndependenceVerification.execution.independent_object_outcome_verified;
   }
@@ -201,6 +209,7 @@ function verifyExecutionProofBundle(bundle={}){
   const verificationDigest=digestObject(bundle.verification);
   const verificationMatches=
     verificationDigest===digestObject(expectedVerification)||
+    verificationDigest===digestObject(preTrustDomainVerification)||
     verificationDigest===digestObject(preObjectIndependenceVerification)||
     verificationDigest===digestObject(preIssuerAuthVerification)||
     verificationDigest===digestObject(completionOnlyVerification)||
@@ -224,6 +233,8 @@ function verifyExecutionProofBundle(bundle={}){
       expectedVerification.execution.physical_completion_verified,
     safe_closeout_verified:
       expectedVerification.execution.safe_closeout_verified,
+    authorization_trust_domain_key_source_verified:
+      expectedVerification.execution.authorization_trust_domain_key_source_verified===true,
     authorization_issuer_authenticated_verified:
       expectedVerification.execution.authorization_issuer_authenticated_verified===true,
     independent_object_outcome_verified:
