@@ -1,0 +1,392 @@
+{
+  "schema_version": "user-story-impact.v1",
+  "generated_from": [
+    "docs/user-story-closure-audit.md",
+    "docs/horizontal-completeness-audit.md"
+  ],
+  "suites": {
+    "state-contract": [
+      "node",
+      "tests/commit_gate.cjs"
+    ],
+    "state-runtime": [
+      "node",
+      "tests/home_goal_runtime.cjs"
+    ],
+    "streaming-state": [
+      "node",
+      "tests/streaming_slu_e2e.cjs"
+    ],
+    "execution-runtime": [
+      "node",
+      "tests/flythink_execution_runtime.cjs"
+    ],
+    "authorization-ledger": [
+      "node",
+      "scripts/test_authorization_ledger.cjs"
+    ],
+    "physical-runtime": [
+      "node",
+      "tests/physical_runtime.cjs"
+    ],
+    "physical-recovery": [
+      "node",
+      "tests/recovery_transaction.cjs"
+    ],
+    "atomic-physical": [
+      "node",
+      "scripts/test_atomic_physical_set.cjs"
+    ],
+    "execution-receipt": [
+      "node",
+      "tests/execution_receipt.cjs"
+    ],
+    "proof-bundle": [
+      "node",
+      "tests/execution_proof_bundle.cjs"
+    ],
+    "claim-scope": [
+      "node",
+      "--test",
+      "tests/claim_scope_report.cjs"
+    ],
+    "external-completion": [
+      "node",
+      "tests/physical_completion_external_rail.cjs"
+    ],
+    "decision-proposal": [
+      "node",
+      "tests/decision_proposal_contract.cjs"
+    ],
+    "context-identity": [
+      "node",
+      "tests/contextual_edge_slu_adapter.cjs"
+    ]
+  },
+  "stories": {
+    "home.add_target": {
+      "depends_on": [],
+      "paths": [
+        "scripts/whole_home_patch_contract.cjs",
+        "scripts/home_goal_runtime.cjs",
+        "tests/home_goal_runtime.cjs"
+      ],
+      "suites": [
+        "state-contract",
+        "state-runtime"
+      ]
+    },
+    "home.patch_slot": {
+      "depends_on": [
+        "home.add_target"
+      ],
+      "paths": [
+        "scripts/whole_home_patch_contract.cjs",
+        "scripts/commit_gate.cjs",
+        "tests/commit_gate.cjs"
+      ],
+      "suites": [
+        "state-contract",
+        "state-runtime"
+      ]
+    },
+    "home.patch_relative": {
+      "depends_on": [
+        "home.patch_slot"
+      ],
+      "paths": [
+        "scripts/whole_home_patch_contract.cjs",
+        "scripts/home_goal_runtime.cjs"
+      ],
+      "suites": [
+        "state-contract",
+        "state-runtime"
+      ]
+    },
+    "home.close_device": {
+      "depends_on": [
+        "home.patch_slot"
+      ],
+      "paths": [
+        "scripts/whole_home_patch_contract.cjs",
+        "scripts/physical_runtime.cjs"
+      ],
+      "suites": [
+        "state-contract",
+        "physical-runtime"
+      ]
+    },
+    "home.remove_target": {
+      "depends_on": [
+        "home.add_target"
+      ],
+      "paths": [
+        "scripts/whole_home_patch_contract.cjs"
+      ],
+      "suites": [
+        "state-contract"
+      ]
+    },
+    "home.replace_target": {
+      "depends_on": [
+        "home.add_target",
+        "context.identity"
+      ],
+      "paths": [
+        "scripts/context_target_resolver.py",
+        "scripts/context_patch_composer.py",
+        "scripts/whole_home_patch_contract.cjs"
+      ],
+      "suites": [
+        "state-contract",
+        "context-identity"
+      ]
+    },
+    "home.cancel_pending": {
+      "depends_on": [
+        "context.identity"
+      ],
+      "paths": [
+        "scripts/streaming_slu_e2e.cjs",
+        "tests/streaming_slu_e2e.cjs"
+      ],
+      "suites": [
+        "streaming-state"
+      ]
+    },
+    "home.undo": {
+      "depends_on": [
+        "execution.proof_bundle",
+        "execution.authorization_replay"
+      ],
+      "paths": [
+        "scripts/proof_derived_undo.cjs",
+        "tests/proof_derived_undo.cjs"
+      ],
+      "suites": [
+        "execution-runtime",
+        "authorization-ledger",
+        "proof-bundle"
+      ]
+    },
+    "home.protect_untouched": {
+      "depends_on": [
+        "home.patch_slot"
+      ],
+      "paths": [
+        "scripts/whole_home_patch_contract.cjs",
+        "tests/commit_gate.cjs"
+      ],
+      "suites": [
+        "state-contract"
+      ]
+    },
+    "home.multi_target_set": {
+      "depends_on": [
+        "execution.authorization_replay",
+        "execution.quarantine"
+      ],
+      "paths": [
+        "scripts/atomic_physical_set.cjs",
+        "scripts/physical_transaction_router.cjs",
+        "scripts/test_atomic_physical_set.cjs"
+      ],
+      "suites": [
+        "atomic-physical",
+        "physical-runtime"
+      ]
+    },
+    "home.coreference_clarification": {
+      "depends_on": [
+        "context.identity"
+      ],
+      "paths": [
+        "scripts/context_target_resolver.py",
+        "scripts/context_slot_resolver.py",
+        "scripts/context_patch_composer.py"
+      ],
+      "suites": [
+        "context-identity",
+        "streaming-state"
+      ]
+    },
+    "home.interruption_resume": {
+      "depends_on": [
+        "context.identity"
+      ],
+      "paths": [
+        "scripts/streaming_slu_e2e.cjs",
+        "scripts/stateful_checkpoint_trajectory.cjs"
+      ],
+      "suites": [
+        "streaming-state"
+      ]
+    },
+    "context.identity": {
+      "depends_on": [],
+      "paths": [
+        "scripts/contextual_edge_slu_adapter.cjs",
+        "scripts/runtime_context_adapter.cjs",
+        "tests/contextual_edge_slu_adapter.cjs"
+      ],
+      "suites": [
+        "context-identity"
+      ]
+    },
+    "execution.untrusted_reasoner_boundary": {
+      "depends_on": [
+        "context.identity"
+      ],
+      "paths": [
+        "scripts/decision_proposal_contract.cjs",
+        "scripts/execution_reasoning_contract.cjs"
+      ],
+      "suites": [
+        "decision-proposal",
+        "execution-runtime"
+      ]
+    },
+    "execution.authorization_binding": {
+      "depends_on": [
+        "execution.untrusted_reasoner_boundary"
+      ],
+      "paths": [
+        "scripts/spatialruntime_authorizer.cjs",
+        "scripts/flythink_execution_runtime.cjs"
+      ],
+      "suites": [
+        "execution-runtime",
+        "execution-receipt"
+      ]
+    },
+    "execution.authorization_replay": {
+      "depends_on": [
+        "execution.authorization_binding"
+      ],
+      "paths": [
+        "scripts/authorization_ledger.cjs",
+        "scripts/atomic_authorized_commit.cjs",
+        "scripts/proof_derived_undo.cjs",
+        "scripts/flythink_execution_runtime.cjs"
+      ],
+      "suites": [
+        "authorization-ledger",
+        "execution-runtime"
+      ]
+    },
+    "execution.transaction_trust": {
+      "depends_on": [
+        "execution.authorization_binding",
+        "execution.authorization_replay"
+      ],
+      "paths": [
+        "interop/kontxt-txntoken-trust/**",
+        "docs/standards/kontxt-txntoken-trust.md"
+      ],
+      "suites": [
+        "execution-runtime",
+        "claim-scope"
+      ]
+    },
+    "execution.quarantine": {
+      "depends_on": [
+        "execution.authorization_binding"
+      ],
+      "paths": [
+        "scripts/physical_runtime.cjs",
+        "scripts/recovery_transaction.cjs"
+      ],
+      "suites": [
+        "physical-runtime",
+        "physical-recovery",
+        "execution-runtime"
+      ]
+    },
+    "execution.physical_completion": {
+      "depends_on": [
+        "execution.authorization_binding",
+        "execution.quarantine"
+      ],
+      "paths": [
+        "scripts/execution_receipt.cjs",
+        "scripts/verify_physical_completion_vector_cli.cjs",
+        "interop/physical-completion/**"
+      ],
+      "suites": [
+        "execution-receipt",
+        "external-completion"
+      ]
+    },
+    "execution.independent_object_outcome": {
+      "depends_on": [
+        "execution.physical_completion"
+      ],
+      "paths": [
+        "scripts/execution_receipt.cjs",
+        "scripts/claim_scope_report.cjs"
+      ],
+      "suites": [
+        "execution-receipt",
+        "claim-scope"
+      ]
+    },
+    "execution.proof_bundle": {
+      "depends_on": [
+        "execution.physical_completion"
+      ],
+      "paths": [
+        "scripts/execution_proof_bundle.cjs",
+        "contracts/execution-proof-bundle.v1.schema.json"
+      ],
+      "suites": [
+        "proof-bundle",
+        "claim-scope"
+      ]
+    },
+    "execution.claim_scope": {
+      "depends_on": [
+        "execution.authorization_binding",
+        "execution.physical_completion",
+        "execution.proof_bundle"
+      ],
+      "paths": [
+        "scripts/claim_scope_report.cjs",
+        "interop/claim-scope/**",
+        "docs/standards/claim-scope-execution-evidence.md"
+      ],
+      "suites": [
+        "claim-scope",
+        "proof-bundle"
+      ]
+    },
+    "execution.external_completion_rail": {
+      "depends_on": [
+        "execution.physical_completion"
+      ],
+      "paths": [
+        "scripts/evc_physical_completion_verifier.cjs",
+        "interop/evc-physical-completion/**"
+      ],
+      "suites": [
+        "external-completion"
+      ]
+    },
+    "execution.golden_proof": {
+      "depends_on": [
+        "execution.authorization_replay",
+        "execution.proof_bundle",
+        "execution.physical_completion"
+      ],
+      "paths": [
+        "scripts/run_acoustic_windowpilot_e2e.cjs",
+        "tests/acoustic_windowpilot_live_probe.cjs",
+        "tests/golden_proof_closeout.cjs"
+      ],
+      "suites": [
+        "execution-runtime",
+        "execution-receipt",
+        "proof-bundle"
+      ]
+    }
+  }
+}
