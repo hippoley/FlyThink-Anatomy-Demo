@@ -43,7 +43,7 @@ async function main(){
   graph:arg("--graph"),judgement:arg("--judgement"),semantic:arg("--semantic"),
   physical:arg("--physical")
  });
- const overall=bucket(),families={},difficulties={},failures=[];
+ const overall=bucket(),families={},difficulties={},generalization={},failures=[];
  let unsafe=0,wrong=0,untouched=0,strictTrajectories=0,passAllRepeats=0,totalRuns=0;
  try{
   for(const tr of rows){
@@ -61,8 +61,9 @@ async function main(){
       addTurn(overall,turn,row);
       const f=turn.scenario_family||"unknown";
       const q=String(turn.difficulty==null?"unknown":turn.difficulty);
-      families[f]??=bucket();difficulties[q]??=bucket();
-      addTurn(families[f],turn,row);addTurn(difficulties[q],turn,row);
+      const g=turn.generalization_class||"unknown";
+      families[f]??=bucket();difficulties[q]??=bucket();generalization[g]??=bucket();
+      addTurn(families[f],turn,row);addTurn(difficulties[q],turn,row);addTurn(generalization[g],turn,row);
       if((!row.ok||!row.state_ok)&&failures.length<100){
         failures.push({trajectory:tr.id,repeat:rep+1,turn:i+1,split:tr.split,
           family:f,difficulty:turn.difficulty,text:turn.text,gold_decision:turn.gold_decision,
@@ -77,6 +78,7 @@ async function main(){
 
  const familyMetrics=Object.fromEntries(Object.entries(families).map(([k,v])=>[k,finish(v)]));
  const difficultyMetrics=Object.fromEntries(Object.entries(difficulties).map(([k,v])=>[k,finish(v)]));
+ const generalizationMetrics=Object.fromEntries(Object.entries(generalization).map(([k,v])=>[k,finish(v)]));
  const familyPatch=Object.values(familyMetrics).filter(x=>x.turns).map(x=>x.full_patch_exact);
  const out={
   truth:"whole_home_long_trajectory_generalization_eval_v3",
@@ -84,6 +86,7 @@ async function main(){
   overall:finish(overall),
   by_scenario_family:familyMetrics,
   by_difficulty:difficultyMetrics,
+  by_generalization_class:generalizationMetrics,
   worst_family_full_patch_exact:familyPatch.length?Math.min(...familyPatch):null,
   strict_trajectory_rate:strictTrajectories/totalRuns,
   pass_pow_k:{k:repeats,value:passAllRepeats/rows.length,
