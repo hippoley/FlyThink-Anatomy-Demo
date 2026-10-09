@@ -126,23 +126,41 @@ class FileAuthorizationLedger{
       consumed_at:consumedAt
     };
     const reservationPath=this._reservationPath(key);
+    const reservationTmp=path.join(
+      this.reservationsDir,
+      ".tmp-"+process.pid+"-"+crypto.randomBytes(8).toString("hex")
+    );
     let reservationFd;
     try{
-      // O_EXCL is the linearization point. Across processes, exactly one
-      // contender can reserve this authorization ID.
-      reservationFd=fs.openSync(reservationPath,"wx",0o600);
+      // Write and fsync a complete private record first. The hard-link creation
+      // below is the linearization point: the final path is created atomically,
+      // and EEXIST means another process already consumed the same ID. This
+      // avoids exposing a partially-written final marker after a crash.
+      reservationFd=fs.openSync(reservationTmp,"wx",0o600);
       fs.writeFileSync(
         reservationFd,
         JSON.stringify(reservation,null,2)+"\n",
         {encoding:"utf8"}
       );
       fs.fsyncSync(reservationFd);
-    }catch(err){
-      if(err&&err.code==="EEXIST")return false;
-      throw err;
+      fs.closeSync(reservationFd);
+      reservationFd=null;
+      try{
+        fs.linkSync(reservationTmp,reservationPath);
+      }catch(err){
+        if(err&&err.code==="EEXIST")return false;
+        throw err;
+      }
+      try{
+        const dirFd=fs.openSync(this.reservationsDir,"r");
+        try{fs.fsyncSync(dirFd)}finally{fs.closeSync(dirFd)}
+      }catch(_){}
     }finally{
       if(reservationFd!=null){
         try{fs.closeSync(reservationFd)}catch(_){}
+      }
+      try{fs.unlinkSync(reservationTmp)}catch(err){
+        if(!err||err.code!=="ENOENT")throw err;
       }
     }
 
