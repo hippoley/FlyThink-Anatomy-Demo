@@ -50,7 +50,10 @@ function restoreQuarantineAfterVerifiedRecovery(runtime,target,proof){
     proof.hardware_identity_verified===true&&
     proof.physical_readback_verified===true&&
     proof.safe_position_verified===true&&
+    typeof proof.expected_identity_sha256==="string"&&
+    proof.expected_identity_sha256.length>0&&
     typeof proof.identity_sha256==="string"&&proof.identity_sha256.length>0&&
+    proof.identity_sha256===proof.expected_identity_sha256&&
     Number.isFinite(beforeTick)&&
     Number.isFinite(afterTick)&&
     afterTick>beforeTick&&
@@ -87,6 +90,20 @@ async function runRecoveryTransaction(inputRuntime,{
   if(driver.target&&deviceKey(driver.target)!==deviceKey(target)){
     throw new Error("recovery_driver_target_mismatch");
   }
+  const driverExpectedIdentity=
+    typeof driver.expectedHardwareIdentity==="string"&&
+    driver.expectedHardwareIdentity.length>0
+      ?driver.expectedHardwareIdentity
+      :null;
+  if(!driverExpectedIdentity){
+    throw new Error("recovery_driver_expected_hardware_identity_required");
+  }
+  if(
+    expected_hardware_identity!=null&&
+    String(expected_hardware_identity)!==driverExpectedIdentity
+  ){
+    throw new Error("recovery_expected_hardware_identity_override_forbidden");
+  }
   if(!safe_patch)throw new Error("recovery_safe_patch_required");
   if(!safe_patch.target||deviceKey(safe_patch.target)!==deviceKey(target)){
     throw new Error("recovery_patch_target_mismatch");
@@ -121,7 +138,7 @@ async function runRecoveryTransaction(inputRuntime,{
   if(!identityBefore){
     return blocked(runtime,"recovery_hardware_identity_missing",trace);
   }
-  if(expected_hardware_identity&&identityBefore!==expected_hardware_identity){
+  if(identityBefore!==driverExpectedIdentity){
     return blocked(runtime,"recovery_hardware_identity_mismatch",trace);
   }
 
@@ -191,7 +208,7 @@ async function runRecoveryTransaction(inputRuntime,{
   if(!identityAfter||identityAfter!==identityBefore){
     return blocked(runtime,"recovery_hardware_identity_changed",trace,{receipt});
   }
-  if(expected_hardware_identity&&identityAfter!==expected_hardware_identity){
+  if(identityAfter!==driverExpectedIdentity){
     return blocked(runtime,"recovery_hardware_identity_mismatch",trace,{receipt});
   }
 
@@ -204,6 +221,7 @@ async function runRecoveryTransaction(inputRuntime,{
     hardware_identity_verified:true,
     physical_readback_verified:true,
     safe_position_verified:true,
+    expected_identity_sha256:driverExpectedIdentity,
     identity_sha256:identityAfter,
     before_tick:beforeTick,
     after_tick:afterTick,
