@@ -43,6 +43,7 @@ function driver({
   let readinessReads=0;
   let stateReads=0;
   return {
+    expectedHardwareIdentity: identityBefore,
     async readiness(){
       readinessReads++;
       return {
@@ -298,6 +299,7 @@ function driver({
     const runtime=baseRuntime();
     let boundaryCalls=0;
     const mustNotReach={
+      expectedHardwareIdentity:"hw-1",
       async readiness(){boundaryCalls++;throw new Error("must_not_reach_readiness");},
       async state(){boundaryCalls++;throw new Error("must_not_reach_state");},
       async execute(){boundaryCalls++;throw new Error("must_not_reach_execute");}
