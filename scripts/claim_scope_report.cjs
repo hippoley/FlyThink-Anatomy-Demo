@@ -6,8 +6,8 @@
  * This deliberately keeps seven questions separate:
  * 1) was an execution record internally verified?
  * 2) was the exact action bound to the retained authorization receipt?
- * 3) was the authorization Trust Domain / signing-key source externally verified?
- * 4) when an issuer identity is part of the profile, was that issuer authenticated?
+ * 3) was the authorization trust-domain/signing-key source externally verified?
+ * 4) when an issuer identity is asserted, was that optional issuer authenticated?
  * 5) did the downstream controller report success?
  * 6) did identified fresh readback satisfy the precommitted completion criterion?
  * 7) was the object-level outcome independently observed outside that control path?
@@ -40,10 +40,10 @@ function buildClaimScopeReport(verification={}){
   ]);
 
   // claim-scope-report.v1 is a projection over FlyThink's current verifier.
-  // No trusted external Transaction Token/workload-identity adapter is wired
-  // into that verifier yet, so caller-supplied JSON must never mint either
-  // external authorization-trust claim.
-  const authorizationTrustDomainKeySourceVerified=false;
+  // No trusted Transaction Token trust-domain/key-source adapter is wired into
+  // that verifier yet, and issuer identity is a separate optional claim.
+  // Caller-supplied JSON must never mint either stronger claim.
+  const authorizationTrustDomainVerified=false;
   const authorizationIssuerAuthenticated=false;
 
   const controllerReportVerified=allTrue(verification,[
@@ -82,20 +82,19 @@ function buildClaimScopeReport(verification={}){
         status:executionAuthorizationBindingVerified?"VERIFIED":"NOT_VERIFIED",
         proves:"the exact action is internally bound to the retained SpatialRuntime authorization receipt under FlyThink validation semantics",
         does_not_prove:[
-          "the authorization trust domain or configured signing-key source was externally verified",
-          "an optional authorization issuer identity was authenticated",
+          "the authorization receipt was issued by a trusted external authority",
           "a named human approved the action",
           "a downstream controller succeeded",
           "the intended physical effect occurred"
         ]
       },
       authorization_trust_domain:{
-        status:authorizationTrustDomainKeySourceVerified?"VERIFIED":"UNVERIFIED",
-        proves:authorizationTrustDomainKeySourceVerified
-          ?"the authorization token was verified against a configured Trust Domain and signing-key source"
-          :"no external Trust Domain/signing-key-source claim is established by execution-receipt.v1",
+        status:authorizationTrustDomainVerified?"VERIFIED":"UNVERIFIED",
+        proves:authorizationTrustDomainVerified
+          ?"the authorization token was verified against a trusted Trust Domain and signing-key source"
+          :"no Transaction Token Trust Domain/signing-key-source claim is established by execution-receipt.v1",
         does_not_prove:[
-          "an optional issuer identity was authenticated unless separately established",
+          "a particular optional issuer identity was authenticated",
           "the action was safe, legal or beneficial",
           "the intended physical effect occurred"
         ]
@@ -103,10 +102,10 @@ function buildClaimScopeReport(verification={}){
       authorization_issuer:{
         status:authorizationIssuerAuthenticated?"VERIFIED":"UNVERIFIED",
         proves:authorizationIssuerAuthenticated
-          ?"an optional issuer identity configured by the authorization profile was authenticated"
+          ?"the optional authorization issuer identity was authenticated by an external trust layer"
           :"no optional issuer-authenticity claim is established by execution-receipt.v1",
         does_not_prove:[
-          "the authorization Trust Domain or signing-key source was verified unless separately established",
+          "the Trust Domain key source was trusted unless separately verified",
           "the action was safe, legal or beneficial",
           "the intended physical effect occurred"
         ]
@@ -137,7 +136,7 @@ function buildClaimScopeReport(verification={}){
           :"no independent object-level observer claim is established by execution-receipt.v1",
         does_not_prove:[
           "the action was safe, legal or beneficial",
-          "the authorization trust domain or issuer was trusted"
+          "the authorization issuer was trusted"
         ]
       }
     }
