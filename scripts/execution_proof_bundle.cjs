@@ -99,7 +99,9 @@ function deriveVerification(artifacts){
       evidence_digest:execution.evidence_digest,
       result:execution.result,
       physical_committed:execution.physical_committed,
-      physical_truth_verified:execution.physical_truth_verified
+      physical_truth_verified:execution.physical_truth_verified,
+      physical_completion_verified:execution.physical_completion_verified,
+      safe_closeout_verified:execution.safe_closeout_verified
     }
   };
 }
@@ -174,7 +176,21 @@ function verifyExecutionProofBundle(bundle={}){
   }
 
   const expectedVerification=deriveVerification(bundle.artifacts);
-  if(digestObject(bundle.verification)!==digestObject(expectedVerification))
+  const legacyVerification=clone(expectedVerification);
+  if(legacyVerification&&legacyVerification.execution){
+    delete legacyVerification.execution.physical_completion_verified;
+    delete legacyVerification.execution.safe_closeout_verified;
+  }
+  const completionOnlyVerification=clone(expectedVerification);
+  if(completionOnlyVerification&&completionOnlyVerification.execution){
+    delete completionOnlyVerification.execution.safe_closeout_verified;
+  }
+  const verificationDigest=digestObject(bundle.verification);
+  const verificationMatches=
+    verificationDigest===digestObject(expectedVerification)||
+    verificationDigest===digestObject(completionOnlyVerification)||
+    verificationDigest===digestObject(legacyVerification);
+  if(!verificationMatches)
     throw new Error("execution_proof_bundle_verification_mismatch");
 
   return {
@@ -188,6 +204,10 @@ function verifyExecutionProofBundle(bundle={}){
       expectedVerification.execution.physical_committed,
     physical_truth_verified:
       expectedVerification.execution.physical_truth_verified,
+    physical_completion_verified:
+      expectedVerification.execution.physical_completion_verified,
+    safe_closeout_verified:
+      expectedVerification.execution.safe_closeout_verified,
     result:expectedVerification.execution.result
   };
 }

@@ -203,6 +203,8 @@ function buildBundle(){
   assert.equal(verified.valid,true);
   assert.equal(verified.physical_committed,true);
   assert.equal(verified.physical_truth_verified,true);
+  assert.equal(verified.physical_completion_verified,false);
+  assert.equal(verified.safe_closeout_verified,false);
   assert.equal(
     verified.decision_proposal_sha256,
     digestDecisionProposal(decisionProposal)
@@ -261,6 +263,18 @@ function buildBundle(){
     assert.equal(cli.status,1);
     const row=JSON.parse(cli.stdout.trim());
     assert.equal(row.verdict,"INVALID");
+  }
+
+  {
+    let legacy=buildBundle();
+    delete legacy.verification.execution.physical_completion_verified;
+    delete legacy.verification.execution.safe_closeout_verified;
+    legacy=resealBundle(legacy);
+    const checked=verifyExecutionProofBundle(legacy);
+    assert.equal(checked.valid,true);
+    assert.equal(checked.physical_truth_verified,true);
+    assert.equal(checked.physical_completion_verified,false);
+    assert.equal(checked.safe_closeout_verified,false);
   }
 
   {
