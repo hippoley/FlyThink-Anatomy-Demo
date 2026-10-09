@@ -944,13 +944,7 @@ function externalTrustVerifier({
     const ledger=freshLedger();
     const p=proposal([action]);
     p.strategy.world_snapshot_sha256="c".repeat(64);
-    let seq=0;
-    const authorizer=async input=>{
-      const base=await passAuthorizerWithToken(
-        "same-token",null,null,"auth-local-"+String(++seq)
-      )(input);
-      return base;
-    };
+    const authorizer=passAuthorizerWithToken("same-token");
     const args={
       runtime:initial,
       contextual_state:context,
