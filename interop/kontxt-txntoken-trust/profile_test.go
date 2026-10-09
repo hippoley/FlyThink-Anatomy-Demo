@@ -9,6 +9,7 @@ import (
 
 	"github.com/aramase/kontxt/pkg/keys"
 	"github.com/aramase/kontxt/pkg/token"
+	"github.com/golang-jwt/jwt/v5"
 )
 
 func expected() ExpectedBinding {
@@ -71,6 +72,49 @@ func issue(t *testing.T, manager *keys.Manager, claims token.Claims, lifetime ti
 	return raw
 }
 
+// Kontxt's current token.New() still requires iss even though Transaction Tokens
+// draft-11 makes it optional. Build one standards-shaped issuer-less token
+// directly so this test exercises the external verifier rather than the
+// upstream issuer helper's stricter local policy.
+func issueWithoutIssuer(
+	t *testing.T,
+	manager *keys.Manager,
+	trust TrustAnchor,
+	e ExpectedBinding,
+	lifetime time.Duration,
+) string {
+	t.Helper()
+	key, kid := manager.SigningKey()
+	now := time.Now()
+	claims := jwt.MapClaims{
+		"iat":    now.Unix(),
+		"exp":    now.Add(lifetime).Unix(),
+		"aud":    trust.Audience,
+		"txn":    "issuerless-draft11-transaction",
+		"sub":    e.Subject,
+		"scope":  e.Scope,
+		"req_wl": e.RequestingWorkload,
+		"tctx": map[string]any{
+			"flythink": map[string]any{
+				"patch_digest":               e.PatchDigest,
+				"runtime_registry_digest":    e.RuntimeRegistryDigest,
+				"world_snapshot_revision":    e.WorldSnapshotRevision,
+				"world_snapshot_sha256":      e.WorldSnapshotSHA256,
+				"completion_criteria_sha256": e.CompletionCriteriaSHA256,
+				"execution_target_digest":    e.ExecutionTargetDigest,
+			},
+		},
+	}
+	rawToken := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
+	rawToken.Header["typ"] = token.TypeHeader
+	rawToken.Header["kid"] = kid
+	raw, err := rawToken.SignedString(key)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return raw
+}
+
 func TestRealKontxtVerifierPlusFlyThinkBindingPasses(t *testing.T) {
 	e := expected()
 	manager, trust := setupTrust(
@@ -105,7 +149,7 @@ func TestDraft11IssuerOmissionPassesWhenProfileDoesNotRequireIssuer(t *testing.T
 		"",
 		"homeai.example.test",
 	)
-	raw := issue(t, manager, txClaims(trust, e), time.Minute)
+	raw := issueWithoutIssuer(t, manager, trust, e, time.Minute)
 
 	out := VerifyAndBind(context.Background(), raw, trust, e)
 
