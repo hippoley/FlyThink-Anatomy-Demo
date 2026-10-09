@@ -36,8 +36,9 @@ canonical state-transition claims.
 
 A public sealed set is only "sealed" with respect to the current development
 cycle; once published, future models may eventually ingest it. V3 therefore
-accepts a `--release-id YYYY-MM`. The release ID deterministically derives a
-new seed while preserving the generator and validation contract.
+accepts a `--release-id YYYY-MM` and, for semantic-contract revisions within a
+published period, `YYYY-MM-rN`. The release ID deterministically derives a new
+seed while preserving the applicable generator and validation contract.
 
 Recommended policy:
 
@@ -114,3 +115,26 @@ These baselines are benchmark diagnostics, not model competitors. Their purpose
 is to catch scoring loopholes and distribution artifacts such as a benchmark
 where doing nothing, always clarifying or shallow keyword rules receive
 misleadingly high scores.
+
+
+## Immutable historical releases and semantic profiles
+
+Published evidence must remain reproducible even when the benchmark itself finds
+a gold-contract bug.
+
+The original `2026-10` release is therefore permanently bound to its published
+trajectory SHA and `long-trajectory-v3.1` semantics. The generator fails if
+that release drifts.
+
+Starting with revision-style releases such as `2026-10-r2`, V3 uses
+`long-trajectory-v3.2` / `existing_device_power_v3_2` semantics:
+
+- all devices already present in `initial_runtime` are persistent existing
+  targets;
+- turning an existing device on is `PATCH_SLOT(power=ON)`, not
+  `ADD_DEVICE`;
+- `ADD_DEVICE` remains reserved for the distinct Add-target User Story;
+- physical/persistent close remains distinct through `CLOSE_DEVICE`.
+
+This intentionally does **not** rewrite the historical `2026-10` evidence.
+Comparisons must report the release ID and generator/semantic profile together.

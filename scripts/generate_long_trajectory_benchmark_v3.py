@@ -13,6 +13,9 @@ Goals:
 import argparse,copy,hashlib,json,pathlib,random,re
 
 BASE_SEED=20261009
+LEGACY_RELEASE_SHA256={
+ "2026-10":"e73f8ad72b0e2fe1d667f64c4a78e16ad9c867a8a23b8dd84578f18436b378a0",
+}
 ROOMS=["客厅","主卧","书房","次卧"]
 DEVICES={
  "空调":{"model_id":"AWGD-ZA01","slots":{"power":"OFF","temperature":24}},
@@ -94,7 +97,10 @@ def changed_paths(before,after):
     out.append(f"devices.{k}.slots.{slot}")
  return out
 
-def make_execute_turn(split,state,rng,focus,family):
+def semantic_profile(release_id):
+ return "legacy_v3_1" if release_id in LEGACY_RELEASE_SHA256 else "existing_device_power_v3_2"
+
+def make_execute_turn(split,state,rng,focus,family,profile):
  before=copy.deepcopy(state)
  if family=="multi":
   e=rng.choice(["空调","灯","窗"])
@@ -120,11 +126,14 @@ def make_execute_turn(split,state,rng,focus,family):
   on=rng.random()<.5
   fname="power_on" if on else "power_off"
   text,tid=render(split,fname,rng,r=r,e=e,s=sname,v=v,word=word,wrong="")
-  op="ADD_DEVICE" if on else "CLOSE_DEVICE"
+  op="ADD_DEVICE" if (on and profile=="legacy_v3_1") else ("PATCH_SLOT" if on else "CLOSE_DEVICE")
   state[key(r,e)]["slots"]["power"]="ON" if on else "OFF"
   turn={"text":text,"surface_template_id":tid,"scenario_family":"direct_power","difficulty":1,
     "context_hint":{"focused_target":t},"gold_decision":"EXECUTE","gold_op":op,"gold_target":t}
-  if on: turn["gold_slots"]={"power":"ON"}
+  if on and profile=="legacy_v3_1":
+   turn["gold_slots"]={"power":"ON"}
+  elif on:
+   turn["gold_slot"]="power";turn["gold_value"]="ON"
  elif family=="relative" and focus is not None:
   r,e=focus;t=target(r,e)
   if e=="窗": slot="opening";word="大";delta=10
@@ -194,7 +203,7 @@ def generalization_class(turn):
  pairs={(t["area"],t["entity"]) for t in targets}
  return "compositional_holdout" if any(p not in PAIR_ALLOW["train"] for p in pairs) else "seen_combo"
 
-def make(i,count,rng):
+def make(i,count,rng,profile):
  split=split_for(i,count)
  state=state_template();initial=initial_runtime(state);turns=[];focus=None
  n=rng.randint(12,28)
@@ -208,7 +217,7 @@ def make(i,count,rng):
   turn["generalization_class"]=generalization_class(turn);turns.append(turn)
  while j<n:
   fam=rng.choices(families,weights=weights,k=1)[0]
-  turn,focus=make_execute_turn(split,state,rng,focus,fam)
+  turn,focus=make_execute_turn(split,state,rng,focus,fam,profile)
   turn["turn_id"]=f"{split}-{i:03d}-{j:02d}";j+=1
   turn["generalization_class"]=generalization_class(turn);turns.append(turn)
   # Under the gold history, a multi-target patch leaves no unique focused_target:
@@ -227,12 +236,13 @@ def main():
  ap.add_argument("--release-id",default="2026-10")
  a=ap.parse_args()
  if a.count<60: raise SystemExit("count must be >=60")
- if not re.fullmatch(r"[0-9]{4}-[0-9]{2}",a.release_id):
-  raise SystemExit("release-id must be YYYY-MM")
+ if not re.fullmatch(r"[0-9]{4}-[0-9]{2}(?:-r[1-9][0-9]*)?",a.release_id):
+  raise SystemExit("release-id must be YYYY-MM or YYYY-MM-rN")
  assert_template_isolation()
+ profile=semantic_profile(a.release_id)
  seed=release_seed(a.release_id)
  rng=random.Random(seed)
- rows=[make(i,a.count,rng) for i in range(a.count)]
+ rows=[make(i,a.count,rng,profile) for i in range(a.count)]
  raw=json.dumps(rows,ensure_ascii=False,separators=(",",":"),sort_keys=True).encode()
  split_counts={s:sum(x["split"]==s for x in rows) for s in SPLITS}
  family_counts={};generalization_counts={}
@@ -242,7 +252,8 @@ def main():
    generalization_counts[t["generalization_class"]]=generalization_counts.get(t["generalization_class"],0)+1
  manifest={
   "truth":"whole_home_long_trajectory_generalization_v3",
-  "generator_version":"long-trajectory-v3.1","release_id":a.release_id,
+  "generator_version":"long-trajectory-v3.1" if profile=="legacy_v3_1" else "long-trajectory-v3.2",
+  "release_id":a.release_id,
   "seed":seed,"base_seed":BASE_SEED,"trajectories":len(rows),"turns":sum(len(x["turns"]) for x in rows),
   "split_counts":split_counts,"scenario_family_counts":family_counts,
   "generalization_class_counts":generalization_counts,
@@ -250,6 +261,10 @@ def main():
   "sealed_surface_templates_disjoint":True,
   "sha256":hashlib.sha256(raw).hexdigest()
  }
+ if profile!="legacy_v3_1":
+  manifest["semantic_profile"]=profile
+ if a.release_id in LEGACY_RELEASE_SHA256 and manifest["sha256"]!=LEGACY_RELEASE_SHA256[a.release_id]:
+  raise RuntimeError("legacy_release_sha_drift:"+a.release_id+":"+manifest["sha256"])
  p=pathlib.Path(a.out);p.parent.mkdir(parents=True,exist_ok=True)
  p.write_text(json.dumps({"manifest":manifest,"trajectories":rows},ensure_ascii=False,indent=2)+"\n")
  print(json.dumps(manifest,ensure_ascii=False))
