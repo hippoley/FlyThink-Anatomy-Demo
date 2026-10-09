@@ -1,0 +1,37 @@
+name: noa-consumer-semantics-probe
+
+on:
+  push:
+    paths:
+      - "scripts/noa_consumer_semantics_probe.py"
+      - "tests/test_noa_consumer_semantics_probe.py"
+      - "conformance/noa-consumer-semantics/**"
+      - ".github/workflows/noa-consumer-semantics-probe.yml"
+  pull_request:
+    paths:
+      - "scripts/noa_consumer_semantics_probe.py"
+      - "tests/test_noa_consumer_semantics_probe.py"
+      - "conformance/noa-consumer-semantics/**"
+      - ".github/workflows/noa-consumer-semantics-probe.yml"
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: NordenSoft/noa-mandate-core
+          ref: eacb93ce72c7ba00ecd0d5d4477ad2d6f4e4d3c9
+          path: _noa
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install --disable-pip-version-check pytest
+      - run: python -m pytest -q tests/test_noa_consumer_semantics_probe.py
+      - run: |
+          python scripts/noa_consumer_semantics_probe.py             --upstream-vectors _noa/conformance/action-digest/vectors.json             --inventory conformance/noa-consumer-semantics/vectors.json             --out artifacts/noa-consumer-semantics-report.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: noa-consumer-semantics-report
+          path: artifacts/noa-consumer-semantics-report.json
