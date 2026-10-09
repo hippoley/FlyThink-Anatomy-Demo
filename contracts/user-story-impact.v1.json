@@ -70,6 +70,10 @@
     "benchmark-v3-quality": [
       "python",
       "scripts/check_benchmark_v3_contract.py"
+    ],
+    "hidden-gold-protocol": [
+      "python",
+      "tests/test_hidden_benchmark_protocol.py"
     ]
   },
   "stories": {
@@ -518,6 +522,29 @@
       ],
       "suites": [
         "benchmark-v3-quality"
+      ]
+    },
+    "benchmark.hidden_gold_protocol": {
+      "depends_on": [
+        "benchmark.long_trajectory_v3",
+        "home.patch_slot",
+        "home.multi_target_set",
+        "context.identity"
+      ],
+      "paths": [
+        "contracts/benchmark-hidden-input-pack.v1.schema.json",
+        "contracts/benchmark-hidden-gold-pack.v1.schema.json",
+        "contracts/benchmark-hidden-gold-commitment.v1.schema.json",
+        "contracts/benchmark-hidden-prediction-pack.v1.schema.json",
+        "scripts/validate_hidden_benchmark_pack.py",
+        "scripts/score_hidden_benchmark.py",
+        "scripts/build_hidden_benchmark_fixture.py",
+        "tests/test_hidden_benchmark_protocol.py",
+        "docs/benchmark-hidden-gold.md",
+        ".github/workflows/benchmark-hidden-gold-contract.yml"
+      ],
+      "suites": [
+        "hidden-gold-protocol"
       ]
     }
   }

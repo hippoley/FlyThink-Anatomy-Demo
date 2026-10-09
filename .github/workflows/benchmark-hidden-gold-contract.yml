@@ -1,0 +1,57 @@
+name: benchmark-hidden-gold-contract
+
+on:
+  pull_request:
+    paths:
+      - "contracts/benchmark-hidden-*.schema.json"
+      - "scripts/validate_hidden_benchmark_pack.py"
+      - "scripts/score_hidden_benchmark.py"
+      - "scripts/build_hidden_benchmark_fixture.py"
+      - "tests/test_hidden_benchmark_protocol.py"
+      - "docs/benchmark-hidden-gold.md"
+      - ".github/workflows/benchmark-hidden-gold-contract.yml"
+  push:
+    branches: [main]
+    paths:
+      - "contracts/benchmark-hidden-*.schema.json"
+      - "scripts/validate_hidden_benchmark_pack.py"
+      - "scripts/score_hidden_benchmark.py"
+      - "scripts/build_hidden_benchmark_fixture.py"
+      - "tests/test_hidden_benchmark_protocol.py"
+      - "docs/benchmark-hidden-gold.md"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  protocol:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Syntax
+        run: |
+          python -m py_compile             scripts/validate_hidden_benchmark_pack.py             scripts/score_hidden_benchmark.py             scripts/build_hidden_benchmark_fixture.py             tests/test_hidden_benchmark_protocol.py
+      - name: Independent negative tests
+        run: python tests/test_hidden_benchmark_protocol.py
+      - name: Produce fixture receipt
+        run: |
+          mkdir -p /tmp/hidden
+          python scripts/build_hidden_benchmark_fixture.py --dir /tmp/hidden
+          python scripts/validate_hidden_benchmark_pack.py --input /tmp/hidden/input.json --gold /tmp/hidden/gold.json --commitment /tmp/hidden/commitment.json --predictions /tmp/hidden/predictions.json
+          python scripts/score_hidden_benchmark.py --input /tmp/hidden/input.json --gold /tmp/hidden/gold.json --commitment /tmp/hidden/commitment.json --predictions /tmp/hidden/predictions.json --out /tmp/hidden/receipt.json
+          python - <<'PY'
+          import json
+          x=json.load(open("/tmp/hidden/receipt.json"))
+          assert x["metrics"]["full_exact"]==1
+          assert x["source"]["kind"]=="fixture"
+          assert x["claim_scope"]["gold_content_matches_commitment_verified"] is True
+          assert x["claim_scope"]["commitment_pre_prediction_publication_externally_verified"] is False
+          assert x["claim_scope"]["external_generalization_claim_eligible"] is False
+          assert x["claim_scope"]["source_independence_externally_verified"] is False
+          print("hidden-gold-protocol: PASS_WITHOUT_EXTERNAL_CLAIM")
+          PY
