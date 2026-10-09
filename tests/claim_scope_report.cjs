@@ -61,6 +61,7 @@ test("record integrity does not imply named-human or issuer authentication",()=>
 
 test("caller input cannot mint authorization issuer authenticity",()=>{
   const v=base();
+  v.verification_source="flythink-canonical-verifier";
   v.authorization_issuer_authenticated_verified=true;
   const out=buildClaimScopeReport(v);
   assert.equal(out.claims.execution_authorization.status,"VERIFIED");
