@@ -1,7 +1,7 @@
 "use strict";
 const assert=require("assert");
 const path=require("path");
-const {loadGraph,impact,matches}=require("../scripts/user_story_impact.cjs");
+const {loadGraph,impact,matches,runSuites}=require("../scripts/user_story_impact.cjs");
 
 const graph=loadGraph(path.join(__dirname,"..","contracts","user-story-impact.v1.json"));
 assert.equal(matches("interop/kontxt-txntoken-trust/**","interop/kontxt-txntoken-trust/profile.go"),true);
@@ -35,4 +35,9 @@ assert.equal(matches("scripts/*.cjs","scripts/nested/a.cjs"),false);
   assert.deepEqual(out.direct_stories,[]);
   assert.deepEqual(out.regression_suites,[]);
 }
-console.log(JSON.stringify({ok:true,stories:Object.keys(graph.stories).length,contract:"changed paths expand through user-story dependencies into deterministic regression suites"}));
+{
+  const fake={suites:{ok:["node","-e","process.exit(0)"],bad:["node","-e","process.exit(7)"]}};
+  assert.deepEqual(runSuites(fake,["ok"]),[{suite:"ok",status:0}]);
+  assert.throws(()=>runSuites(fake,["bad"]),/user_story_regression_failed:bad/);
+}
+console.log(JSON.stringify({ok:true,stories:Object.keys(graph.stories).length,contract:"changed paths expand through user-story dependencies into executable fail-closed regression suites"}));
