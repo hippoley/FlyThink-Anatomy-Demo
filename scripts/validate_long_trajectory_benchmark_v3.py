@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 import argparse,collections,hashlib,json,re
 
+LEGACY_RELEASE_SHA256={
+ "2026-10":"e73f8ad72b0e2fe1d667f64c4a78e16ad9c867a8a23b8dd84578f18436b378a0",
+}
+
 def norm_text(s):
  return re.sub(r"\s+","",str(s)).lower()
 
@@ -18,8 +22,15 @@ def main():
  a=ap.parse_args()
  d=json.load(open(a.path,encoding="utf8"));m=d["manifest"];ts=d["trajectories"]
  assert m["truth"]=="whole_home_long_trajectory_generalization_v3"
- assert m.get("generator_version")=="long-trajectory-v3.1"
- assert re.fullmatch(r"[0-9]{4}-[0-9]{2}",m.get("release_id",""))
+ release=m.get("release_id","")
+ assert re.fullmatch(r"[0-9]{4}-[0-9]{2}(?:-r[1-9][0-9]*)?",release)
+ if release in LEGACY_RELEASE_SHA256:
+  assert m.get("generator_version")=="long-trajectory-v3.1"
+  assert "semantic_profile" not in m
+  assert m.get("sha256")==LEGACY_RELEASE_SHA256[release],"legacy release manifest SHA drift"
+ else:
+  assert m.get("generator_version")=="long-trajectory-v3.2"
+  assert m.get("semantic_profile")=="existing_device_power_v3_2"
  assert len(ts)>=60 and set(x["split"] for x in ts)=={"train","dev","sealed"}
  raw=json.dumps(ts,ensure_ascii=False,separators=(",",":"),sort_keys=True).encode()
  assert hashlib.sha256(raw).hexdigest()==m["sha256"],"manifest sha256 does not bind trajectories"
@@ -41,6 +52,14 @@ def main():
    assert set(t["gold_state"])==expected
    observed=diff_state(prev,t["gold_state"])
    assert sorted(observed)==sorted(t["gold_write_set"]),(t["turn_id"],observed,t["gold_write_set"])
+   if t["scenario_family"]=="direct_power":
+    if release in LEGACY_RELEASE_SHA256:
+     assert t["gold_op"] in ("ADD_DEVICE","CLOSE_DEVICE")
+    else:
+     assert t["gold_op"] in ("PATCH_SLOT","CLOSE_DEVICE")
+     assert t["gold_op"]!="ADD_DEVICE","existing device power-on must not be ADD_DEVICE"
+     if t["gold_op"]=="PATCH_SLOT":
+      assert t.get("gold_slot")=="power" and t.get("gold_value")=="ON"
    if t["gold_decision"]!="EXECUTE":
     assert not observed and not t["gold_write_set"],"non-execute turn mutated state"
     basis=t.get("ambiguity_basis")
@@ -86,7 +105,8 @@ def main():
 
  print(json.dumps({
   "valid":True,"trajectories":len(ts),"turns":turns,
-  "release_id":m["release_id"],"split_counts":actual_split_counts,
+  "release_id":m["release_id"],"generator_version":m["generator_version"],
+  "semantic_profile":m.get("semantic_profile","legacy_v3_1"),"split_counts":actual_split_counts,
   "decisions":dict(decision),"families":dict(family),"difficulty":dict(difficulty),
   "generalization_classes":dict(generalization),"sealed_generalization_classes":dict(sealed_generalization),
   "cross_split_text_overlap":0,"cross_split_template_overlap":0,
