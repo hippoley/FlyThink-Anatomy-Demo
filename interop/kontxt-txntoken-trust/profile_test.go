@@ -83,6 +83,7 @@ func TestRealKontxtVerifierPlusFlyThinkBindingPasses(t *testing.T) {
 	out := VerifyAndBind(context.Background(), raw, trust, e)
 
 	if !out.CryptographicValidationVerified ||
+		!out.TrustDomainKeySourceVerified ||
 		!out.IssuerAuthenticatedAgainstConfiguredTrustAnchor ||
 		!out.RequiredClaimsVerified ||
 		!out.FlyThinkProfileBindingVerified ||
@@ -97,7 +98,30 @@ func TestRealKontxtVerifierPlusFlyThinkBindingPasses(t *testing.T) {
 	}
 }
 
-func TestKontxtCryptoSuccessDoesNotBypassIssuerBinding(t *testing.T) {
+func TestDraft11IssuerOmissionPassesWhenProfileDoesNotRequireIssuer(t *testing.T) {
+	e := expected()
+	manager, trust := setupTrust(
+		t,
+		"",
+		"homeai.example.test",
+	)
+	raw := issue(t, manager, txClaims(trust, e), time.Minute)
+
+	out := VerifyAndBind(context.Background(), raw, trust, e)
+
+	if !out.CryptographicValidationVerified ||
+		!out.TrustDomainKeySourceVerified ||
+		!out.RequiredClaimsVerified ||
+		!out.FlyThinkProfileBindingVerified ||
+		!out.ReadyForCanonicalTrustIntegration {
+		t.Fatalf("draft-11 issuer omission was incorrectly rejected: %+v", out)
+	}
+	if out.IssuerAuthenticatedAgainstConfiguredTrustAnchor {
+		t.Fatalf("issuer authenticity was claimed without a configured issuer: %+v", out)
+	}
+}
+
+func TestKontxtCryptoSuccessDoesNotBypassConfiguredIssuerBinding(t *testing.T) {
 	e := expected()
 	manager, trust := setupTrust(
 		t,
@@ -110,12 +134,13 @@ func TestKontxtCryptoSuccessDoesNotBypassIssuerBinding(t *testing.T) {
 
 	out := VerifyAndBind(context.Background(), raw, trust, e)
 
-	if !out.CryptographicValidationVerified {
-		t.Fatalf("expected Kontxt crypto verification to pass: %+v", out)
+	if !out.CryptographicValidationVerified ||
+		!out.TrustDomainKeySourceVerified {
+		t.Fatalf("expected Kontxt trust-domain verification to pass: %+v", out)
 	}
 	if out.IssuerAuthenticatedAgainstConfiguredTrustAnchor ||
 		out.ReadyForCanonicalTrustIntegration {
-		t.Fatalf("issuer mismatch was promoted: %+v", out)
+		t.Fatalf("configured issuer mismatch was promoted: %+v", out)
 	}
 	if out.FailureStage != "issuer_binding" {
 		t.Fatalf("wrong failure stage: %+v", out)
@@ -139,9 +164,10 @@ func TestForgedExpectedIssuerSignedByUntrustedKeyIsBlocked(t *testing.T) {
 	out := VerifyAndBind(context.Background(), raw, trust, e)
 
 	if out.CryptographicValidationVerified ||
+		out.TrustDomainKeySourceVerified ||
 		out.IssuerAuthenticatedAgainstConfiguredTrustAnchor ||
 		out.ReadyForCanonicalTrustIntegration {
-		t.Fatalf("rogue signer minted configured issuer authenticity: %+v", out)
+		t.Fatalf("rogue signer minted configured trust: %+v", out)
 	}
 	if out.FailureStage != "external_token_verification" {
 		t.Fatalf("wrong failure stage: %+v", out)
@@ -163,6 +189,7 @@ func TestKontxtCryptoSuccessDoesNotBypassFlyThinkTctxBinding(t *testing.T) {
 	out := VerifyAndBind(context.Background(), raw, trust, e)
 
 	if !out.CryptographicValidationVerified ||
+		!out.TrustDomainKeySourceVerified ||
 		!out.IssuerAuthenticatedAgainstConfiguredTrustAnchor {
 		t.Fatalf("external verification unexpectedly failed: %+v", out)
 	}
@@ -189,6 +216,7 @@ func TestMissingTctxRemainsBlockedAfterValidSignature(t *testing.T) {
 	out := VerifyAndBind(context.Background(), raw, trust, e)
 
 	if !out.CryptographicValidationVerified ||
+		!out.TrustDomainKeySourceVerified ||
 		!out.IssuerAuthenticatedAgainstConfiguredTrustAnchor {
 		t.Fatalf("external verification unexpectedly failed: %+v", out)
 	}
@@ -212,6 +240,7 @@ func TestWrongAudienceFailsInKontxtBeforeFlyThinkProfile(t *testing.T) {
 	out := VerifyAndBind(context.Background(), raw, trust, e)
 
 	if out.CryptographicValidationVerified ||
+		out.TrustDomainKeySourceVerified ||
 		out.ReadyForCanonicalTrustIntegration {
 		t.Fatalf("wrong audience passed external verifier: %+v", out)
 	}
@@ -232,6 +261,7 @@ func TestExpiredTokenFailsInKontxtBeforeFlyThinkProfile(t *testing.T) {
 	out := VerifyAndBind(context.Background(), raw, trust, e)
 
 	if out.CryptographicValidationVerified ||
+		out.TrustDomainKeySourceVerified ||
 		out.ReadyForCanonicalTrustIntegration {
 		t.Fatalf("expired token passed external verifier: %+v", out)
 	}
@@ -243,7 +273,6 @@ func TestExpiredTokenFailsInKontxtBeforeFlyThinkProfile(t *testing.T) {
 func TestTrustAnchorMustBeConfiguredBeforeVerification(t *testing.T) {
 	e := expected()
 	trust := TrustAnchor{
-		Issuer:   "https://tts.example.test",
 		JWKSURL:  "https://jwks.example.test",
 		Audience: "homeai.example.test",
 	}
@@ -252,6 +281,7 @@ func TestTrustAnchorMustBeConfiguredBeforeVerification(t *testing.T) {
 
 	if out.FailureStage != "trust_anchor_configuration" ||
 		out.CryptographicValidationVerified ||
+		out.TrustDomainKeySourceVerified ||
 		out.ReadyForCanonicalTrustIntegration {
 		t.Fatalf("unproven trust anchor was accepted: %+v", out)
 	}
