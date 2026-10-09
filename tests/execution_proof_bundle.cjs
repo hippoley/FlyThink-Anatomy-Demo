@@ -334,6 +334,18 @@ function buildBundle(){
   }
 
   {
+    // Arbitrary field deletion is not a historical generation. Backward
+    // compatibility accepts only the actual additive schema chronology.
+    let skippedGeneration=buildBundle();
+    delete skippedGeneration.verification.execution.authorization_issuer_authenticated_verified;
+    skippedGeneration=resealBundle(skippedGeneration);
+    assert.throws(
+      ()=>verifyExecutionProofBundle(skippedGeneration),
+      /execution_proof_bundle_verification_mismatch/
+    );
+  }
+
+  {
     let forged=buildBundle();
     forged.verification.execution.authorization_trust_domain_key_source_verified=true;
     forged=resealBundle(forged);

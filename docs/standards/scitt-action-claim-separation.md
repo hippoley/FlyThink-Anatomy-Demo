@@ -14,7 +14,8 @@ now the separation lived mostly in prose and verifier internals.
 ```text
 execution record
 execution authorization binding
-authorization issuer authenticity
+authorization trust-domain / signing-key-source verification
+optional authorization issuer authenticity
 controller report
 physical effect
 ```
@@ -23,8 +24,9 @@ Each claim has its own status and explicit non-claims.
 
 This is intentionally stricter than a single `success=true` bit. In particular:
 
-- verified authorization **binding** does not imply the authorization issuer was authenticated;
-- authorization issuer authenticity does not imply controller success;
+- verified authorization **binding** does not imply an external authorization Trust Domain / signing-key source was verified;
+- trust-domain / signing-key-source verification does not by itself authenticate an optional issuer identity;
+- optional authorization issuer authenticity does not imply controller success;
 - controller ACK does not imply physical completion;
 - physical completion requires the existing FlyThink precommitted criterion,
   identified witness, fresh observation and completion checks;

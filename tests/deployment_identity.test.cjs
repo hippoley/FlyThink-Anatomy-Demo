@@ -4,6 +4,7 @@ const fs=require("fs");
 const assert=require("assert");
 
 const html=fs.readFileSync("index.html","utf8");
+const publishWorkflow=fs.readFileSync(".github/workflows/publish-static.yml","utf8");
 
 for(const token of [
   "Execution Truth for Physical AI",
@@ -12,7 +13,7 @@ for(const token of [
   "Reality responds.",
   "IDENTITY BOUND",
   "INTEGRITY VERIFIABLE",
-  "Authorization issuer",
+  "Authorization trust",
   "UNVERIFIED",
   "INDETERMINATE",
   "Real hardware golden",
@@ -33,15 +34,24 @@ assert.ok(
   "public page must preserve the real-hardware non-claim"
 );
 assert.ok(
-  html.includes("current v1 proves binding/integrity, not who was authorized to issue the allow receipt"),
-  "public page must separate authorization binding from issuer authenticity"
+  html.includes("current v1 proves binding/integrity, not an externally governed Trust Domain or signing-key source"),
+  "public page must separate local authorization binding from external trust-domain verification"
 );
 assert.ok(
   !html.includes("issues/93") && !html.includes("converging in #93"),
   "public page must not advertise a superseded convergence issue"
 );
 
+assert.ok(
+  publishWorkflow.includes("'Authorization trust','UNVERIFIED'"),
+  "static publish gate must require the same authorization-trust identity token as the public page"
+);
+assert.ok(
+  !publishWorkflow.includes("'Authorization issuer','UNVERIFIED'"),
+  "static publish gate must not retain the superseded issuer-only identity token"
+);
+
 console.log(JSON.stringify({
   ok:true,
-  contract:"public first screen separates authorization authenticity from binding and keeps only the real-device Golden Proof run pending"
+  contract:"public first screen separates local authorization binding, external trust-domain verification and optional issuer identity while keeping the real-device Golden Proof run pending"
 }));

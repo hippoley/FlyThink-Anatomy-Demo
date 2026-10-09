@@ -187,7 +187,7 @@ The bridge must preserve both claim scopes:
 - a valid AER receipt does not imply FlyThink physical completion;
 - verified physical completion does not repair an invalid AER receipt, and does not establish independent object-level observation;
 - AER provenance remains AER provenance and must not be rewritten by FlyThink;
-- FlyThink's Context/World identities and authorization-receipt binding remain independently re-verified, while authorization-issuer authenticity remains a separate unverified claim;
+- FlyThink's Context/World identities and authorization-receipt binding remain independently re-verified, while external authorization Trust Domain / signing-key-source verification and optional issuer authentication remain separate unverified claims;
 - missing or stale physical evidence may remain `INDETERMINATE` without
   invalidating the AER receipt itself.
 
