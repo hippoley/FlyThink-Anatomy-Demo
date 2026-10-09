@@ -1,0 +1,71 @@
+#!/usr/bin/env python3
+import argparse,collections,hashlib,json,re
+
+def norm_text(s):
+ return re.sub(r"\s+","",str(s)).lower()
+
+def diff_state(prev,gold):
+ out=[]
+ for k in sorted(set(prev)|set(gold)):
+  a=prev.get(k,{});b=gold.get(k,{})
+  for slot in sorted(set(a)|set(b)):
+   if a.get(slot)!=b.get(slot):out.append(f"devices.{k}.slots.{slot}")
+ return out
+
+def main():
+ ap=argparse.ArgumentParser()
+ ap.add_argument("path",nargs="?",default="benchmarks/long_trajectories_v3.json")
+ a=ap.parse_args()
+ d=json.load(open(a.path,encoding="utf8"));m=d["manifest"];ts=d["trajectories"]
+ assert m["truth"]=="whole_home_long_trajectory_generalization_v3"
+ assert len(ts)>=60 and set(x["split"] for x in ts)=={"train","dev","sealed"}
+ raw=json.dumps(ts,ensure_ascii=False,separators=(",",":"),sort_keys=True).encode()
+ assert hashlib.sha256(raw).hexdigest()==m["sha256"],"manifest sha256 does not bind trajectories"
+
+ by_split=collections.defaultdict(list);texts=collections.defaultdict(set);templates=collections.defaultdict(set)
+ family=collections.Counter();decision=collections.Counter();difficulty=collections.Counter()
+ pairs=collections.defaultdict(set);turns=0
+ for tr in ts:
+  split=tr["split"];by_split[split].append(tr)
+  expected=set(tr["initial_runtime"]["devices"])
+  assert len(expected)==m["devices_per_home"]
+  prev={k:v["slots"] for k,v in tr["initial_runtime"]["devices"].items()}
+  for t in tr["turns"]:
+   turns+=1;family[t["scenario_family"]]+=1;decision[t["gold_decision"]]+=1;difficulty[t["difficulty"]]+=1
+   nt=norm_text(t["text"]);assert nt not in texts[split],"duplicate text inside split:"+nt;texts[split].add(nt)
+   templates[split].add(t["surface_template_id"])
+   assert set(t["gold_state"])==expected
+   observed=diff_state(prev,t["gold_state"])
+   assert sorted(observed)==sorted(t["gold_write_set"]),(t["turn_id"],observed,t["gold_write_set"])
+   if t["gold_decision"]!="EXECUTE":
+    assert not observed and not t["gold_write_set"],"non-execute turn mutated state"
+   if t.get("gold_target"):
+    targets=t["gold_target"] if isinstance(t["gold_target"],list) else [t["gold_target"]]
+    for x in targets:pairs[split].add((x["area"],x["entity"]))
+   prev=t["gold_state"]
+
+ assert turns==m["turns"]
+ for a1,b1 in (("train","dev"),("train","sealed"),("dev","sealed")):
+  overlap=texts[a1]&texts[b1];assert not overlap,f"text leakage {a1}/{b1}: {list(overlap)[:5]}"
+  assert not (templates[a1]&templates[b1]),f"surface template leakage {a1}/{b1}"
+ assert decision["EXECUTE"]>0 and decision["CLARIFY"]>0
+ for name in ("direct_slot","direct_power","relative_coreference","explicit_correction","multi_target","ambiguous_clarify"):
+  assert family[name]>=max(5,turns//100),f"scenario family under-covered: {name}"
+ assert set(difficulty)>={1,3,4}
+ train_pairs=pairs["train"]
+ for split in ("dev","sealed"):
+  assert pairs[split]-train_pairs,f"{split} lacks room×entity compositional holdout"
+ # Vocabulary remains shared: hold out combinations, not entity identities.
+ entities={s:{e for _,e in pairs[s]} for s in ("train","dev","sealed")}
+ assert entities["train"]==entities["dev"]==entities["sealed"]=={"空调","灯","窗"}
+
+ print(json.dumps({
+  "valid":True,"trajectories":len(ts),"turns":turns,
+  "split_counts":{s:len(by_split[s]) for s in ("train","dev","sealed")},
+  "decisions":dict(decision),"families":dict(family),"difficulty":dict(difficulty),
+  "cross_split_text_overlap":0,"cross_split_template_overlap":0,
+  "sealed_unseen_room_entity_pairs":sorted([list(x) for x in pairs["sealed"]-train_pairs]),
+  "sha256_verified":True
+ },ensure_ascii=False))
+
+if __name__=="__main__":main()
