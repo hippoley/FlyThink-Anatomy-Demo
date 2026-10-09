@@ -16,7 +16,8 @@ execution record
 execution authorization binding
 authorization issuer authenticity
 controller report
-physical effect
+physical completion
+independent object-level outcome
 ```
 
 Each claim has its own status and explicit non-claims.
@@ -28,6 +29,8 @@ This is intentionally stricter than a single `success=true` bit. In particular:
 - controller ACK does not imply physical completion;
 - physical completion requires the existing FlyThink precommitted criterion,
   identified witness, fresh observation and completion checks;
+- physical completion through integrated controller/state readback does not imply
+  independent object-level observation;
 - no layer implies human approval, safety, legality or business correctness.
 
 The current SCITT AI-Agent Action Receipt draft similarly separates governed-boundary
