@@ -416,17 +416,23 @@ function buildBundle(){
       out.receipt.receipt_sha256=authorizationSha256Object(base);
       return out;
     };
+    const mutatedDriver=new MockThingDriver(current);
     await assert.rejects(
       ()=>runProofDerivedUndo({
         runtime:current,
         proof_bundle:source,
-        driver:new MockThingDriver(current),
+        driver:mutatedDriver,
         physicalAuthorizer:mutatedAuthorizer,
         authorizationLedger:{add(){return true}}
       }),
-      /undo_authorization_changed_derived_compensation|patch_digest_mismatch/
+      /authorization_id_mismatch|patch_digest_mismatch|undo_authorization_changed_derived_compensation/
     );
     assert.equal(mutatedCalls,1);
+    assert.equal(
+      mutatedDriver.commands.length,
+      0,
+      "tampered fresh authorization must be rejected before physical compensation"
+    );
   }
 
   console.log(JSON.stringify({
