@@ -59,6 +59,11 @@ jobs:
         run: python scripts/generate_long_trajectory_benchmark_v3.py --count 180 --out /tmp/long_trajectories_v3.json
       - name: Validate split isolation, oracle integrity and coverage
         run: python scripts/validate_long_trajectory_benchmark_v3.py /tmp/long_trajectories_v3.json
+      - name: Prove corrected semantic profile without rewriting legacy release
+        run: |
+          python scripts/generate_long_trajectory_benchmark_v3.py --count 180 --release-id 2026-10-r2 --out /tmp/long_trajectories_v3_r2.json
+          python scripts/validate_long_trajectory_benchmark_v3.py /tmp/long_trajectories_v3_r2.json
+          node scripts/validate_benchmark_v3_oracle_runner.cjs /tmp/long_trajectories_v3_r2.json
       - name: Prove gold oracle is executable by canonical stateful runner
         run: node scripts/validate_benchmark_v3_oracle_runner.cjs /tmp/long_trajectories_v3.json
       - name: Validate stratified evaluator metrics
