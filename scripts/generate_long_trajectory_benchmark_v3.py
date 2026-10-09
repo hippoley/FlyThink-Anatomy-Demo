@@ -104,7 +104,9 @@ def surface_entity(split,canonical,rng,profile):
   return rng.choice(ENTITY_ALIASES[split][canonical]),"non_standard_alias"
  return canonical,"canonical"
 
-def annotate_robustness(turn,naming_class):
+def annotate_robustness(turn,naming_class,profile):
+ if profile=="legacy_v3_1":
+  return turn
  turn["surface_naming_class"]=naming_class
  fam=turn["scenario_family"]
  if fam=="multi_target":turn["instruction_shape"]="multi_intent"
@@ -143,7 +145,7 @@ def make_execute_turn(split,state,rng,focus,family,profile):
     "gold_target":targets,"gold_slot":slot,"gold_value":v,
     "gold_write_set":changed_paths(before,state),"gold_state":snapshot(state)
    }
-   return annotate_robustness(turn,naming),(r2,e)
+   return annotate_robustness(turn,naming,profile),(r2,e)
 
  r,e=choose_pair(split,rng)
  sname,slot,v,word,delta=slot_spec(e,rng)
@@ -188,9 +190,9 @@ def make_execute_turn(split,state,rng,focus,family,profile):
     "gold_target":t,"gold_slot":slot,"gold_value":v}
  turn["gold_write_set"]=changed_paths(before,state)
  turn["gold_state"]=snapshot(state)
- return annotate_robustness(turn,naming),(r,e)
+ return annotate_robustness(turn,naming,profile),(r,e)
 
-def make_clarify(split,state,rng,focus,basis):
+def make_clarify(split,state,rng,focus,basis,profile):
  if basis not in ("no_prior_focus","multi_referent_set"):
   raise ValueError("clarify requires explicit ambiguity basis")
  e=rng.choice(["空调","灯","窗"])
@@ -202,7 +204,7 @@ def make_clarify(split,state,rng,focus,basis):
   "ambiguity_basis":basis,
   "gold_write_set":[],"gold_state":snapshot(state)
  }
- return annotate_robustness(turn,"not_applicable"),focus
+ return annotate_robustness(turn,"not_applicable",profile),focus
 
 def assert_template_isolation():
  for i,a in enumerate(SPLITS):
@@ -241,7 +243,7 @@ def make(i,count,rng,profile):
  j=0
  # A first-turn ambiguous request is valid because no conversational focus exists.
  if rng.random()<.25:
-  turn,focus=make_clarify(split,state,rng,focus,"no_prior_focus")
+  turn,focus=make_clarify(split,state,rng,focus,"no_prior_focus",profile)
   turn["turn_id"]=f"{split}-{i:03d}-{j:02d}";j+=1
   turn["generalization_class"]=generalization_class(turn);turns.append(turn)
  while j<n:
@@ -253,7 +255,7 @@ def make(i,count,rng,profile):
   # runtime_context_adapter exposes the whole targets array as referent_set.
   # A singular deictic follow-up is therefore genuinely ambiguous.
   if fam=="multi" and j<n and rng.random()<.65:
-   turn,focus=make_clarify(split,state,rng,focus,"multi_referent_set")
+   turn,focus=make_clarify(split,state,rng,focus,"multi_referent_set",profile)
    turn["turn_id"]=f"{split}-{i:03d}-{j:02d}";j+=1
    turn["generalization_class"]=generalization_class(turn);turns.append(turn)
  return {"id":f"whole-home-v3-{i:03d}","split":split,"initial_runtime":initial,"turns":turns}
