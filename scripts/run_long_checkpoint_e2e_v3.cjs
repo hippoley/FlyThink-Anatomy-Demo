@@ -30,7 +30,7 @@ function strictSuccess(result){
    result.untouched_state_violation===0;
 }
 
-(async()=>{
+async function main(){
  const file=arg("--benchmark")||"benchmarks/long_trajectories_v3.json";
  const split=arg("--split")||"sealed";
  const repeats=Math.max(1,numArg("--repeats",1));
@@ -93,6 +93,10 @@ function strictSuccess(result){
  };
  console.log(JSON.stringify(out));
  if(unsafe||wrong||untouched)process.exitCode=2;
-})().catch(e=>{console.error(e);process.exit(1)});
+}
 
-module.exports={bucket,addTurn,finish,strictSuccess};
+if(require.main===module){
+ main().catch(e=>{console.error(e);process.exit(1)});
+}
+
+module.exports={bucket,addTurn,finish,strictSuccess,main};
