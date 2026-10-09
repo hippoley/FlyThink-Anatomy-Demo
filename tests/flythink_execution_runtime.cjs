@@ -528,7 +528,29 @@ function passAuthorizer(counter=null,transform=null,authorizationId=null,overrid
     assert.equal(driver.commands.length,1);
   }
 
-  // 13. Runtime facade exposes the formal recovery path, not manual trust clearing.
+  // 14. Ledger contention/storage failure blocks before physical dispatch.
+  {
+    const action={op:"PATCH_SLOT",target:B,slot:"temperature",value:19};
+    const driver=new MockThingDriver(initial);
+    const out=await runExecutionProposal({
+      runtime:initial,
+      contextual_state:context,
+      request:request([action]),
+      proposal:proposal([action]),
+      driver,
+      physicalAuthorizer:passAuthorizer(),
+      authorizationLedger:{
+        add(){throw new Error("authorization_ledger_locked")}
+      }
+    });
+    assert.equal(out.ok,false);
+    assert.equal(out.status,"BLOCKED");
+    assert.equal(out.reason,"authorization_ledger_unavailable");
+    assert.match(out.authorization_error,/authorization_ledger_locked/);
+    assert.equal(driver.commands.length,0);
+  }
+
+  // 15. Runtime facade exposes the formal recovery path, not manual trust clearing.
   {
     const W={area:"客厅",entity:"窗",instance:"default"};
     const wk="客厅::窗::default";
