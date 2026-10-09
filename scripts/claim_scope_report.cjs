@@ -3,13 +3,14 @@
 /**
  * Produce a claim-scope-preserving report from FlyThink execution verification.
  *
- * This deliberately keeps six questions separate:
+ * This deliberately keeps seven questions separate:
  * 1) was an execution record internally verified?
  * 2) was the exact action bound to the retained authorization receipt?
- * 3) was the authorization issuer authenticated by an external trust layer?
- * 4) did the downstream controller report success?
- * 5) did identified fresh readback satisfy the precommitted completion criterion?
- * 6) was the object-level outcome independently observed outside that control path?
+ * 3) was the authorization trust-domain/signing-key source externally verified?
+ * 4) when an issuer identity is asserted, was that optional issuer authenticated?
+ * 5) did the downstream controller report success?
+ * 6) did identified fresh readback satisfy the precommitted completion criterion?
+ * 7) was the object-level outcome independently observed outside that control path?
  *
  * A stronger claim is never inferred from a weaker one.
  */
@@ -39,8 +40,10 @@ function buildClaimScopeReport(verification={}){
   ]);
 
   // claim-scope-report.v1 is a projection over FlyThink's current verifier.
-  // No trusted issuer-authentication adapter is wired into that verifier yet,
-  // so caller-supplied JSON must never be allowed to mint this stronger claim.
+  // No trusted Transaction Token trust-domain/key-source adapter is wired into
+  // that verifier yet, and issuer identity is a separate optional claim.
+  // Caller-supplied JSON must never mint either stronger claim.
+  const authorizationTrustDomainVerified=false;
   const authorizationIssuerAuthenticated=false;
 
   const controllerReportVerified=allTrue(verification,[
@@ -85,12 +88,24 @@ function buildClaimScopeReport(verification={}){
           "the intended physical effect occurred"
         ]
       },
+      authorization_trust_domain:{
+        status:authorizationTrustDomainVerified?"VERIFIED":"UNVERIFIED",
+        proves:authorizationTrustDomainVerified
+          ?"the authorization token was verified against a trusted Trust Domain and signing-key source"
+          :"no Transaction Token Trust Domain/signing-key-source claim is established by execution-receipt.v1",
+        does_not_prove:[
+          "a particular optional issuer identity was authenticated",
+          "the action was safe, legal or beneficial",
+          "the intended physical effect occurred"
+        ]
+      },
       authorization_issuer:{
         status:authorizationIssuerAuthenticated?"VERIFIED":"UNVERIFIED",
         proves:authorizationIssuerAuthenticated
-          ?"the authorization issuer was authenticated by an external trust layer"
-          :"no issuer-authenticity claim is established by execution-receipt.v1",
+          ?"the optional authorization issuer identity was authenticated by an external trust layer"
+          :"no optional issuer-authenticity claim is established by execution-receipt.v1",
         does_not_prove:[
+          "the Trust Domain key source was trusted unless separately verified",
           "the action was safe, legal or beneficial",
           "the intended physical effect occurred"
         ]
