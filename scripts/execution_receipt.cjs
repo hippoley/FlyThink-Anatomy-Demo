@@ -906,7 +906,6 @@ function verifyExecutionReceipt(receipt={},{
 
   return {
     valid:true,
-    verification_source:"flythink-canonical-verifier",
     receipt_sha256:receipt.receipt_sha256,
     evidence_digest:receipt.evidence_digest,
     result:receipt.result,
@@ -919,11 +918,9 @@ function verifyExecutionReceipt(receipt={},{
       rebuiltRows,
       receipt.logical_targets||[]
     ),
-    // execution-receipt.v1 verifies local authorization binding/integrity only.
-    // No external Transaction Token/workload-identity trust adapter is wired
-    // into this verifier yet. Trust-domain key-source verification and optional
-    // issuer authentication are separate claims, and neither can be minted
-    // from local receipt data.
+    // execution-receipt.v1 verifies binding/integrity only. It does not
+    // establish a trusted Transaction Token trust-domain/signing-key source,
+    // nor does it authenticate an optional issuer identity.
     authorization_trust_domain_key_source_verified:false,
     authorization_issuer_authenticated_verified:false,
     independent_object_outcome_verified:false
