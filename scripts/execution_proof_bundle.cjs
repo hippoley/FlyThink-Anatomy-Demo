@@ -101,7 +101,9 @@ function deriveVerification(artifacts){
       physical_committed:execution.physical_committed,
       physical_truth_verified:execution.physical_truth_verified,
       physical_completion_verified:execution.physical_completion_verified,
-      safe_closeout_verified:execution.safe_closeout_verified
+      safe_closeout_verified:execution.safe_closeout_verified,
+      authorization_issuer_authenticated_verified:
+        execution.authorization_issuer_authenticated_verified===true
     }
   };
 }
@@ -176,18 +178,24 @@ function verifyExecutionProofBundle(bundle={}){
   }
 
   const expectedVerification=deriveVerification(bundle.artifacts);
-  const legacyVerification=clone(expectedVerification);
-  if(legacyVerification&&legacyVerification.execution){
-    delete legacyVerification.execution.physical_completion_verified;
-    delete legacyVerification.execution.safe_closeout_verified;
+  // Additive v1 evolution: accept older stored verification blocks, but
+  // recompute the current verdicts from the retained artifacts before return.
+  const preIssuerAuthVerification=clone(expectedVerification);
+  if(preIssuerAuthVerification&&preIssuerAuthVerification.execution){
+    delete preIssuerAuthVerification.execution.authorization_issuer_authenticated_verified;
   }
-  const completionOnlyVerification=clone(expectedVerification);
+  const completionOnlyVerification=clone(preIssuerAuthVerification);
   if(completionOnlyVerification&&completionOnlyVerification.execution){
     delete completionOnlyVerification.execution.safe_closeout_verified;
+  }
+  const legacyVerification=clone(completionOnlyVerification);
+  if(legacyVerification&&legacyVerification.execution){
+    delete legacyVerification.execution.physical_completion_verified;
   }
   const verificationDigest=digestObject(bundle.verification);
   const verificationMatches=
     verificationDigest===digestObject(expectedVerification)||
+    verificationDigest===digestObject(preIssuerAuthVerification)||
     verificationDigest===digestObject(completionOnlyVerification)||
     verificationDigest===digestObject(legacyVerification);
   if(!verificationMatches)
@@ -208,6 +216,8 @@ function verifyExecutionProofBundle(bundle={}){
       expectedVerification.execution.physical_completion_verified,
     safe_closeout_verified:
       expectedVerification.execution.safe_closeout_verified,
+    authorization_issuer_authenticated_verified:
+      expectedVerification.execution.authorization_issuer_authenticated_verified===true,
     result:expectedVerification.execution.result
   };
 }
