@@ -113,6 +113,9 @@ process.stdout.write(JSON.stringify(result));
   assert.equal(duplicates.length,7,JSON.stringify(results));
   assert.equal(unexpectedErrors.length,0,JSON.stringify(results));
   assert.equal(new FileAuthorizationLedger(raceFile).has(raceId),true);
+  const journalNames=fs.readdirSync(raceFile+".reservations");
+  assert.equal(journalNames.filter(name=>name.endsWith(".json")).length,1);
+  assert.equal(journalNames.filter(name=>name.startsWith(".tmp-")).length,0);
 
   const mode=fs.statSync(file).mode & 0o777;
   const reservationDirMode=fs.statSync(file+".reservations").mode & 0o777;
