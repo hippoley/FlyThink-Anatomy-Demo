@@ -37,12 +37,10 @@ function buildClaimScopeReport(verification={}){
     "logical_target_binding_verified"
   ]);
 
-  // claim-scope-report.v1 may be called as a standalone projection, so a caller
-  // cannot mint issuer authenticity merely by setting a boolean. Only a canonical
-  // verifier result with the explicit source marker can promote this claim.
-  const authorizationIssuerAuthenticated=
-    verification.verification_source==="flythink-canonical-verifier"&&
-    verification.authorization_issuer_authenticated_verified===true;
+  // This projection accepts untrusted JSON input. Until a trusted external
+  // issuer-authentication adapter is wired into the canonical verifier, no input
+  // field or self-declared source marker may mint the stronger authenticity claim.
+  const authorizationIssuerAuthenticated=false;
 
   const controllerReportVerified=allTrue(verification,[
     "target_binding_verified",
