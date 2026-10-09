@@ -103,7 +103,9 @@ function deriveVerification(artifacts){
       physical_completion_verified:execution.physical_completion_verified,
       safe_closeout_verified:execution.safe_closeout_verified,
       authorization_issuer_authenticated_verified:
-        execution.authorization_issuer_authenticated_verified===true
+        execution.authorization_issuer_authenticated_verified===true,
+      independent_object_outcome_verified:
+        execution.independent_object_outcome_verified===true
     }
   };
 }
@@ -180,7 +182,11 @@ function verifyExecutionProofBundle(bundle={}){
   const expectedVerification=deriveVerification(bundle.artifacts);
   // Additive v1 evolution: accept older stored verification blocks, but
   // recompute the current verdicts from the retained artifacts before return.
-  const preIssuerAuthVerification=clone(expectedVerification);
+  const preObjectIndependenceVerification=clone(expectedVerification);
+  if(preObjectIndependenceVerification&&preObjectIndependenceVerification.execution){
+    delete preObjectIndependenceVerification.execution.independent_object_outcome_verified;
+  }
+  const preIssuerAuthVerification=clone(preObjectIndependenceVerification);
   if(preIssuerAuthVerification&&preIssuerAuthVerification.execution){
     delete preIssuerAuthVerification.execution.authorization_issuer_authenticated_verified;
   }
@@ -195,6 +201,7 @@ function verifyExecutionProofBundle(bundle={}){
   const verificationDigest=digestObject(bundle.verification);
   const verificationMatches=
     verificationDigest===digestObject(expectedVerification)||
+    verificationDigest===digestObject(preObjectIndependenceVerification)||
     verificationDigest===digestObject(preIssuerAuthVerification)||
     verificationDigest===digestObject(completionOnlyVerification)||
     verificationDigest===digestObject(legacyVerification);
@@ -218,6 +225,8 @@ function verifyExecutionProofBundle(bundle={}){
       expectedVerification.execution.safe_closeout_verified,
     authorization_issuer_authenticated_verified:
       expectedVerification.execution.authorization_issuer_authenticated_verified===true,
+    independent_object_outcome_verified:
+      expectedVerification.execution.independent_object_outcome_verified===true,
     result:expectedVerification.execution.result
   };
 }

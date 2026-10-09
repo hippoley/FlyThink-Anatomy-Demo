@@ -44,6 +44,7 @@ L5a is evidence that the interface can survive outside this repository. It is
 | Authorization issuer authenticity | External trust layer pending | real Transaction Token/workload-identity validator or equivalent issuer-authenticated mechanism required; current verifier returns `authorization_issuer_authenticated_verified=false` |
 | Potential side effect with ambiguous transport stays `INDETERMINATE` | L3 | real lost-ACK evidence would strengthen the claim |
 | Completion requires pre-actuation criterion + fresh identified witness | L3 | retained real-hardware Golden Proof |
+| Independent object-level outcome observation | Not established by v1 | current WindowPilot witness is integrated controller/state readback (`witness.independent=false`); `independent_object_outcome_verified=false` until a separately trusted observer path exists |
 | Third party can verify retained evidence offline | L4 for frozen fixtures | real-hardware proof still pending; bundle integrity alone is not issuer authentication |
 | Kernel conformance contract is consumable outside FlyThink | L5a | NLUSLOT pins FlyThink commit `d1c3f3619b400153f17731df12a71f0b472ff9fc` and passed cross-repo CI run `37873409257` |
 | EVC host can spawn FlyThink as an external physical-completion verifier | L4/L5a-ready interface | EVC-02-style fd-isolated subprocess verifier is canonical; independent host consumption still required for L5b |
@@ -57,6 +58,7 @@ L5a is evidence that the interface can survive outside this repository. It is
 - FlyThink does not own persistent semantic conversation/task truth.
 - Authorization success is not physical completion.
 - Authorization receipt integrity/binding is not authorization issuer authenticity.
+- Identified fresh controller/state readback is not independent object-level observation.
 
 ## Current reality gates
 

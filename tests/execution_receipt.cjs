@@ -212,6 +212,7 @@ function buildVerified(){
     assert.equal(receipt.verification.measured_readback_verified,true);
     assert.equal(receipt.verification.physical_truth_verified,true);
     assert.equal(receipt.verification.physical_completion_verified,true);
+    assert.equal(receipt.verification.independent_object_outcome_verified,false);
     assert.equal(
       receipt.verification.completion_criterion_authorization_binding_verified,
       true
@@ -228,6 +229,7 @@ function buildVerified(){
     assert.equal(verified.physical_truth_verified,true);
     assert.equal(verified.physical_completion_verified,true);
     assert.equal(verified.authorization_issuer_authenticated_verified,false);
+    assert.equal(verified.independent_object_outcome_verified,false);
   }
 
   // 2. Mutating the exact authorized action is detected even if outer receipt is re-sealed.
@@ -610,12 +612,14 @@ function buildVerified(){
       false
     );
     assert.equal(receipt.verification.physical_completion_verified,false);
+    assert.equal(receipt.verification.independent_object_outcome_verified,false);
     const verified=verifyExecutionReceipt(receipt,{
       before_runtime:before,
       after_runtime:after
     });
     assert.equal(verified.physical_truth_verified,true);
     assert.equal(verified.physical_completion_verified,false);
+    assert.equal(verified.independent_object_outcome_verified,false);
   }
 
   console.log(JSON.stringify({

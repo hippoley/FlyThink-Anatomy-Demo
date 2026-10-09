@@ -3,12 +3,13 @@
 /**
  * Produce a claim-scope-preserving report from FlyThink execution verification.
  *
- * This deliberately keeps five questions separate:
+ * This deliberately keeps six questions separate:
  * 1) was an execution record internally verified?
  * 2) was the exact action bound to the retained authorization receipt?
  * 3) was the authorization issuer authenticated by an external trust layer?
  * 4) did the downstream controller report success?
- * 5) was the intended physical effect independently witnessed?
+ * 5) did identified fresh readback satisfy the precommitted completion criterion?
+ * 6) was the object-level outcome independently observed outside that control path?
  *
  * A stronger claim is never inferred from a weaker one.
  */
@@ -48,6 +49,11 @@ function buildClaimScopeReport(verification={}){
   ]);
 
   const physicalEffectVerified=verification.physical_completion_verified===true;
+
+  // Current execution-receipt.v1 has no external trust adapter capable of
+  // establishing failure-domain / observer independence. Caller-supplied JSON
+  // must never promote an integrated controller readback into this stronger claim.
+  const independentObjectOutcomeVerified=false;
 
   let physicalStatus="NOT_VERIFIED";
   if(physicalEffectVerified)physicalStatus="VERIFIED";
@@ -104,7 +110,18 @@ function buildClaimScopeReport(verification={}){
           :"no physical-effect claim is established",
         does_not_prove:[
           "the action was safe, legal or beneficial",
-          "a named human approved the action"
+          "a named human approved the action",
+          "the object-level outcome was independently observed outside the controller/readback path"
+        ]
+      },
+      independent_object_outcome:{
+        status:independentObjectOutcomeVerified?"VERIFIED":"UNVERIFIED",
+        proves:independentObjectOutcomeVerified
+          ?"an independently separated object-level observer verified the intended outcome"
+          :"no independent object-level observer claim is established by execution-receipt.v1",
+        does_not_prove:[
+          "the action was safe, legal or beneficial",
+          "the authorization issuer was trusted"
         ]
       }
     }

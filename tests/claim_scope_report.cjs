@@ -49,6 +49,12 @@ test("physical completion is reported only from explicit completion verification
   const out=buildClaimScopeReport(v);
   assert.equal(out.claims.physical_effect.status,"VERIFIED");
   assert.match(out.claims.physical_effect.proves,/precommitted criterion/);
+  assert.equal(out.claims.independent_object_outcome.status,"UNVERIFIED");
+  assert.ok(
+    out.claims.physical_effect.does_not_prove.includes(
+      "the object-level outcome was independently observed outside the controller/readback path"
+    )
+  );
 });
 
 test("record integrity does not imply named-human or issuer authentication",()=>{
@@ -65,4 +71,15 @@ test("caller input cannot mint authorization issuer authenticity",()=>{
   const out=buildClaimScopeReport(v);
   assert.equal(out.claims.execution_authorization.status,"VERIFIED");
   assert.equal(out.claims.authorization_issuer.status,"UNVERIFIED");
+});
+
+
+test("caller input cannot mint independent object-level outcome verification",()=>{
+  const v=base();
+  v.physical_truth_verified=true;
+  v.physical_completion_verified=true;
+  v.independent_object_outcome_verified=true;
+  const out=buildClaimScopeReport(v);
+  assert.equal(out.claims.physical_effect.status,"VERIFIED");
+  assert.equal(out.claims.independent_object_outcome.status,"UNVERIFIED");
 });

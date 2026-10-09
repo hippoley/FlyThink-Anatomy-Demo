@@ -526,6 +526,10 @@ function buildExecutionReceipt({
     verification.observation_method_verified&&
     verification.observation_window_verified&&
     verification.completion_criterion_satisfied_verified;
+  // Current v1 can verify a completion criterion against an identified,
+  // fresh WindowPilot readback, but it does not verify observer independence
+  // or an independently separated object-level witness.
+  verification.independent_object_outcome_verified=false;
 
   if(
     physical_committed===true&&
@@ -879,6 +883,7 @@ function verifyExecutionReceipt(receipt={},{
     expectedVerification.observation_method_verified&&
     expectedVerification.observation_window_verified&&
     expectedVerification.completion_criterion_satisfied_verified;
+  expectedVerification.independent_object_outcome_verified=false;
   if(digestObject(verification)!==digestObject(expectedVerification))
     throw new Error("execution_receipt_verification_summary_mismatch");
 
@@ -915,7 +920,8 @@ function verifyExecutionReceipt(receipt={},{
     ),
     // execution-receipt.v1 verifies binding/integrity only. It does not
     // authenticate the authority that issued the SpatialRuntime allow receipt.
-    authorization_issuer_authenticated_verified:false
+    authorization_issuer_authenticated_verified:false,
+    independent_object_outcome_verified:false
   };
 }
 
