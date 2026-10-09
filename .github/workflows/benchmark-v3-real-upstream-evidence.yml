@@ -6,6 +6,8 @@ on:
       - "scripts/generate_long_trajectory_benchmark_v3.py"
       - "scripts/validate_long_trajectory_benchmark_v3.py"
       - "scripts/run_long_checkpoint_e2e_v3.cjs"
+      - "scripts/run_benchmark_v3_teacher_forced.cjs"
+      - "scripts/build_benchmark_v3_first_failure_ledger.py"
       - "scripts/build_benchmark_v3_upstream_evidence.py"
       - ".github/workflows/benchmark-v3-real-upstream-evidence.yml"
   workflow_dispatch:
@@ -74,6 +76,14 @@ jobs:
           # Exit 2 means the evaluator produced evidence but a safety invariant failed.
           # Preserve it for public review instead of losing the artifact.
           if [ "$code" -ne 0 ] && [ "$code" -ne 2 ]; then exit "$code"; fi
+      - name: Evaluate local competence under gold state/history prefix
+        run: |
+          node scripts/run_benchmark_v3_teacher_forced.cjs             --benchmark benchmark-v3.json             --split sealed             --graph artifacts/flywire/connectome.json             --judgement artifacts/context-judgement-v3/model.pt             --semantic artifacts/semantic-patch-v1/model.pt             > benchmark-v3-teacher-forced.json
+          cat benchmark-v3-teacher-forced.json
+      - name: Build first-failure ledger
+        run: |
+          python scripts/build_benchmark_v3_first_failure_ledger.py             --stateful benchmark-v3-real-upstream.json             --teacher-forced benchmark-v3-teacher-forced.json             --out benchmark-v3-first-failure-ledger.json
+          cat benchmark-v3-first-failure-ledger.json
       - name: Build auditable evidence manifest
         run: |
           python scripts/build_benchmark_v3_upstream_evidence.py             --benchmark benchmark-v3.json             --result benchmark-v3-real-upstream.json             --graph artifacts/flywire/connectome.json             --judgement artifacts/context-judgement-v3/model.pt             --semantic artifacts/semantic-patch-v1/model.pt             --judgement-run-id "${{ inputs.judgement_run_id || '36372167785' }}"             --semantic-run-id "${{ inputs.semantic_run_id || '36372786282' }}"             --out benchmark-v3-real-upstream-evidence.json
@@ -107,6 +117,8 @@ jobs:
             benchmark-v3.json
             benchmark-v3-validation.json
             benchmark-v3-real-upstream.json
+            benchmark-v3-teacher-forced.json
+            benchmark-v3-first-failure-ledger.json
             benchmark-v3-real-upstream-evidence.json
       - name: Evidence production gate
         run: |

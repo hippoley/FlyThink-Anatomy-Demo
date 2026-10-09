@@ -72,7 +72,7 @@ async function main(){
   graph:arg("--graph"),judgement:arg("--judgement"),semantic:arg("--semantic"),
   physical:arg("--physical")
  });
- const overall=bucket(),families={},difficulties={},generalization={},failures=[];
+ const overall=bucket(),families={},difficulties={},generalization={},failures=[],firstFailures=[];
  let unsafe=0,wrong=0,untouched=0,strictTrajectories=0,passAllRepeats=0,totalRuns=0;
  let cleanPrefixTurns=0,cleanPrefixUnsafe=0,cleanPrefixWrong=0,prefixFractionSum=0,noFailureRuns=0;
  const firstFailureTurns=[];
@@ -93,7 +93,21 @@ async function main(){
     cleanPrefixWrong+=prefix.clean_prefix_wrong_device;
     prefixFractionSum+=prefix.clean_prefix_fraction;
     if(prefix.first_failure_turn==null)noFailureRuns++;
-    else firstFailureTurns.push(prefix.first_failure_turn);
+    else{
+      firstFailureTurns.push(prefix.first_failure_turn);
+      const fi=prefix.first_failure_turn-1;
+      const ft=tr.turns[fi],fr=result.turns[fi]||{};
+      firstFailures.push({
+        trajectory:tr.id,repeat:rep+1,turn:prefix.first_failure_turn,
+        turn_id:ft.turn_id||null,split:tr.split,
+        family:ft.scenario_family||"unknown",
+        generalization_class:ft.generalization_class||"unknown",
+        difficulty:ft.difficulty,text:ft.text,
+        gold_decision:ft.gold_decision,outcome:fr.outcome,
+        patches:fr.applied_patches||[],error:fr.error||null,
+        patch_ok:!!fr.ok,state_ok:!!fr.state_ok
+      });
+    }
     for(let i=0;i<tr.turns.length;i++){
       const turn=tr.turns[i],row=result.turns[i];
       addTurn(overall,turn,row);
@@ -148,6 +162,7 @@ async function main(){
     }
   },
   unsafe_execute:unsafe,wrong_device:wrong,untouched_state_violation:untouched,
+  first_failures:firstFailures,
   failures
  };
  console.log(JSON.stringify(out));

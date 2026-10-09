@@ -65,3 +65,29 @@ V3 currently permits two explicit ambiguity bases:
   target under the canonical runtime context adapter.
 
 The validator rejects CLARIFY rows that do not prove one of these conditions.
+
+
+## Causal score decomposition
+
+A long-horizon benchmark should not collapse local capability and state cascade
+into one aggregate number.
+
+V3 therefore has three complementary views:
+
+1. **Stateful execution** — run the full trajectory using the model's own prior
+   outputs and persistent runtime state. This measures end-to-end reliability.
+2. **Teacher-forced local competence** — evaluate each turn with the correct
+   gold runtime and gold applied-patch history as its prefix. This measures
+   whether the upstream model can solve the turn when its prerequisites are
+   correct.
+3. **First-failure ledger** — retain exactly one uncapped first failure per
+   trajectory run, then join it with the teacher-forced result to distinguish
+   local capability failures from failures caused only after state divergence.
+
+The detailed per-turn failure list may remain capped for artifact size, but the
+first-failure ledger must never be truncated.
+
+Canonical reporting should show both stateful and teacher-forced metrics. A
+higher teacher-forced score with a low stateful score indicates trajectory
+stability/context propagation problems; low values in both indicate local
+semantic capability gaps.

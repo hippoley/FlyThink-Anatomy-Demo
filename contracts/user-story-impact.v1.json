@@ -508,7 +508,10 @@
         "tests/benchmark_v3_metrics.cjs",
         "docs/benchmark-v3.md",
         ".github/workflows/benchmark-v3-contract.yml",
-        "scripts/validate_benchmark_v3_oracle_runner.cjs"
+        "scripts/validate_benchmark_v3_oracle_runner.cjs",
+        "scripts/run_benchmark_v3_teacher_forced.cjs",
+        "scripts/build_benchmark_v3_first_failure_ledger.py",
+        "tests/benchmark_v3_teacher_forced.cjs"
       ],
       "suites": [
         "benchmark-v3-quality"
