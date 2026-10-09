@@ -21,15 +21,18 @@ def canonical_surface(text):
  return s
 
 def collect(data):
- out=defaultdict(list)
+ unique=defaultdict(dict)
  for tr in data["trajectories"]:
   for t in tr["turns"]:
-   out[tr["split"]].append({
+   surface=canonical_surface(t["text"])
+   if not surface: continue
+   k=(t.get("scenario_family"),surface)
+   unique[tr["split"]].setdefault(k,{
     "trajectory":tr["id"],"turn_id":t.get("turn_id"),
     "family":t.get("scenario_family"),"text":t["text"],
-    "surface":canonical_surface(t["text"])
+    "surface":surface
    })
- return out
+ return {split:list(items.values()) for split,items in unique.items()}
 
 def scan(a,b,threshold):
  hits=[];best=0.0;best_pair=None
