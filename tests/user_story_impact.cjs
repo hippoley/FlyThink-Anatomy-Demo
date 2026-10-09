@@ -29,6 +29,7 @@ assert.equal(matches("scripts/*.cjs","scripts/nested/a.cjs"),false);
   assert.ok(out.direct_stories.includes("context.identity"));
   assert.ok(out.impacted_stories.includes("home.coreference_clarification"));
   assert.ok(out.impacted_stories.includes("execution.untrusted_reasoner_boundary"));
+  assert.ok(out.impacted_stories.includes("execution.context_world_identity"));
 }
 {
   const out=impact(graph,["README.md"]);
@@ -40,4 +41,5 @@ assert.equal(matches("scripts/*.cjs","scripts/nested/a.cjs"),false);
   assert.deepEqual(runSuites(fake,["ok"]),[{suite:"ok",status:0}]);
   assert.throws(()=>runSuites(fake,["bad"]),/user_story_regression_failed:bad/);
 }
+assert.ok(Object.keys(graph.stories).length>=31);
 console.log(JSON.stringify({ok:true,stories:Object.keys(graph.stories).length,contract:"changed paths expand through user-story dependencies into executable fail-closed regression suites"}));
