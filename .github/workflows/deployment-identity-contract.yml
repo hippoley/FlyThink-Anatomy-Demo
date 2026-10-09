@@ -7,6 +7,7 @@ on:
       - "tests/deployment_identity.test.cjs"
       - "tests/guided-demo.test.cjs"
       - "tests/demo-loading.test.cjs"
+      - ".github/workflows/publish-static.yml"
       - ".github/workflows/deployment-identity-contract.yml"
   workflow_dispatch:
 
