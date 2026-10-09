@@ -47,6 +47,7 @@ L5a is evidence that the interface can survive outside this repository. It is
 | Kernel conformance contract is consumable outside FlyThink | L5a | NLUSLOT pins FlyThink commit `d1c3f3619b400153f17731df12a71f0b472ff9fc` and passed cross-repo CI run `37873409257` |
 | EVC host can spawn FlyThink as an external physical-completion verifier | L4/L5a-ready interface | EVC-02-style fd-isolated subprocess verifier is canonical; independent host consumption still required for L5b |
 | Independent external system depends on a FlyThink verifier/conformance rail | L5b not achieved | separately owned project / CI / verifier required |
+| External standards text cites a FlyThink interoperability experiment | Achieved | `draft-zambo-aer1-14` Implementation Status records the FlyThink four-case AER-1/physical-completion fixture; citation is external standards feedback, not L5b dependency |
 
 ## Intentionally blocked
 
@@ -60,7 +61,7 @@ L5a is evidence that the interface can survive outside this repository. It is
 1. **Golden Proof:** execute the protected human-WAV → canonical runtime → real WindowPilot workflow and retain a bundle where physical truth, completion and safe closeout verify, plus the separate Sigstore provenance envelope.
 2. **Independent adoption:** L5a is closed for the kernel conformance rail; L5b still requires a separately owned downstream repository/host/verifier to pin and run FlyThink.
 3. **Authorization authenticity / standards node:** the old project-specific HMAC authorization direction is retired. Issue #137 tracks an experimental physical-action binding profile over IETF Transaction Tokens / workload identity; only real validator/TTS integration or external review advances this gate.
-4. **Standards feedback:** NOA/EVC/SCITT compatibility probes are self-authored evidence until an upstream maintainer, independent implementation or public conformance package consumes/reviews them.
+4. **Standards feedback:** this gate is now crossed for AER-1: `draft-zambo-aer1-14` records the FlyThink four-case interoperability fixture in Implementation Status and adds an explicit binding-does-not-transfer-claims rule. This is external citation/standards feedback, not IETF endorsement and not L5b dependency. NOA/EVC/other probes remain self-authored until an upstream maintainer, independent implementation or public conformance package consumes/reviews them.
 
 ## Priority rule
 
@@ -73,5 +74,6 @@ At the current state, the two highest-value transitions are:
 L3 -> L4   retained real-hardware Golden Proof with separate proof + provenance verification
 L3 -> L4   retained real-hardware proof-derived compensation (only if Undo is publicly claimed)
 L5a -> L5b independently owned downstream consumer
-draft probe -> external feedback/consumption for EVC/NOA/Transaction-Token bindings
+AER-1 citation -> upstream conformance/regression dependency if requested or accepted
+ draft probe -> external feedback/consumption for EVC/NOA/Transaction-Token bindings
 ```
