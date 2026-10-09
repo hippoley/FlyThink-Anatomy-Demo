@@ -4,6 +4,10 @@ const crypto=require("crypto");
 const {deviceKey}=require("./whole_home_patch_contract.cjs");
 const {canonical}=require("./execution_reasoning_contract.cjs");
 const {runtimeRegistryDigest}=require("./spatialruntime_authorizer.cjs");
+const {
+  buildExternalAuthorizationTrustBinding,
+  verifyRetainedExternalAuthorizationEvidence
+}=require("./external_authorization_trust.cjs");
 
 const SCHEMA_VERSION="execution-receipt.v1";
 
@@ -364,7 +368,8 @@ function buildExecutionReceipt({
   physical_committed=false,
   source_step=0,
   source_revision=0,
-  closeout=null
+  closeout=null,
+  external_authorization_trust=null
 }={}){
   if(!contextual_state||typeof contextual_state!=="object")
     throw new Error("execution_receipt_context_required");
@@ -440,6 +445,24 @@ function buildExecutionReceipt({
       try{return !!target&&logicalTargetKeys.has(deviceKey(target))}
       catch(e){return false}
     });
+
+  let externalTrustEvidenceBound=false;
+  if(external_authorization_trust!=null){
+    const worldSha=
+      proposal&&proposal.strategy&&proposal.strategy.world_snapshot_sha256||null;
+    const expectedExternalBinding=buildExternalAuthorizationTrustBinding({
+      authorized_actions,
+      authorization_receipt:authorization,
+      completion_criteria:authorizationCompletionCriteria,
+      world_snapshot_revision:Number(source_revision),
+      world_snapshot_sha256:worldSha
+    });
+    const externalEvidenceCheck=verifyRetainedExternalAuthorizationEvidence(
+      external_authorization_trust,
+      expectedExternalBinding
+    );
+    externalTrustEvidenceBound=externalEvidenceCheck.bound===true;
+  }
   const verification={
     authorization_receipt_integrity_verified:
       authorizationReceiptChecks.receipt_integrity_verified,
@@ -573,7 +596,10 @@ function buildExecutionReceipt({
       receipt:clone(authorization),
       receipt_sha256:authorization?digestObject(authorization):null,
       authorized_actions:clone(authorized_actions),
-      authorized_actions_sha256:digestObject(authorized_actions)
+      authorized_actions_sha256:digestObject(authorized_actions),
+      external_trust:clone(external_authorization_trust),
+      external_trust_sha256:
+        external_authorization_trust?digestObject(external_authorization_trust):null
     },
     physical:{
       committed:physical_committed===true,
@@ -701,6 +727,36 @@ function verifyExecutionReceipt(receipt={},{
   }
   if(auth.authorized_actions_sha256!==digestObject(auth.authorized_actions||[]))
     throw new Error("execution_receipt_authorized_actions_digest_mismatch");
+
+  let externalTrustEvidenceBound=false;
+  let externalTrustOfflineReverifiable=false;
+  if(auth.external_trust!=null){
+    if(auth.external_trust_sha256!==digestObject(auth.external_trust))
+      throw new Error("execution_receipt_external_trust_digest_mismatch");
+    if(!proposal)
+      throw new Error("execution_receipt_proposal_required_for_external_trust");
+    const worldSha=
+      proposal&&proposal.strategy&&proposal.strategy.world_snapshot_sha256||null;
+    const expectedExternalBinding=buildExternalAuthorizationTrustBinding({
+      authorized_actions:auth.authorized_actions||[],
+      authorization_receipt:auth.receipt,
+      completion_criteria:
+        auth.receipt&&Array.isArray(auth.receipt.completion_criteria)
+          ?auth.receipt.completion_criteria
+          :[],
+      world_snapshot_revision:Number(receipt.source_revision),
+      world_snapshot_sha256:worldSha
+    });
+    const externalCheck=verifyRetainedExternalAuthorizationEvidence(
+      auth.external_trust,
+      expectedExternalBinding
+    );
+    externalTrustEvidenceBound=externalCheck.bound===true;
+    externalTrustOfflineReverifiable=
+      externalCheck.offline_reverifiable===true;
+  }else if(auth.external_trust_sha256!=null){
+    throw new Error("execution_receipt_external_trust_missing");
+  }
 
   const physical=receipt.physical||{};
   if(!Array.isArray(physical.evidence))
@@ -919,11 +975,15 @@ function verifyExecutionReceipt(receipt={},{
       rebuiltRows,
       receipt.logical_targets||[]
     ),
-    // execution-receipt.v1 verifies local authorization binding/integrity only.
-    // No external Transaction Token/workload-identity trust adapter is wired
-    // into this verifier yet. Trust-domain key-source verification and optional
-    // issuer authentication are separate claims, and neither can be minted
-    // from local receipt data.
+    // Retained external-trust evidence can be structurally and semantically
+    // bound to this receipt without upgrading the cryptographic trust claim.
+    // Runtime enforcement and offline re-verifiability are intentionally
+    // separate. Until an offline verifier/attestation is replayed here, the
+    // stronger external trust claims remain false.
+    authorization_external_trust_evidence_bound_verified:
+      externalTrustEvidenceBound===true,
+    authorization_external_trust_offline_reverifiable:
+      externalTrustOfflineReverifiable===true,
     authorization_trust_domain_key_source_verified:false,
     authorization_issuer_authenticated_verified:false,
     independent_object_outcome_verified:false
