@@ -5,7 +5,9 @@ const {
   materializePatch,
   expectedObservationTarget,
   reconcileObservation,
-  markQuarantined
+  markQuarantined,
+  isQuarantined,
+  isSafetyReducingPatch
 }=require("./physical_runtime.cjs");
 const {PHYSICAL_CAPABILITIES,requireCapability}=require("./physical_driver_capabilities.cjs");
 
@@ -41,6 +43,24 @@ async function executeAtomicPhysicalSet(inputRuntime,patches,driver,options={}){
     for(const patch of patches) physical.push(materializePatch(before,patch));
   }catch(e){
     return {ok:false,runtime:before,receipts:[],reason:String(e.message||e)};
+  }
+
+  // The atomic path must enforce the same persistent quarantine invariant as
+  // the single-target path. A multi-target SET is not an escape hatch around
+  // executeSinglePhysicalPatch().
+  const quarantineViolation=physical.find(patch=>
+    patch&&
+    patch.target&&
+    isQuarantined(before,patch.target)&&
+    !isSafetyReducingPatch(before,patch)
+  );
+  if(quarantineViolation){
+    return {
+      ok:false,
+      runtime:before,
+      receipts:[],
+      reason:"device_quarantined"
+    };
   }
 
   let commands;
