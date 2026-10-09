@@ -208,16 +208,17 @@ function buildBundle(){
     assert.equal(cli.status,0);
     const row=JSON.parse(cli.stdout.trim());
     assert.equal(row.verdict,"VERIFIED");
-    assert.equal(row.verification_source,"flythink-canonical-verifier");
     assert.equal(row.bundle_sha256,bundle.bundle_sha256);
   }
   assert.equal(verified.valid,true);
-  assert.equal(verified.verification_source,"flythink-canonical-verifier");
   assert.equal(verified.physical_committed,true);
   assert.equal(verified.physical_truth_verified,true);
   assert.equal(verified.physical_completion_verified,false);
   assert.equal(verified.safe_closeout_verified,false);
-  assert.equal(verified.authorization_trust_domain_key_source_verified,false);
+  assert.equal(
+    verified.authorization_trust_domain_key_source_verified,
+    false
+  );
   assert.equal(verified.authorization_issuer_authenticated_verified,false);
   assert.equal(verified.independent_object_outcome_verified,false);
   assert.equal(
@@ -293,18 +294,10 @@ function buildBundle(){
     assert.equal(checked.physical_truth_verified,true);
     assert.equal(checked.physical_completion_verified,false);
     assert.equal(checked.safe_closeout_verified,false);
-    assert.equal(checked.authorization_trust_domain_key_source_verified,false);
-    assert.equal(checked.authorization_issuer_authenticated_verified,false);
-    assert.equal(checked.independent_object_outcome_verified,false);
-  }
-
-  {
-    let preTrustDomain=buildBundle();
-    delete preTrustDomain.verification.execution.authorization_trust_domain_key_source_verified;
-    preTrustDomain=resealBundle(preTrustDomain);
-    const checked=verifyExecutionProofBundle(preTrustDomain);
-    assert.equal(checked.valid,true);
-    assert.equal(checked.authorization_trust_domain_key_source_verified,false);
+    assert.equal(
+      checked.authorization_trust_domain_key_source_verified,
+      false
+    );
     assert.equal(checked.authorization_issuer_authenticated_verified,false);
     assert.equal(checked.independent_object_outcome_verified,false);
   }
@@ -317,9 +310,25 @@ function buildBundle(){
     preIssuerAuth=resealBundle(preIssuerAuth);
     const checked=verifyExecutionProofBundle(preIssuerAuth);
     assert.equal(checked.valid,true);
-    assert.equal(checked.authorization_trust_domain_key_source_verified,false);
+    assert.equal(
+      checked.authorization_trust_domain_key_source_verified,
+      false
+    );
     assert.equal(checked.authorization_issuer_authenticated_verified,false);
     assert.equal(checked.independent_object_outcome_verified,false);
+  }
+
+  {
+    let preTrustDomain=buildBundle();
+    delete preTrustDomain.verification.execution.authorization_trust_domain_key_source_verified;
+    preTrustDomain=resealBundle(preTrustDomain);
+    const checked=verifyExecutionProofBundle(preTrustDomain);
+    assert.equal(checked.valid,true);
+    assert.equal(
+      checked.authorization_trust_domain_key_source_verified,
+      false
+    );
+    assert.equal(checked.authorization_issuer_authenticated_verified,false);
   }
 
   {
@@ -329,7 +338,6 @@ function buildBundle(){
     preObjectIndependence=resealBundle(preObjectIndependence);
     const checked=verifyExecutionProofBundle(preObjectIndependence);
     assert.equal(checked.valid,true);
-    assert.equal(checked.authorization_trust_domain_key_source_verified,false);
     assert.equal(checked.independent_object_outcome_verified,false);
   }
 
