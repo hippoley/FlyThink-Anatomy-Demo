@@ -282,6 +282,7 @@ function buildBundle(){
     delete legacy.verification.execution.physical_completion_verified;
     delete legacy.verification.execution.safe_closeout_verified;
     delete legacy.verification.execution.authorization_issuer_authenticated_verified;
+    delete legacy.verification.execution.independent_object_outcome_verified;
     legacy=resealBundle(legacy);
     const checked=verifyExecutionProofBundle(legacy);
     assert.equal(checked.valid,true);
@@ -295,6 +296,7 @@ function buildBundle(){
   {
     let preIssuerAuth=buildBundle();
     delete preIssuerAuth.verification.execution.authorization_issuer_authenticated_verified;
+    delete preIssuerAuth.verification.execution.independent_object_outcome_verified;
     preIssuerAuth=resealBundle(preIssuerAuth);
     const checked=verifyExecutionProofBundle(preIssuerAuth);
     assert.equal(checked.valid,true);
