@@ -69,6 +69,7 @@ async function main(){
  if(!rows.length)throw new Error("benchmark_split_empty:"+split);
 
  const client=createCheckpointClient({
+  backend:arg("--backend")||"neural",
   graph:arg("--graph"),judgement:arg("--judgement"),semantic:arg("--semantic"),
   physical:arg("--physical")
  });
