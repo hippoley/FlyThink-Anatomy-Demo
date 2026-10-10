@@ -10,7 +10,7 @@ def predict(inference,capability_index,text,context=None,background=None):
  ctx=context or {}
  bg=background if background is not None else ctx
  j=inference.judgement(text,bg)
- ev=operation_evidence(text)
+ ev=operation_evidence(text,ctx)
  resolved=bool(ctx.get("focused_target") or ctx.get("add_target") or ctx.get("referent_set"))
 
  if ev and resolved and j["decision"]=="CLARIFY":
@@ -25,7 +25,7 @@ def predict(inference,capability_index,text,context=None,background=None):
 
  raw=inference.patch(text,ctx)
  if ev:
-  override={k:v for k,v in ev.items() if k in ("op","direction","cardinality")}
+  override={k:v for k,v in ev.items() if k in ("op","direction","cardinality","slot","value")}
   if any(raw.get(k)!=v for k,v in override.items()):
    raw={**raw,**override,"operation_override":ev}
 
