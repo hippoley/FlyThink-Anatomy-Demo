@@ -26,6 +26,8 @@ assert pos["op"]=="PATCH_RELATIVE" and pos["direction"]=="POS"
 ctx={"focused_target":{"area":"客厅","entity":"窗","instance":"default"},"protected_paths":[]}
 existing_open=operation_evidence("打开客厅窗",ctx)
 assert existing_open["op"]=="PATCH_SLOT"
+first_turn_open=operation_evidence("打开客厅窗",{"device_registry":{"客厅::窗::default":{"model_id":"CWDS-CA01"}}})
+assert first_turn_open["op"]=="PATCH_SLOT"
 assert existing_open["slot"]=="power" and existing_open["value"]=="ON"
 assert operation_evidence("打开新风机",{"add_target":{"area":"客厅","entity":"新风机","instance":"default"}})["op"]=="ADD_DEVICE"
 assert safe_block_override(operation_evidence("再开大一点"),ctx,{"rain":False}) is True
