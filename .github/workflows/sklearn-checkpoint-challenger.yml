@@ -6,6 +6,12 @@ on:
       - "requirements-model-baselines.txt"
       - "scripts/train_sklearn_checkpoint_challenger.py"
       - "tests/test_sklearn_checkpoint_challenger.py"
+      - "tests/test_sklearn_checkpoint_inference.py"
+      - "scripts/sklearn_checkpoint_features.py"
+      - "scripts/sklearn_checkpoint_inference.py"
+      - "scripts/checkpoint_jsonl_server.py"
+      - "scripts/stateful_checkpoint_trajectory.cjs"
+      - "scripts/run_long_checkpoint_e2e_v3.cjs"
       - "scripts/context_judgement_corpus_v4.py"
       - "scripts/whole_home_patch_corpus_v12.py"
       - ".github/workflows/sklearn-checkpoint-challenger.yml"
@@ -29,6 +35,25 @@ jobs:
         run: python tests/test_sklearn_checkpoint_challenger.py
       - name: Train train-only challenger
         run: python scripts/train_sklearn_checkpoint_challenger.py
+      - name: Load serialized challenger through runtime interface
+        run: |
+          python tests/test_sklearn_checkpoint_inference.py             --judgement artifacts/sklearn-checkpoint-challenger/judgement.joblib             --semantic artifacts/sklearn-checkpoint-challenger/semantic.joblib
+      - name: Build runtime capability index
+        run: python scripts/build_capability_index.py
+      - name: Generate V3.2 dev benchmark
+        run: |
+          python scripts/generate_long_trajectory_benchmark_v3.py             --count 180             --release-id 2026-10-r2             --out artifacts/sklearn-checkpoint-challenger/v3_2.json
+          python scripts/validate_long_trajectory_benchmark_v3.py             artifacts/sklearn-checkpoint-challenger/v3_2.json
+      - name: Run sklearn through canonical stateful runtime on dev
+        shell: bash
+        run: |
+          set +e
+          node scripts/run_long_checkpoint_e2e_v3.cjs             --backend sklearn             --benchmark artifacts/sklearn-checkpoint-challenger/v3_2.json             --split dev             --repeats 1             --judgement artifacts/sklearn-checkpoint-challenger/judgement.joblib             --semantic artifacts/sklearn-checkpoint-challenger/semantic.joblib             > artifacts/sklearn-checkpoint-challenger/dev-e2e.json
+          code=$?
+          set -e
+          test -s artifacts/sklearn-checkpoint-challenger/dev-e2e.json
+          cat artifacts/sklearn-checkpoint-challenger/dev-e2e.json
+          if [ "$code" -ne 0 ] && [ "$code" -ne 2 ]; then exit "$code"; fi
       - name: Publish report
         run: cat artifacts/sklearn-checkpoint-challenger/report.json
       - name: Sanity gate
@@ -39,10 +64,14 @@ jobs:
           assert r["selection_policy"]=="fixed_hyperparameters_train_only_no_dev_tuning"
           assert r["judgement"]["dev"]["accuracy"]>0
           assert r["semantic"]["dev"]["exact"]>0
+          e=json.load(open("artifacts/sklearn-checkpoint-challenger/dev-e2e.json"))
           print({
             "judgement_dev":r["judgement"]["dev"]["accuracy"],
             "semantic_dev_exact":r["semantic"]["dev"]["exact"],
-            "semantic_multi_target":r["semantic"]["dev"]["family"].get("v3_multi_target")
+            "semantic_multi_target":r["semantic"]["dev"]["family"].get("v3_multi_target"),
+            "dev_e2e":e["overall"],
+            "dev_strict_trajectory_rate":e["strict_trajectory_rate"],
+            "dev_clean_prefix_safety":e["causal_prefix_diagnostics"]["clean_prefix_safety"]
           })
           PY
       - uses: actions/upload-artifact@v4
