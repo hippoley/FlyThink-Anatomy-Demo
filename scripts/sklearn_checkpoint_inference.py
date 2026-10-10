@@ -1,12 +1,17 @@
 #!/usr/bin/env python3
 """scikit-learn implementation of the checkpoint inference interface."""
 import joblib
-from sklearn_checkpoint_features import judgement_text,semantic_text
+from sklearn_checkpoint_features import judgement_text,semantic_text,FEATURE_CONTRACT
 
 class SklearnInference:
  def __init__(self,judgement_ckpt,semantic_ckpt):
   j=joblib.load(judgement_ckpt)
   s=joblib.load(semantic_ckpt)
+  for name,x in (("judgement",j),("semantic",s)):
+   if x.get("artifact_version")!="flythink-sklearn-checkpoint-v1":
+    raise ValueError("unsupported_sklearn_checkpoint_artifact:"+name)
+   if x.get("feature_contract")!=FEATURE_CONTRACT:
+    raise ValueError("sklearn_checkpoint_feature_contract_mismatch:"+name)
   self.jvec=j["vectorizer"];self.judge=j["classifier"]
   self.svec=s["vectorizer"];self.semantic=s["models"]
 
