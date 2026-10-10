@@ -83,7 +83,9 @@ def resolve_targets(text,proposal,context):
  if len(text_targets)==1:
   return {"mode":"ONE","targets":text_targets,"source":"explicit_text"}
  if len(text_targets)>1:
-  multi=any(x in (text or "") for x in ("和","以及","都","两个","两台","两盏","两扇"))
+  multi=any(x in (text or "") for x in (
+   "和","以及","都","同时","、","跟","两处","两个","两台","两盏","两扇"
+  ))
   if multi:return {"mode":"SET","targets":text_targets,"source":"explicit_text_set"}
   return {"mode":"CLARIFY","targets":[],"source":"ambiguous_explicit_text"}
 
