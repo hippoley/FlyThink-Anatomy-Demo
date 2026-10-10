@@ -7,11 +7,17 @@ from checkpoint_runtime import predict
 
 def main():
  ap=argparse.ArgumentParser()
- ap.add_argument("--graph",required=True)
+ ap.add_argument("--backend",choices=["neural","sklearn"],default="neural")
+ ap.add_argument("--graph")
  ap.add_argument("--judgement",required=True)
  ap.add_argument("--semantic",required=True)
  a=ap.parse_args()
- inf=Inference(a.graph,a.judgement,a.semantic)
+ if a.backend=="neural":
+  if not a.graph:raise SystemExit("--graph is required for neural backend")
+  inf=Inference(a.graph,a.judgement,a.semantic)
+ else:
+  from sklearn_checkpoint_inference import SklearnInference
+  inf=SklearnInference(a.judgement,a.semantic)
  index=load()
  for line in sys.stdin:
   x=json.loads(line)
