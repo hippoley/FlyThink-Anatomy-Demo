@@ -2,15 +2,16 @@
 """Resolve patch targets from the current utterance and world context.
 
 Precedence is deliberate:
-current-turn explicit target > semantic proposal target > additive target >
-set referents > focus > single referent.
+current-turn corrected explicit target > current-turn explicit target >
+semantic proposal target > additive target > set referents > focus >
+single referent.
 """
+import re
 
 ENTITY_ALIASES={
- "空调":("空调",),
- "灯":("灯","灯光"),
- "窗":("窗","窗户"),
- "窗户":("窗","窗户"),
+ "空调":("空调","空调机","冷气机","冷气","空调设备"),
+ "灯":("灯","灯光","照明灯","照明","灯具"),
+ "窗":("窗","窗户","玻璃窗","窗子","外窗"),
 }
 
 def key(t):
@@ -49,7 +50,29 @@ def explicit_targets_from_text(text,context):
    matches.append(target)
  return uniq(matches)
 
+def _correction_suffix(text):
+ t=text or ""
+ for marker in ("改成","而是"):
+  if marker in t:return t.rsplit(marker,1)[1]
+ m=re.search(r"不是[^，,。；;]*[，,]\s*是(.+)$",t)
+ return m.group(1) if m else None
+
+def corrected_explicit_target(text,context):
+ """Resolve only the positive side of an explicit correction.
+
+ This deliberately avoids treating the rejected target as a candidate. If the
+ correction suffix does not bind exactly one registry target, return None and
+ let the normal fail-closed resolution path decide.
+ """
+ suffix=_correction_suffix(text)
+ if not suffix:return None
+ xs=explicit_targets_from_text(suffix,context)
+ return xs[0] if len(xs)==1 else None
+
 def resolve_targets(text,proposal,context):
+ corrected=corrected_explicit_target(text,context)
+ if corrected:
+  return {"mode":"ONE","targets":[corrected],"source":"explicit_correction_text"}
  text_targets=explicit_targets_from_text(text,context)
  explicit=proposal.get("target")
  explicit_set=proposal.get("targets")
@@ -60,7 +83,9 @@ def resolve_targets(text,proposal,context):
  if len(text_targets)==1:
   return {"mode":"ONE","targets":text_targets,"source":"explicit_text"}
  if len(text_targets)>1:
-  multi=any(x in (text or "") for x in ("和","以及","都","两个","两台","两盏","两扇"))
+  multi=any(x in (text or "") for x in (
+   "和","以及","都","同时","、","跟","两处","两个","两台","两盏","两扇"
+  ))
   if multi:return {"mode":"SET","targets":text_targets,"source":"explicit_text_set"}
   return {"mode":"CLARIFY","targets":[],"source":"ambiguous_explicit_text"}
 

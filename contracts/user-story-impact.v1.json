@@ -82,6 +82,10 @@
     "benchmark-v3-training-adapter": [
       "python",
       "tests/test_benchmark_v3_training_adapter.py"
+    ],
+    "sklearn-checkpoint-challenger": [
+      "bash",
+      "scripts/check_sklearn_checkpoint_challenger.sh"
     ]
   },
   "stories": {
@@ -578,6 +582,28 @@
       ],
       "suites": [
         "benchmark-v3-training-adapter"
+      ]
+    },
+    "benchmark.sklearn_checkpoint_challenger": {
+      "depends_on": [
+        "benchmark.v3_train_dev_checkpoint_adapter",
+        "benchmark.long_trajectory_v3"
+      ],
+      "paths": [
+        "requirements-model-baselines.txt",
+        "scripts/train_sklearn_checkpoint_challenger.py",
+        "tests/test_sklearn_checkpoint_challenger.py",
+        ".github/workflows/sklearn-checkpoint-challenger.yml",
+        "scripts/sklearn_checkpoint_features.py",
+        "scripts/sklearn_checkpoint_inference.py",
+        "scripts/checkpoint_jsonl_server.py",
+        "scripts/stateful_checkpoint_trajectory.cjs",
+        "scripts/run_long_checkpoint_e2e_v3.cjs",
+        "tests/test_sklearn_checkpoint_inference.py",
+        "scripts/check_sklearn_checkpoint_challenger.sh"
+      ],
+      "suites": [
+        "sklearn-checkpoint-challenger"
       ]
     }
   }

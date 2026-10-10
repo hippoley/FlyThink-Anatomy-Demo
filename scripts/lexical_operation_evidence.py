@@ -27,7 +27,7 @@ LIFECYCLE_CUES=(
 )
 
 
-def operation_evidence(text):
+def operation_evidence(text,context=None):
     t=text or ""
     if any(x in t for x in PROTECT):
         return None
@@ -48,6 +48,15 @@ def operation_evidence(text):
     if close and not open_:
         return {"op":"CLOSE_DEVICE","source":"lexical_actuator","confidence":1.0}
     if open_ and not close:
+        # Preserve legacy/no-context behavior for callers that are explicitly
+        # reasoning about Add-target. In the online runtime, a bound existing
+        # target is a power-state mutation, not persistent target creation.
+        ctx=context or {}
+        if context is not None and not ctx.get("add_target"):
+            return {
+                "op":"PATCH_SLOT","slot":"power","value":"ON",
+                "source":"lexical_existing_device_power_on","confidence":1.0
+            }
         return {"op":"ADD_DEVICE","source":"lexical_actuator","confidence":1.0}
     return None
 

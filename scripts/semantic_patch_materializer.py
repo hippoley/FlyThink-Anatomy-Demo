@@ -15,6 +15,8 @@ def deterministic_value(text,slot=None):
  return None
 def materialize(raw,text):
  p={"op":raw["op"],"cardinality":raw["cardinality"]}
+ if raw.get("slot") is not None:p["slot"]=raw["slot"]
+ if "value" in raw:p["value"]=raw["value"]
  if raw["op"]=="CLOSE_DEVICE":p.update({"slot":"power","value":"OFF"})
  elif raw["op"]=="ADD_DEVICE":p["slots"]={"power":"ON"}
  if raw["op"]=="PATCH_RELATIVE":

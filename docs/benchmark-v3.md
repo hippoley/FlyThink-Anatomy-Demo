@@ -213,3 +213,27 @@ responsibilities.
 The adapter never exports V3 sealed rows. Existing judgement `final` and
 semantic `sealed` corpora are inherited byte-for-byte from their previous
 builders. V3 sealed releases remain evaluation-only.
+
+
+## scikit-learn checkpoint challenger
+
+A mature external challenger is intentionally kept beside the custom neural
+checkpoint rather than replacing it without evidence.
+
+`scikit-learn 1.9.1` supplies a fixed train-only character n-gram TF-IDF +
+LogisticRegression baseline for:
+
+- the judgement decision;
+- semantic operation;
+- cardinality;
+- relative direction;
+- value-presence semantics.
+
+The challenger uses the same V3.2 train/dev adapter and inherited evaluation
+corpora as the neural checkpoints. Hyperparameters are frozen in code and no
+dev/sealed set is used for fitting or parameter search.
+
+This is an architectural falsification test: if the simpler mature wheel
+matches or beats the custom topology backend on the relevant dev families, the
+project should prefer the cheaper replaceable backend unless the custom model
+demonstrates a separate durable advantage.
