@@ -44,12 +44,15 @@ function physicalReceiptFailure(receipts){
 }
 
 function createCheckpointClient(args={}){
- const py=cp.spawn("python",[
+ const backend=args.backend||"neural";
+ const pyArgs=[
   "scripts/checkpoint_jsonl_server.py",
-  "--graph",args.graph,
+  "--backend",backend,
   "--judgement",args.judgement,
   "--semantic",args.semantic
- ],{stdio:["pipe","pipe","inherit"]});
+ ];
+ if(args.graph)pyArgs.push("--graph",args.graph);
+ const py=cp.spawn("python",pyArgs,{stdio:["pipe","pipe","inherit"]});
  const rl=readline.createInterface({input:py.stdout});
  const queue=[];
  let serverError=null,closed=false;
