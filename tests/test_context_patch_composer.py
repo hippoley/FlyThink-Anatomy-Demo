@@ -82,6 +82,30 @@ r=resolve_targets(
 )
 assert r["targets"]==[{"area":"主卧","entity":"灯","instance":"default"}]
 
+# Explicit multi-target conjunction variants must resolve as a set even if
+# semantic cardinality is wrong.
+r=resolve_targets(
+ "同时把书房、主卧窗户的开度设为80",
+ {"op":"PATCH_SLOT","cardinality":"ONE"},
+ {"device_registry":REG},
+)
+assert r["mode"]=="SET"
+assert r["targets"]==[
+ {"area":"主卧","entity":"窗","instance":"default"},
+ {"area":"书房","entity":"窗","instance":"default"},
+]
+
+r=resolve_targets(
+ "客厅跟书房这两处空调，温度统一到22",
+ {"op":"PATCH_SLOT","cardinality":"ONE"},
+ {"device_registry":REG},
+)
+assert r["mode"]=="SET"
+assert r["targets"]==[
+ {"area":"客厅","entity":"空调","instance":"default"},
+ {"area":"书房","entity":"空调","instance":"default"},
+]
+
 # Pronouns/relative follow-ups still use context when no explicit target is named.
 r=resolve_targets(
  "再低一点",
