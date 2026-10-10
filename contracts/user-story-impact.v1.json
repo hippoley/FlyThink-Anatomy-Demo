@@ -84,8 +84,8 @@
       "tests/test_benchmark_v3_training_adapter.py"
     ],
     "sklearn-checkpoint-challenger": [
-      "python",
-      "tests/test_sklearn_checkpoint_challenger.py"
+      "bash",
+      "scripts/check_sklearn_checkpoint_challenger.sh"
     ]
   },
   "stories": {
@@ -599,7 +599,8 @@
         "scripts/checkpoint_jsonl_server.py",
         "scripts/stateful_checkpoint_trajectory.cjs",
         "scripts/run_long_checkpoint_e2e_v3.cjs",
-        "tests/test_sklearn_checkpoint_inference.py"
+        "tests/test_sklearn_checkpoint_inference.py",
+        "scripts/check_sklearn_checkpoint_challenger.sh"
       ],
       "suites": [
         "sklearn-checkpoint-challenger"
