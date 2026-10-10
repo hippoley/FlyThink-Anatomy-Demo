@@ -3,13 +3,17 @@ import pathlib,sys
 ROOT=pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/"scripts"))
 
-from sklearn_checkpoint_features import flatten,judgement_text,semantic_text
+from sklearn_checkpoint_features import flatten,judgement_text,semantic_text,context_text,FEATURE_CONTRACT
 from train_sklearn_checkpoint_challenger import semantic_labels
 from context_judgement_corpus_v4 import build as judgement_build
 from whole_home_patch_corpus_v12 import build as semantic_build
 
 out=[];flatten("ctx",{"b":2,"a":{"x":["z",1]}},out)
 assert out==["ctx.a.x=z","ctx.a.x=1","ctx.b=2"]
+base={"focused_target":{"area":"客厅","entity":"空调","instance":"default"},"device_keys":["客厅::空调::default"]}
+noisy={**base,"last_execution":{"id":"x","status":"applied"},"active_goals":[{"id":"g"}],"quarantined_devices":[{"device_key":"other"}]}
+assert context_text(base)==context_text(noisy)
+assert FEATURE_CONTRACT=="sklearn-checkpoint-context-v1"
 
 j=judgement_build()
 assert j["train"] and j["dev"] and j["final"]
