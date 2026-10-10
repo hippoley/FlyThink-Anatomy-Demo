@@ -18,7 +18,8 @@ assert FEATURE_CONTRACT=="sklearn-checkpoint-context-v1"
 j=judgement_build()
 assert j["train"] and j["dev"] and j["final"]
 assert "utterance=" in judgement_text(j["train"][0])
-assert "ctx." in judgement_text(j["train"][0])
+synthetic={"utterance":"测试","background":{"focused_target":{"area":"客厅","entity":"空调","instance":"default"}}}
+assert "ctx.focused_target.area=客厅" in judgement_text(synthetic)
 
 s=semantic_build()
 assert s["train"] and s["dev"] and s["sealed"]
