@@ -1,0 +1,52 @@
+name: sklearn-checkpoint-challenger
+
+on:
+  pull_request:
+    paths:
+      - "requirements-model-baselines.txt"
+      - "scripts/train_sklearn_checkpoint_challenger.py"
+      - "tests/test_sklearn_checkpoint_challenger.py"
+      - "scripts/context_judgement_corpus_v4.py"
+      - "scripts/whole_home_patch_corpus_v12.py"
+      - ".github/workflows/sklearn-checkpoint-challenger.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  train-and-compare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install mature external challenger
+        run: pip install -r requirements-model-baselines.txt
+      - name: Contract test
+        run: python tests/test_sklearn_checkpoint_challenger.py
+      - name: Train train-only challenger
+        run: python scripts/train_sklearn_checkpoint_challenger.py
+      - name: Publish report
+        run: cat artifacts/sklearn-checkpoint-challenger/report.json
+      - name: Sanity gate
+        run: |
+          python - <<'PY'
+          import json
+          r=json.load(open("artifacts/sklearn-checkpoint-challenger/report.json"))
+          assert r["selection_policy"]=="fixed_hyperparameters_train_only_no_dev_tuning"
+          assert r["judgement"]["dev"]["accuracy"]>0
+          assert r["semantic"]["dev"]["exact"]>0
+          print({
+            "judgement_dev":r["judgement"]["dev"]["accuracy"],
+            "semantic_dev_exact":r["semantic"]["dev"]["exact"],
+            "semantic_multi_target":r["semantic"]["dev"]["family"].get("v3_multi_target")
+          })
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sklearn-checkpoint-challenger
+          retention-days: 30
+          path: artifacts/sklearn-checkpoint-challenger/
