@@ -191,3 +191,25 @@ part of the machine-readable User Story impact graph.
 
 They are intentionally kept outside production dependencies: their role is to
 falsify benchmark/data assumptions, not participate in inference or actuation.
+
+
+## Train/dev checkpoint adapter
+
+Benchmark V3.2 can improve the existing checkpoints without tuning on a sealed
+release. `benchmark_v3_training_adapter.py` converts only V3.2 train/dev turns
+into the existing checkpoint training contracts.
+
+Judgement rows use runtime-shaped context keys such as `focused_target`,
+`referent_set`, `device_keys` and `device_registry`. EXECUTE and CLARIFY
+additions are bounded and decision-balanced so the augmentation cannot turn the
+safety classifier into an execute-biased shortcut.
+
+Semantic rows are emitted only for EXECUTE turns and are bounded per scenario
+family. They supervise only the four semantic heads already owned by the
+checkpoint: operation, cardinality, relative direction and value presence.
+Target resolution and concrete value materialization remain downstream
+responsibilities.
+
+The adapter never exports V3 sealed rows. Existing judgement `final` and
+semantic `sealed` corpora are inherited byte-for-byte from their previous
+builders. V3 sealed releases remain evaluation-only.
