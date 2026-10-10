@@ -593,7 +593,13 @@
         "requirements-model-baselines.txt",
         "scripts/train_sklearn_checkpoint_challenger.py",
         "tests/test_sklearn_checkpoint_challenger.py",
-        ".github/workflows/sklearn-checkpoint-challenger.yml"
+        ".github/workflows/sklearn-checkpoint-challenger.yml",
+        "scripts/sklearn_checkpoint_features.py",
+        "scripts/sklearn_checkpoint_inference.py",
+        "scripts/checkpoint_jsonl_server.py",
+        "scripts/stateful_checkpoint_trajectory.cjs",
+        "scripts/run_long_checkpoint_e2e_v3.cjs",
+        "tests/test_sklearn_checkpoint_inference.py"
       ],
       "suites": [
         "sklearn-checkpoint-challenger"
