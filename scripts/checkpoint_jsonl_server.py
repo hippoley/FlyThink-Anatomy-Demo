@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Persistent JSONL checkpoint server. Context arrives from actual JS runtime each turn."""
 import argparse,json,sys
-from checkpoint_inference import Inference
 from context_slot_resolver import load
 from checkpoint_runtime import predict
 
@@ -14,6 +13,7 @@ def main():
  a=ap.parse_args()
  if a.backend=="neural":
   if not a.graph:raise SystemExit("--graph is required for neural backend")
+  from checkpoint_inference import Inference
   inf=Inference(a.graph,a.judgement,a.semantic)
  else:
   from sklearn_checkpoint_inference import SklearnInference
