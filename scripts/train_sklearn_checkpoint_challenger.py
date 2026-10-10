@@ -15,7 +15,7 @@ from sklearn.linear_model import LogisticRegression
 from context_judgement_corpus_v4 import build as judgement_build
 from whole_home_patch_corpus_v12 import build as semantic_build
 from semantic_patch_contract import OPS,CARD,DIR,encode
-from sklearn_checkpoint_features import judgement_text,semantic_text
+from sklearn_checkpoint_features import judgement_text,semantic_text,FEATURE_CONTRACT
 
 DECISIONS=["EXECUTE","CLARIFY","BLOCK","NOOP","CANCEL_PENDING","UNDO_EXECUTED"]
 HEADS=("op","cardinality","direction","has_value")
@@ -72,7 +72,11 @@ def train_judgement(out):
   "features":len(vec.vocabulary_)
  }
  out.mkdir(parents=True,exist_ok=True)
- joblib.dump({"vectorizer":vec,"classifier":clf,"decisions":DECISIONS},out/"judgement.joblib")
+ joblib.dump({
+  "artifact_version":"flythink-sklearn-checkpoint-v1",
+  "feature_contract":FEATURE_CONTRACT,
+  "vectorizer":vec,"classifier":clf,"decisions":DECISIONS
+ },out/"judgement.joblib")
  return report
 
 def semantic_labels(rows):
@@ -121,7 +125,11 @@ def train_semantic(out):
   "classes":{h:list(models[h].classes_) for h in HEADS}
  }
  out.mkdir(parents=True,exist_ok=True)
- joblib.dump({"vectorizer":vec,"models":models,"ops":OPS,"card":CARD,"dir":DIR},out/"semantic.joblib")
+ joblib.dump({
+  "artifact_version":"flythink-sklearn-checkpoint-v1",
+  "feature_contract":FEATURE_CONTRACT,
+  "vectorizer":vec,"models":models,"ops":OPS,"card":CARD,"dir":DIR
+ },out/"semantic.joblib")
  return report
 
 def main():
