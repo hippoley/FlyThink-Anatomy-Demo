@@ -15,8 +15,14 @@ LAMP={"area":"客厅","entity":"灯"}
 REG={
  "客厅::空调::default":{"model_id":"AWGD-ZA01"},
  "主卧::空调::default":{"model_id":"AWGD-ZA01"},
+ "书房::空调::default":{"model_id":"AWGD-ZA01"},
+ "次卧::空调::default":{"model_id":"AWGD-ZA01"},
  "客厅::灯::default":{"model_id":"LIGHT_GROUP"},
+ "主卧::灯::default":{"model_id":"LIGHT_GROUP"},
+ "次卧::灯::default":{"model_id":"LIGHT_GROUP"},
  "客厅::窗::default":{"model_id":"CWDS-CA01"},
+ "主卧::窗::default":{"model_id":"CWDS-CA01"},
+ "书房::窗::default":{"model_id":"CWDS-CA01"},
 }
 
 p={"op":"CLOSE_DEVICE","slot":"power"}
@@ -51,6 +57,30 @@ r=resolve_targets(
  {"focused_target":B,"referent_set":[B],"device_registry":REG},
 )
 assert r["targets"]==[{"area":"客厅","entity":"窗","instance":"default"}]
+
+# Dev/sealed aliases ground to canonical entities.
+r=resolve_targets(
+ "书房冷气机温度调到23度",
+ {"op":"PATCH_SLOT","cardinality":"ONE"},
+ {"focused_target":LAMP,"referent_set":[LAMP],"device_registry":REG},
+)
+assert r["targets"]==[{"area":"书房","entity":"空调","instance":"default"}]
+
+# Explicit correction must resolve the positive target rather than stale/rejected focus.
+r=resolve_targets(
+ "刚说错了，不要书房，改成次卧冷气机温度27",
+ {"op":"PATCH_SLOT","cardinality":"ONE"},
+ {"focused_target":{"area":"书房","entity":"空调"},"referent_set":[{"area":"书房","entity":"空调"}],"device_registry":REG},
+)
+assert r["targets"]==[{"area":"次卧","entity":"空调","instance":"default"}]
+assert r["source"]=="explicit_correction_text"
+
+r=resolve_targets(
+ "更正一下，目标不是客厅而是主卧照明灯，亮度80",
+ {"op":"PATCH_SLOT","cardinality":"ONE"},
+ {"focused_target":LAMP,"referent_set":[LAMP],"device_registry":REG},
+)
+assert r["targets"]==[{"area":"主卧","entity":"灯","instance":"default"}]
 
 # Pronouns/relative follow-ups still use context when no explicit target is named.
 r=resolve_targets(
