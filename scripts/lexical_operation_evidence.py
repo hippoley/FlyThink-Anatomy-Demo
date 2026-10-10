@@ -52,9 +52,7 @@ def operation_evidence(text,context=None):
         # reasoning about Add-target. In the online runtime, a bound existing
         # target is a power-state mutation, not persistent target creation.
         ctx=context or {}
-        if context is not None and not ctx.get("add_target") and (
-            ctx.get("focused_target") or ctx.get("referent_set")
-        ):
+        if context is not None and not ctx.get("add_target"):
             return {
                 "op":"PATCH_SLOT","slot":"power","value":"ON",
                 "source":"lexical_existing_device_power_on","confidence":1.0
