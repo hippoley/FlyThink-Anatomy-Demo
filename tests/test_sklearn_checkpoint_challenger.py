@@ -3,9 +3,8 @@ import pathlib,sys
 ROOT=pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/"scripts"))
 
-from train_sklearn_checkpoint_challenger import (
- flatten,judgement_text,semantic_text,semantic_labels
-)
+from sklearn_checkpoint_features import flatten,judgement_text,semantic_text
+from train_sklearn_checkpoint_challenger import semantic_labels
 from context_judgement_corpus_v4 import build as judgement_build
 from whole_home_patch_corpus_v12 import build as semantic_build
 
