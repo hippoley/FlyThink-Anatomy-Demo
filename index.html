@@ -608,7 +608,11 @@ function composeGoalScenario(text){
   for(const n of needs){const key=[n.area,n.entity,n.property].join('::'),prior=byKey.get(key);if(prior&&prior.value!==n.value)conflicts.push({key,area:n.area,entity:n.entity,property:n.property,values:[prior.value,n.value]});else byKey.set(key,n)}
   const deduped=[...byKey.values()];
   if(!deduped.length)return null;
-  return {text:raw,goal:'composed_home_goal',entity:deduped.length>1?'home':deduped[0].entity,operation:'plan',action:null,confidence:conflicts.length?.58:.86,match:1,
+  // Preserve a single recognized goal's semantic identity rather than
+  // collapsing it into 'composed_home_goal'; mixed goals retain the generic ID.
+  const movieSignals=evidence.length>0&&evidence.every(e=>['movie_glare','movie_warmth','excess_light'].includes(e.signal));
+  const goal=/看电影|观影|投影/.test(raw)&&movieSignals?'movie_comfort':'composed_home_goal';
+  return {text:raw,goal,entity:deduped.length>1?'home':deduped[0].entity,operation:'plan',action:null,confidence:conflicts.length?.58:.86,match:1,
     needs:deduped,evidence,constraints,conflicts,scope:[...new Set(deduped.map(x=>x.area))],inference_source:'compositional_room_object_goal_compiler'};
 }
 function capabilityText(c){
