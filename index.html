@@ -194,7 +194,7 @@ measured_flywire_coordinate_derivative
 
 Blue anatomy mapping:
 developmental projection, not measured FlyWire activity.\n\nThing Model archive:\n46/46 original JSON schemas loaded from the fixed uploaded archive.\nEvery executable binding is validated against the loaded schema at runtime.</div></div>
-</div></details></div></details><details class="disclosure" id="researchTools"><summary>研究工具<span>语料编排、批量测试、模型检查与神经视图</span></summary><div class="disclosureBody"><button id="exportFailures" class="quietLink" type="button">导出错误样本 JSONL</button><button class="btn" id="exportTrajectory" type="button">导出交互轨迹</button><button class="btn" id="openTrajectoryReview" type="button" hidden>审核本地轨迹</button><span id="telemetryStatus" aria-live="polite"></span><span id="exportFailuresStatus" class="feedbackCount" role="status"></span><details class="disclosure" id="dialogueTools"><summary>编辑语料与多轮脚本<span></span></summary><div class="disclosureBody"><div class="corpusStudio">
+</div></details></div></details><details class="disclosure" id="researchTools"><summary>研究工具<span>语料编排、批量测试、模型检查与神经视图</span></summary><div class="disclosureBody"><button id="exportFailures" class="quietLink" type="button">导出错误样本 JSONL</button><button id="exportBenchmarkEvidence" class="quietLink" type="button">导出批量测试证据 JSON</button><button id="openBenchmarkReport" class="quietLink" type="button">审阅后提交 GitHub Issue</button><span id="benchmarkEvidenceStatus" role="status" class="feedbackCount"></span><button class="btn" id="exportTrajectory" type="button">导出交互轨迹</button><button class="btn" id="openTrajectoryReview" type="button" hidden>审核本地轨迹</button><span id="telemetryStatus" aria-live="polite"></span><span id="exportFailuresStatus" class="feedbackCount" role="status"></span><details class="disclosure" id="dialogueTools"><summary>编辑语料与多轮脚本<span></span></summary><div class="disclosureBody"><div class="corpusStudio">
 <div class="corpusTop"><div><div class="corpusTitle">Dialogue Essence · Corpus Mutation Lab</div><div class="corpusMeta" id="corpusMeta">loading train-only exemplars…</div><div class="corpusMeta" style="margin-top:3px">NEGATION · MULTI-INTENT · NER/AREA · COREFERENCE · CROSS-ROOM · REVISION · INTERRUPTION · SCENARIO · OOD</div></div><div class="presets" style="margin:0"><button class="btn mut" id="sampleCorpus" type="button">抽一条语料</button></div></div>
 <p class="toolHint">这些工具会修改主对话框中的草稿。修改后返回上方发送，继续同一段对话。</p><a class="quietLink" href="#input">返回对话草稿 ↑</a>
 <div class="mutationBar">
@@ -1313,7 +1313,76 @@ function runBenchmark(){
     benchmarkResults.push({...sc,turnResults:turns,failures,pass:!failures.length,passedTurns:turns.filter(t=>t.pass).length});
   }
   reset();
+  persistBenchmarkEvidence();
   renderBenchmark();
+}
+const BENCHMARK_EVIDENCE_KEY='flythink.benchmark.evidence.v1';
+function benchmarkEvidenceDocument(){
+  if(!benchmarkResults.length)return null;
+  return {
+    schema_version:'flythink.benchmark.evidence.v1',
+    generated_at:new Date().toISOString(),
+    evidence_type:'local_browser_regression_not_real_hardware',
+    review_status:'unreviewed_not_training_gold',
+    location:'browser_local_until_explicit_export_or_submission',
+    totals:{
+      sequences:benchmarkResults.length,
+      turns:benchmarkResults.reduce((n,s)=>n+s.turnResults.length,0),
+      passed_turns:benchmarkResults.reduce((n,s)=>n+s.passedTurns,0),
+      passed_sequences:benchmarkResults.filter(s=>s.pass).length
+    },
+    cases:benchmarkResults.map(sc=>({
+      id:sc.id,family:sc.family,passed:sc.pass,passed_turns:sc.passedTurns,
+      turns:sc.turnResults.map((tr,i)=>({
+        index:i+1,type:tr.turn?.type||'turn',
+        input:tr.turn?.text||'',
+        expected:tr.turn?.expect||tr.turn?.expected||null,
+        actual_delta:tr.result?.delta||null,
+        actual_route:tr.result?.exec?.route||null,
+        actual_nodes:tr.result?.exec?.nodes||[],
+        before:tr.pre||null,after:tr.post||null,
+        failure_codes:tr.failures||[],pass:tr.pass
+      }))
+    }))
+  };
+}
+function persistBenchmarkEvidence(){
+  const doc=benchmarkEvidenceDocument();if(!doc)return false;
+  try{browserSessionStorage()?.setItem(BENCHMARK_EVIDENCE_KEY,JSON.stringify(doc));return true}
+  catch(_){const el=$('#benchmarkEvidenceStatus');if(el)el.textContent='浏览器持久化失败，请立即导出';return false}
+}
+function exportBenchmarkEvidence(){
+  let doc=benchmarkEvidenceDocument();
+  if(!doc){try{doc=JSON.parse(browserSessionStorage()?.getItem(BENCHMARK_EVIDENCE_KEY)||'null')}catch(_){}}
+  const status=$('#benchmarkEvidenceStatus');
+  if(!doc){if(status)status.textContent='还没有可导出的批量测试结果';return}
+  const url=URL.createObjectURL(new Blob([JSON.stringify(doc,null,2)],{type:'application/json'}));
+  const a=document.createElement('a');a.href=url;a.download='flythink-benchmark-evidence-'+new Date().toISOString().slice(0,10)+'.json';
+  document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+  if(status)status.textContent='已导出，请先检查输入是否含个人信息再分享';
+}
+function openBenchmarkReport(){
+  let doc=benchmarkEvidenceDocument();
+  if(!doc){try{doc=JSON.parse(browserSessionStorage()?.getItem(BENCHMARK_EVIDENCE_KEY)||'null')}catch(_){}}
+  const status=$('#benchmarkEvidenceStatus');
+  if(!doc){if(status)status.textContent='请先运行 Regression Lab';return}
+  // GitHub Issue contains ONLY aggregated failure codes, no utterances or state snapshots.
+  const counts={};for(const sc of doc.cases)for(const tr of sc.turns)for(const code of tr.failure_codes)counts[code]=(counts[code]||0)+1;
+  const body=['### FlyThink regression evidence (user-reviewed submission)',
+    'Evidence schema: '+doc.schema_version,
+    'Recorded locally: '+doc.generated_at,
+    'Passed: '+doc.totals.passed_turns+'/'+doc.totals.turns+' turns; '+doc.totals.passed_sequences+'/'+doc.totals.sequences+' sequences.',
+    '',
+    '### Failure counts (no user utterances or device state included)',
+    ...Object.entries(counts).sort((a,b)=>b[1]-a[1]).map(([k,v])=>'- '+k+': '+v),
+    '',
+    '### Reproduction',
+    'Export benchmark evidence JSON locally, inspect and remove sensitive inputs, then attach or provide a sanitized minimal repro.',
+    'This report is not a human-reviewed gold label or hardware-validation claim.'
+  ].join('\\n');
+  const url='https://github.com/hippoley/FlyThink-Anatomy-Demo/issues/new?title='+encodeURIComponent('Regression feedback: '+doc.totals.passed_turns+'/'+doc.totals.turns+' turns')+'&body='+encodeURIComponent(body);
+  window.open(url,'_blank','noopener,noreferrer');
+  if(status)status.textContent='已打开 GitHub Issue 草稿；请审阅并手动提交';
 }
 function benchmarkFailureCounts(){
   const counts={};
@@ -2616,7 +2685,9 @@ function prepareGuidedTurn(button){
   $('#experience').scrollIntoView({behavior:'smooth',block:'start'});
 }
 $('#turnStageRail').addEventListener('click',e=>{const stage=e.target.closest('[data-turn-stage]');if(stage)selectTurnJourneyStage(Number(stage.dataset.turnStage))});document.querySelectorAll('[data-guided-turn]').forEach(b=>b.addEventListener('click',()=>prepareGuidedTurn(b)));
-document.querySelectorAll('[data-p]').forEach(b=>b.addEventListener('click',()=>{const t=b.dataset.p;$('#input').value=t;updateDecisionHeads(t)}));document.querySelectorAll('[data-mutate]').forEach(b=>b.addEventListener('click',()=>mutateDraft(b.dataset.mutate)));$('#sampleCorpus').addEventListener('click',sampleCorpus);$('#copyDecision').addEventListener('click',async()=>{const s=JSON.stringify(window.__decisionContract||{},null,2);try{await navigator.clipboard.writeText(s);$('#copyDecision').textContent='Copied';setTimeout(()=>$('#copyDecision').textContent='Copy JSON',900)}catch(e){$('#decisionAnswer').textContent=s}});$('#reset').addEventListener('click',()=>{closeTelemetryEpisode();reset()});$('#homeRoomGrid').addEventListener('click',e=>{const b=e.target.closest('[data-home-probe]');if(!b)return;loadHomeProbe(b.dataset.area,b.dataset.entity)});$('#nextHint').addEventListener('click',e=>{const b=e.target.closest('[data-next-prompt]');if(!b)return;const t=b.dataset.nextPrompt||'';$('#input').value=t;currentCorpusCase=null;updateDecisionHeads(t);$('#input').focus()});$('#markWrong').addEventListener('click',markLastResultWrong);$('#exportFailures').addEventListener('click',exportFailureLibrary);$('#exportTrajectory').addEventListener('click',exportTrajectory);$('#openTrajectoryReview').addEventListener('click',openTrajectoryReview);$('#openTrajectoryReview').hidden=!telemetryLocalEnabled();$('#composer').addEventListener('submit',e=>{e.preventDefault();if($('#sendTurn').disabled)return;const t=$('#input').value;if(!t.trim())return;submit(t);$('#input').value='';$('#input').focus()});$('#runAsSequence').addEventListener('click',()=>{currentCorpusCase=null;const seq=splitSequence($('#input').value);for(const t of seq)submit(t)});$('#input').addEventListener('keydown',e=>{
+document.querySelectorAll('[data-p]').forEach(b=>b.addEventListener('click',()=>{const t=b.dataset.p;$('#input').value=t;updateDecisionHeads(t)}));document.querySelectorAll('[data-mutate]').forEach(b=>b.addEventListener('click',()=>mutateDraft(b.dataset.mutate)));$('#sampleCorpus').addEventListener('click',sampleCorpus);$('#copyDecision').addEventListener('click',async()=>{const s=JSON.stringify(window.__decisionContract||{},null,2);try{await navigator.clipboard.writeText(s);$('#copyDecision').textContent='Copied';setTimeout(()=>$('#copyDecision').textContent='Copy JSON',900)}catch(e){$('#decisionAnswer').textContent=s}});$('#reset').addEventListener('click',()=>{closeTelemetryEpisode();reset()});$('#homeRoomGrid').addEventListener('click',e=>{const b=e.target.closest('[data-home-probe]');if(!b)return;loadHomeProbe(b.dataset.area,b.dataset.entity)});$('#nextHint').addEventListener('click',e=>{const b=e.target.closest('[data-next-prompt]');if(!b)return;const t=b.dataset.nextPrompt||'';$('#input').value=t;currentCorpusCase=null;updateDecisionHeads(t);$('#input').focus()});$('#markWrong').addEventListener('click',markLastResultWrong);$('#exportFailures').addEventListener('click',exportFailureLibrary);
+$('#exportBenchmarkEvidence').addEventListener('click',exportBenchmarkEvidence);
+$('#openBenchmarkReport').addEventListener('click',openBenchmarkReport);$('#exportTrajectory').addEventListener('click',exportTrajectory);$('#openTrajectoryReview').addEventListener('click',openTrajectoryReview);$('#openTrajectoryReview').hidden=!telemetryLocalEnabled();$('#composer').addEventListener('submit',e=>{e.preventDefault();if($('#sendTurn').disabled)return;const t=$('#input').value;if(!t.trim())return;submit(t);$('#input').value='';$('#input').focus()});$('#runAsSequence').addEventListener('click',()=>{currentCorpusCase=null;const seq=splitSequence($('#input').value);for(const t of seq)submit(t)});$('#input').addEventListener('keydown',e=>{
   if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){
     e.preventDefault();
     if(!$('#sendTurn').disabled)$('#composer').requestSubmit();
