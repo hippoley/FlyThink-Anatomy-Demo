@@ -2160,6 +2160,10 @@ function executeCurrent(neural,d){
   if(d?.op==='CLEAR_STATE_TREE')return {outputs:[],route:'STATE_ONLY'};
   const nodes=nodesForCurrentTurn(d);
   const fallback=nodes;
+  // Browser Thing Model mutations are provisional until every node is grounded.
+  // This is NOT a distributed physical transaction or a hardware atomicity claim.
+  const beforeValues=clone(state.thingValues);
+  const beforeAction=state.lastAction;
   const outputs=[];
   for(const n of fallback){
     const ra=routeNode(n);
@@ -2180,6 +2184,16 @@ function executeCurrent(neural,d){
     }else{
       outputs.push({route:ra.route,action:ra.action,node:n,binding:null,worldDelta:null});
     }
+  }
+  // Any blocked member invalidates the entire simulated write set. A partial
+  // action list must never escape the browser executor as an executable plan.
+  if(outputs.some(x=>x.grounding_status==='BLOCKED'||x.route==='CLARIFY'||x.route==='LLM_ESCALATE')){
+    state.thingValues=beforeValues;
+    state.lastAction=beforeAction;
+    return {route:'CLARIFY',actions:[],outputs:outputs.map(x=>({...x,
+      action:null,worldDelta:null,grounding_status:x.grounding_status==='BLOCKED'?x.grounding_status:'NOT_COMMITTED',
+      grounding_reason:x.grounding_reason||'compound_write_set_rejected'})),
+      nodes:fallback,worldDeltas:[],commit_status:'REJECTED_ATOMIC_SIMULATION'};
   }
   state.lastAction=outputs.filter(x=>x.action).map(x=>x.action).join(',');
   const routes=[...new Set(outputs.map(x=>x.route))];
