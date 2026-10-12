@@ -1,0 +1,24 @@
+name: nluslot-goal-plan-consumer
+
+on:
+  push:
+    paths:
+      - "scripts/nluslot_goal_plan_consumer.cjs"
+      - "tests/nluslot_goal_plan_consumer.test.cjs"
+      - ".github/workflows/nluslot-goal-plan-consumer.yml"
+  pull_request:
+    paths:
+      - "scripts/nluslot_goal_plan_consumer.cjs"
+      - "tests/nluslot_goal_plan_consumer.test.cjs"
+      - ".github/workflows/nluslot-goal-plan-consumer.yml"
+  workflow_dispatch:
+
+jobs:
+  consume:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: node --test tests/nluslot_goal_plan_consumer.test.cjs
