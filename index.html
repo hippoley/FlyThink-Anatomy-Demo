@@ -2086,6 +2086,15 @@ function bindingForCapability(node,route='THING_MODEL_EXECUTE'){
   const mode=node?.intent==='QueryState'?'read':(c.kind==='s'?'execute':'write');
   const value=node?.slots?.value;
   const check=capabilityValueCheck(c,value,mode);
+  // Defense in depth: downstream execution rechecks the precise capability
+  // identity, independently of the planner/ranker.
+  const declaredModel=node?.slots?.model_code;
+  const declaredModule=node?.slots?.module_code;
+  const declaredProperty=node?.slots?.schema_property;
+  if((declaredModel&&c.model!==declaredModel)||(declaredModule&&c.module!==declaredModule)||(declaredProperty&&c.code!==declaredProperty)){
+    return {route:'CLARIFY',action:null,node,binding:null,grounding_status:'BLOCKED',
+      grounding_reason:'capability_identity_mismatch',worldDelta:null};
+  }
   const area=node?.slots?.area||state.lastArea||null;
   const entityName=node?.slots?.entity_name||canonicalEntityName(node?.target?.entity,area)||[area,c.product||c.model].filter(Boolean).join('');
   const binding={
