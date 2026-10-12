@@ -771,6 +771,14 @@ function buildGoalPlan(scenario,area,raw){
     });
   }
   const gate=!needs.length?'UNSUPPORTED':gates.some(x=>x.gate==='UNSUPPORTED')?'UNSUPPORTED':gates.some(x=>x.gate==='CLARIFY')?'CLARIFY':'EXECUTE';
+  // One unsupported/ambiguous need blocks the entire compound goal. Do not
+  // expose a partial plan as executable or report a partial capability selection.
+  if(gate!=='EXECUTE'){
+    for(const candidate of candidates){candidate.selected=false;candidate.commit_gate=gate}
+    for(const candidate of selected)rejected.push({...candidate,commit_gate:gate,filter_reason:'compound_goal_not_atomic'});
+    return {nodes:[],candidates,selected:[],rejected,needs,gates,gate,
+      truth:'goal_semantic_state_plus_global_46_model_capability_retrieval_plus_commit_gate'};
+  }
   return {nodes,candidates,selected,rejected,needs,gates,gate,
     truth:'goal_semantic_state_plus_global_46_model_capability_retrieval_plus_commit_gate'};
 }
