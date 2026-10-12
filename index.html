@@ -1373,6 +1373,7 @@ function benchmarkEvidenceDocument(){
         actual_commit_status:tr.result?.exec?.commit_status||null,
         actual_failure_code:tr.result?.exec?.failure_code||null,
         actual_world_deltas:tr.result?.exec?.worldDeltas||[],
+        execution_evidence:{kind:'browser_simulation_only',physical_completion:'UNVERIFIED',hardware_ack:'NOT_OBSERVED',independent_readback:'NOT_OBSERVED'},
         actual_nodes:tr.result?.exec?.nodes||[],
         before:tr.pre||null,after:tr.post||null,
         failure_codes:tr.failures||[],pass:tr.pass
