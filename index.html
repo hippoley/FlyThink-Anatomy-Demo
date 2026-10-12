@@ -2165,6 +2165,7 @@ function executeCurrent(neural,d){
   const beforeValues=clone(state.thingValues);
   const beforeAction=state.lastAction;
   const outputs=[];
+  try{
   for(const n of fallback){
     const ra=routeNode(n);
     const learned=neural?.bestLabel||null;
@@ -2184,6 +2185,16 @@ function executeCurrent(neural,d){
     }else{
       outputs.push({route:ra.route,action:ra.action,node:n,binding:null,worldDelta:null});
     }
+  }
+  }catch(err){
+    // Unexpected adapter exceptions must not strand provisional browser writes.
+    // Preserve the failure as data; do not convert it into an execution success.
+    state.thingValues=beforeValues;
+    state.lastAction=beforeAction;
+    return {route:'CLARIFY',actions:[],outputs:[],nodes:fallback,worldDeltas:[],
+      commit_status:'REJECTED_ATOMIC_SIMULATION',
+      failure_code:'EXECUTION_ADAPTER_EXCEPTION',
+      failure_detail:String(err?.message||err).slice(0,240)};
   }
   // Any blocked member invalidates the entire simulated write set. A partial
   // action list must never escape the browser executor as an executable plan.
