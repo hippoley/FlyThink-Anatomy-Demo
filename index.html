@@ -1300,20 +1300,31 @@ function diagnoseBenchmarkTurn(turn,result,pre,post){
 }
 function runBenchmark(){
   if(!benchmarkScenarios.length)generateBenchmark();
+  // The regression runner is not a user-session reset. Keep both the live
+  // state and browser-side evidence even if a benchmark case throws.
+  const savedState=clone(state);
+  const savedNeural=clone(neuralState),savedScores=clone(semanticScores),savedRoots=clone(projectedRoots);
+  const savedCorpus=currentCorpusCase;
   benchmarkResults=[];
-  for(const sc of benchmarkScenarios){
-    resetRuntimeState();
-    const turns=[];
-    for(const turn of sc.turns){
-      const pre=composerSnapshot(),result=submit(turn.text,{silent:true}),post=composerSnapshot();
-      const failures=diagnoseBenchmarkTurn(turn,result,pre,post);
-      turns.push({turn,result,pre,post,failures,pass:!failures.length});
+  try{
+    for(const sc of benchmarkScenarios){
+      resetRuntimeState();
+      const turns=[];
+      for(const turn of sc.turns){
+        const pre=composerSnapshot(),result=submit(turn.text,{silent:true,transient:true}),post=composerSnapshot();
+        const failures=diagnoseBenchmarkTurn(turn,result,pre,post);
+        turns.push({turn,result,pre,post,failures,pass:!failures.length});
+      }
+      const failures=[...new Set(turns.flatMap(t=>t.failures))];
+      benchmarkResults.push({...sc,turnResults:turns,failures,pass:!failures.length,passedTurns:turns.filter(t=>t.pass).length});
     }
-    const failures=[...new Set(turns.flatMap(t=>t.failures))];
-    benchmarkResults.push({...sc,turnResults:turns,failures,pass:!failures.length,passedTurns:turns.filter(t=>t.pass).length});
+    persistBenchmarkEvidence();
+  }finally{
+    // Never call reset() here: it deletes the human's persisted session.
+    Object.assign(state,savedState);
+    neuralState=savedNeural;semanticScores=savedScores;projectedRoots=savedRoots;
+    currentCorpusCase=savedCorpus;
   }
-  reset();
-  persistBenchmarkEvidence();
   renderBenchmark();
 }
 const BENCHMARK_EVIDENCE_KEY='flythink.benchmark.evidence.v1';
