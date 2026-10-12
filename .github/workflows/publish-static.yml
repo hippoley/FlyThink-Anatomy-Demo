@@ -84,6 +84,7 @@ jobs:
           node tests/test_crossroom_action_inheritance.cjs
           node tests/test_movie_goal_inference.cjs
           node tests/test_goal_retrieval_oracle.cjs
+          node tests/test_goal_inventory_binding.cjs
           python - <<'PY'
           import json
           from collections import Counter
