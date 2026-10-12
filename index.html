@@ -2187,7 +2187,7 @@ function executeCurrent(neural,d){
   }
   // Any blocked member invalidates the entire simulated write set. A partial
   // action list must never escape the browser executor as an executable plan.
-  if(outputs.some(x=>x.grounding_status==='BLOCKED'||x.route==='CLARIFY'||x.route==='LLM_ESCALATE')){
+  if(outputs.some(x=>['BLOCKED','NEEDS_GROUNDING'].includes(x.grounding_status)||x.route==='CLARIFY'||x.route==='LLM_ESCALATE')){
     state.thingValues=beforeValues;
     state.lastAction=beforeAction;
     return {route:'CLARIFY',actions:[],outputs:outputs.map(x=>({...x,
@@ -2258,6 +2258,7 @@ function displayBindingValue(b,value){
 }
 function friendlyTurn(exec,d){
   if(d?.op==='CLEAR_STATE_TREE')return {status:'意图已全部撤回',title:'所有挂载意图已清空。',detail:'暂停队列和指代焦点也已清空；已发生的设备动作不会自动逆转。',blocked:false};
+  if(exec.commit_status==='REJECTED_ATOMIC_SIMULATION')return {status:'整组拒绝',title:'有设备未通过校验，本轮未修改任何模拟设备状态。',detail:'组合操作已整体拒绝；请确认设备身份、能力与房间绑定后再试。',blocked:true};
   const changes=(exec.outputs||[]).filter(o=>o.worldDelta);
   const pending=(exec.outputs||[]).filter(o=>o.route==='CLARIFY'||o.grounding_status==='BLOCKED'||o.grounding_status==='NEEDS_GROUNDING');
   const queries=(exec.outputs||[]).filter(o=>o.query);
