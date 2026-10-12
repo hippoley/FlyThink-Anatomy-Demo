@@ -1,0 +1,15 @@
+'use strict';
+const assert=require('node:assert/strict');
+const fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
+const html=fs.readFileSync(path.join(__dirname,'..','index.html'),'utf8');
+const part=(start,end)=>{const a=html.indexOf(start),b=html.indexOf(end,a);assert(a>=0&&b>a,start);return html.slice(a,b)};
+const env={actualEntities:()=>[],actualAreas:()=>[],CAPINDEX:{capabilities:[]}};
+vm.createContext(env);
+const diagnose=vm.runInContext(part('function diagnoseBenchmarkTurn(','\nfunction runBenchmark(')+'\ndiagnoseBenchmarkTurn',env);
+const failures=Array.from(diagnose({expected:{}},{delta:{op:'CREATE_TASK'},exec:{commit_status:'REJECTED_ATOMIC_SIMULATION',failure_code:'EXECUTION_ADAPTER_EXCEPTION',nodes:[],outputs:[]}}, {intentTree:{}},{intentTree:{},tasks:[]}));
+assert(failures.includes('EXECUTION_ADAPTER_EXCEPTION'),'reject must remain visible as benchmark failure');
+assert(html.includes('actual_commit_status:tr.result?.exec?.commit_status||null'));
+assert(html.includes('actual_failure_code:tr.result?.exec?.failure_code||null'));
+assert(html.includes('actual_world_deltas:tr.result?.exec?.worldDeltas||[]'));
+assert(html.includes('world_delta_changed:JSON.stringify(oldWrites)!==JSON.stringify(newWrites)'));
+console.log('PASS executor rejection becomes benchmark failure and evidence retains outcome/write delta');
