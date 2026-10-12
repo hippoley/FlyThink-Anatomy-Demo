@@ -95,6 +95,7 @@ jobs:
           node tests/test_session_execution_evidence.cjs
           node tests/test_submit_execution_evidence_runtime.cjs
           node tests/test_open_user_story_closure_plan.cjs
+          node tests/inference_proposal_adapter.cjs
           node tests/test_compound_execute_rollback.cjs
           node tests/test_atomic_ungrounded_feedback.cjs
           node tests/test_execution_exception_rollback.cjs
