@@ -2507,7 +2507,7 @@ function submit(text,opts={}){
   const response=friendlyTurn(exec,d);
   if(!opts.transient&&(!opts.silent||opts.restore)){
     const at=opts.eventAt||new Date().toISOString(),eventId='event:'+telemetryEpisode()+':'+at+':'+d.turn_id;
-    const event={episode_id:telemetryEpisode(),trajectory_step:state.trajectoryStep=(state.trajectoryStep||0)+1,started_ms:startedMs,ended_ms:Date.now(),event_id:eventId,turn_id:d.turn_id,text:String(text),at,before,delta:clone(d),reply:response.detail,route:exec.route,outcome:response.blocked?'blocked':exec.worldDeltas?.length?'committed':'no_change',world_deltas:clone(exec.worldDeltas||[]),after:runtimeTraceSnapshot()};
+    const event={episode_id:telemetryEpisode(),trajectory_step:state.trajectoryStep=(state.trajectoryStep||0)+1,started_ms:startedMs,ended_ms:Date.now(),event_id:eventId,turn_id:d.turn_id,text:String(text),at,before,delta:clone(d),reply:response.detail,route:exec.route,outcome:response.blocked?'blocked':exec.worldDeltas?.length?'committed':'no_change',world_deltas:clone(exec.worldDeltas||[]),execution_evidence:{kind:'browser_simulation_only',commit_status:exec.commit_status||((exec.worldDeltas||[]).length?'SIMULATED_STATE_CHANGED':'NO_SIMULATED_WRITE'),failure_code:exec.failure_code||null,physical_completion:'UNVERIFIED',hardware_ack:'NOT_OBSERVED',independent_readback:'NOT_OBSERVED'},after:runtimeTraceSnapshot()};
     state.sessionEvents.push(event);state.lastEventId=eventId;if(!opts.restore)syncTrajectory();
     if(state.sessionEvents.length>200)state.sessionEvents=state.sessionEvents.slice(-200);
     if(opts.persist!==false){const saved=persistSession();$('#runtimeStatus').textContent=saved?('已保存在此浏览器 · '+state.sessionEvents.length+' 轮'):'本轮仅保存在内存 · 浏览器禁止本地存储';}
