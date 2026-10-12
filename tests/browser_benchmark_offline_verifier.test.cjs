@@ -5,7 +5,7 @@ const {verify}=require('../scripts/verify_browser_benchmark_evidence.cjs');
 function receipt(){
  return {schema_version:'flythink.benchmark.evidence.v1',evidence_type:'local_browser_regression_not_real_hardware',source:'generated_contract_derived_not_independent_gold',review_status:'unreviewed_not_training_gold',
  totals:{sequences:1,turns:1,passed_turns:1,passed_sequences:1},
- cases:[{id:'case-01',passed:true,passed_turns:1,turns:[{input:'把客厅灯关掉',expected:{op:'CREATE_TASK'},actual_commit_status:null,actual_failure_code:null,actual_world_deltas:[{key:'light',after:false}],failure_codes:[],pass:true}]}]};
+ cases:[{id:'case-01',passed:true,passed_turns:1,turns:[{input:'把客厅灯关掉',expected:{op:'CREATE_TASK'},actual_delta:{op:'CREATE_TASK'},actual_commit_status:null,actual_failure_code:null,actual_world_deltas:[{key:'light',after:false}],failure_codes:[],pass:true}]}]};
 }
 test('valid structural evidence passes',()=>assert.deepEqual(verify(receipt()),[]));
 test('cannot claim a rejected write succeeded',()=>{
@@ -38,4 +38,15 @@ test('refuse clarification route counted as passing',()=>{
  const reasons=verify(r).map(e=>e.reason);
  assert(reasons.includes('blocked_route_marked_success'));
  assert(reasons.includes('turn_pass_inconsistent'));
+});
+
+test('wrong GraphDelta operation cannot be counted as passed',()=>{
+ const r=receipt();r.cases[0].turns[0].actual_delta.op='UPDATE_TASK';
+ const reasons=verify(r).map(e=>e.reason);
+ assert(reasons.includes('expected_operation_mismatch'));
+ assert(reasons.includes('turn_pass_inconsistent'));
+});
+test('missing GraphDelta cannot pass when expected operation is known',()=>{
+ const r=receipt();delete r.cases[0].turns[0].actual_delta;
+ assert(verify(r).some(e=>e.reason==='expected_operation_mismatch'));
 });
