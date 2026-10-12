@@ -1,0 +1,277 @@
+{
+  "schema_version": "flythink.user-story-closure-plan.v1",
+  "all_selected": true,
+  "completion_rule": "code_and_regression_and_applicable_horizontal_gates_and_real_world_evidence",
+  "batches": [
+    {
+      "id": 1,
+      "focus": "goal_to_registry_to_crossroom_to_frozen_regression",
+      "first": [
+        "US-27",
+        "US-28",
+        "US-29",
+        "US-31"
+      ]
+    },
+    {
+      "id": 2,
+      "focus": "real_execution_golden_proof_and_failure_paths",
+      "first": [
+        "US-10",
+        "US-19",
+        "US-20",
+        "US-22",
+        "US-34"
+      ]
+    },
+    {
+      "id": 3,
+      "focus": "remaining_semantics_trust_independent_adoption",
+      "first": [
+        "US-02",
+        "US-03",
+        "US-04",
+        "US-08",
+        "US-11",
+        "US-12",
+        "US-17",
+        "US-18",
+        "US-21",
+        "US-23",
+        "US-24",
+        "US-25",
+        "US-26",
+        "US-30",
+        "US-32",
+        "US-33"
+      ]
+    }
+  ],
+  "stories": [
+    {
+      "id": "US-02",
+      "title": "Patch one slot, preserve untouched state",
+      "selected": true,
+      "batch": 3,
+      "status": "OPEN",
+      "closure_evidence": [],
+      "external_gate": "review_formal_audit"
+    },
+    {
+      "id": "US-03",
+      "title": "Relative patch",
+      "selected": true,
+      "batch": 3,
+      "status": "OPEN",
+      "closure_evidence": [],
+      "external_gate": "review_formal_audit"
+    },
+    {
+      "id": "US-04",
+      "title": "Close without remove",
+      "selected": true,
+      "batch": 3,
+      "status": "OPEN",
+      "closure_evidence": [],
+      "external_gate": "review_formal_audit"
+    },
+    {
+      "id": "US-08",
+      "title": "Undo executed action",
+      "selected": true,
+      "batch": 3,
+      "status": "OPEN",
+      "closure_evidence": [],
+      "external_gate": "review_formal_audit"
+    },
+    {
+      "id": "US-10",
+      "title": "Multi-target atomic set",
+      "selected": true,
+      "batch": 2,
+      "status": "OPEN",
+      "closure_evidence": [],
+      "external_gate": "review_formal_audit"
+    },
+    {
+      "id": "US-11",
+      "title": "Coreference / correction / clarification",
+      "selected": true,
+      "batch": 3,
+      "status": "OPEN",
+      "closure_evidence": [],
+      "external_gate": "review_formal_audit"
+    },
+    {
+      "id": "US-12",
+      "title": "Interruption / resume / long dialogue",
+      "selected": true,
+      "batch": 3,
+      "status": "OPEN",
+      "closure_evidence": [],
+      "external_gate": "review_formal_audit"
+    },
+    {
+      "id": "US-17",
+      "title": "External authorization trust domain",
+      "selected": true,
+      "batch": 3,
+      "status": "OPEN",
+      "closure_evidence": [],
+      "external_gate": "review_formal_audit"
+    },
+    {
+      "id": "US-18",
+      "title": "Optional issuer authentication",
+      "selected": true,
+      "batch": 3,
+      "status": "OPEN",
+      "closure_evidence": [],
+      "external_gate": "review_formal_audit"
+    },
+    {
+      "id": "US-19",
+      "title": "Ambiguous transport quarantine",
+      "selected": true,
+      "batch": 2,
+      "status": "OPEN",
+      "closure_evidence": [],
+      "external_gate": "review_formal_audit"
+    },
+    {
+      "id": "US-20",
+      "title": "Completion criterion and witness",
+      "selected": true,
+      "batch": 2,
+      "status": "OPEN",
+      "closure_evidence": [],
+      "external_gate": "review_formal_audit"
+    },
+    {
+      "id": "US-21",
+      "title": "Independent object outcome observation",
+      "selected": true,
+      "batch": 3,
+      "status": "OPEN",
+      "closure_evidence": [],
+      "external_gate": "review_formal_audit"
+    },
+    {
+      "id": "US-22",
+      "title": "Offline third-party physical proof verification",
+      "selected": true,
+      "batch": 2,
+      "status": "OPEN",
+      "closure_evidence": [],
+      "external_gate": "review_formal_audit"
+    },
+    {
+      "id": "US-23",
+      "title": "Independent L5b kernel consumer",
+      "selected": true,
+      "batch": 3,
+      "status": "OPEN",
+      "closure_evidence": [],
+      "external_gate": "review_formal_audit"
+    },
+    {
+      "id": "US-24",
+      "title": "External physical completion verification adoption",
+      "selected": true,
+      "batch": 3,
+      "status": "OPEN",
+      "closure_evidence": [],
+      "external_gate": "review_formal_audit"
+    },
+    {
+      "id": "US-25",
+      "title": "Claim-scope cross-implementation adoption",
+      "selected": true,
+      "batch": 3,
+      "status": "OPEN",
+      "closure_evidence": [],
+      "external_gate": "review_formal_audit"
+    },
+    {
+      "id": "US-26",
+      "title": "Standards citation to downstream dependency",
+      "selected": true,
+      "batch": 3,
+      "status": "OPEN",
+      "closure_evidence": [],
+      "external_gate": "review_formal_audit"
+    },
+    {
+      "id": "US-27",
+      "title": "Natural-language goal understanding",
+      "selected": true,
+      "batch": 1,
+      "status": "OPEN",
+      "closure_evidence": [],
+      "external_gate": "product_e2e_acceptance"
+    },
+    {
+      "id": "US-28",
+      "title": "46-model capability-to-instance plan",
+      "selected": true,
+      "batch": 1,
+      "status": "OPEN",
+      "closure_evidence": [],
+      "external_gate": "product_e2e_acceptance"
+    },
+    {
+      "id": "US-29",
+      "title": "Cross-room action/device identity inheritance",
+      "selected": true,
+      "batch": 1,
+      "status": "OPEN",
+      "closure_evidence": [],
+      "external_gate": "product_e2e_acceptance"
+    },
+    {
+      "id": "US-30",
+      "title": "Durable user feedback and evidence",
+      "selected": true,
+      "batch": 3,
+      "status": "OPEN",
+      "closure_evidence": [],
+      "external_gate": "product_e2e_acceptance"
+    },
+    {
+      "id": "US-31",
+      "title": "Frozen replay and independent regression",
+      "selected": true,
+      "batch": 1,
+      "status": "OPEN",
+      "closure_evidence": [],
+      "external_gate": "product_e2e_acceptance"
+    },
+    {
+      "id": "US-32",
+      "title": "Feedback-driven measurable improvement",
+      "selected": true,
+      "batch": 3,
+      "status": "OPEN",
+      "closure_evidence": [],
+      "external_gate": "product_e2e_acceptance"
+    },
+    {
+      "id": "US-33",
+      "title": "Model-provider compatibility",
+      "selected": true,
+      "batch": 3,
+      "status": "OPEN",
+      "closure_evidence": [],
+      "external_gate": "product_e2e_acceptance"
+    },
+    {
+      "id": "US-34",
+      "title": "Human voice to physical Golden Proof",
+      "selected": true,
+      "batch": 2,
+      "status": "OPEN",
+      "closure_evidence": [],
+      "external_gate": "product_e2e_acceptance"
+    }
+  ]
+}
