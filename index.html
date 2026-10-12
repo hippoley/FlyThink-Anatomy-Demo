@@ -1255,7 +1255,7 @@ function diagnoseBenchmarkTurn(turn,result,pre,post){
     if(!(result?.exec?.nodes||[]).length)fail.push('scenario_plan_empty');
     if((sc?.planned_actions||0)>1&&(result?.exec?.nodes||[]).length<2)fail.push('multi_device_plan');
     if(!(sc?.capability_candidates||[]).length)fail.push('capability_retrieval');
-    if(sc?.truth!=='goal_semantic_state_plus_global_46_model_capability_retrieval')fail.push('global_capability_retrieval');
+    if(sc?.truth!=='goal_semantic_state_plus_global_46_model_capability_retrieval_plus_commit_gate')fail.push('global_capability_retrieval');
     if(!(sc?.selected_capabilities||[]).length)fail.push('capability_selection_empty');
     if((sc?.selected_capabilities||[]).some(c=>!CAPINDEX?.capabilities?.some(x=>x.capability_id===c.capability_id)))fail.push('capability_schema_missing');
     if((sc?.selected_capabilities||[]).some(c=>!capabilityValueCheck(capabilityById(c.capability_id),c.need?.value,'write').ok))fail.push('capability_constraint_filter');
