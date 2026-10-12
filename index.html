@@ -770,7 +770,7 @@ function buildGoalPlan(scenario,area,raw){
       gate:'EXECUTE',truth:'selected_after_global_retrieval_constraint_filter_and_margin_gate'
     });
   }
-  const gate=gates.some(x=>x.gate==='UNSUPPORTED')?'UNSUPPORTED':gates.some(x=>x.gate==='CLARIFY')?'CLARIFY':'EXECUTE';
+  const gate=!needs.length?'UNSUPPORTED':gates.some(x=>x.gate==='UNSUPPORTED')?'UNSUPPORTED':gates.some(x=>x.gate==='CLARIFY')?'CLARIFY':'EXECUTE';
   return {nodes,candidates,selected,rejected,needs,gates,gate,
     truth:'goal_semantic_state_plus_global_46_model_capability_retrieval_plus_commit_gate'};
 }
