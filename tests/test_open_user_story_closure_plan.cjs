@@ -1,0 +1,17 @@
+'use strict';
+const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
+const p=path.join(__dirname,'..','contracts','open-user-story-closure-plan.v1.json');
+const d=JSON.parse(fs.readFileSync(p,'utf8'));
+const expected=['02','03','04','08','10','11','12','17','18','19','20','21','22','23','24','25','26','27','28','29','30','31','32','33','34'].map(x=>'US-'+x);
+assert.equal(d.schema_version,'flythink.user-story-closure-plan.v1');
+assert.equal(d.all_selected,true);
+assert.deepEqual(d.stories.map(x=>x.id).sort(),expected.sort());
+assert.equal(new Set(d.stories.map(x=>x.id)).size,25);
+assert(d.stories.every(x=>x.selected===true),'all remaining stories must stay selected');
+assert(d.stories.every(x=>[1,2,3].includes(x.batch)),'every story belongs to one batch');
+assert(d.stories.every(x=>x.status==='OPEN'||x.status==='CLOSED'),'invalid closure status');
+assert(d.stories.every(x=>x.status!=='CLOSED'||(Array.isArray(x.closure_evidence)&&x.closure_evidence.length>0)),'cannot close story without evidence');
+assert(d.batches.every(b=>b.first.every(id=>d.stories.some(x=>x.id===id&&x.batch===b.id))),'batch and story assignments inconsistent');
+const assigned=d.batches.flatMap(b=>b.first);
+assert.equal(new Set(assigned).size,25,'batch lists must partition all 25 stories exactly once');
+console.log('PASS 25/25 selected, unique, grouped, and evidence-gated');
