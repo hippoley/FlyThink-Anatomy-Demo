@@ -82,6 +82,7 @@ jobs:
           node tests/test_browser_benchmark_evidence_contract.cjs
           node tests/test_benchmark_evidence_replay.cjs
           node tests/test_crossroom_action_inheritance.cjs
+          node tests/test_movie_goal_inference.cjs
           python - <<'PY'
           import json
           from collections import Counter
