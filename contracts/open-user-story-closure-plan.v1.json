@@ -1,7 +1,7 @@
 {
   "schema_version": "flythink.user-story-closure-plan.v1",
   "all_selected": true,
-  "completion_rule": "code_and_regression_and_applicable_horizontal_gates_and_real_world_evidence",
+  "completion_rule": "CLOSED iff code, regression, cross_module_integration, horizontal_audit and every applicable physical/external gate each have independently reviewable evidence; CI verified; never inferred from commits or browser simulation",
   "batches": [
     {
       "id": 1,
@@ -55,7 +55,33 @@
       "batch": 3,
       "status": "OPEN",
       "closure_evidence": [],
-      "external_gate": "review_formal_audit"
+      "external_gate": "review_formal_audit",
+      "acceptance": {
+        "code": {
+          "required": true,
+          "evidence": []
+        },
+        "regression": {
+          "required": true,
+          "evidence": []
+        },
+        "cross_module_integration": {
+          "required": true,
+          "evidence": []
+        },
+        "horizontal_audit": {
+          "required": true,
+          "evidence": []
+        },
+        "physical_or_external": {
+          "required": true,
+          "evidence": []
+        },
+        "ci": {
+          "required": true,
+          "evidence": []
+        }
+      }
     },
     {
       "id": "US-03",
@@ -64,7 +90,33 @@
       "batch": 3,
       "status": "OPEN",
       "closure_evidence": [],
-      "external_gate": "review_formal_audit"
+      "external_gate": "review_formal_audit",
+      "acceptance": {
+        "code": {
+          "required": true,
+          "evidence": []
+        },
+        "regression": {
+          "required": true,
+          "evidence": []
+        },
+        "cross_module_integration": {
+          "required": true,
+          "evidence": []
+        },
+        "horizontal_audit": {
+          "required": true,
+          "evidence": []
+        },
+        "physical_or_external": {
+          "required": true,
+          "evidence": []
+        },
+        "ci": {
+          "required": true,
+          "evidence": []
+        }
+      }
     },
     {
       "id": "US-04",
@@ -73,7 +125,33 @@
       "batch": 3,
       "status": "OPEN",
       "closure_evidence": [],
-      "external_gate": "review_formal_audit"
+      "external_gate": "review_formal_audit",
+      "acceptance": {
+        "code": {
+          "required": true,
+          "evidence": []
+        },
+        "regression": {
+          "required": true,
+          "evidence": []
+        },
+        "cross_module_integration": {
+          "required": true,
+          "evidence": []
+        },
+        "horizontal_audit": {
+          "required": true,
+          "evidence": []
+        },
+        "physical_or_external": {
+          "required": true,
+          "evidence": []
+        },
+        "ci": {
+          "required": true,
+          "evidence": []
+        }
+      }
     },
     {
       "id": "US-08",
@@ -82,7 +160,33 @@
       "batch": 3,
       "status": "OPEN",
       "closure_evidence": [],
-      "external_gate": "review_formal_audit"
+      "external_gate": "review_formal_audit",
+      "acceptance": {
+        "code": {
+          "required": true,
+          "evidence": []
+        },
+        "regression": {
+          "required": true,
+          "evidence": []
+        },
+        "cross_module_integration": {
+          "required": true,
+          "evidence": []
+        },
+        "horizontal_audit": {
+          "required": true,
+          "evidence": []
+        },
+        "physical_or_external": {
+          "required": true,
+          "evidence": []
+        },
+        "ci": {
+          "required": true,
+          "evidence": []
+        }
+      }
     },
     {
       "id": "US-10",
@@ -91,7 +195,33 @@
       "batch": 2,
       "status": "OPEN",
       "closure_evidence": [],
-      "external_gate": "review_formal_audit"
+      "external_gate": "review_formal_audit",
+      "acceptance": {
+        "code": {
+          "required": true,
+          "evidence": []
+        },
+        "regression": {
+          "required": true,
+          "evidence": []
+        },
+        "cross_module_integration": {
+          "required": true,
+          "evidence": []
+        },
+        "horizontal_audit": {
+          "required": true,
+          "evidence": []
+        },
+        "physical_or_external": {
+          "required": true,
+          "evidence": []
+        },
+        "ci": {
+          "required": true,
+          "evidence": []
+        }
+      }
     },
     {
       "id": "US-11",
@@ -100,7 +230,33 @@
       "batch": 3,
       "status": "OPEN",
       "closure_evidence": [],
-      "external_gate": "review_formal_audit"
+      "external_gate": "review_formal_audit",
+      "acceptance": {
+        "code": {
+          "required": true,
+          "evidence": []
+        },
+        "regression": {
+          "required": true,
+          "evidence": []
+        },
+        "cross_module_integration": {
+          "required": true,
+          "evidence": []
+        },
+        "horizontal_audit": {
+          "required": true,
+          "evidence": []
+        },
+        "physical_or_external": {
+          "required": true,
+          "evidence": []
+        },
+        "ci": {
+          "required": true,
+          "evidence": []
+        }
+      }
     },
     {
       "id": "US-12",
@@ -109,7 +265,33 @@
       "batch": 3,
       "status": "OPEN",
       "closure_evidence": [],
-      "external_gate": "review_formal_audit"
+      "external_gate": "review_formal_audit",
+      "acceptance": {
+        "code": {
+          "required": true,
+          "evidence": []
+        },
+        "regression": {
+          "required": true,
+          "evidence": []
+        },
+        "cross_module_integration": {
+          "required": true,
+          "evidence": []
+        },
+        "horizontal_audit": {
+          "required": true,
+          "evidence": []
+        },
+        "physical_or_external": {
+          "required": true,
+          "evidence": []
+        },
+        "ci": {
+          "required": true,
+          "evidence": []
+        }
+      }
     },
     {
       "id": "US-17",
@@ -118,7 +300,33 @@
       "batch": 3,
       "status": "OPEN",
       "closure_evidence": [],
-      "external_gate": "review_formal_audit"
+      "external_gate": "review_formal_audit",
+      "acceptance": {
+        "code": {
+          "required": true,
+          "evidence": []
+        },
+        "regression": {
+          "required": true,
+          "evidence": []
+        },
+        "cross_module_integration": {
+          "required": true,
+          "evidence": []
+        },
+        "horizontal_audit": {
+          "required": true,
+          "evidence": []
+        },
+        "physical_or_external": {
+          "required": true,
+          "evidence": []
+        },
+        "ci": {
+          "required": true,
+          "evidence": []
+        }
+      }
     },
     {
       "id": "US-18",
@@ -127,7 +335,33 @@
       "batch": 3,
       "status": "OPEN",
       "closure_evidence": [],
-      "external_gate": "review_formal_audit"
+      "external_gate": "review_formal_audit",
+      "acceptance": {
+        "code": {
+          "required": true,
+          "evidence": []
+        },
+        "regression": {
+          "required": true,
+          "evidence": []
+        },
+        "cross_module_integration": {
+          "required": true,
+          "evidence": []
+        },
+        "horizontal_audit": {
+          "required": true,
+          "evidence": []
+        },
+        "physical_or_external": {
+          "required": true,
+          "evidence": []
+        },
+        "ci": {
+          "required": true,
+          "evidence": []
+        }
+      }
     },
     {
       "id": "US-19",
@@ -136,7 +370,33 @@
       "batch": 2,
       "status": "OPEN",
       "closure_evidence": [],
-      "external_gate": "review_formal_audit"
+      "external_gate": "review_formal_audit",
+      "acceptance": {
+        "code": {
+          "required": true,
+          "evidence": []
+        },
+        "regression": {
+          "required": true,
+          "evidence": []
+        },
+        "cross_module_integration": {
+          "required": true,
+          "evidence": []
+        },
+        "horizontal_audit": {
+          "required": true,
+          "evidence": []
+        },
+        "physical_or_external": {
+          "required": true,
+          "evidence": []
+        },
+        "ci": {
+          "required": true,
+          "evidence": []
+        }
+      }
     },
     {
       "id": "US-20",
@@ -145,7 +405,33 @@
       "batch": 2,
       "status": "OPEN",
       "closure_evidence": [],
-      "external_gate": "review_formal_audit"
+      "external_gate": "review_formal_audit",
+      "acceptance": {
+        "code": {
+          "required": true,
+          "evidence": []
+        },
+        "regression": {
+          "required": true,
+          "evidence": []
+        },
+        "cross_module_integration": {
+          "required": true,
+          "evidence": []
+        },
+        "horizontal_audit": {
+          "required": true,
+          "evidence": []
+        },
+        "physical_or_external": {
+          "required": true,
+          "evidence": []
+        },
+        "ci": {
+          "required": true,
+          "evidence": []
+        }
+      }
     },
     {
       "id": "US-21",
@@ -154,7 +440,33 @@
       "batch": 3,
       "status": "OPEN",
       "closure_evidence": [],
-      "external_gate": "review_formal_audit"
+      "external_gate": "review_formal_audit",
+      "acceptance": {
+        "code": {
+          "required": true,
+          "evidence": []
+        },
+        "regression": {
+          "required": true,
+          "evidence": []
+        },
+        "cross_module_integration": {
+          "required": true,
+          "evidence": []
+        },
+        "horizontal_audit": {
+          "required": true,
+          "evidence": []
+        },
+        "physical_or_external": {
+          "required": true,
+          "evidence": []
+        },
+        "ci": {
+          "required": true,
+          "evidence": []
+        }
+      }
     },
     {
       "id": "US-22",
@@ -163,7 +475,33 @@
       "batch": 2,
       "status": "OPEN",
       "closure_evidence": [],
-      "external_gate": "review_formal_audit"
+      "external_gate": "review_formal_audit",
+      "acceptance": {
+        "code": {
+          "required": true,
+          "evidence": []
+        },
+        "regression": {
+          "required": true,
+          "evidence": []
+        },
+        "cross_module_integration": {
+          "required": true,
+          "evidence": []
+        },
+        "horizontal_audit": {
+          "required": true,
+          "evidence": []
+        },
+        "physical_or_external": {
+          "required": true,
+          "evidence": []
+        },
+        "ci": {
+          "required": true,
+          "evidence": []
+        }
+      }
     },
     {
       "id": "US-23",
@@ -172,7 +510,33 @@
       "batch": 3,
       "status": "OPEN",
       "closure_evidence": [],
-      "external_gate": "review_formal_audit"
+      "external_gate": "review_formal_audit",
+      "acceptance": {
+        "code": {
+          "required": true,
+          "evidence": []
+        },
+        "regression": {
+          "required": true,
+          "evidence": []
+        },
+        "cross_module_integration": {
+          "required": true,
+          "evidence": []
+        },
+        "horizontal_audit": {
+          "required": true,
+          "evidence": []
+        },
+        "physical_or_external": {
+          "required": true,
+          "evidence": []
+        },
+        "ci": {
+          "required": true,
+          "evidence": []
+        }
+      }
     },
     {
       "id": "US-24",
@@ -181,7 +545,33 @@
       "batch": 3,
       "status": "OPEN",
       "closure_evidence": [],
-      "external_gate": "review_formal_audit"
+      "external_gate": "review_formal_audit",
+      "acceptance": {
+        "code": {
+          "required": true,
+          "evidence": []
+        },
+        "regression": {
+          "required": true,
+          "evidence": []
+        },
+        "cross_module_integration": {
+          "required": true,
+          "evidence": []
+        },
+        "horizontal_audit": {
+          "required": true,
+          "evidence": []
+        },
+        "physical_or_external": {
+          "required": true,
+          "evidence": []
+        },
+        "ci": {
+          "required": true,
+          "evidence": []
+        }
+      }
     },
     {
       "id": "US-25",
@@ -190,7 +580,33 @@
       "batch": 3,
       "status": "OPEN",
       "closure_evidence": [],
-      "external_gate": "review_formal_audit"
+      "external_gate": "review_formal_audit",
+      "acceptance": {
+        "code": {
+          "required": true,
+          "evidence": []
+        },
+        "regression": {
+          "required": true,
+          "evidence": []
+        },
+        "cross_module_integration": {
+          "required": true,
+          "evidence": []
+        },
+        "horizontal_audit": {
+          "required": true,
+          "evidence": []
+        },
+        "physical_or_external": {
+          "required": true,
+          "evidence": []
+        },
+        "ci": {
+          "required": true,
+          "evidence": []
+        }
+      }
     },
     {
       "id": "US-26",
@@ -199,7 +615,33 @@
       "batch": 3,
       "status": "OPEN",
       "closure_evidence": [],
-      "external_gate": "review_formal_audit"
+      "external_gate": "review_formal_audit",
+      "acceptance": {
+        "code": {
+          "required": true,
+          "evidence": []
+        },
+        "regression": {
+          "required": true,
+          "evidence": []
+        },
+        "cross_module_integration": {
+          "required": true,
+          "evidence": []
+        },
+        "horizontal_audit": {
+          "required": true,
+          "evidence": []
+        },
+        "physical_or_external": {
+          "required": true,
+          "evidence": []
+        },
+        "ci": {
+          "required": true,
+          "evidence": []
+        }
+      }
     },
     {
       "id": "US-27",
@@ -208,7 +650,33 @@
       "batch": 1,
       "status": "OPEN",
       "closure_evidence": [],
-      "external_gate": "product_e2e_acceptance"
+      "external_gate": "product_e2e_acceptance",
+      "acceptance": {
+        "code": {
+          "required": true,
+          "evidence": []
+        },
+        "regression": {
+          "required": true,
+          "evidence": []
+        },
+        "cross_module_integration": {
+          "required": true,
+          "evidence": []
+        },
+        "horizontal_audit": {
+          "required": true,
+          "evidence": []
+        },
+        "physical_or_external": {
+          "required": true,
+          "evidence": []
+        },
+        "ci": {
+          "required": true,
+          "evidence": []
+        }
+      }
     },
     {
       "id": "US-28",
@@ -217,7 +685,33 @@
       "batch": 1,
       "status": "OPEN",
       "closure_evidence": [],
-      "external_gate": "product_e2e_acceptance"
+      "external_gate": "product_e2e_acceptance",
+      "acceptance": {
+        "code": {
+          "required": true,
+          "evidence": []
+        },
+        "regression": {
+          "required": true,
+          "evidence": []
+        },
+        "cross_module_integration": {
+          "required": true,
+          "evidence": []
+        },
+        "horizontal_audit": {
+          "required": true,
+          "evidence": []
+        },
+        "physical_or_external": {
+          "required": true,
+          "evidence": []
+        },
+        "ci": {
+          "required": true,
+          "evidence": []
+        }
+      }
     },
     {
       "id": "US-29",
@@ -226,7 +720,33 @@
       "batch": 1,
       "status": "OPEN",
       "closure_evidence": [],
-      "external_gate": "product_e2e_acceptance"
+      "external_gate": "product_e2e_acceptance",
+      "acceptance": {
+        "code": {
+          "required": true,
+          "evidence": []
+        },
+        "regression": {
+          "required": true,
+          "evidence": []
+        },
+        "cross_module_integration": {
+          "required": true,
+          "evidence": []
+        },
+        "horizontal_audit": {
+          "required": true,
+          "evidence": []
+        },
+        "physical_or_external": {
+          "required": true,
+          "evidence": []
+        },
+        "ci": {
+          "required": true,
+          "evidence": []
+        }
+      }
     },
     {
       "id": "US-30",
@@ -235,7 +755,33 @@
       "batch": 3,
       "status": "OPEN",
       "closure_evidence": [],
-      "external_gate": "product_e2e_acceptance"
+      "external_gate": "product_e2e_acceptance",
+      "acceptance": {
+        "code": {
+          "required": true,
+          "evidence": []
+        },
+        "regression": {
+          "required": true,
+          "evidence": []
+        },
+        "cross_module_integration": {
+          "required": true,
+          "evidence": []
+        },
+        "horizontal_audit": {
+          "required": true,
+          "evidence": []
+        },
+        "physical_or_external": {
+          "required": true,
+          "evidence": []
+        },
+        "ci": {
+          "required": true,
+          "evidence": []
+        }
+      }
     },
     {
       "id": "US-31",
@@ -244,7 +790,33 @@
       "batch": 1,
       "status": "OPEN",
       "closure_evidence": [],
-      "external_gate": "product_e2e_acceptance"
+      "external_gate": "product_e2e_acceptance",
+      "acceptance": {
+        "code": {
+          "required": true,
+          "evidence": []
+        },
+        "regression": {
+          "required": true,
+          "evidence": []
+        },
+        "cross_module_integration": {
+          "required": true,
+          "evidence": []
+        },
+        "horizontal_audit": {
+          "required": true,
+          "evidence": []
+        },
+        "physical_or_external": {
+          "required": true,
+          "evidence": []
+        },
+        "ci": {
+          "required": true,
+          "evidence": []
+        }
+      }
     },
     {
       "id": "US-32",
@@ -253,7 +825,33 @@
       "batch": 3,
       "status": "OPEN",
       "closure_evidence": [],
-      "external_gate": "product_e2e_acceptance"
+      "external_gate": "product_e2e_acceptance",
+      "acceptance": {
+        "code": {
+          "required": true,
+          "evidence": []
+        },
+        "regression": {
+          "required": true,
+          "evidence": []
+        },
+        "cross_module_integration": {
+          "required": true,
+          "evidence": []
+        },
+        "horizontal_audit": {
+          "required": true,
+          "evidence": []
+        },
+        "physical_or_external": {
+          "required": true,
+          "evidence": []
+        },
+        "ci": {
+          "required": true,
+          "evidence": []
+        }
+      }
     },
     {
       "id": "US-33",
@@ -262,7 +860,33 @@
       "batch": 3,
       "status": "OPEN",
       "closure_evidence": [],
-      "external_gate": "product_e2e_acceptance"
+      "external_gate": "product_e2e_acceptance",
+      "acceptance": {
+        "code": {
+          "required": true,
+          "evidence": []
+        },
+        "regression": {
+          "required": true,
+          "evidence": []
+        },
+        "cross_module_integration": {
+          "required": true,
+          "evidence": []
+        },
+        "horizontal_audit": {
+          "required": true,
+          "evidence": []
+        },
+        "physical_or_external": {
+          "required": true,
+          "evidence": []
+        },
+        "ci": {
+          "required": true,
+          "evidence": []
+        }
+      }
     },
     {
       "id": "US-34",
@@ -271,7 +895,33 @@
       "batch": 2,
       "status": "OPEN",
       "closure_evidence": [],
-      "external_gate": "product_e2e_acceptance"
+      "external_gate": "product_e2e_acceptance",
+      "acceptance": {
+        "code": {
+          "required": true,
+          "evidence": []
+        },
+        "regression": {
+          "required": true,
+          "evidence": []
+        },
+        "cross_module_integration": {
+          "required": true,
+          "evidence": []
+        },
+        "horizontal_audit": {
+          "required": true,
+          "evidence": []
+        },
+        "physical_or_external": {
+          "required": true,
+          "evidence": []
+        },
+        "ci": {
+          "required": true,
+          "evidence": []
+        }
+      }
     }
   ]
 }
