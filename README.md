@@ -80,6 +80,18 @@ Interactive public build:
 
 https://raw.githack.com/hippoley/FlyThink-Anatomy-Demo/gh-pages/index.html
 
+## Public contribution provenance: AER-1 physical completion interop
+
+This repository is maintained under the GitHub account **[@hippoley](https://github.com/hippoley)**. The independent AER-1 interoperability fixture published here is a **FlyThink contribution from hippoley**, not an IETF endorsement or an adopted standard.
+
+- **Stable implementation commit:** [01297c1dbca49be19f6af6c90dda58bb08c03f9d](https://github.com/hippoley/FlyThink-Anatomy-Demo/commit/01297c1dbca49be19f6af6c90dda58bb08c03f9d)
+- **Fixture:** [four AER-1 / physical-completion cases](interop/aer1-physical-completion/fixture.v0.1.json)
+- **Replay:** `node interop/aer1-physical-completion/verify_fixture.cjs`
+- **External reference:** [draft-zambo-aer1-13](https://datatracker.ietf.org/doc/html/draft-zambo-aer1-13), Implementation Status (the draft records FlyThink interoperability work).
+- **External reproducibility claim:** the draft author reported independently replaying all four cases successfully on October 8, 2026. That report is distinct from this repository's self-tests and is not a claim of independent physical hardware observation.
+
+**Claim boundary:** the fixture tests receipt/claim separation. Receipt validity does not prove physical completion; valid evidence binding must not inherit an unrelated verifier's authority. This work does not establish real window movement, third-party production consumption of FlyThink, IETF working-group adoption, or any maintainer appointment.
+
 ## Emerging standards position
 
 FlyThink is tracking a narrow interoperability question across 2026 agent-action
