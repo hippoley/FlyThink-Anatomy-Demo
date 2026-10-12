@@ -15,7 +15,7 @@ function verifyClosurePlan(doc, verifiedReceipts=new Map()){
     if(!g.evidence.length)errors.push(prefix+':missing_evidence:'+gate);
     for(const e of g.evidence){
      const verified=verifiedReceipts instanceof Map ? verifiedReceipts.get(prefix+':'+gate+':'+e?.ref) : null;
-     if(!verified||verified.verified!==true||verified.story_id!==prefix||verified.gate!==gate||verified.ref!==e?.ref){
+     if(!verified||verified.verified!==true||verified.story_id!==prefix||verified.gate!==gate||verified.ref!==e?.ref||!(/^[a-f0-9]{40}$/.test(e?.revision_sha||''))||verified.revision_sha!==e.revision_sha||verified.independent_source!==true){
        errors.push(prefix+':unverified_external_receipt:'+gate);
      }
      if(!e||typeof e.ref!=='string'||!e.ref.trim()||
