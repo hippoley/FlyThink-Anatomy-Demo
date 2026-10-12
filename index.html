@@ -1379,7 +1379,7 @@ function openBenchmarkReport(){
     '### Reproduction',
     'Export benchmark evidence JSON locally, inspect and remove sensitive inputs, then attach or provide a sanitized minimal repro.',
     'This report is not a human-reviewed gold label or hardware-validation claim.'
-  ].join('\\n');
+  ].join('\n');
   const url='https://github.com/hippoley/FlyThink-Anatomy-Demo/issues/new?title='+encodeURIComponent('Regression feedback: '+doc.totals.passed_turns+'/'+doc.totals.turns+' turns')+'&body='+encodeURIComponent(body);
   window.open(url,'_blank','noopener,noreferrer');
   if(status)status.textContent='已打开 GitHub Issue 草稿；请审阅并手动提交';
