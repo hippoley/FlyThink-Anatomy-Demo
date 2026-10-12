@@ -2117,7 +2117,15 @@ function bindingForCapability(node,route='THING_MODEL_EXECUTE'){
     return {route:'CLARIFY',action:null,node,binding:null,grounding_status:'BLOCKED',
       grounding_reason:'room_inventory_identity_mismatch',worldDelta:null};
   }
-  const entityName=node?.slots?.entity_name||canonicalEntityName(node?.target?.entity,area)||[area,c.product||c.model].filter(Boolean).join('');
+  // Never trust a carried-over display identity from an earlier room.
+  // A different room with the same model could otherwise overwrite the prior
+  // room's simulated state key despite passing model/module validation.
+  const canonicalName=canonicalEntityName(entity,area);
+  if(!canonicalName||node?.slots?.entity_name&&node.slots.entity_name!==canonicalName){
+    return {route:'CLARIFY',action:null,node,binding:null,grounding_status:'BLOCKED',
+      grounding_reason:'room_entity_name_mismatch',worldDelta:null};
+  }
+  const entityName=canonicalName;
   const binding={
     binding_key:c.capability_id,model_code:c.model,product_title:c.product,product_id:null,productKey:null,category:null,version:null,
     module_code:c.module,module_title:c.module_title||null,module_identifier:c.module||null,
