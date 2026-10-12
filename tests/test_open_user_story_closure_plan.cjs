@@ -33,3 +33,20 @@ for(const gate of REQUIRED){
  assert(verifyClosurePlan(forged).some(e=>e.includes('invalid_evidence')),'unreviewed artifacts cannot close a story');
 }
 console.log('PASS mandatory six-gate closure checks and negative cases');
+
+{
+ const forged=JSON.parse(JSON.stringify(d)),story=forged.stories[0];story.status='CLOSED';
+ for(const gate of REQUIRED)story.acceptance[gate].evidence=[{ref:'receipt-'+gate,scope:'reproducible',result:'PASS',reviewed:true}];
+ assert(REQUIRED.every(g=>verifyClosurePlan(forged).includes(story.id+':unverified_external_receipt:'+g)),
+  'manifest PASS and reviewed flags must not verify their own receipts');
+ const independentlyChecked=new Map(REQUIRED.map(g=>{
+  const ref='receipt-'+g;
+  return [story.id+':'+g+':'+ref,{verified:true,story_id:story.id,gate:g,ref}];
+ }));
+ assert.deepEqual(verifyClosurePlan(forged,independentlyChecked),[],
+  'trusted verification results may satisfy evidence gates');
+ independentlyChecked.set(story.id+':ci:receipt-ci',{verified:true,story_id:'OTHER',gate:'ci',ref:'receipt-ci'});
+ assert(verifyClosurePlan(forged,independentlyChecked).includes(story.id+':unverified_external_receipt:ci'),
+  'wrong-story receipt must be rejected');
+}
+console.log('PASS rejects self-attested receipts, accepts independently verified scoped receipts');
