@@ -89,6 +89,7 @@ jobs:
           node tests/test_compound_goal_atomic_gate.cjs
           node tests/test_execution_capability_identity.cjs
           node tests/test_goal_execute_no_write_e2e.cjs
+          node tests/test_compound_execute_rollback.cjs
           python - <<'PY'
           import json
           from collections import Counter
