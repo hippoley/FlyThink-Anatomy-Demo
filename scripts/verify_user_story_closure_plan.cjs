@@ -1,6 +1,8 @@
 'use strict';
 const REQUIRED=['code','regression','cross_module_integration','horizontal_audit','physical_or_external','ci'];
-function verifyClosurePlan(doc){
+function verifyClosurePlan(doc, verifiedReceipts=new Map()){
+ // Receipt verification must arrive from the independent runner, never from
+ // manifest-authored PASS/reviewed fields. Fail closed without that runner.
  const errors=[];
  if(!doc||!Array.isArray(doc.stories))return ['invalid_stories'];
  for(const story of doc.stories){
@@ -12,6 +14,10 @@ function verifyClosurePlan(doc){
    if(story.status==='CLOSED'){
     if(!g.evidence.length)errors.push(prefix+':missing_evidence:'+gate);
     for(const e of g.evidence){
+     const verified=verifiedReceipts instanceof Map ? verifiedReceipts.get(prefix+':'+gate+':'+e?.ref) : null;
+     if(!verified||verified.verified!==true||verified.story_id!==prefix||verified.gate!==gate||verified.ref!==e?.ref){
+       errors.push(prefix+':unverified_external_receipt:'+gate);
+     }
      if(!e||typeof e.ref!=='string'||!e.ref.trim()||
         typeof e.scope!=='string'||!e.scope.trim()||
         e.result!=='PASS'||e.reviewed!==true){
