@@ -194,7 +194,7 @@ measured_flywire_coordinate_derivative
 
 Blue anatomy mapping:
 developmental projection, not measured FlyWire activity.\n\nThing Model archive:\n46/46 original JSON schemas loaded from the fixed uploaded archive.\nEvery executable binding is validated against the loaded schema at runtime.</div></div>
-</div></details></div></details><details class="disclosure" id="researchTools"><summary>研究工具<span>语料编排、批量测试、模型检查与神经视图</span></summary><div class="disclosureBody"><button id="exportFailures" class="quietLink" type="button">导出错误样本 JSONL</button><button id="exportBenchmarkEvidence" class="quietLink" type="button">导出批量测试证据 JSON</button><button id="openBenchmarkReport" class="quietLink" type="button">审阅后提交 GitHub Issue</button><span id="benchmarkEvidenceStatus" role="status" class="feedbackCount"></span><button class="btn" id="exportTrajectory" type="button">导出交互轨迹</button><button class="btn" id="openTrajectoryReview" type="button" hidden>审核本地轨迹</button><span id="telemetryStatus" aria-live="polite"></span><span id="exportFailuresStatus" class="feedbackCount" role="status"></span><details class="disclosure" id="dialogueTools"><summary>编辑语料与多轮脚本<span></span></summary><div class="disclosureBody"><div class="corpusStudio">
+</div></details></div></details><details class="disclosure" id="researchTools"><summary>研究工具<span>语料编排、批量测试、模型检查与神经视图</span></summary><div class="disclosureBody"><button id="exportFailures" class="quietLink" type="button">导出错误样本 JSONL</button><button id="exportBenchmarkEvidence" class="quietLink" type="button">导出批量测试证据 JSON</button><button id="importBenchmarkEvidence" class="quietLink" type="button">导入证据并重放</button><input id="benchmarkEvidenceFile" type="file" accept=".json,application/json" hidden><button id="openBenchmarkReport" class="quietLink" type="button">审阅后提交 GitHub Issue</button><span id="benchmarkEvidenceStatus" role="status" class="feedbackCount"></span><button class="btn" id="exportTrajectory" type="button">导出交互轨迹</button><button class="btn" id="openTrajectoryReview" type="button" hidden>审核本地轨迹</button><span id="telemetryStatus" aria-live="polite"></span><span id="exportFailuresStatus" class="feedbackCount" role="status"></span><details class="disclosure" id="dialogueTools"><summary>编辑语料与多轮脚本<span></span></summary><div class="disclosureBody"><div class="corpusStudio">
 <div class="corpusTop"><div><div class="corpusTitle">Dialogue Essence · Corpus Mutation Lab</div><div class="corpusMeta" id="corpusMeta">loading train-only exemplars…</div><div class="corpusMeta" style="margin-top:3px">NEGATION · MULTI-INTENT · NER/AREA · COREFERENCE · CROSS-ROOM · REVISION · INTERRUPTION · SCENARIO · OOD</div></div><div class="presets" style="margin:0"><button class="btn mut" id="sampleCorpus" type="button">抽一条语料</button></div></div>
 <p class="toolHint">这些工具会修改主对话框中的草稿。修改后返回上方发送，继续同一段对话。</p><a class="quietLink" href="#input">返回对话草稿 ↑</a>
 <div class="mutationBar">
@@ -340,7 +340,7 @@ const $=s=>document.querySelector(s);
 const GOAL_PLAN_TRUTH='contract_derived_goal_plan_not_hidden_ground_truth';
 const SESSION_STORAGE_KEY='flythink.runtime.session.v1',FAILURE_STORAGE_KEY='flythink.runtime.failures.v1';
 const state={turn:0,taskSeq:0,nodeSeq:0,tasks:[],activeTask:null,paused:[],revisions:[],focus:null,focusKey:null,lastArea:'客厅',lastAction:null,thingValues:{},intentTree:{},utteranceHistory:[],sessionEvents:[],failureEvents:[],lastEventId:null,lastDelta:null};
-let DATA=null,NEURAL=null,LEARNED=null,THINGREG=null,CAPINDEX=null,neuralState=[],semanticScores=[],projectedRoots=[],unitToRoot=[],decisionHeads=null,currentCorpusCase=null,composerTurns=[],composerResults=[],composerSeq=0,composerDragId=null,composerInspectIndex=null,benchmarkScenarios=[],benchmarkResults=[],benchmarkRunSeq=0,essenceBatch=[],essenceResults=[],rot={x:-.18,y:.31},zoom=1.55,drag=null,hits=[],neuralHits=[],selected=null,pulseT=0,pulseRAF=null,pulseStart=0,pulseUntil=0,pulseSpeed=1,pulsePaused=false,pulseBaseReal=0,pulseBaseVirtual=0,turnJourneyStages=[],turnJourneyTimers=[];
+let DATA=null,NEURAL=null,LEARNED=null,THINGREG=null,CAPINDEX=null,neuralState=[],semanticScores=[],projectedRoots=[],unitToRoot=[],decisionHeads=null,currentCorpusCase=null,composerTurns=[],composerResults=[],composerSeq=0,composerDragId=null,composerInspectIndex=null,benchmarkScenarios=[],benchmarkResults=[],benchmarkRunSeq=0,benchmarkEvidenceOrigin="generated",benchmarkReplayComparison=null,essenceBatch=[],essenceResults=[],rot={x:-.18,y:.31},zoom=1.55,drag=null,hits=[],neuralHits=[],selected=null,pulseT=0,pulseRAF=null,pulseStart=0,pulseUntil=0,pulseSpeed=1,pulsePaused=false,pulseBaseReal=0,pulseBaseVirtual=0,turnJourneyStages=[],turnJourneyTimers=[];
 
 function clone(x){return x===undefined?undefined:JSON.parse(JSON.stringify(x))}
 function normalizeThingRegistry(raw){
@@ -1228,7 +1228,7 @@ function generateBenchmarkCase(rand,id,length){
 }
 function generateBenchmark(){
   const count=Number($('#benchCount')?.value||24),depth=$('#benchDepth')?.value||'mixed',seed=Number($('#benchSeed')?.value||400),rand=seededRandom(seed);
-  benchmarkRunSeq++;benchmarkResults=[];
+  benchmarkRunSeq++;benchmarkResults=[];benchmarkEvidenceOrigin='generated';benchmarkReplayComparison=null;
   benchmarkScenarios=Array.from({length:count},(_,i)=>{
     const length=depth==='short'?(4+Math.floor(rand()*3)):depth==='long'?(7+Math.floor(rand()*4)):(4+Math.floor(rand()*7));
     if(i%5===1)return generateValuePatchCase(rand,i+1,length);
@@ -1334,8 +1334,9 @@ function benchmarkEvidenceDocument(){
     schema_version:'flythink.benchmark.evidence.v1',
     generated_at:new Date().toISOString(),
     evidence_type:'local_browser_regression_not_real_hardware',
-    generator:{seed:Number($('#benchSeed')?.value||400),depth:$('#benchDepth')?.value||'mixed',count:benchmarkScenarios.length},
-    source:'generated_contract_derived_not_independent_gold',
+    generator:benchmarkEvidenceOrigin==='replay'?null:{seed:Number($('#benchSeed')?.value||400),depth:$('#benchDepth')?.value||'mixed',count:benchmarkScenarios.length},
+    source:benchmarkEvidenceOrigin==='replay'?'imported_unreviewed_replay_not_independent_gold':'generated_contract_derived_not_independent_gold',
+    replay_comparison:benchmarkReplayComparison,
     review_status:'unreviewed_not_training_gold',
     location:'browser_local_until_explicit_export_or_submission',
     totals:{
@@ -1370,6 +1371,36 @@ function persistBenchmarkEvidence(){
   }catch(_){
     const el=$('#benchmarkEvidenceStatus');if(el)el.textContent='浏览器持久化失败，请立即导出';
     return false;
+  }
+}
+function replayImportedBenchmarkEvidence(doc){
+  if(!doc||doc.schema_version!=='flythink.benchmark.evidence.v1'||!Array.isArray(doc.cases)||!doc.cases.length||doc.cases.length>48)throw new Error('证据版本或案例数量无效');
+  const seen=new Set();
+  const incoming=doc.cases.map(sc=>{
+    if(typeof sc.id!=='string'||!sc.id||seen.has(sc.id)||!Array.isArray(sc.turns)||!sc.turns.length||sc.turns.length>30)throw new Error('案例 ID、数量或轮次无效');
+    seen.add(sc.id);
+    const turns=sc.turns.map(tr=>{
+      if(typeof tr.input!=='string'||!tr.input.trim()||tr.input.length>1000||!tr.expected||typeof tr.expected!=='object'||Array.isArray(tr.expected))throw new Error('缺少可重放的输入或预期契约');
+      return {type:typeof tr.type==='string'?tr.type:'turn',text:tr.input,expected:clone(tr.expected)};
+    });
+    return {id:sc.id,family:String(sc.family||'imported'),truth:'imported_unreviewed_evidence',length:turns.length,turns};
+  });
+  const prior={scenarios:benchmarkScenarios,results:benchmarkResults,origin:benchmarkEvidenceOrigin,comparison:benchmarkReplayComparison};
+  try{
+    benchmarkScenarios=incoming;benchmarkEvidenceOrigin='replay';benchmarkReplayComparison=null;
+    runBenchmark();
+    const changes=[];
+    for(let i=0;i<incoming.length;i++)for(let j=0;j<incoming[i].turns.length;j++){
+      const old=doc.cases[i].turns[j],now=benchmarkResults[i].turnResults[j];
+      const was=[...(old.failure_codes||[])].sort(),is=[...now.failures].sort();
+      if(JSON.stringify(was)!==JSON.stringify(is))changes.push({case_id:incoming[i].id,turn:j+1,previous:was,current:is});
+    }
+    benchmarkReplayComparison={baseline_generated_at:doc.generated_at||null,changed_turns:changes,changed_count:changes.length,baseline_source:doc.source||'unknown'};
+    persistBenchmarkEvidence();
+    $('#benchmarkEvidenceStatus').textContent='重放完成：'+benchmarkResults.length+' 组；与原证据存在 '+changes.length+' 轮差异。结果已留本地，可导出。';
+  }catch(err){
+    benchmarkScenarios=prior.scenarios;benchmarkResults=prior.results;benchmarkEvidenceOrigin=prior.origin;benchmarkReplayComparison=prior.comparison;
+    throw err;
   }
 }
 function exportBenchmarkEvidence(){
@@ -2708,6 +2739,8 @@ function prepareGuidedTurn(button){
 $('#turnStageRail').addEventListener('click',e=>{const stage=e.target.closest('[data-turn-stage]');if(stage)selectTurnJourneyStage(Number(stage.dataset.turnStage))});document.querySelectorAll('[data-guided-turn]').forEach(b=>b.addEventListener('click',()=>prepareGuidedTurn(b)));
 document.querySelectorAll('[data-p]').forEach(b=>b.addEventListener('click',()=>{const t=b.dataset.p;$('#input').value=t;updateDecisionHeads(t)}));document.querySelectorAll('[data-mutate]').forEach(b=>b.addEventListener('click',()=>mutateDraft(b.dataset.mutate)));$('#sampleCorpus').addEventListener('click',sampleCorpus);$('#copyDecision').addEventListener('click',async()=>{const s=JSON.stringify(window.__decisionContract||{},null,2);try{await navigator.clipboard.writeText(s);$('#copyDecision').textContent='Copied';setTimeout(()=>$('#copyDecision').textContent='Copy JSON',900)}catch(e){$('#decisionAnswer').textContent=s}});$('#reset').addEventListener('click',()=>{closeTelemetryEpisode();reset()});$('#homeRoomGrid').addEventListener('click',e=>{const b=e.target.closest('[data-home-probe]');if(!b)return;loadHomeProbe(b.dataset.area,b.dataset.entity)});$('#nextHint').addEventListener('click',e=>{const b=e.target.closest('[data-next-prompt]');if(!b)return;const t=b.dataset.nextPrompt||'';$('#input').value=t;currentCorpusCase=null;updateDecisionHeads(t);$('#input').focus()});$('#markWrong').addEventListener('click',markLastResultWrong);$('#exportFailures').addEventListener('click',exportFailureLibrary);
 $('#exportBenchmarkEvidence').addEventListener('click',exportBenchmarkEvidence);
+$('#importBenchmarkEvidence').addEventListener('click',()=>$('#benchmarkEvidenceFile').click());
+$('#benchmarkEvidenceFile').addEventListener('change',async e=>{const file=e.target.files?.[0];if(!file)return;try{if(file.size>2*1024*1024)throw new Error('证据文件超过 2MB');replayImportedBenchmarkEvidence(JSON.parse(await file.text()));}catch(err){$('#benchmarkEvidenceStatus').textContent='重放失败：'+String(err.message||err)}finally{e.target.value=''}});
 $('#openBenchmarkReport').addEventListener('click',openBenchmarkReport);$('#exportTrajectory').addEventListener('click',exportTrajectory);$('#openTrajectoryReview').addEventListener('click',openTrajectoryReview);$('#openTrajectoryReview').hidden=!telemetryLocalEnabled();$('#composer').addEventListener('submit',e=>{e.preventDefault();if($('#sendTurn').disabled)return;const t=$('#input').value;if(!t.trim())return;submit(t);$('#input').value='';$('#input').focus()});$('#runAsSequence').addEventListener('click',()=>{currentCorpusCase=null;const seq=splitSequence($('#input').value);for(const t of seq)submit(t)});$('#input').addEventListener('keydown',e=>{
   if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){
     e.preventDefault();
