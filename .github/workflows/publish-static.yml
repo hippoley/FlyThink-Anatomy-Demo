@@ -92,6 +92,7 @@ jobs:
           node tests/test_compound_execute_rollback.cjs
           node tests/test_atomic_ungrounded_feedback.cjs
           node tests/test_execution_exception_rollback.cjs
+          node tests/test_benchmark_execution_failure_evidence.cjs
           python - <<'PY'
           import json
           from collections import Counter
