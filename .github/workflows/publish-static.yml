@@ -91,6 +91,7 @@ jobs:
           node tests/test_goal_execute_no_write_e2e.cjs
           node tests/test_room_inventory_execution_gate.cjs
           node tests/test_crossroom_entity_identity_gate.cjs
+          node tests/test_turn_journey_commit_badge.cjs
           node tests/test_compound_execute_rollback.cjs
           node tests/test_atomic_ungrounded_feedback.cjs
           node tests/test_execution_exception_rollback.cjs
