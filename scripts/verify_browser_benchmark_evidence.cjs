@@ -8,7 +8,11 @@ function verify(doc){
  const fail=(location,reason)=>errors.push({location,reason});
  if(!doc||typeof doc!=='object'||Array.isArray(doc))return [{location:'$',reason:'invalid_document'}];
  if(doc.schema_version!=='flythink.benchmark.evidence.v1')fail('$','unsupported_schema');
- if(doc.evidence_type!=='local_browser_regression_not_real_hardware')fail(' if(!Array.isArray(doc.cases)||!doc.cases.length||doc.cases.length>48)return [...errors,{location:'$.cases',reason:'invalid_case_count'}];
+ if(doc.evidence_type!=='local_browser_regression_not_real_hardware')fail('document','unsupported_evidence_type');
+ const sources=['generated_contract_derived_not_independent_gold','imported_unreviewed_replay_not_independent_gold'];
+ if(!sources.includes(doc.source))fail('source','untrusted_or_missing_provenance');
+ if(doc.review_status!=='unreviewed_not_training_gold')fail('review_status','unreviewed_evidence_claim_promoted');
+ if(!Array.isArray(doc.cases)||!doc.cases.length||doc.cases.length>48)return [...errors,{location:'cases',reason:'invalid_case_count'}];
  const ids=new Set();let turns=0,passedTurns=0,passedCases=0;
  for(let i=0;i<doc.cases.length;i++){
   const sc=doc.cases[i],where='$.cases['+i+']';
