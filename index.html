@@ -2331,7 +2331,7 @@ function turnJourneyData(text,d,exec,neural){
     {name:'结构理解',title:'形成 node / slot / value',detail:nodes.join('；')||('本轮无可执行节点 · '+(d?.op||'NO_OP')),badge:'v14 BLIND-V5 DELTA EXACT 81.25% · 训练证据，非本网页推理'},
     {name:'状态提交',title:'更新持久意图树',detail:(d?.op||'—')+' · '+treeCount+' 个活跃实例 · focus '+(state.focusKey||state.focus||'—'),badge:'PATCH BY DEFAULT · EXPLICIT REMOVE'},
     {name:'约束校验',title:'通过真实物模型约束',detail:grounded.join('；')||('无 schema 写入 · route '+(exec.route||'—')),badge:(THINGREG?.model_count||46)+' MODELS · '+(CAPINDEX?.count||794)+' CAPABILITIES'},
-    {name:'家中变化',title:result.title,detail:changes.join('；')||result.detail,badge:result.blocked?'BLOCKED / CLARIFY':'COMMITTED SIMULATION'}
+    {name:'家中变化',title:result.title,detail:changes.join('；')||result.detail,badge:result.blocked?'BLOCKED / CLARIFY':(exec.worldDeltas||[]).length?'COMMITTED SIMULATION':'NO DEVICE WRITE'}
   ];
 }
 function selectTurnJourneyStage(index){
