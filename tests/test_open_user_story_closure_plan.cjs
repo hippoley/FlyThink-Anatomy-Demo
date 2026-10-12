@@ -36,12 +36,13 @@ console.log('PASS mandatory six-gate closure checks and negative cases');
 
 {
  const forged=JSON.parse(JSON.stringify(d)),story=forged.stories[0];story.status='CLOSED';
- for(const gate of REQUIRED)story.acceptance[gate].evidence=[{ref:'receipt-'+gate,scope:'reproducible',result:'PASS',reviewed:true}];
+ const revision_sha='a'.repeat(40);
+ for(const gate of REQUIRED)story.acceptance[gate].evidence=[{ref:'receipt-'+gate,scope:'reproducible',result:'PASS',reviewed:true,revision_sha}];
  assert(REQUIRED.every(g=>verifyClosurePlan(forged).includes(story.id+':unverified_external_receipt:'+g)),
   'manifest PASS and reviewed flags must not verify their own receipts');
  const independentlyChecked=new Map(REQUIRED.map(g=>{
   const ref='receipt-'+g;
-  return [story.id+':'+g+':'+ref,{verified:true,story_id:story.id,gate:g,ref}];
+  return [story.id+':'+g+':'+ref,{verified:true,story_id:story.id,gate:g,ref,revision_sha,independent_source:true}];
  }));
  assert.deepEqual(verifyClosurePlan(forged,independentlyChecked),[],
   'trusted verification results may satisfy evidence gates');
@@ -50,3 +51,21 @@ console.log('PASS mandatory six-gate closure checks and negative cases');
   'wrong-story receipt must be rejected');
 }
 console.log('PASS rejects self-attested receipts, accepts independently verified scoped receipts');
+
+{
+ const doc=JSON.parse(JSON.stringify(d)),story=doc.stories[0];story.status='CLOSED';
+ const sha='a'.repeat(40);
+ const receipts=new Map();
+ for(const gate of REQUIRED){
+  const ref='receipt-'+gate;
+  story.acceptance[gate].evidence=[{ref,scope:'integration',result:'PASS',reviewed:true,revision_sha:sha}];
+  receipts.set(story.id+':'+gate+':'+ref,{verified:true,story_id:story.id,gate,ref,revision_sha:sha,independent_source:true});
+ }
+ assert.deepEqual(verifyClosurePlan(doc,receipts),[]);
+ receipts.get(story.id+':ci:receipt-ci').revision_sha='b'.repeat(40);
+ assert(verifyClosurePlan(doc,receipts).includes(story.id+':unverified_external_receipt:ci'));
+ receipts.get(story.id+':ci:receipt-ci').revision_sha=sha;
+ receipts.get(story.id+':ci:receipt-ci').independent_source=false;
+ assert(verifyClosurePlan(doc,receipts).includes(story.id+':unverified_external_receipt:ci'));
+}
+console.log('PASS wrong-revision and untrusted-source receipts cannot close a story');
