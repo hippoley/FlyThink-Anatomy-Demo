@@ -696,7 +696,11 @@ function retrieveCapabilities(goal,text,need,limit=10){
   const all=CAPINDEX?.capabilities||[];
   const ranked=all.map(c=>({capability:c,...scoreCapability(c,need,goal,text)}))
     .sort((a,b)=>b.score-a.score);
-  const accepted=ranked.filter(x=>x.check.ok&&x.capability.kind==='p'&&(x.capability.ops||[]).includes('write'));
+  // Explicit room-inventory identities are hard constraints, not ranking bonuses.
+  // A high lexical score must never authorize a different device model/module.
+  const accepted=ranked.filter(x=>x.check.ok&&x.capability.kind==='p'&&(x.capability.ops||[]).includes('write')
+    &&(!need?.model_code||x.capability.model===need.model_code)
+    &&(!need?.module_code||x.capability.module===need.module_code));
   const top=ranked.slice(0,Math.max(limit,16)).map((x,rank)=>({
     rank:rank+1,score:Number(x.score.toFixed(3)),selected:false,
     capability_id:x.capability.capability_id,model_code:x.capability.model,product_title:x.capability.product,
