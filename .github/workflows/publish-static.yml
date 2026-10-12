@@ -86,6 +86,7 @@ jobs:
           node tests/test_goal_retrieval_oracle.cjs
           node tests/test_goal_inventory_binding.cjs
           node tests/test_empty_goal_plan_gate.cjs
+          node tests/test_compound_goal_atomic_gate.cjs
           python - <<'PY'
           import json
           from collections import Counter
