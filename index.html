@@ -1259,6 +1259,7 @@ function actualAreas(result){return (result?.exec?.nodes||[]).map(n=>n.slots?.ar
 function diagnoseBenchmarkTurn(turn,result,pre,post){
   const e=turn.expected||{},fail=[];
   if(e.op&&result?.delta?.op!==e.op)fail.push('graph_delta');
+  if(result?.exec?.commit_status==='REJECTED_ATOMIC_SIMULATION')fail.push(result.exec.failure_code||'execution_atomic_rejected');
   if(e.scenario){
     const sc=result?.delta?.metadata?.scenario_inference;
     if(!sc?.goal)fail.push('scenario_goal');
@@ -1369,6 +1370,9 @@ function benchmarkEvidenceDocument(){
         expected:tr.turn?.expected||null,
         actual_delta:tr.result?.delta||null,
         actual_route:tr.result?.exec?.route||null,
+        actual_commit_status:tr.result?.exec?.commit_status||null,
+        actual_failure_code:tr.result?.exec?.failure_code||null,
+        actual_world_deltas:tr.result?.exec?.worldDeltas||[],
         actual_nodes:tr.result?.exec?.nodes||[],
         before:tr.pre||null,after:tr.post||null,
         failure_codes:tr.failures||[],pass:tr.pass
@@ -1409,7 +1413,15 @@ function replayImportedBenchmarkEvidence(doc){
     for(let i=0;i<incoming.length;i++)for(let j=0;j<incoming[i].turns.length;j++){
       const old=doc.cases[i].turns[j],now=benchmarkResults[i].turnResults[j];
       const was=[...(old.failure_codes||[])].sort(),is=[...now.failures].sort();
-      if(JSON.stringify(was)!==JSON.stringify(is))changes.push({case_id:incoming[i].id,turn:j+1,previous:was,current:is});
+      const oldOutcome=old.actual_commit_status||null,newOutcome=now.result?.exec?.commit_status||null;
+      const oldFailure=old.actual_failure_code||null,newFailure=now.result?.exec?.failure_code||null;
+      const oldWrites=old.actual_world_deltas||[],newWrites=now.result?.exec?.worldDeltas||[];
+      if(JSON.stringify(was)!==JSON.stringify(is)||oldOutcome!==newOutcome||oldFailure!==newFailure||
+        JSON.stringify(oldWrites)!==JSON.stringify(newWrites))
+        changes.push({case_id:incoming[i].id,turn:j+1,previous:was,current:is,
+          previous_commit_status:oldOutcome,current_commit_status:newOutcome,
+          previous_failure_code:oldFailure,current_failure_code:newFailure,
+          world_delta_changed:JSON.stringify(oldWrites)!==JSON.stringify(newWrites)});
     }
     benchmarkReplayComparison={baseline_generated_at:doc.generated_at||null,changed_turns:changes,changed_count:changes.length,baseline_source:doc.source||'unknown'};
     persistBenchmarkEvidence();
