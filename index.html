@@ -1787,7 +1787,27 @@ function parseUtterance(text){
     else if(correction&&focusedBefore?.entity)entity=focusedBefore.entity;
 
     if(!explicitArea&&(inherit||correction)&&focusedBefore?.area&&!previousArea)state.lastArea=focusedBefore.area;
-    if(/做一样的|照刚才/.test(p)){intent=previousIntent||intentFromLastAction();}
+    if(/做一样的|照刚才/.test(p)){
+      // Cross-room references inherit the previous operation/value, never the
+      // prior device's physical identity. Do not silently guess an operation.
+      const focusNode=focusedBefore;
+      const prev=activeTask()?.nodes?.filter(n=>n.target?.entity===entity&&n.slots?.property).slice(-1)[0];
+      const source=prev||null;
+      intent=previousIntent||source?.intent||intentFromLastAction();
+      if(source&&intent){
+        slots.property=source.slots.property;
+        slots.value=source.slots.value;
+      }else if(focusNode&&entity===focusNode.entity){
+        const prop=Object.keys(focusNode.properties||{}).slice(-1)[0];
+        if(prop){
+          slots.property=prop;
+          slots.value=focusNode.properties[prop]?.value;
+        }
+      }
+      if(!intent||!slots.property||slots.value===undefined){
+        entity=null;intent=null;
+      }
+    }
     else if(/查询|现在|多少|开着吗|关着吗|温度/.test(p) && entity==='climate'){intent='QueryState';slots.property='temperature';}
     else if(/查询|状态|开着吗|关着吗/.test(p)){intent='QueryState';slots.property='state';}
     else if(/色温|开尔文|\d{4}\s*[kK]|三千/.test(p)){intent='SetValue';slots.property='colorTemperature';slots.value=kelvin?Number(kelvin[1]):3000;}
