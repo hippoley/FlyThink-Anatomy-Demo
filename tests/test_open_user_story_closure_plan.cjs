@@ -2,6 +2,7 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
 const p=path.join(__dirname,'..','contracts','open-user-story-closure-plan.v1.json');
 const d=JSON.parse(fs.readFileSync(p,'utf8'));
+const {verifyClosurePlan,REQUIRED}=require('../scripts/verify_user_story_closure_plan.cjs');
 const expected=['02','03','04','08','10','11','12','17','18','19','20','21','22','23','24','25','26','27','28','29','30','31','32','33','34'].map(x=>'US-'+x);
 assert.equal(d.schema_version,'flythink.user-story-closure-plan.v1');
 assert.equal(d.all_selected,true);
@@ -15,3 +16,20 @@ assert(d.batches.every(b=>b.first.every(id=>d.stories.some(x=>x.id===id&&x.batch
 const assigned=d.batches.flatMap(b=>b.first);
 assert.equal(new Set(assigned).size,25,'batch lists must partition all 25 stories exactly once');
 console.log('PASS 25/25 selected, unique, grouped, and evidence-gated');
+
+assert.deepEqual(verifyClosurePlan(d),[],'current OPEN manifest must have complete gate definitions');
+assert(d.stories.every(s=>REQUIRED.every(k=>s.acceptance[k].required)),'all gates required');
+for(const gate of REQUIRED){
+ const specimen=JSON.parse(JSON.stringify(d));
+ const story=specimen.stories[0];
+ story.status='CLOSED';
+ for(const k of REQUIRED)story.acceptance[k].evidence=[{ref:'tests/verified-'+k+'.cjs',scope:'fixture',result:'PASS',reviewed:true}];
+ story.acceptance[gate].evidence=[];
+ assert(verifyClosurePlan(specimen).some(e=>e.includes('missing_evidence:'+gate)),'missing '+gate+' must reject closure');
+}
+{
+ const forged=JSON.parse(JSON.stringify(d)),x=forged.stories[0];x.status='CLOSED';
+ for(const gate of REQUIRED)x.acceptance[gate].evidence=[{ref:'self-reported-success',scope:'browser',result:'PASS',reviewed:false}];
+ assert(verifyClosurePlan(forged).some(e=>e.includes('invalid_evidence')),'unreviewed artifacts cannot close a story');
+}
+console.log('PASS mandatory six-gate closure checks and negative cases');
