@@ -1359,8 +1359,16 @@ function benchmarkEvidenceDocument(){
 }
 function persistBenchmarkEvidence(){
   const doc=benchmarkEvidenceDocument();if(!doc)return false;
-  try{browserSessionStorage()?.setItem(BENCHMARK_EVIDENCE_KEY,JSON.stringify(doc));return true}
-  catch(_){const el=$('#benchmarkEvidenceStatus');if(el)el.textContent='浏览器持久化失败，请立即导出';return false}
+  try{
+    const storage=browserSessionStorage();
+    if(!storage)throw new Error('browser storage unavailable');
+    storage.setItem(BENCHMARK_EVIDENCE_KEY,JSON.stringify(doc));
+    if(storage.getItem(BENCHMARK_EVIDENCE_KEY)===null)throw new Error('browser storage write not retained');
+    return true;
+  }catch(_){
+    const el=$('#benchmarkEvidenceStatus');if(el)el.textContent='浏览器持久化失败，请立即导出';
+    return false;
+  }
 }
 function exportBenchmarkEvidence(){
   let doc=benchmarkEvidenceDocument();
