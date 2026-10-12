@@ -26,6 +26,12 @@ function verify(doc){
    if(typeof t.input!=='string'||!t.input.trim()||t.input.length>1000)fail(at,'invalid_input');
    if(!t.expected||typeof t.expected!=='object'||Array.isArray(t.expected))fail(at,'missing_expected_contract');
    if(!Array.isArray(t.failure_codes)||t.failure_codes.some(x=>typeof x!=='string')){fail(at,'invalid_failure_codes');casePass=false;continue}
+   // Check independently observable GraphDelta against the declared contract.
+   // This catches a self-reported pass when a different operation was emitted.
+   const op=t.expected&&typeof t.expected.op==='string'?t.expected.op:null;
+   const actualOp=t.actual_delta&&typeof t.actual_delta.op==='string'?t.actual_delta.op:null;
+   const operationMismatch=!!op&&actualOp!==op;
+   if(operationMismatch)fail(at,'expected_operation_mismatch');
    const rejected=t.actual_commit_status==='REJECTED_ATOMIC_SIMULATION';
    if(t.actual_commit_status!==null&&t.actual_commit_status!==undefined&&!rejected)fail(at,'unknown_commit_status');
    const nonExecutableRoute=typeof t.actual_route==='string'&&/(?:CLARIFY|LLM_ESCALATE|OOD)/.test(t.actual_route);
@@ -38,7 +44,7 @@ function verify(doc){
     if(t.actual_failure_code&&!t.failure_codes.includes(t.actual_failure_code))fail(at,'failure_code_not_propagated');
    }
    if(t.actual_failure_code&&t.actual_commit_status!=='REJECTED_ATOMIC_SIMULATION')fail(at,'failure_code_without_rejection');
-   const expectedPass=t.failure_codes.length===0&&!rejected&&!nonExecutableRoute;
+   const expectedPass=t.failure_codes.length===0&&!rejected&&!nonExecutableRoute&&!operationMismatch;
    if(t.pass!==expectedPass)fail(at,'turn_pass_inconsistent');
    if(expectedPass){passedTurns++;casePassed++}else casePass=false;
   }
